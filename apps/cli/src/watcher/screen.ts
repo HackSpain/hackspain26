@@ -151,23 +151,22 @@ export function wrap(text: string, w: number): string[] {
 function explainerBox(
   state: WatchState,
   w: number,
-  intervalMs: number,
   compact: boolean
 ): string[] {
   const inner = w - 4;
-  const every = Math.round(intervalMs / 1000);
-  const team = state.team ? `${state.team.name}'s` : "your team's";
+  const team = state.team ? state.team.name : "your team";
   const paragraphs = compact
     ? [
-        `Leave this open while you build: every ${every}s it reports ${team} AI usage (request counts and token totals, never prompts or code) to the live board. Organiser announcements appear below. ${c.bold("q")} quits · ${c.bold("p")} pauses.`,
+        `Leave this running in a spare terminal while you build. It puts ${team} on the live board and shows organiser announcements here. Only counts leave your machine, never prompts or code.`,
+        `${c.bold("q")} quits  ·  ${c.bold("p")} pauses`,
       ]
     : [
-        `Keep this open while you build. Every ${every}s it reads the local logs of your AI coding tools (Claude Code, Codex, OpenCode, Cline) and reports ${team} usage to the live board: request counts and token totals only. Never prompts, code, or file paths.`,
-        "Organiser announcements show up on the right as soon as they are sent, with a ping and a desktop notification.",
-        `${c.bold("q")} quits and prints a summary  ·  ${c.bold("p")} pauses scanning  ·  ${c.bold("hackspain --help")} for everything else`,
+        `Leave this running in a spare terminal while you build. It is how ${team} shows up on the live board that everyone at the venue sees, and how organisers know who is shipping.`,
+        "Announcements from the organisers land here and as a desktop notification, so you do not miss lunch, judging slots or a schedule change while you are heads down.",
+        `Only counts and totals leave your machine, never prompts or code.  ${c.bold("q")} quits  ·  ${c.bold("p")} pauses  ·  ${c.bold("hackspain --help")} for the rest`,
       ];
   const lines = paragraphs.flatMap((p) => wrap(p, inner));
-  return box({ title: "How this works" }, lines, w);
+  return box({ title: "Keep this open" }, lines, w);
 }
 
 function youBox(state: WatchState, w: number): string[] {
@@ -427,7 +426,7 @@ export function frame(
   } else if (w < 96) {
     // Narrow: one column. The explainer shrinks and the profile box goes
     // before the organiser feed ever loses its rows.
-    const explainer = explainerBox(state, w, intervalMs, available < 34);
+    const explainer = explainerBox(state, w, available < 34);
     const harnesses = harnessesBox(state, now, w, harnessRows);
     let you = youBox(state, w);
     let rest = available - explainer.length - harnesses.length - you.length;
@@ -445,7 +444,7 @@ export function frame(
   } else {
     // Wide: explainer across the top, then you + harnesses beside the feed,
     // then recent requests across the bottom when there is room.
-    const explainer = explainerBox(state, w, intervalMs, available < 30);
+    const explainer = explainerBox(state, w, available < 30);
     const leftW = Math.max(48, Math.floor(w * 0.55));
     const rightW = w - leftW;
     const lower = available - explainer.length;

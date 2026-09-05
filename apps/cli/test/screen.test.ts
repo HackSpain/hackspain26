@@ -84,10 +84,8 @@ describe("frame", () => {
     const text = stripAnsi(
       frame(sampleState(), { columns: 120, rows: 40 }, { now: NOW }).join("\n")
     );
-    expect(text).toContain("How this works");
-    expect(text.replace(/[│\s]+/g, " ")).toContain(
-      "Never prompts, code, or file paths"
-    );
+    expect(text).toContain("Keep this open");
+    expect(text.replace(/[│\s]+/g, " ")).toContain("never prompts or code");
     expect(text).toContain("Domènec");
     expect(text).toContain("Quijote Labs");
     expect(text).toContain("Claude Code");
@@ -107,7 +105,7 @@ describe("frame", () => {
     );
     expect(text).toContain("Harnesses");
     expect(text).toContain("Organisers");
-    expect(text).not.toContain("How this works");
+    expect(text).not.toContain("Keep this open");
   });
 
   test("wordmark only on tall terminals", () => {

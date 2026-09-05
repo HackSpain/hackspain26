@@ -45,7 +45,7 @@ hackspain --json <command>      # one JSON object on stdout, prompts disabled
 ## Watcher
 
 `hackspain watch` is meant to stay open in its own terminal all weekend. It takes over the
-screen with a "How this works" explainer, a panel for you and your team, a table of the AI
+screen with a short "Keep this open" note on why it matters, a panel for you and your team, a table of the AI
 harnesses it found (status, requests, tokens, last request), organiser announcements as they
 arrive, a table of the most recent requests it reported, and a status bar with the next scan
 and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
