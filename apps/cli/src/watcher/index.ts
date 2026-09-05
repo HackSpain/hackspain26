@@ -286,6 +286,7 @@ export async function runWatch(
       id: c.id,
       found: discovered.includes(c.id),
       requests: 0,
+      tokens: 0,
     }));
   }
   say(

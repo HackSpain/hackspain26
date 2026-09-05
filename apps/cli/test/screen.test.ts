@@ -5,14 +5,7 @@ import {
   IDLE_INTERVAL_MS,
   scanIntervalFor,
 } from "../src/watcher/index";
-import {
-  box,
-  chart,
-  diffFrame,
-  fit,
-  frame,
-  gauge,
-} from "../src/watcher/screen";
+import { box, diffFrame, fit, frame, gauge, wrap } from "../src/watcher/screen";
 import {
   BUCKET_MS,
   createState,
@@ -43,8 +36,8 @@ function sampleState() {
   });
   state.startedAt = NOW - 5 * 60 * 1000;
   state.harnesses = [
-    { id: "claude-code", found: true, requests: 0 },
-    { id: "codex", found: false, requests: 0 },
+    { id: "claude-code", found: true, requests: 0, tokens: 0 },
+    { id: "codex", found: false, requests: 0, tokens: 0 },
   ];
   for (let i = 0; i < 6; i++) {
     recordEvent(state, {
@@ -81,27 +74,40 @@ describe("frame", () => {
         expect(width(line)).toBeLessThanOrEqual(Math.max(40, size.columns));
       }
       const text = stripAnsi(lines.join("\n"));
-      expect(text).toContain("Activity");
+      expect(text).toContain("Harnesses");
       expect(text).toContain("Organisers");
       expect(stripAnsi(lines.at(-1) ?? "")).toContain("q quit");
     }
   });
 
-  test("wide layout has the profile, harnesses with gauges, and the feed side by side", () => {
+  test("wide layout: explainer, profile, harness table, feed, recent requests", () => {
     const text = stripAnsi(
       frame(sampleState(), { columns: 120, rows: 40 }, { now: NOW }).join("\n")
     );
+    expect(text).toContain("How this works");
+    expect(text.replace(/[│\s]+/g, " ")).toContain(
+      "Never prompts, code, or file paths"
+    );
     expect(text).toContain("Domènec");
     expect(text).toContain("Quijote Labs");
-    expect(text).toContain("Harnesses");
-    expect(text).toContain("input");
-    expect(text).toContain("cached");
+    expect(text).toContain("Claude Code");
+    expect(text).toContain("● live");
+    expect(text).toContain("not on this machine");
+    expect(text).toContain("Total");
+    expect(text).toContain("2 sessions");
+    expect(text).toContain("Recent requests");
+    expect(text).toContain("claude-sonnet-5");
     expect(text).toContain("Pizza at 14:00");
     expect(text).toContain("Courtyard");
-    expect(text).toContain("not on this machine");
-    expect(text).toContain("6 requests");
-    expect(text).toContain("2 sessions");
-    expect(text).toContain("peak 1");
+  });
+
+  test("tiny terminals keep the harness table and the feed", () => {
+    const text = stripAnsi(
+      frame(sampleState(), { columns: 60, rows: 12 }, { now: NOW }).join("\n")
+    );
+    expect(text).toContain("Harnesses");
+    expect(text).toContain("Organisers");
+    expect(text).not.toContain("How this works");
   });
 
   test("wordmark only on tall terminals", () => {
@@ -116,7 +122,7 @@ describe("frame", () => {
     expect(short).toContain("HACKSPAIN");
   });
 
-  test("paused and a fresh message change the status and the feed accent", () => {
+  test("paused is visible in the status line", () => {
     const state = sampleState();
     state.paused = true;
     const lines = frame(state, { columns: 100, rows: 30 }, { now: NOW });
@@ -140,11 +146,9 @@ describe("primitives", () => {
     expect(stripAnsi(lines[0] ?? "")).toContain("sub");
   });
 
-  test("chart scales to the peak and uses partial blocks", () => {
-    const rows = chart([0, 2, 4, 1], 2).map(stripAnsi);
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toBe("  █ ");
-    expect(rows[1]).toBe(" ██▄");
+  test("wrap keeps words whole", () => {
+    expect(wrap("one two three four", 9)).toEqual(["one two", "three", "four"]);
+    expect(wrap("", 9)).toEqual([""]);
   });
 
   test("gauge fills proportionally", () => {
@@ -187,11 +191,13 @@ describe("primitives", () => {
     ).toBe(120_000);
   });
 
-  test("seriesWindow is zero-filled, oldest first", () => {
+  test("state keeps recent requests newest first and per-harness tokens", () => {
     const state = sampleState();
-    const points = seriesWindow(state, 8, NOW);
-    expect(points).toHaveLength(8);
-    expect(points.map((p) => p.requests)).toEqual([0, 0, 1, 1, 1, 1, 1, 1]);
-    expect(points.at(-1)?.byHarness["claude-code"]).toBe(1);
+    expect(state.recent).toHaveLength(6);
+    expect(state.recent[0]?.at).toBeGreaterThan(state.recent[5]?.at ?? 0);
+    expect(state.harnesses[0]?.tokens).toBe(6 * 100);
+    expect(seriesWindow(state, 8, NOW).map((p) => p.requests)).toEqual([
+      0, 0, 1, 1, 1, 1, 1, 1,
+    ]);
   });
 });

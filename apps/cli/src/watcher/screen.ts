@@ -1,17 +1,18 @@
 import { WORDMARK_WIDTH, wordmarkRows } from "../lib/banner";
-import { compactNumber, formatAgo } from "../lib/output";
+import { compactNumber, formatAgo, renderTable } from "../lib/output";
 import { c, colorEnabled, stripAnsi, width } from "../lib/style";
-import { seriesWindow, type WatchState } from "./state";
+import type { WatchState } from "./state";
 
 /**
- * Full-terminal live view for `hackspain watch`, in the spirit of btop: the
- * whole screen is a grid of rounded boxes with a graph, gauges and a feed,
- * redrawn twice a second. `frame()` is pure (state + size → lines) so it is
- * testable; `startScreen()` owns the alternate screen buffer and the keys.
+ * Full-terminal live view for `hackspain watch`: a grid of rounded boxes
+ * that fills the terminal, built from tables rather than charts because
+ * tables are what people actually read at a glance. `frame()` is pure
+ * (state + size → lines) so it is testable; `startScreen()` owns the
+ * alternate screen buffer, redraws changed rows once a second, and maps
+ * key presses onto the state.
  */
 const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const MIN_WIDTH = 40;
-const BLOCKS = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
 
 const HARNESS_NAMES: Record<string, string> = {
   "claude-code": "Claude Code",
@@ -62,10 +63,6 @@ function padRight(text: string, size: number): string {
   return text + " ".repeat(Math.max(0, size - width(text)));
 }
 
-function padLeft(text: string, size: number): string {
-  return " ".repeat(Math.max(0, size - width(text))) + text;
-}
-
 export type BoxOptions = {
   title: string;
   subtitle?: string;
@@ -74,7 +71,7 @@ export type BoxOptions = {
   height?: number;
 };
 
-/** Rounded box, btop-style: title inset on the top border, optional subtitle on the right. */
+/** Rounded box: title inset on the top border, optional subtitle on the right. */
 export function box(options: BoxOptions, lines: string[], w: number): string[] {
   const inner = w - 4;
   const accent = options.accent ?? TEAL;
@@ -105,6 +102,14 @@ function clock(at: number): string {
   });
 }
 
+function clockSeconds(at: number): string {
+  return new Date(at).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 function elapsed(since: number, now: number): string {
   const s = Math.max(0, Math.floor((now - since) / 1000));
   const h = Math.floor(s / 3600);
@@ -114,34 +119,7 @@ function elapsed(since: number, now: number): string {
     : `${m}m ${String(s % 60).padStart(2, "0")}s`;
 }
 
-/**
- * Column chart: one column per point, `height` rows, partial blocks for the
- * top cell, warm gradient from the baseline (teal) to the peaks (gold).
- */
-export function chart(values: number[], height: number): string[] {
-  const max = Math.max(1, ...values);
-  const rows: string[] = [];
-  for (let r = height - 1; r >= 0; r--) {
-    let line = "";
-    for (const value of values) {
-      const level = (value / max) * height;
-      let cell = " ";
-      if (level >= r + 1) {
-        cell = "█";
-      } else if (level > r) {
-        cell = BLOCKS[Math.max(1, Math.round((level - r) * 8))] ?? "▁";
-      }
-      line +=
-        cell === " "
-          ? " "
-          : rgb(mix(TEAL, GOLD, r / Math.max(1, height - 1)), cell);
-    }
-    rows.push(line);
-  }
-  return rows;
-}
-
-/** Horizontal gauge: filled share in colour, the rest dim. */
+/** Horizontal gauge: filled share in colour, the rest dim. Used for the scan countdown. */
 export function gauge(
   fraction: number,
   size: number,
@@ -151,66 +129,45 @@ export function gauge(
   return `${rgb(color, "█".repeat(filled))}${c.dim("░".repeat(size - filled))}`;
 }
 
-/** Eight-cell sparkline for a harness, from the per-minute series. */
-function sparkline(values: number[]): string {
-  const max = Math.max(1, ...values);
-  return values
-    .map((v) => BLOCKS[Math.min(8, Math.round((v / max) * 8))] ?? " ")
-    .join("");
+export function wrap(text: string, w: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (current && width(`${current} ${word}`) > w) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = current ? `${current} ${word}` : word;
+    }
+  }
+  if (current) {
+    lines.push(current);
+  }
+  return lines.length ? lines : [""];
 }
 
-function activityBox(
+/** What this screen is and how to use it. Always visible; shorter when rows are scarce. */
+function explainerBox(
   state: WatchState,
-  now: number,
   w: number,
-  h: number
+  intervalMs: number,
+  compact: boolean
 ): string[] {
   const inner = w - 4;
-  const graphRows = Math.max(3, h - 1);
-  const points = seriesWindow(state, inner, now);
-  const requests = points.map((p) => p.requests);
-  const peak = Math.max(...requests, 0);
-  const current = requests.at(-1) ?? 0;
-  const lines = chart(requests, graphRows);
-  // Peak label on the top row, right-aligned, only when there is something to show.
-  if (peak > 0 && lines[0] !== undefined) {
-    const label = c.dim(`${peak} req/min`);
-    const keep = Math.max(0, inner - width(label) - 1);
-    lines[0] = `${fitCells(lines[0], keep)}${" ".repeat(Math.max(0, inner - keep - width(label)))}${label}`;
-  }
-  const left = c.dim(`${inner} min ago`);
-  const right = c.dim("now");
-  lines.push(
-    `${left}${" ".repeat(Math.max(1, inner - width(left) - width(right)))}${right}`
-  );
-  return box(
-    {
-      title: "Activity",
-      subtitle: `requests per minute · now ${current} · peak ${peak}`,
-      height: h,
-    },
-    lines,
-    w
-  );
-}
-
-/** Keep the first `cells` visible cells of an ANSI-coloured line without breaking escapes. */
-function fitCells(line: string, cells: number): string {
-  let out = "";
-  let count = 0;
-  let i = 0;
-  while (i < line.length && count < cells) {
-    if (line[i] === "\x1b") {
-      const end = line.indexOf("m", i);
-      out += line.slice(i, end + 1);
-      i = end + 1;
-      continue;
-    }
-    out += line[i];
-    count++;
-    i++;
-  }
-  return `${out}${colorEnabled ? "\x1b[39m" : ""}`;
+  const every = Math.round(intervalMs / 1000);
+  const team = state.team ? `${state.team.name}'s` : "your team's";
+  const paragraphs = compact
+    ? [
+        `Leave this open while you build: every ${every}s it reports ${team} AI usage (request counts and token totals, never prompts or code) to the live board. Organiser announcements appear below. ${c.bold("q")} quits · ${c.bold("p")} pauses.`,
+      ]
+    : [
+        `Keep this open while you build. Every ${every}s it reads the local logs of your AI coding tools (Claude Code, Codex, OpenCode, Cline) and reports ${team} usage to the live board: request counts and token totals only. Never prompts, code, or file paths.`,
+        "Organiser announcements show up on the right as soon as they are sent, with a ping and a desktop notification.",
+        `${c.bold("q")} quits and prints a summary  ·  ${c.bold("p")} pauses scanning  ·  ${c.bold("hackspain --help")} for everything else`,
+      ];
+  const lines = paragraphs.flatMap((p) => wrap(p, inner));
+  return box({ title: "How this works" }, lines, w);
 }
 
 function youBox(state: WatchState, w: number): string[] {
@@ -231,71 +188,97 @@ function youBox(state: WatchState, w: number): string[] {
   );
 }
 
+function harnessStatus(lastEventAt: number | undefined, now: number): string {
+  if (lastEventAt === undefined) {
+    return rgb(TEAL, "● waiting");
+  }
+  if (now - lastEventAt < 5 * 60 * 1000) {
+    return rgb(GOLD, "● live");
+  }
+  return rgb(TEAL, "● idle");
+}
+
 function harnessesBox(
   state: WatchState,
   now: number,
   w: number,
   h: number
 ): string[] {
-  const inner = w - 4;
-  const points = seriesWindow(state, 8, now);
-  const lines: string[] = [];
-  for (const harness of state.harnesses) {
-    const name = padRight(HARNESS_NAMES[harness.id] ?? harness.id, 11);
+  const rows: string[][] = state.harnesses.map((harness) => {
+    const name = HARNESS_NAMES[harness.id] ?? harness.id;
     if (!harness.found) {
-      lines.push(
-        `${c.dim("○")} ${c.dim(name)} ${" ".repeat(8)} ${c.dim("not on this machine")}`
-      );
-      continue;
+      return [
+        c.dim(name),
+        c.dim("○ not on this machine"),
+        c.dim("–"),
+        c.dim("–"),
+        c.dim("–"),
+      ];
     }
-    const live =
-      harness.lastEventAt !== undefined &&
-      now - harness.lastEventAt < 5 * 60 * 1000;
-    const spark = rgb(
-      live ? GOLD : TEAL,
-      sparkline(points.map((p) => p.byHarness[harness.id] ?? 0))
-    );
-    const detail = harness.lastEventAt
-      ? `${compactNumber(harness.requests)} req · ${formatAgo(harness.lastEventAt, now)}`
-      : "waiting for requests";
-    lines.push(
-      `${rgb(live ? GOLD : TEAL, "●")} ${name} ${spark} ${c.dim(fit(detail, Math.max(8, inner - 24)))}`
-    );
-  }
-  if (state.harnesses.every((x) => !x.found)) {
-    lines.push(c.dim("No supported AI harness found."));
-    lines.push(c.dim("Claude Code, Codex, OpenCode and Cline are supported."));
-  }
+    return [
+      name,
+      harnessStatus(harness.lastEventAt, now),
+      compactNumber(harness.requests),
+      compactNumber(harness.tokens),
+      harness.lastEventAt
+        ? c.dim(formatAgo(harness.lastEventAt, now))
+        : c.dim("–"),
+    ];
+  });
   const t = state.totals;
-  const total = Math.max(1, t.input + t.output + t.cached);
-  const gaugeWidth = Math.max(6, Math.min(24, inner - 26));
-  const row = (label: string, value: number, color: Rgb) =>
-    `${c.dim(padRight(label, 7))} ${gauge(value / total, gaugeWidth, color)} ${padLeft(compactNumber(value), 7)} ${c.dim(`${Math.round((value / total) * 100)}%`)}`;
-  const gauges = [
+  rows.push([
+    c.bold("Total"),
+    c.dim(`${t.sessions.size} session${t.sessions.size === 1 ? "" : "s"}`),
+    c.bold(compactNumber(t.requests)),
+    c.bold(compactNumber(t.input + t.output + t.cached)),
     "",
-    `${c.bold(compactNumber(t.requests))} ${c.dim(t.requests === 1 ? "request" : "requests")}  ${c.bold(String(t.sessions.size))} ${c.dim(t.sessions.size === 1 ? "session" : "sessions")}  ${c.bold(compactNumber(t.input + t.output + t.cached))} ${c.dim("tokens")}`,
-    row("input", t.input, ORANGE),
-    row("output", t.output, GOLD),
-    row("cached", t.cached, TEAL),
-  ];
-  // Spare rows become a tokens-per-minute chart rather than empty space.
-  const used = lines.length + gauges.length;
-  const spare = h - used;
-  if (spare >= 5) {
-    const window = seriesWindow(state, inner, now);
-    const label = c.dim(`tokens per minute · last ${inner} min`);
-    gauges.push(
-      "",
-      label,
-      ...chart(
-        window.map((p) => p.tokens),
-        spare - 2
-      )
-    );
-  }
+  ]);
+  const table = renderTable(rows, [
+    "Harness",
+    "Status",
+    "Requests",
+    "Tokens",
+    "Last",
+  ]).split("\n");
+  const breakdown = `${c.dim("tokens:")} ${compactNumber(t.input)} ${c.dim("in")} · ${compactNumber(t.output)} ${c.dim("out")} · ${compactNumber(t.cached)} ${c.dim("cached")}`;
   return box(
-    { title: "Harnesses", subtitle: "last 8 min", height: h },
-    [...lines, ...gauges],
+    { title: "Harnesses", subtitle: "what is being reported", height: h },
+    [...table, "", breakdown],
+    w
+  );
+}
+
+function recentBox(state: WatchState, w: number, h: number): string[] {
+  const rows = state.recent
+    .slice(0, Math.max(0, h - 2))
+    .map((r) => [
+      c.dim(clockSeconds(r.at)),
+      HARNESS_NAMES[r.harness] ?? r.harness,
+      r.model,
+      compactNumber(r.input),
+      compactNumber(r.output),
+      compactNumber(r.cached),
+      c.dim(r.sessionId.slice(0, 8)),
+    ]);
+  const lines =
+    rows.length === 0
+      ? [
+          c.dim(
+            "Nothing reported yet. Use your AI tool and the next scan will list the requests here."
+          ),
+        ]
+      : renderTable(rows, [
+          "Time",
+          "Harness",
+          "Model",
+          "In",
+          "Out",
+          "Cached",
+          "Session",
+        ]).split("\n");
+  return box(
+    { title: "Recent requests", subtitle: "newest first", height: h },
+    lines,
     w
   );
 }
@@ -310,8 +293,12 @@ function organisersBox(
   const lines: string[] = [];
   if (state.notifications.length === 0) {
     lines.push(c.dim("Nothing yet."));
-    lines.push(c.dim("Announcements from the organisers land"));
-    lines.push(c.dim("here, with a ping and a desktop toast."));
+    lines.push(
+      ...wrap(
+        "Announcements from the organisers land here the moment they are sent.",
+        inner
+      ).map((l) => c.dim(l))
+    );
   }
   for (const n of state.notifications) {
     lines.push(`${rgb(GOLD, clock(n.at))}  ${c.bold(n.subject)}`);
@@ -335,24 +322,6 @@ function organisersBox(
     lines,
     w
   );
-}
-
-function wrap(text: string, w: number): string[] {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let current = "";
-  for (const word of words) {
-    if (current && width(`${current} ${word}`) > w) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = current ? `${current} ${word}` : word;
-    }
-  }
-  if (current) {
-    lines.push(current);
-  }
-  return lines.length ? lines : [""];
 }
 
 function statusLine(
@@ -443,42 +412,61 @@ export function frame(
   const w = Math.max(MIN_WIDTH, size.columns);
   const h = size.rows;
 
-  const tall = h >= 42 && w >= WORDMARK_WIDTH + 2;
+  const tall = h >= 44 && w >= WORDMARK_WIDTH + 2;
   const head = header(state, now, w, tall);
   const status = statusLine(state, now, tick, w, intervalMs);
+  const lines: string[] = [...head];
   const available = h - head.length - 1;
 
-  const lines: string[] = [...head];
-  if (available < 12) {
-    // Tiny terminal: just the graph and the feed.
-    const graphH = Math.max(3, Math.floor(available / 2) - 2);
-    lines.push(...activityBox(state, now, w, graphH));
-    lines.push(
-      ...organisersBox(state, now, w, Math.max(1, available - graphH - 4))
-    );
-  } else if (w < 84) {
-    // Narrow: single column, stacked.
-    const graphH = Math.max(5, Math.floor(available * 0.3) - 2);
-    const harnessH = state.harnesses.length + 5;
-    const feedH = Math.max(2, available - graphH - harnessH - 6);
-    lines.push(...activityBox(state, now, w, graphH));
-    lines.push(...harnessesBox(state, now, w, harnessH));
+  const harnessRows = state.harnesses.length + 5; // header, rule, per harness, total, blank, breakdown
+  if (available < 14) {
+    // Tiny terminal: the two things that matter.
+    const feedH = Math.max(1, available - harnessRows - 4);
+    lines.push(...harnessesBox(state, now, w, harnessRows));
     lines.push(...organisersBox(state, now, w, feedH));
+  } else if (w < 96) {
+    // Narrow: one column. The explainer shrinks and the profile box goes
+    // before the organiser feed ever loses its rows.
+    const explainer = explainerBox(state, w, intervalMs, available < 34);
+    const harnesses = harnessesBox(state, now, w, harnessRows);
+    let you = youBox(state, w);
+    let rest = available - explainer.length - harnesses.length - you.length;
+    if (rest < 5) {
+      you = [];
+      rest = available - explainer.length - harnesses.length;
+    }
+    const feedH = Math.max(1, Math.min(8, rest - 2));
+    const recentH = rest - feedH - 2 - 2;
+    lines.push(...explainer, ...you, ...harnesses);
+    lines.push(...organisersBox(state, now, w, feedH));
+    if (recentH >= 4) {
+      lines.push(...recentBox(state, w, recentH));
+    }
   } else {
-    // Wide: graph on top, then two columns.
-    const graphH = Math.max(6, Math.min(14, Math.floor(available * 0.36) - 2));
-    const lowerRows = available - (graphH + 2);
-    const leftW = Math.max(40, Math.floor(w * 0.5));
+    // Wide: explainer across the top, then you + harnesses beside the feed,
+    // then recent requests across the bottom when there is room.
+    const explainer = explainerBox(state, w, intervalMs, available < 30);
+    const leftW = Math.max(48, Math.floor(w * 0.55));
     const rightW = w - leftW;
-    lines.push(...activityBox(state, now, w, graphH));
+    const lower = available - explainer.length;
     const you = youBox(state, leftW);
-    const harnessH = Math.max(
-      state.harnesses.length + 5,
-      lowerRows - you.length - 2
+    const columnsH = Math.max(
+      you.length + harnessRows + 2,
+      lower >= 26 ? Math.floor(lower * 0.55) : lower
     );
+    const harnessH = Math.max(harnessRows, columnsH - you.length - 2);
     const left = [...you, ...harnessesBox(state, now, leftW, harnessH)];
-    const right = organisersBox(state, now, rightW, Math.max(1, lowerRows - 2));
-    lines.push(...columns(left, leftW, right));
+    const right = organisersBox(
+      state,
+      now,
+      rightW,
+      Math.max(1, left.length - 2)
+    );
+    lines.push(...explainer, ...columns(left, leftW, right));
+    const recentH = lower - left.length - 2;
+    if (recentH >= 4) {
+      lines.push(...recentBox(state, w, recentH));
+    }
   }
 
   const body = lines.slice(0, Math.max(0, h - 1));

@@ -15,8 +15,11 @@ export type WatchState = {
     id: HarnessId;
     found: boolean;
     requests: number;
+    tokens: number;
     lastEventAt?: number;
   }[];
+  /** Newest first, capped; what the "Recent requests" table shows. */
+  recent: RecentRequest[];
   totals: {
     requests: number;
     sessions: Set<string>;
@@ -45,6 +48,18 @@ export type WatchState = {
   /** Last few diagnostics, newest last. */
   log: string[];
 };
+
+export type RecentRequest = {
+  at: number;
+  harness: HarnessId;
+  model: string;
+  input: number;
+  output: number;
+  cached: number;
+  sessionId: string;
+};
+
+export const RECENT_KEPT = 60;
 
 export type SeriesPoint = {
   requests: number;
@@ -92,6 +107,7 @@ export function createState(
     team: init.team,
     project: init.project,
     harnesses: [],
+    recent: [],
     totals: {
       requests: 0,
       sessions: new Set(),
@@ -124,9 +140,25 @@ export function recordEvent(state: WatchState, event: TelemetryEvent): void {
   state.totals.input += event.tokens.input;
   state.totals.output += event.tokens.output;
   state.totals.cached += event.tokens.cacheRead + event.tokens.cacheWrite;
+  const cached = event.tokens.cacheRead + event.tokens.cacheWrite;
   if (harness) {
     harness.requests++;
+    harness.tokens += event.tokens.input + event.tokens.output + cached;
   }
+  // Backfill reads newest files first, so events do not arrive in time
+  // order; keep the list sorted newest first regardless.
+  const entry: RecentRequest = {
+    at,
+    harness: event.harness,
+    model: event.model?.raw ?? "unknown",
+    input: event.tokens.input,
+    output: event.tokens.output,
+    cached,
+    sessionId: event.sessionId,
+  };
+  const index = state.recent.findIndex((r) => r.at <= at);
+  state.recent.splice(index === -1 ? state.recent.length : index, 0, entry);
+  state.recent.splice(RECENT_KEPT);
   const bucket = bucketOf(at);
   const point = state.series.get(bucket) ?? {
     requests: 0,

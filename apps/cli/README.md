@@ -45,10 +45,11 @@ hackspain --json <command>      # one JSON object on stdout, prompts disabled
 ## Watcher
 
 `hackspain watch` is meant to stay open in its own terminal all weekend. It takes over the
-screen with the wordmark, a panel for you and your team, the live usage board (requests,
-sessions, tokens, per-harness activity), organiser announcements as they arrive, and a status
-bar with the next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`,
-`--once` and `--plain` use the line-by-line mode instead.
+screen with a "How this works" explainer, a panel for you and your team, a table of the AI
+harnesses it found (status, requests, tokens, last request), organiser announcements as they
+arrive, a table of the most recent requests it reported, and a status bar with the next scan
+and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
+`--plain` use the line-by-line mode instead.
 
 Every 30 s it reads the local session logs of the
 AI coding harnesses it finds (Claude Code, Codex, OpenCode, Cline), normalises them into one
