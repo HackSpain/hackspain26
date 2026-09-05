@@ -4,6 +4,17 @@ Terminal client for HackSpain participants. It is another interface onto the das
 users, same Convex Auth session, and every Convex call runs inside the dashboard's `/api/cli/*`
 routes (`apps/app/src/app/api/cli`). The binary only knows the dashboard's address.
 
+## Install
+
+```sh
+curl -fsSL https://hackspain.com/install.sh | sh      # macOS and Linux, into ~/.local/bin
+hackspain update                                      # later, to get the newest release
+```
+
+Windows: download `hackspain-windows-x64.exe` from the
+[releases page](https://github.com/HackSpain/hackspain26/releases) and rename it `hackspain.exe`.
+Binaries are self-contained; nothing else to install.
+
 ```
 hackspain auth login            # email + 8-digit code, same as the dashboard
 hackspain auth status | logout
@@ -72,6 +83,16 @@ HACKSPAIN_SMOKE_EMAIL=… scripts/smoke.sh           # end-to-end through the lo
   `api.teams.join` is just the function name sent to `/api/cli/rpc`; the server keeps an
   allowlist in `apps/app/src/app/api/cli/_lib/functions.ts`. Add a function there when a new
   command needs it. Run `bun dev:convex` after backend changes so the types update.
+
+## Release
+
+Tag `master` with `cli-vX.Y.Z` (matching `apps/cli/package.json`) and push the tag. The
+`cli-release` workflow cross-compiles the five targets on Linux, writes `SHA256SUMS`, and attaches
+everything to a GitHub release; `install.sh` and `hackspain update` read that release. Release
+binaries target `https://app.hackspain.com`; the optional repository variable
+`HACKSPAIN_APP_URL` overrides that at build time. Nothing else to configure. `cli-ci` runs
+typecheck, lint, tests, and a host compile on every PR that touches `apps/cli` or the Convex
+functions.
 
 ## Exit codes
 

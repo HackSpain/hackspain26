@@ -1,0 +1,61 @@
+name: cli-release
+# Tag `cli-vX.Y.Z` on master to publish binaries for every platform.
+# Binaries talk to https://app.hackspain.com; the optional repository
+# variable HACKSPAIN_APP_URL overrides that at build time.
+on:
+  push:
+    tags:
+      - "cli-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to stamp into the binaries (e.g. 0.2.0)"
+        required: true
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.1"
+      - run: bun install --frozen-lockfile
+      - name: Test
+        run: |
+          bun run --filter cli typecheck
+          bun run --filter cli test
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            echo "value=${GITHUB_REF_NAME#cli-v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build all targets
+        env:
+          HACKSPAIN_VERSION: ${{ steps.version.outputs.value }}
+          HACKSPAIN_APP_URL_DEFAULT: ${{ vars.HACKSPAIN_APP_URL }}
+        run: bun run --filter cli build:bin
+      - name: Smoke the linux binary
+        run: |
+          ./apps/cli/dist/hackspain-linux-x64 --version | grep -F "${{ steps.version.outputs.value }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hackspain-binaries
+          path: |
+            apps/cli/dist/hackspain-*
+            apps/cli/dist/SHA256SUMS
+          if-no-files-found: error
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: hackspain CLI ${{ steps.version.outputs.value }}
+          generate_release_notes: true
+          files: |
+            apps/cli/dist/hackspain-*
+            apps/cli/dist/SHA256SUMS
