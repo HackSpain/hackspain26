@@ -108,9 +108,11 @@ export function registerWatch(program: Command): void {
           intervalMs,
           onQuit: () => {
             state.stopRequested = true;
+            state.wake?.();
           },
           onTogglePause: () => {
             state.paused = !state.paused;
+            state.wake?.();
           },
         });
         try {

@@ -31,6 +31,10 @@ export type WatchState = {
   nextScanAt?: number;
   paused: boolean;
   stopRequested: boolean;
+  /** Set by the loop while it sleeps; the screen calls it on q/p so the loop reacts at once. */
+  wake?: () => void;
+  /** Newest usage event seen, for the idle backoff. */
+  lastEventAt?: number;
   upload: {
     enabled: boolean;
     lastOkAt?: number;
@@ -116,6 +120,7 @@ export function recordEvent(state: WatchState, event: TelemetryEvent): void {
     return;
   }
   state.totals.requests++;
+  state.lastEventAt = Math.max(state.lastEventAt ?? 0, at);
   state.totals.input += event.tokens.input;
   state.totals.output += event.tokens.output;
   state.totals.cached += event.tokens.cacheRead + event.tokens.cacheWrite;

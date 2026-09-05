@@ -67,8 +67,46 @@ export type WatchDeps = {
 
 const RECENT_IDS_CAP = 5000;
 const TEAM_REFRESH_MS = 5 * 60 * 1000;
-/** Organiser messages are polled through the same server API as everything else. */
-export const NOTIFY_POLL_MS = 10 * 1000;
+/** After this long without a usage event, scans slow down to save battery. */
+export const IDLE_AFTER_MS = 10 * 60 * 1000;
+export const IDLE_INTERVAL_MS = 60 * 1000;
+
+/**
+ * Scan cadence: the configured interval while there is activity, at most
+ * once a minute once the machine has been idle for a while. Organiser
+ * messages are polled on the same tick, so one wakeup covers both.
+ */
+export function scanIntervalFor(
+  baseMs: number,
+  lastEventAt: number | undefined,
+  now: number,
+  startedAt: number
+): number {
+  const reference = lastEventAt ?? startedAt;
+  if (now - reference >= IDLE_AFTER_MS) {
+    return Math.max(baseMs, IDLE_INTERVAL_MS);
+  }
+  return baseMs;
+}
+
+/** Sleep for `ms`, or until something calls `state.wake()` (a key press). */
+function sleepOrWake(state: WatchState | undefined, ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      if (state) {
+        state.wake = undefined;
+      }
+      resolve();
+    }, ms);
+    if (state) {
+      state.wake = () => {
+        clearTimeout(timer);
+        state.wake = undefined;
+        resolve();
+      };
+    }
+  });
+}
 
 function lockPath(): string {
   return join(stateDir(), "watch.lock");
@@ -354,29 +392,40 @@ export async function runWatch(
     if (options.once) {
       return EXIT.OK;
     }
-    let nextScan = Date.now() + options.intervalMs;
-    let nextPoll = Date.now();
+    const startedAt = Date.now();
+    let lastEventAt: number | undefined = state?.lastEventAt;
+    const interval = () =>
+      scanIntervalFor(
+        options.intervalMs,
+        state?.lastEventAt ?? lastEventAt,
+        Date.now(),
+        startedAt
+      );
+    await pollNotifications();
+    let nextScan = Date.now() + interval();
     if (state) {
       state.nextScanAt = nextScan;
     }
     while (!(stopping || state?.stopRequested)) {
       const now = Date.now();
-      if (now >= nextPoll) {
-        await pollNotifications();
-        nextPoll = Date.now() + NOTIFY_POLL_MS;
-      }
       if (now >= nextScan) {
         if (state?.paused) {
           nextScan = Date.now() + 1000;
         } else {
-          await tick();
-          nextScan = Date.now() + options.intervalMs;
+          // One wakeup does both the scan and the organiser-message poll.
+          const scanned = await tick();
+          if (scanned.events > 0) {
+            lastEventAt = Date.now();
+          }
+          await pollNotifications();
+          nextScan = Date.now() + interval();
         }
         if (state) {
           state.nextScanAt = nextScan;
         }
       }
-      await Bun.sleep(250);
+      // One wakeup per second at most; a key press wakes it immediately.
+      await sleepOrWake(state, state?.paused ? 5000 : 1000);
     }
     say("Stopping, flushing…");
     await batcher.flush();

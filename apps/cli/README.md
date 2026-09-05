@@ -59,8 +59,11 @@ stores them is decided server-side (the store is still being chosen), so no CLI 
 needed when that lands. `--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
 in `~/.config/hackspain/config.json` point the upload elsewhere.
 
-Every 10 s it also polls organiser broadcasts and shows them in the terminal and as a desktop
-notification (`notify-send`, macOS Notification Center, Windows toast). No prompt text or full
+On the same tick it polls organiser broadcasts and shows them in the feed and as a desktop
+notification (`notify-send`, macOS Notification Center, Windows toast). It is built to sit on a
+laptop all weekend: one wakeup per second, the screen repaints only the rows that changed, one
+network round trip per scan, and after ten minutes without new usage the scan slows to once a
+minute until activity resumes. No prompt text or full
 paths ever leave the machine; only token counts, model, session ids, and a hash of the project
 directory. By default only usage after the watcher starts is reported; `--backfill 6` includes
 the last six hours.

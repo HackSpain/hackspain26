@@ -490,6 +490,23 @@ export function frame(
 
 export type ScreenHandle = { stop: () => void; redraw: () => void };
 
+/** Rows that differ between two frames; undefined means "repaint everything". */
+export function diffFrame(
+  previous: string[] | undefined,
+  next: string[]
+): { row: number; line: string }[] | undefined {
+  if (!previous || previous.length !== next.length) {
+    return;
+  }
+  const changes: { row: number; line: string }[] = [];
+  next.forEach((line, row) => {
+    if (line !== previous[row]) {
+      changes.push({ row, line });
+    }
+  });
+  return changes;
+}
+
 export function startScreen(
   state: WatchState,
   handlers: {
@@ -501,18 +518,31 @@ export function startScreen(
   const out = process.stdout;
   const size = () => ({ columns: out.columns ?? 80, rows: out.rows ?? 24 });
   let ticks = 0;
-  const draw = () => {
+  let previous: string[] | undefined;
+  // Once a second, and only the rows that changed: an idle board costs the
+  // terminal a couple of short lines per second instead of a full repaint.
+  const draw = (force = false) => {
     ticks++;
     const lines = frame(state, size(), {
       tick: ticks,
       intervalMs: handlers.intervalMs,
     });
-    out.write(`\x1b[H${lines.map((l) => `${l}\x1b[K`).join("\n")}\x1b[J`);
+    const changes = force ? undefined : diffFrame(previous, lines);
+    if (changes === undefined) {
+      out.write(`\x1b[H${lines.map((l) => `${l}\x1b[K`).join("\n")}\x1b[J`);
+    } else if (changes.length > 0) {
+      out.write(
+        changes
+          .map(({ row, line }) => `\x1b[${row + 1};1H${line}\x1b[K`)
+          .join("")
+      );
+    }
+    previous = lines;
   };
 
   out.write("\x1b[?1049h\x1b[?25l\x1b[2J");
-  const timer = setInterval(draw, 500);
-  const onResize = () => draw();
+  const timer = setInterval(() => draw(), 1000);
+  const onResize = () => draw(true);
   out.on("resize", onResize);
 
   const stdin = process.stdin;

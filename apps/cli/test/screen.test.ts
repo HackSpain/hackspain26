@@ -1,6 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { stripAnsi, width } from "../src/lib/style";
-import { box, chart, fit, frame, gauge } from "../src/watcher/screen";
+import {
+  IDLE_AFTER_MS,
+  IDLE_INTERVAL_MS,
+  scanIntervalFor,
+} from "../src/watcher/index";
+import {
+  box,
+  chart,
+  diffFrame,
+  fit,
+  frame,
+  gauge,
+} from "../src/watcher/screen";
 import {
   BUCKET_MS,
   createState,
@@ -143,6 +155,36 @@ describe("primitives", () => {
   test("fit truncates visible width and drops colour when cutting", () => {
     expect(fit("hello", 10)).toBe("hello");
     expect(fit("\x1b[1mhello world\x1b[22m", 6)).toBe("hello…");
+  });
+
+  test("diffFrame reports only changed rows and asks for a repaint on resize", () => {
+    expect(diffFrame(undefined, ["a", "b"])).toBeUndefined();
+    expect(diffFrame(["a", "b"], ["a", "b", "c"])).toBeUndefined();
+    expect(diffFrame(["a", "b", "c"], ["a", "B", "c"])).toEqual([
+      { row: 1, line: "B" },
+    ]);
+    expect(diffFrame(["a", "b"], ["a", "b"])).toEqual([]);
+  });
+
+  test("scan interval backs off after ten idle minutes and snaps back on activity", () => {
+    const start = NOW;
+    expect(scanIntervalFor(30_000, undefined, start + 60_000, start)).toBe(
+      30_000
+    );
+    expect(
+      scanIntervalFor(30_000, undefined, start + IDLE_AFTER_MS, start)
+    ).toBe(IDLE_INTERVAL_MS);
+    expect(
+      scanIntervalFor(
+        30_000,
+        start + IDLE_AFTER_MS,
+        start + IDLE_AFTER_MS + 1000,
+        start
+      )
+    ).toBe(30_000);
+    expect(
+      scanIntervalFor(120_000, undefined, start + IDLE_AFTER_MS, start)
+    ).toBe(120_000);
   });
 
   test("seriesWindow is zero-filled, oldest first", () => {
