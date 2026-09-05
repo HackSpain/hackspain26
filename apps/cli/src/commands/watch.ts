@@ -105,6 +105,7 @@ export function registerWatch(program: Command): void {
           uploadEnabled: Boolean(uploadUrl),
         });
         const screen = startScreen(state, {
+          intervalMs,
           onQuit: () => {
             state.stopRequested = true;
           },
