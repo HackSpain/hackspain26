@@ -7,6 +7,7 @@ Setup, env vars, and Convex login live in the [README](README.md). Bun workspace
 ```text
 apps/web    # Astro 6 landing (Vercel, React islands, Tailwind v4, Neon/Drizzle)
 apps/app    # Next.js dashboard + Convex (auth, CRM, teams, perks)
+apps/cli    # `hackspain` terminal client for participants (Bun binary, same Convex backend)
 ```
 
 ```sh
@@ -122,6 +123,17 @@ Profiles store social links as `urls: { kind, url }[]`. `githubUsername` / `twit
 | `/admin/perks` | Perk CRUD + code pools |
 | `/admin/applications` | Email perk applications queue |
 | `/admin/tracks` | Track copy, submission window, projects per challenge |
+
+## CLI (`apps/cli`)
+
+Commander + `@clack/prompts` on Bun, compiled to standalone binaries with `bun build --compile`. See [apps/cli/README.md](apps/cli/README.md).
+
+- The CLI never talks to Convex. It calls the dashboard's `/api/cli/*` route handlers (`apps/app/src/app/api/cli`), which run allowlisted Convex functions server-side with the participant's own Convex Auth session (`fetchQuery` / `fetchMutation` / `fetchAction` from `convex/nextjs` with the bearer token). Same users as the web login. Add a function to `_lib/functions.ts` when a command needs it; `/api/cli(.*)` is public in `src/middleware.ts` because it authenticates with the bearer token, not the cookie.
+- Backend types come from `apps/app/convex/_generated/api.d.ts` via a type-only import in `src/lib/api.ts`; at runtime `api.x.y` is only the name `"x:y"`. Run `bun dev:convex` after changing Convex functions so the CLI typecheck sees them.
+- Functions the CLI calls throw `ConvexError({ code, message })` from `convex/lib/errors.ts`; the route relays them as `{ kind: "convex", data }` and the CLI raises `RemoteError`. Older web-facing functions throw plain `Error`; `src/lib/errors.ts` maps those Spanish gate messages to English hints and exit codes.
+- Credentials: `~/.config/hackspain/credentials.json`, refreshed through `/api/cli/auth/refresh` under a lock file (Convex Auth rotates refresh tokens; a stale reuse logs every process out). State (cursors, spool) goes to `~/.local/state/hackspain/`. From a source checkout the CLI targets `http://localhost:3000` (`bun dev:app`); release binaries target `https://app.hackspain.com`.
+- `--json` prints exactly one JSON object on stdout and disables prompts; everything else goes to stderr.
+- Lint with `ultracite` (Biome) like `apps/web`; tests are `bun test` under `apps/cli/test`.
 
 ## Conventions
 

@@ -1,0 +1,41 @@
+{
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite/biome/core"],
+  "files": {
+    "includes": ["src/**", "test/**", "scripts/**"]
+  },
+  "javascript": {
+    "globals": ["Bun"]
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "useFilenamingConvention": "error",
+        // The CLI uses `type` aliases throughout, matching apps/app.
+        "useConsistentTypeDefinitions": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off"
+      },
+      "suspicious": {
+        // A CLI's whole job is writing to stdout/stderr.
+        "noConsole": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["test/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            // Async stubs standing in for network calls rarely await anything.
+            "useAwait": "off",
+            // File-mode assertions mask with 0o777.
+            "noBitwiseOperators": "off"
+          }
+        }
+      }
+    }
+  ]
+}

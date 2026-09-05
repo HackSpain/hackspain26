@@ -24,7 +24,10 @@
     "db:migrate": "bun run --filter web db:migrate",
     "db:push": "bun run --filter web db:push",
     "astro": "bun run --filter web astro",
-    "migrate:convex": "bun run --filter app migrate"
+    "migrate:convex": "bun run --filter app migrate",
+    "dev:cli": "bun run --filter cli dev",
+    "build:cli": "bun run --filter cli build:bin",
+    "test:cli": "bun run --filter cli test"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
