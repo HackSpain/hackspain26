@@ -16,8 +16,9 @@ import { resolveAppUrl } from "../lib/config";
 import { contextFor } from "../lib/context";
 import { CliError } from "../lib/errors";
 import { describeGate, fetchMe } from "../lib/me";
-import { formatWhen, uiFor } from "../lib/output";
+import { firstName, formatWhen, uiFor } from "../lib/output";
 import { textOrFlag } from "../lib/prompts";
+import { c, highlight } from "../lib/style";
 
 const CODE_PATTERN = /^\d{8}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,10 +57,12 @@ export function registerAuth(program: Command): void {
         const ui = uiFor(ctx);
         const { url } = resolveAppUrl(ctx.urlOverride);
 
-        ui.intro("hackspain login");
+        ui.intro("login");
         const existing = readCredentials();
         if (existing && existing.appUrl === url) {
-          ui.info(`Replacing the current session for ${existing.email}.`);
+          ui.info(
+            `You are already signed in as ${existing.email}. Signing in again replaces that session.`
+          );
         }
 
         const email = normalizeEmail(
@@ -71,49 +74,72 @@ export function registerAuth(program: Command): void {
           })
         );
 
-        if (!(await authStart(url, email))) {
+        const started = await ui.spin(
+          `Sending a code to ${email}…`,
+          () => authStart(url, email),
+          `Code sent to ${email}. Check your inbox (and spam, just in case).`
+        );
+        if (!started) {
           throw new CliError("The server did not start an email sign-in.", {
             code: "SIGNIN_FAILED",
           });
         }
-        ui.step(`Sent an 8-digit code to ${email}.`);
 
         const code = (
           await textOrFlag(ctx, opts.code, {
             flag: "--code",
-            message: "Code from the email",
+            message: "Paste the 8-digit code",
             placeholder: "12345678",
             validate: validateCode,
           })
         ).trim();
 
-        const tokens = await authVerify(url, email, code);
+        const tokens = await ui.spin(
+          "Signing you in…",
+          () => authVerify(url, email, code),
+          "Signed in"
+        );
         if (!tokens) {
           throw new CliError("That code was not accepted.", {
             code: "BAD_OTP",
-            hint: "Codes expire after 15 minutes. Run `hackspain auth login` to get a new one.",
+            hint: "Codes expire after 15 minutes. Run `hackspain auth login` to get a fresh one.",
           });
         }
 
         writeCredentials(credentialsFromTokens(tokens, url, email));
         const session = await openSession(ctx, { requireAuth: true });
-        await session.client.mutation(api.users.attachAfterLogin, {});
-        const me = await fetchMe(session);
+        const me = await ui.spin(
+          "Setting up your profile…",
+          async () => {
+            await session.client.mutation(api.users.attachAfterLogin, {});
+            return await fetchMe(session);
+          },
+          "Profile ready"
+        );
         const gate = me ? describeGate(me) : null;
 
         if (ctx.json) {
           ui.result({ email, url, gate });
           return;
         }
-        ui.success(`Logged in as ${email}.`);
-        if (gate) {
-          (gate.state === "ready" || gate.state === "admin"
-            ? ui.info
-            : ui.warn)(
-            gate.hint ? `${gate.message}\n${gate.hint}` : gate.message
-          );
+        ui.celebrate(`Welcome, ${highlight(firstName(me?.name, email))}!`);
+        if (gate && gate.state !== "ready" && gate.state !== "admin") {
+          ui.warn(gate.message);
+          if (gate.hint) {
+            ui.line(c.dim(gate.hint));
+          }
+          ui.outro("Everything else unlocks once that is sorted.");
+          return;
         }
-        ui.outro("Try `hackspain team show` next.");
+        ui.next([
+          ["hackspain", "see where you stand and what to do next"],
+          [
+            "hackspain team create <name>",
+            "start a team, or join one with a code",
+          ],
+          ["hackspain watch", "keep it running in a spare terminal"],
+        ]);
+        ui.outro("Have a great hackathon ⚡");
       }
     );
 
@@ -140,7 +166,7 @@ export function registerAuth(program: Command): void {
       }
       clearCredentials();
       ui.result({ loggedOut: true, email: creds.email });
-      ui.success(`Logged out ${creds.email}.`);
+      ui.success(`Signed out ${creds.email}. See you soon.`);
     });
 
   auth
@@ -161,12 +187,16 @@ export function registerAuth(program: Command): void {
           ui.result({ loggedIn: false, url, urlSource: source, hint });
           return;
         }
-        ui.warn(`Not logged in to ${url} (${source}).\n${hint}`);
+        ui.warn(`Not signed in to ${url} (${source}).\n${hint}`);
         return;
       }
 
       const session = await openSession(ctx);
-      const me = session.authenticated ? await fetchMe(session) : null;
+      const me = await ui.spin(
+        "Checking your session…",
+        async () => (session.authenticated ? await fetchMe(session) : null),
+        "Session checked"
+      );
       const gate = me ? describeGate(me) : null;
       const refreshed = readCredentials() ?? forThisUrl;
 
@@ -187,15 +217,20 @@ export function registerAuth(program: Command): void {
         return;
       }
 
-      ui.table([
-        ["Email", refreshed.email],
-        ["Server", `${url} (${source})`],
-        ["Token expires", formatWhen(refreshed.tokenExpiresAt)],
-        ["Status", gate ? gate.message : "Session rejected by the server"],
-        ...(me?.githubUsername ? [["GitHub", me.githubUsername]] : []),
+      ui.kv([
+        ["Signed in as", highlight(refreshed.email)],
+        [
+          "Status",
+          gate ? gate.message : c.red("session rejected by the server"),
+        ],
+        ...(me?.githubUsername
+          ? ([["GitHub", me.githubUsername]] as [string, string][])
+          : []),
+        ["Server", c.dim(`${url} (${source})`)],
+        ["Session renews", c.dim(formatWhen(refreshed.tokenExpiresAt))],
       ]);
       if (gate?.hint) {
-        ui.line(`\n${gate.hint}`);
+        ui.line(`\n${c.dim(gate.hint)}`);
       }
     });
 }

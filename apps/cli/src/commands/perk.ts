@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { uiFor } from "../lib/output";
 import { openParticipant, type PerkEntry } from "../lib/participant";
+import { c } from "../lib/style";
 
 function perkStatus(
   perk: PerkEntry["perk"],
@@ -27,24 +28,34 @@ export function registerPerk(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const { session } = await openParticipant(ctx);
-      const entries = await session.client.query(api.perks.listCatalog, {});
+      const entries = await ui.spin(
+        "Fetching perks…",
+        () => session.client.query(api.perks.listCatalog, {}),
+        "Perks"
+      );
       ui.result(entries);
       if (entries.length === 0) {
-        ui.info("No perks published yet.");
+        ui.info(
+          "No perks published yet. Partners usually add them right before the event."
+        );
         return;
       }
       ui.table(
         entries.map(({ perk: p, claim }) => [
           p.company,
           p.title,
-          p.value,
-          perkStatus(p, claim),
-          p._id,
+          c.gold(p.value),
+          claim ? c.green(perkStatus(p, claim)) : c.dim(perkStatus(p, claim)),
+          c.dim(p._id),
         ]),
         ["Partner", "Perk", "Value", "Status", "Id"]
       );
-      ui.info(
-        "Claim perks from the dashboard; pass ids to `hackspain submit --perk <id>`."
-      );
+      ui.next([
+        ["app.hackspain.com/perks", "claim a perk from the dashboard"],
+        [
+          "hackspain submit --perk <id>",
+          "credit the perks you used in your project",
+        ],
+      ]);
     });
 }

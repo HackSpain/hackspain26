@@ -106,11 +106,12 @@ export function registerUpdate(program: Command): void {
 
       const asset = assetName();
       const base = `https://github.com/${REPO}/releases/download/${release.tag_name}`;
-      ui.step(`Downloading ${asset} ${latest}…`);
-      const [binary, sums] = await Promise.all([
-        fetch(`${base}/${asset}`),
-        fetch(`${base}/SHA256SUMS`),
-      ]);
+      const [binary, sums] = await ui.spin(
+        `Downloading ${asset} ${latest}…`,
+        () =>
+          Promise.all([fetch(`${base}/${asset}`), fetch(`${base}/SHA256SUMS`)]),
+        "Downloaded"
+      );
       if (!(binary.ok && sums.ok)) {
         throw new CliError("Could not download the release assets.", {
           exitCode: EXIT.NETWORK,
@@ -145,6 +146,8 @@ export function registerUpdate(program: Command): void {
       }
       renameSync(staging, target);
       ui.result({ current: VERSION, installed: latest, path: target });
-      ui.success(`Updated ${VERSION} → ${latest} at ${target}.`);
+      ui.celebrate(
+        `Updated ${VERSION} → ${latest}. You are on the newest build.`
+      );
     });
 }

@@ -16,6 +16,7 @@ Windows: download `hackspain-windows-x64.exe` from the
 Binaries are self-contained; nothing else to install.
 
 ```
+hackspain                       # where you stand and what to do next
 hackspain auth login            # email + 8-digit code, same as the dashboard
 hackspain auth status | logout
 

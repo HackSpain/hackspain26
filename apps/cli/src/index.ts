@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
 import { registerAuth } from "./commands/auth";
+import { registerHome } from "./commands/home";
 import { registerMilestone } from "./commands/milestone";
 import { registerPerk } from "./commands/perk";
 import { registerProject } from "./commands/project";
@@ -12,12 +13,21 @@ import { registerTrack } from "./commands/track";
 import { registerUpdate } from "./commands/update";
 import { registerWatch } from "./commands/watch";
 import { runCli } from "./lib/run";
+import { BRAND, c, cmd } from "./lib/style";
 import { VERSION } from "./version";
 
 const program = new Command()
   .name("hackspain")
-  .description("Terminal client for HackSpain participants")
+  .description("Your terminal companion for HackSpain 2026")
   .version(VERSION, "-v, --version")
+  .addHelpText(
+    "beforeAll",
+    `${BRAND} ${c.dim(`v${VERSION}`)}  ${c.dim("Madrid · teams, tracks, projects, live usage board")}\n`
+  )
+  .addHelpText(
+    "afterAll",
+    `\n${c.dim("Start with")} ${cmd("hackspain auth login")}${c.dim(", then just")} ${cmd("hackspain")} ${c.dim("to see where you stand.")}\n`
+  )
   .option("--json", "machine-readable output on stdout, no prompts")
   .option(
     "--url <url>",
@@ -26,6 +36,7 @@ const program = new Command()
   .showHelpAfterError("(run with --help for usage)")
   .showSuggestionAfterError();
 
+registerHome(program);
 registerAuth(program);
 registerTeam(program);
 registerTrack(program);

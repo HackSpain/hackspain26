@@ -4,6 +4,7 @@ import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
 import { formatWhen, uiFor } from "../lib/output";
 import { type Milestone, openParticipant } from "../lib/participant";
+import { c, highlight } from "../lib/style";
 
 const KINDS = ["firstCommit", "firstBuild", "firstDemo", "custom"] as const;
 type Kind = (typeof KINDS)[number];
@@ -13,6 +14,13 @@ const KIND_LABEL: Record<Kind, string> = {
   firstBuild: "First build",
   firstDemo: "First demo",
   custom: "Milestone",
+};
+
+const KIND_CHEER: Record<Kind, string> = {
+  firstCommit: "the repo is no longer empty.",
+  firstBuild: "it builds. Everything after this is polish.",
+  firstDemo: "you have something to show.",
+  custom: "logged.",
 };
 
 function parseKind(raw: string): Kind {
@@ -43,11 +51,11 @@ function parseAt(raw: string | undefined): number | undefined {
 
 function rows(list: Milestone[], withTeam: boolean): string[][] {
   return list.map((m) => [
-    formatWhen(m.at),
+    c.dim(formatWhen(m.at)),
     ...(withTeam ? [m.teamName] : []),
-    KIND_LABEL[m.kind],
+    highlight(KIND_LABEL[m.kind]),
     m.label ?? "",
-    m.byEmail ?? "",
+    c.dim(m.byEmail ?? ""),
   ]);
 }
 
@@ -71,14 +79,21 @@ export function registerMilestone(program: Command): void {
         const ui = uiFor(ctx);
         const { session } = await openParticipant(ctx);
         const kind = parseKind(rawKind);
-        const id = await session.client.mutation(api.milestones.add, {
-          kind,
-          label: opts.label,
-          at: parseAt(opts.at),
-        });
+        const id = await ui.spin(
+          "Recording…",
+          () =>
+            session.client.mutation(api.milestones.add, {
+              kind,
+              label: opts.label,
+              at: parseAt(opts.at),
+            }),
+          "Recorded"
+        );
         ui.result({ id, kind, label: opts.label ?? null });
-        ui.success(
-          `${KIND_LABEL[kind]}${opts.label ? `: ${opts.label}` : ""} recorded.`
+        ui.celebrate(
+          kind === "custom"
+            ? `${highlight(opts.label ?? KIND_LABEL.custom)} logged.`
+            : `${highlight(KIND_LABEL[kind])}: ${KIND_CHEER[kind]}`
         );
       }
     );
@@ -91,14 +106,27 @@ export function registerMilestone(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const { session } = await openParticipant(ctx);
-      const list = opts.all
-        ? await session.client.query(api.milestones.list, {})
-        : await session.client.query(api.milestones.mine, {});
+      const list = await ui.spin(
+        "Fetching milestones…",
+        () =>
+          opts.all
+            ? session.client.query(api.milestones.list, {})
+            : session.client.query(api.milestones.mine, {}),
+        "Milestones"
+      );
       ui.result(list);
       if (list.length === 0) {
         ui.info(
-          opts.all ? "No milestones yet." : "No milestones for your team yet."
+          opts.all
+            ? "No milestones from anyone yet."
+            : "No milestones for your team yet."
         );
+        ui.next([
+          [
+            "hackspain milestone add firstCommit",
+            "log the first one when it happens",
+          ],
+        ]);
         return;
       }
       ui.table(

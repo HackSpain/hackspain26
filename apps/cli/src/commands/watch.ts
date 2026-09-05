@@ -1,10 +1,12 @@
+import { note } from "@clack/prompts";
 import type { Command } from "commander";
 import { api, openSession } from "../lib/api";
 import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
 import { requireOnboarded } from "../lib/me";
-import { uiFor } from "../lib/output";
+import { firstName, uiFor } from "../lib/output";
+import { c } from "../lib/style";
 import { acquireWatchLock, runWatch } from "../watcher";
 
 type WatchFlags = {
@@ -75,10 +77,32 @@ export function registerWatch(program: Command): void {
           readConfig().telemetry?.url ??
           `${session.url}/api/cli/telemetry`)
         : undefined;
+      const announce = (subject: string, body: string, at: number) => {
+        if (ctx.json) {
+          console.log(
+            JSON.stringify({ event: "notification", subject, body, at })
+          );
+          return;
+        }
+        process.stdout.write("\x07");
+        note(
+          body,
+          `📣 ${c.bold(subject)} ${c.dim(`· organisers · ${new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`)}`
+        );
+      };
       try {
         ui.intro(
-          `hackspain watch ${flags.once ? "(once)" : `every ${flags.interval}s`}`
+          flags.once
+            ? "watch · once"
+            : `watch ${c.dim(`· every ${flags.interval}s · Ctrl+C to stop`)}`
         );
+        if (!flags.once) {
+          ui.line(
+            c.dim(
+              `Hi ${firstName(me.name, me.email)}. Leave this running: your AI usage feeds the live board${team ? ` for ${team.name}` : ""}, and organiser messages show up here.`
+            )
+          );
+        }
         const code = await runWatch(
           {
             once: Boolean(flags.once),
@@ -88,7 +112,7 @@ export function registerWatch(program: Command): void {
             uploadUrl,
             verbose: Boolean(flags.verbose),
           },
-          { session, me, teamId: team?._id, log, say }
+          { session, me, teamId: team?._id, log, say, announce }
         );
         process.exitCode = code;
       } finally {

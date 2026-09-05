@@ -12,7 +12,7 @@ describe("renderTable", () => {
     );
     expect(out.split("\n")).toEqual([
       "Team      Members",
-      "--------  -------",
+      "────────  ───────",
       "Tortilla  4",
       "Ñ         12",
     ]);

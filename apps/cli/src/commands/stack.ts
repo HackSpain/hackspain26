@@ -4,6 +4,7 @@ import { contextFor } from "../lib/context";
 import { CliError } from "../lib/errors";
 import { uiFor } from "../lib/output";
 import { openParticipant } from "../lib/participant";
+import { c, highlight } from "../lib/style";
 
 export function registerStack(program: Command): void {
   const stack = program
@@ -17,12 +18,26 @@ export function registerStack(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const { session } = await openParticipant(ctx);
-      const mine = await session.client.query(api.teams.mine, {});
+      const mine = await ui.spin(
+        "Fetching your team…",
+        () => session.client.query(api.teams.mine, {}),
+        "Stack"
+      );
       if (!mine) {
         throw new CliError("You are not in a team yet.", { code: "NO_TEAM" });
       }
       ui.result({ techStack: mine.techStack });
-      ui.line(mine.techStack.length ? mine.techStack.join(", ") : "(not set)");
+      if (mine.techStack.length === 0) {
+        ui.info("No stack declared yet.");
+        ui.next([
+          [
+            "hackspain stack set nextjs convex claude-code",
+            "list what you are building with",
+          ],
+        ]);
+        return;
+      }
+      ui.line(mine.techStack.map((t) => highlight(t)).join(c.dim(" · ")));
     });
 
   stack
@@ -34,12 +49,19 @@ export function registerStack(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const { session } = await openParticipant(ctx);
-      const saved = await session.client.mutation(api.teams.setTechStack, {
-        stack: tech.flatMap((t) => t.split(",")),
-      });
+      const saved = await ui.spin(
+        "Saving your stack…",
+        () =>
+          session.client.mutation(api.teams.setTechStack, {
+            stack: tech.flatMap((t) => t.split(",")),
+          }),
+        "Saved"
+      );
       ui.result({ techStack: saved });
       ui.success(
-        saved.length ? `Stack: ${saved.join(", ")}` : "Stack cleared."
+        saved.length
+          ? `Building with ${saved.map((t) => highlight(t)).join(c.dim(" · "))}`
+          : "Stack cleared."
       );
     });
 }

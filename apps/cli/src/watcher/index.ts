@@ -50,6 +50,8 @@ export type WatchDeps = {
   teamId?: string;
   log: (message: string) => void;
   say: (message: string) => void;
+  /** Renders an organiser message; defaults to `say(formatNotification(...))`. */
+  announce?: (subject: string, body: string, at: number) => void;
   toaster?: Toaster;
   collectors?: Collector[];
   extraSinks?: Sink[];
@@ -247,7 +249,11 @@ export async function runWatch(
         continue;
       }
       lastSeen = row.sentAt;
-      say(formatNotification(row.subject, row.body, row.sentAt));
+      (deps.announce ?? ((s, b, at) => say(formatNotification(s, b, at))))(
+        row.subject,
+        row.body,
+        row.sentAt
+      );
       if (options.toast) {
         toaster(row.subject, row.body).then((ok) => {
           if (!ok) {
