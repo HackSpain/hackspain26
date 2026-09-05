@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { api, openSession } from "../lib/api";
 import { readCredentials } from "../lib/auth-store";
+import { banner } from "../lib/banner";
 import { resolveAppUrl } from "../lib/config";
 import { contextFor } from "../lib/context";
 import { describeGate, fetchMe } from "../lib/me";
@@ -17,7 +18,10 @@ export function registerHome(program: Command): void {
     const ctx = contextFor(command);
     const ui = uiFor(ctx);
     const { url } = resolveAppUrl(ctx.urlOverride);
-    ui.intro(`HackSpain 2026 · Madrid ${c.dim(`v${VERSION}`)}`);
+    if (!ctx.json) {
+      console.log(`\n${banner()}\n`);
+    }
+    ui.intro(c.dim(`v${VERSION}`));
 
     const creds = readCredentials();
     if (!creds || creds.appUrl !== url) {

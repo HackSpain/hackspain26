@@ -12,8 +12,9 @@ import { registerTelemetry } from "./commands/telemetry";
 import { registerTrack } from "./commands/track";
 import { registerUpdate } from "./commands/update";
 import { registerWatch } from "./commands/watch";
+import { banner } from "./lib/banner";
 import { runCli } from "./lib/run";
-import { BRAND, c, cmd } from "./lib/style";
+import { c, cmd } from "./lib/style";
 import { VERSION } from "./version";
 
 const program = new Command()
@@ -22,7 +23,7 @@ const program = new Command()
   .version(VERSION, "-v, --version")
   .addHelpText(
     "beforeAll",
-    `${BRAND} ${c.dim(`v${VERSION}`)}  ${c.dim("Madrid · teams, tracks, projects, live usage board")}\n`
+    `${banner(`HackSpain 2026 · Madrid · v${VERSION}`)}\n`
   )
   .addHelpText(
     "afterAll",
