@@ -5,6 +5,7 @@ import { registerFeed } from "./commands/feed";
 import { registerHome } from "./commands/home";
 import { registerMilestone } from "./commands/milestone";
 import { registerPerk } from "./commands/perk";
+import { registerProfile } from "./commands/profile";
 import { registerProject } from "./commands/project";
 import { registerStack } from "./commands/stack";
 import { registerSubmit } from "./commands/submit";
@@ -40,6 +41,7 @@ const program = new Command()
 
 registerHome(program);
 registerAuth(program);
+registerProfile(program);
 registerTeam(program);
 registerTrack(program);
 registerProject(program);

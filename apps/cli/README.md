@@ -20,6 +20,13 @@ hackspain                       # where you stand and what to do next
 hackspain auth login            # email + 8-digit code, same as the dashboard
 hackspain auth status | logout
 
+hackspain profile               # attendance, diet, travel, phone, notices, GitHub
+hackspain profile edit [--diet …] [--diet-details …] [--from …]
+hackspain profile attendance [attending|cancelled]
+hackspain profile notify on|off
+hackspain profile phone [+34…] [--code …]   # SMS code, same as the dashboard
+hackspain profile github [--unlink]         # prints the link to authorise in a browser
+
 hackspain team create <name> [-m github:x -m a@b.c]
 hackspain team join <code>      # 8-character code from the owner
 hackspain team show | list | leave | code [--regenerate] | repo [url|--clear]

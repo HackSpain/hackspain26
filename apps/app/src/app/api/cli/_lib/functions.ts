@@ -12,13 +12,26 @@ export type Exposed =
   | { kind: "mutation"; ref: FunctionReference<"mutation"> }
   | { kind: "action"; ref: FunctionReference<"action"> };
 
-const query = (ref: FunctionReference<"query">): Exposed => ({ kind: "query", ref });
-const mutation = (ref: FunctionReference<"mutation">): Exposed => ({ kind: "mutation", ref });
+const query = (ref: FunctionReference<"query">): Exposed => ({
+  kind: "query",
+  ref,
+});
+const mutation = (ref: FunctionReference<"mutation">): Exposed => ({
+  kind: "mutation",
+  ref,
+});
 
 export const CLI_FUNCTIONS: Record<string, Exposed> = {
   // auth / profile
   "users:me": query(api.users.me),
   "users:attachAfterLogin": mutation(api.users.attachAfterLogin),
+  "users:setAttendance": mutation(api.users.setAttendance),
+  "users:setNotificationConsent": mutation(api.users.setNotificationConsent),
+  "users:updateEventDetails": mutation(api.users.updateEventDetails),
+  "onboarding:requestPhoneCode": mutation(api.onboarding.requestPhoneCode),
+  "onboarding:verifyPhoneCode": mutation(api.onboarding.verifyPhoneCode),
+  "github:startLink": mutation(api.github.startLink),
+  "github:unlink": mutation(api.github.unlink),
 
   // teams
   "teams:mine": query(api.teams.mine),
