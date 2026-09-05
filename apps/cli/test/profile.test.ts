@@ -30,7 +30,7 @@ function row(me: Me, label: string): string {
 
 describe("profile", () => {
   test("rows read like the dashboard's profile page", () => {
-    expect(row(base, "Attendance")).toBe("attending");
+    expect(row(base, "Name")).toBe("Ana");
     expect(row(base, "Phone")).toBe("+34600111222 · confirmed");
     expect(row(base, "GitHub")).toBe("ana · linked");
     expect(row(base, "Event notices")).toBe("on");
@@ -42,13 +42,13 @@ describe("profile", () => {
       ...base,
       phone: undefined,
       phoneConfirmed: false,
-      attendanceStatus: "cancelled",
+      name: undefined,
       dietaryRestrictions: undefined,
       dietaryDetails: "no nuts",
       notificationConsent: false,
       githubLinked: false,
     };
-    expect(row(me, "Attendance")).toBe("not coming");
+    expect(row(me, "Name")).toContain("hackspain profile edit");
     expect(row(me, "Phone")).toContain("hackspain profile phone");
     expect(row(me, "Diet")).toContain("hackspain profile edit");
     expect(row(me, "Diet details")).toBe("no nuts");
@@ -60,7 +60,6 @@ describe("profile", () => {
     expect(Object.keys(profileJson(base))).toEqual([
       "name",
       "email",
-      "attendanceStatus",
       "dietaryRestrictions",
       "dietaryDetails",
       "travelOrigin",

@@ -1,22 +1,22 @@
 import type { Command } from "commander";
-import { api } from "../lib/api";
-import { contextFor } from "../lib/context";
+import { api, type Session } from "../lib/api";
+import { type CliContext, contextFor } from "../lib/context";
 import { CliError, usageError } from "../lib/errors";
 import type { Me } from "../lib/me";
-import { uiFor } from "../lib/output";
+import { type Ui, uiFor } from "../lib/output";
 import { openParticipant } from "../lib/participant";
-import { confirmOrFlag, pickOne, textOrFlag } from "../lib/prompts";
+import { confirmOrFlag, textOrFlag } from "../lib/prompts";
 import { c, cmd, highlight } from "../lib/style";
 
 /**
- * `hackspain profile`: the same five things the dashboard's profile page
- * edits (attendance, diet and travel, phone, event notices, GitHub), so a
- * hacker never has to leave the terminal to keep organisers informed.
+ * `hackspain profile`: what the dashboard's profile page edits (name, diet
+ * and travel, phone, event notices, GitHub), so a hacker never has to leave
+ * the terminal to keep organisers informed. Attendance is deliberately not
+ * here: this tool is used at the venue.
  */
 const E164 = /^\+[1-9]\d{6,14}$/;
 const PHONE_CODE = /^\d{4,8}$/;
-
-type Attendance = "attending" | "cancelled";
+const PHONE_NOISE = /[\s()-]/g;
 
 const PHONE_FAILURES: Record<string, string> = {
   no_challenge: "No code was requested. Run `hackspain profile phone` again.",
@@ -24,17 +24,6 @@ const PHONE_FAILURES: Record<string, string> = {
   too_many_attempts: "Too many attempts. Request a new code.",
   incorrect: "That code is not right.",
 };
-
-function attendanceLabel(me: Me): string {
-  switch (me.attendanceStatus) {
-    case "attending":
-      return c.gold("attending");
-    case "cancelled":
-      return c.red("not coming");
-    default:
-      return c.dim("undecided");
-  }
-}
 
 function phoneLabel(me: Me): string {
   if (!me.phone) {
@@ -57,9 +46,8 @@ function githubLabel(me: Me): string {
 
 export function profileRows(me: Me): [string, string][] {
   return [
-    ["Name", me.name ?? c.dim("–")],
+    ["Name", me.name ?? c.dim("not set · hackspain profile edit")],
     ["Email", me.email ?? c.dim("–")],
-    ["Attendance", attendanceLabel(me)],
     [
       "Diet",
       me.dietaryRestrictions ?? c.dim("not set · hackspain profile edit"),
@@ -86,7 +74,6 @@ export function profileJson(me: Me) {
   return {
     name: me.name,
     email: me.email,
-    attendanceStatus: me.attendanceStatus,
     dietaryRestrictions: me.dietaryRestrictions,
     dietaryDetails: me.dietaryDetails,
     travelOrigin: me.travelOrigin,
@@ -107,18 +94,28 @@ async function showProfile(command: Command): Promise<void> {
   ui.kv(profileRows(me));
   ui.next([
     ["hackspain profile edit", "diet and where you travel from"],
-    ["hackspain profile attendance", "tell us if plans change"],
     ["hackspain profile phone <number>", "so we can reach you at the venue"],
   ]);
 }
 
-type EditOptions = { diet?: string; dietDetails?: string; from?: string };
+type EditOptions = {
+  name?: string;
+  diet?: string;
+  dietDetails?: string;
+  from?: string;
+};
 
 async function editProfile(opts: EditOptions, command: Command): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
   const { session, me } = await openParticipant(ctx);
   ui.intro("profile · edit");
+  const name = await textOrFlag(ctx, opts.name, {
+    flag: "--name",
+    message: "Your name, as it should appear on badges and the board",
+    initialValue: me.name ?? "",
+    validate: validateName,
+  });
   const dietaryRestrictions = await textOrFlag(ctx, opts.diet, {
     flag: "--diet",
     message: "Dietary restrictions (write None if you have none)",
@@ -141,79 +138,25 @@ async function editProfile(opts: EditOptions, command: Command): Promise<void> {
   });
   await ui.spin(
     "Saving…",
-    () =>
-      session.client.mutation(api.users.updateEventDetails, {
+    async () => {
+      if (name.trim() !== (me.name ?? "")) {
+        await session.client.mutation(api.users.setName, { name });
+      }
+      await session.client.mutation(api.users.updateEventDetails, {
         dietaryRestrictions: dietaryRestrictions.trim(),
         dietaryDetails: dietaryDetails.trim() || undefined,
         travelOrigin: travelOrigin.trim(),
-      }),
+      });
+    },
     "Saved"
   );
   ui.result({
+    name: name.trim(),
     dietaryRestrictions: dietaryRestrictions.trim(),
     dietaryDetails: dietaryDetails.trim() || undefined,
     travelOrigin: travelOrigin.trim(),
   });
   ui.success("Profile updated. Organisers see it straight away.");
-}
-
-async function setAttendance(
-  status: string | undefined,
-  opts: { yes?: boolean },
-  command: Command
-): Promise<void> {
-  const ctx = contextFor(command);
-  const ui = uiFor(ctx);
-  const { session, me } = await openParticipant(ctx);
-  if (
-    status !== undefined &&
-    status !== "attending" &&
-    status !== "cancelled"
-  ) {
-    throw usageError(
-      `Attendance must be "attending" or "cancelled", got "${status}".`
-    );
-  }
-  const choice = await pickOne<Attendance>(
-    ctx,
-    status as Attendance | undefined,
-    {
-      flag: "<attending|cancelled>",
-      message: "Are you coming to HackSpain?",
-      choices: [
-        { value: "attending", label: "Yes, I am attending" },
-        { value: "cancelled", label: "No, I cannot make it" },
-      ],
-    }
-  );
-  if (choice === "cancelled" && me.attendanceStatus !== "cancelled") {
-    const ok = await confirmOrFlag(ctx, opts.yes, {
-      flag: "--yes",
-      message:
-        "Mark yourself as not coming? Your spot may be offered to someone on the waitlist.",
-      initialValue: false,
-    });
-    if (!ok) {
-      ui.info("Kept your attendance as it was.");
-      return;
-    }
-  }
-  await ui.spin(
-    "Saving…",
-    () =>
-      session.client.mutation(api.users.setAttendance, {
-        attendanceStatus: choice,
-      }),
-    "Saved"
-  );
-  ui.result({ attendanceStatus: choice });
-  if (choice === "attending") {
-    ui.celebrate("See you at HackSpain!");
-  } else {
-    ui.success(
-      "Noted. If plans change, run `hackspain profile attendance attending`."
-    );
-  }
 }
 
 async function setNotify(
@@ -242,15 +185,15 @@ async function setNotify(
   );
 }
 
-async function confirmPhone(
+/** The SMS challenge, shared by `profile phone` and the post-login check. */
+export async function runPhoneConfirmation(
+  ctx: CliContext,
+  ui: Ui,
+  session: Session,
+  me: Me,
   number: string | undefined,
-  opts: { code?: string },
-  command: Command
-): Promise<void> {
-  const ctx = contextFor(command);
-  const ui = uiFor(ctx);
-  const { session, me } = await openParticipant(ctx);
-  ui.intro("profile · phone");
+  code: string | undefined
+): Promise<string> {
   const phone = (
     await textOrFlag(ctx, number, {
       flag: "<number>",
@@ -258,11 +201,11 @@ async function confirmPhone(
       placeholder: "+34 600 111 222",
       initialValue: me.phone ?? "",
       validate: (v) =>
-        E164.test(v.replace(/[\s()-]/g, ""))
+        E164.test(v.replace(PHONE_NOISE, ""))
           ? undefined
           : "Use the international format, like +34600111222.",
     })
-  ).replace(/[\s()-]/g, "");
+  ).replace(PHONE_NOISE, "");
   const requested = await ui.spin(
     "Sending a code…",
     () => session.client.mutation(api.onboarding.requestPhoneCode, { phone }),
@@ -273,7 +216,7 @@ async function confirmPhone(
       `SMS is not configured on this server; the code is ${highlight(requested.debugCode ?? "?")}.`
     );
   }
-  const code = await textOrFlag(ctx, opts.code, {
+  const entered = await textOrFlag(ctx, code, {
     flag: "--code",
     message: `Enter the code we sent to ${phone}`,
     placeholder: "000000",
@@ -283,18 +226,36 @@ async function confirmPhone(
     "Checking…",
     () =>
       session.client.mutation(api.onboarding.verifyPhoneCode, {
-        code: code.trim(),
+        code: entered.trim(),
       }),
     "Checked"
   );
   if (!verified.ok) {
     throw new CliError(
       PHONE_FAILURES[verified.reason] ?? "Could not confirm the phone.",
-      {
-        code: "BAD_OTP",
-      }
+      { code: "BAD_OTP" }
     );
   }
+  return phone;
+}
+
+async function confirmPhone(
+  number: string | undefined,
+  opts: { code?: string },
+  command: Command
+): Promise<void> {
+  const ctx = contextFor(command);
+  const ui = uiFor(ctx);
+  const { session, me } = await openParticipant(ctx);
+  ui.intro("profile · phone");
+  const phone = await runPhoneConfirmation(
+    ctx,
+    ui,
+    session,
+    me,
+    number,
+    opts.code
+  );
   ui.result({ phone, phoneConfirmed: true });
   ui.celebrate(`${phone} confirmed. Organisers can reach you at the venue.`);
 }
@@ -336,6 +297,19 @@ async function linkGithub(
     );
     return;
   }
+  const url = await startGithubLink(session, ui);
+  ui.result({ url });
+  ui.note(
+    `${url}\n\nGitHub asks you to authorise HackSpain, then sends you back to the dashboard. Run ${cmd("hackspain profile")} afterwards to check.`,
+    "Open this link in your browser"
+  );
+}
+
+/** Authorise URL for the GitHub OAuth link; English error when the server lacks the app keys. */
+export async function startGithubLink(
+  session: Session,
+  ui: Ui
+): Promise<string> {
   const { url } = await ui.spin(
     "Preparing the GitHub link…",
     async () => {
@@ -356,11 +330,101 @@ async function linkGithub(
     },
     "Ready"
   );
-  ui.result({ url });
+  return url;
+}
+
+function validateName(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed.length >= 2 && trimmed.length <= 80
+    ? undefined
+    : "Between 2 and 80 characters.";
+}
+
+/**
+ * Right after login: ask for whatever organisers need and the profile is
+ * still missing (name, a confirmed phone, GitHub). Every step can be skipped
+ * with Enter; nothing runs in --json or non-interactive mode.
+ */
+export async function completeProfile(
+  ctx: CliContext,
+  ui: Ui,
+  session: Session,
+  me: Me
+): Promise<Me> {
+  if (!ctx.interactive) {
+    return me;
+  }
+  let current = me;
+  // GitHub linking needs the OAuth app keys on the server; when they are
+  // missing the step is left out rather than promised and then skipped.
+  let githubUrl: string | undefined;
+  if (!current.githubLinked) {
+    try {
+      githubUrl = (await session.client.mutation(api.github.startLink, {})).url;
+    } catch {
+      githubUrl = undefined;
+    }
+  }
+  const askPhone =
+    !current.phoneConfirmed && (current.accepted || current.role === "admin");
+  const missing = [
+    !current.name && "your name",
+    askPhone && "a confirmed phone",
+    githubUrl && "your GitHub",
+  ].filter(Boolean) as string[];
+  if (missing.length === 0) {
+    return current;
+  }
   ui.note(
-    `${url}\n\nGitHub asks you to authorise HackSpain, then sends you back to the dashboard. Run ${cmd("hackspain profile")} afterwards to check.`,
-    "Open this link in your browser"
+    `Organisers still need ${missing.join(", ")}. Press Enter to skip any of these; ${cmd("hackspain profile")} has them all later.`,
+    "One more minute"
   );
+  if (!current.name) {
+    const name = await textOrFlag(ctx, undefined, {
+      flag: "--name",
+      message: "Your name, as it should appear on badges and the board",
+      optional: true,
+      validate: validateName,
+    });
+    if (name.trim()) {
+      await session.client.mutation(api.users.setName, { name });
+      current = { ...current, name: name.trim() };
+      ui.success(`Nice to meet you, ${highlight(name.trim())}.`);
+    }
+  }
+  if (askPhone) {
+    const wants = await confirmOrFlag(ctx, undefined, {
+      flag: "--phone",
+      message:
+        "Confirm your mobile now? Organisers use it to reach you at the venue.",
+      initialValue: true,
+    });
+    if (wants) {
+      try {
+        const phone = await runPhoneConfirmation(
+          ctx,
+          ui,
+          session,
+          current,
+          undefined,
+          undefined
+        );
+        current = { ...current, phone, phoneConfirmed: true };
+        ui.success(`${phone} confirmed.`);
+      } catch (err) {
+        ui.warn(
+          `${err instanceof Error ? err.message : String(err)} Try again later with ${cmd("hackspain profile phone")}.`
+        );
+      }
+    }
+  }
+  if (githubUrl) {
+    ui.note(
+      `${githubUrl}\n\nAuthorise HackSpain there and you are done; it is how your pushes show up on the feed.`,
+      "Link your GitHub in the browser"
+    );
+  }
+  return current;
 }
 
 export function registerProfile(program: Command): void {
@@ -380,17 +444,12 @@ export function registerProfile(program: Command): void {
 
   profile
     .command("edit")
-    .description("Diet and where you travel from")
+    .description("Name, diet and where you travel from")
+    .option("--name <name>", "your name")
     .option("--diet <text>", "dietary restrictions, or None")
     .option("--diet-details <text>", "anything else about your diet")
     .option("--from <place>", "city or region you travel from")
     .action(editProfile);
-
-  profile
-    .command("attendance [status]")
-    .description("Tell us if you are coming: attending | cancelled")
-    .option("-y, --yes", "skip the confirmation when cancelling")
-    .action(setAttendance);
 
   profile
     .command("notify <on|off>")

@@ -25,7 +25,7 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   // auth / profile
   "users:me": query(api.users.me),
   "users:attachAfterLogin": mutation(api.users.attachAfterLogin),
-  "users:setAttendance": mutation(api.users.setAttendance),
+  "users:setName": mutation(api.users.setName),
   "users:setNotificationConsent": mutation(api.users.setNotificationConsent),
   "users:updateEventDetails": mutation(api.users.updateEventDetails),
   "onboarding:requestPhoneCode": mutation(api.onboarding.requestPhoneCode),

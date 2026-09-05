@@ -17,12 +17,11 @@ Binaries are self-contained; nothing else to install.
 
 ```
 hackspain                       # where you stand and what to do next
-hackspain auth login            # email + 8-digit code, same as the dashboard
+hackspain auth login            # email + 8-digit code; then asks for a missing name, phone or GitHub
 hackspain auth status | logout
 
-hackspain profile               # attendance, diet, travel, phone, notices, GitHub
-hackspain profile edit [--diet …] [--diet-details …] [--from …]
-hackspain profile attendance [attending|cancelled]
+hackspain profile               # name, diet, travel, phone, notices, GitHub
+hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]
 hackspain profile notify on|off
 hackspain profile phone [+34…] [--code …]   # SMS code, same as the dashboard
 hackspain profile github [--unlink]         # prints the link to authorise in a browser
