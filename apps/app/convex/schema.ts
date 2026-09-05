@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
+import { milestoneKindValidator } from "./lib/validators";
 
 const authTablesWithoutUsers = Object.fromEntries(
   Object.entries(authTables).filter(([name]) => name !== "users"),
@@ -90,9 +91,25 @@ export default defineSchema({
   teams: defineTable({
     name: v.string(),
     ownerId: v.id("users"),
+    joinCode: v.optional(v.string()),
+    repoUrl: v.optional(v.string()),
+    techStack: v.optional(v.array(v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_owner", ["ownerId"]),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_join_code", ["joinCode"]),
+
+  milestones: defineTable({
+    teamId: v.id("teams"),
+    userId: v.id("users"),
+    kind: milestoneKindValidator,
+    label: v.optional(v.string()),
+    at: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_team", ["teamId"])
+    .index("by_at", ["at"]),
 
   teamMembers: defineTable({
     teamId: v.id("teams"),
@@ -224,5 +241,5 @@ export default defineSchema({
     recipientCount: v.number(),
     sentCount: v.number(),
     failures: v.array(v.object({ email: v.string(), error: v.string() })),
-  }),
+  }).index("by_sent_at", ["sentAt"]),
 });

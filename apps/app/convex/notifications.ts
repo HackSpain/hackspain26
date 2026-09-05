@@ -3,7 +3,11 @@ import { Resend as ResendAPI } from "resend";
 import { internalAction, internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { adminMutation, adminQuery } from "./lib/customFunctions";
+import {
+  adminMutation,
+  adminQuery,
+  authedQuery,
+} from "./lib/customFunctions";
 import { countsAsAttending } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -152,6 +156,56 @@ export const list = adminQuery({
       });
     }
     return result;
+  },
+});
+
+const FOR_ME_LIMIT = 50;
+const FOR_ME_SCAN_LIMIT = 200;
+
+/**
+ * Broadcasts addressed to the caller, oldest first. Used by the CLI watcher as
+ * a live subscription (`since` = process start) and by `hackspain notifications`.
+ * Intentionally not gated on `notificationConsent`: that flag governs email,
+ * and running the watcher is itself an opt-in to see organiser messages.
+ */
+export const forMe = authedQuery({
+  args: { since: v.optional(v.number()) },
+  returns: v.array(
+    v.object({
+      _id: v.id("notifications"),
+      subject: v.string(),
+      body: v.string(),
+      audience: audienceValidator,
+      sentAt: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const since = args.since ?? 0;
+    const rows = await ctx.db
+      .query("notifications")
+      .withIndex("by_sent_at", (q) => q.gt("sentAt", since))
+      .order("asc")
+      .take(FOR_ME_SCAN_LIMIT);
+    if (rows.length === 0) return [];
+
+    const signup = await getSignupForUser(ctx, ctx.user);
+    const accepted = signupIsAccepted(signup);
+    const attending = countsAsAttending(ctx.user.attendanceStatus);
+
+    const result = [];
+    for (const row of rows) {
+      if (row.audience === "user" && row.recipientUserId !== ctx.user._id) continue;
+      if (row.audience === "accepted" && !accepted) continue;
+      if (row.audience === "attending" && !attending) continue;
+      result.push({
+        _id: row._id,
+        subject: row.subject,
+        body: row.body,
+        audience: row.audience,
+        sentAt: row.sentAt,
+      });
+    }
+    return result.slice(-FOR_ME_LIMIT);
   },
 });
 
