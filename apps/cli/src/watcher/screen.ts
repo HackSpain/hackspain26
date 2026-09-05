@@ -257,7 +257,7 @@ function harnessesBox(
     );
     const detail = harness.lastEventAt
       ? `${compactNumber(harness.requests)} req · ${formatAgo(harness.lastEventAt, now)}`
-      : "waiting for the first request";
+      : "waiting for requests";
     lines.push(
       `${rgb(live ? GOLD : TEAL, "●")} ${name} ${spark} ${c.dim(fit(detail, Math.max(8, inner - 24)))}`
     );
@@ -273,7 +273,7 @@ function harnessesBox(
     `${c.dim(padRight(label, 7))} ${gauge(value / total, gaugeWidth, color)} ${padLeft(compactNumber(value), 7)} ${c.dim(`${Math.round((value / total) * 100)}%`)}`;
   const gauges = [
     "",
-    `${c.bold(compactNumber(t.requests))} ${c.dim(t.requests === 1 ? "request" : "requests")}  ${c.bold(String(t.sessions.size))} ${c.dim(t.sessions.size === 1 ? "session" : "sessions")}  ${c.bold(compactNumber(total))} ${c.dim("tokens")}`,
+    `${c.bold(compactNumber(t.requests))} ${c.dim(t.requests === 1 ? "request" : "requests")}  ${c.bold(String(t.sessions.size))} ${c.dim(t.sessions.size === 1 ? "session" : "sessions")}  ${c.bold(compactNumber(t.input + t.output + t.cached))} ${c.dim("tokens")}`,
     row("input", t.input, ORANGE),
     row("output", t.output, GOLD),
     row("cached", t.cached, TEAL),
