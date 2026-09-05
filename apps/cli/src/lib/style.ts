@@ -43,7 +43,13 @@ export function stripAnsi(text: string): string {
   return text.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
-/** Visible width, ignoring colour codes. Good enough for our ASCII-heavy tables. */
+const WIDE = /\p{Extended_Pictographic}/u;
+
+/** Visible width: colour codes ignored, emoji counted as two cells. */
 export function width(text: string): number {
-  return [...stripAnsi(text)].length;
+  let cells = 0;
+  for (const ch of stripAnsi(text)) {
+    cells += WIDE.test(ch) ? 2 : 1;
+  }
+  return cells;
 }

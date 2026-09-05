@@ -25,6 +25,12 @@ import {
 } from "./schema";
 import { httpSink } from "./sinks/http";
 import { type Sink, spoolSink } from "./sinks/spool";
+import {
+  recordEvent,
+  recordLog,
+  recordNotification,
+  type WatchState,
+} from "./state";
 import type { Collector, CollectorContext } from "./types";
 
 export const COLLECTORS: Collector[] = [
@@ -52,6 +58,8 @@ export type WatchDeps = {
   say: (message: string) => void;
   /** Renders an organiser message; defaults to `say(formatNotification(...))`. */
   announce?: (subject: string, body: string, at: number) => void;
+  /** Live-screen state; when given, runWatch keeps it current and honours pause/stop. */
+  state?: WatchState;
   toaster?: Toaster;
   collectors?: Collector[];
   extraSinks?: Sink[];
@@ -195,7 +203,14 @@ export async function runWatch(
   options: WatchOptions,
   deps: WatchDeps
 ): Promise<number> {
-  const { session, me, log, say } = deps;
+  const { session, me, say } = deps;
+  const state = deps.state;
+  const log = (message: string) => {
+    deps.log(message);
+    if (state) {
+      recordLog(state, message);
+    }
+  };
   const collectors = deps.collectors ?? COLLECTORS;
   const cursors = openCursorStore();
   const recent = loadRecentIds();
@@ -204,6 +219,15 @@ export async function runWatch(
     sinks.push(httpSink(options.uploadUrl, () => session.token()));
   }
   const batcher = createBatcher(sinks, log);
+  const recording: Batcher = {
+    ...batcher,
+    push: (event) => {
+      if (state) {
+        recordEvent(state, event);
+      }
+      batcher.push(event);
+    },
+  };
   let teamId = deps.teamId;
   let teamCheckedAt = Date.now();
   const identity = (): TelemetryEvent["identity"] => ({
@@ -218,6 +242,13 @@ export async function runWatch(
     if ((await c.discover()).length > 0) {
       discovered.push(c.id);
     }
+  }
+  if (state) {
+    state.harnesses = collectors.map((c) => ({
+      id: c.id,
+      found: discovered.includes(c.id),
+      requests: 0,
+    }));
   }
   say(
     discovered.length
@@ -249,6 +280,9 @@ export async function runWatch(
         continue;
       }
       lastSeen = row.sentAt;
+      if (state) {
+        recordNotification(state, row.subject, row.body, row.sentAt);
+      }
       (deps.announce ?? ((s, b, at) => say(formatNotification(s, b, at))))(
         row.subject,
         row.body,
@@ -280,10 +314,13 @@ export async function runWatch(
         log(`team lookup failed: ${String(err)}`);
       }
     }
+    if (state) {
+      state.scanning = true;
+    }
     const scanned = await scanOnce(
       collectors,
       ctx,
-      batcher,
+      recording,
       identity(),
       recent
     );
@@ -291,6 +328,15 @@ export async function runWatch(
     if (ok) {
       cursors.save();
       saveRecentIds(recent);
+    }
+    if (state) {
+      state.scanning = false;
+      state.lastScanAt = Date.now();
+      state.upload.failing = !ok;
+      state.upload.queued = batcher.size();
+      if (ok && state.upload.enabled) {
+        state.upload.lastOkAt = Date.now();
+      }
     }
     if (scanned.events > 0 || options.verbose) {
       const parts = Object.entries(scanned.byHarness).map(
@@ -310,15 +356,25 @@ export async function runWatch(
     }
     let nextScan = Date.now() + options.intervalMs;
     let nextPoll = Date.now();
-    while (!stopping) {
+    if (state) {
+      state.nextScanAt = nextScan;
+    }
+    while (!(stopping || state?.stopRequested)) {
       const now = Date.now();
       if (now >= nextPoll) {
         await pollNotifications();
         nextPoll = Date.now() + NOTIFY_POLL_MS;
       }
       if (now >= nextScan) {
-        await tick();
-        nextScan = Date.now() + options.intervalMs;
+        if (state?.paused) {
+          nextScan = Date.now() + 1000;
+        } else {
+          await tick();
+          nextScan = Date.now() + options.intervalMs;
+        }
+        if (state) {
+          state.nextScanAt = nextScan;
+        }
       }
       await Bun.sleep(250);
     }

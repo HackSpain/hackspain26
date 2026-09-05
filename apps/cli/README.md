@@ -44,7 +44,13 @@ hackspain --json <command>      # one JSON object on stdout, prompts disabled
 
 ## Watcher
 
-`hackspain watch` runs during the hackathon. Every 30 s it reads the local session logs of the
+`hackspain watch` is meant to stay open in its own terminal all weekend. It takes over the
+screen with the wordmark, a panel for you and your team, the live usage board (requests,
+sessions, tokens, per-harness activity), organiser announcements as they arrive, and a status
+bar with the next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`,
+`--once` and `--plain` use the line-by-line mode instead.
+
+Every 30 s it reads the local session logs of the
 AI coding harnesses it finds (Claude Code, Codex, OpenCode, Cline), normalises them into one
 schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
 (`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
