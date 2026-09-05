@@ -29,6 +29,8 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "teams:regenerateCode": mutation(api.teams.regenerateCode),
   "teams:setRepoUrl": mutation(api.teams.setRepoUrl),
   "teams:setTechStack": mutation(api.teams.setTechStack),
+  "teams:transferOwnership": mutation(api.teams.transferOwnership),
+  "teams:dissolve": mutation(api.teams.dissolve),
 
   // tracks and projects
   "tracks:list": query(api.tracks.list),

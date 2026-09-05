@@ -22,6 +22,8 @@ hackspain auth status | logout
 hackspain team create <name> [-m github:x -m a@b.c]
 hackspain team join <code>      # 8-character code from the owner
 hackspain team show | list | leave | code [--regenerate] | repo [url|--clear]
+hackspain team transfer [member] # owner hands the team to a teammate
+hackspain team dissolve          # owner deletes a team nobody else is in
 hackspain stack set nextjs convex claude-code
 
 hackspain track list
