@@ -3,7 +3,7 @@ import type { Command } from "commander";
 import { api, uploadImage } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
-import { imageContentType, postLines } from "../lib/feed-format";
+import { imageContentType, postLines, withImageUrls } from "../lib/feed-format";
 import { uiFor } from "../lib/output";
 import { openParticipant } from "../lib/participant";
 
@@ -25,10 +25,13 @@ export function registerFeed(program: Command): void {
         );
       }
       const { session } = await openParticipant(ctx);
-      const posts = await ui.spin(
-        "Loading the feed…",
-        () => session.client.query(api.feed.list, { limit }),
-        "Feed"
+      const posts = withImageUrls(
+        await ui.spin(
+          "Loading the feed…",
+          () => session.client.query(api.feed.list, { limit }),
+          "Feed"
+        ),
+        session.url
       );
       ui.result(posts);
       if (posts.length === 0) {

@@ -8,6 +8,7 @@ import {
   writeFileAtomic,
 } from "../lib/config";
 import { CliError, EXIT } from "../lib/errors";
+import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
 import { VERSION } from "../version";
 import { type Batcher, createBatcher } from "./batcher";
@@ -343,7 +344,10 @@ export async function runWatch(
       return;
     }
     try {
-      state.feed = await session.client.query(api.feed.list, { limit: 15 });
+      state.feed = withImageUrls(
+        await session.client.query(api.feed.list, { limit: 15 }),
+        session.url
+      );
     } catch (err) {
       log(`feed: ${String(err)}`);
     }

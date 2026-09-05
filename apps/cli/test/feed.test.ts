@@ -3,6 +3,7 @@ import {
   type FeedItem,
   imageContentType,
   postLines,
+  withImageUrls,
 } from "../src/lib/feed-format";
 import { stripAnsi } from "../src/lib/style";
 
@@ -43,6 +44,15 @@ describe("feed formatting", () => {
     expect(lines[0]).toBe("⑂ Quijote Labs · quijote/agentos · just now");
     expect(lines[1]).toContain("pushed 3 commits");
     expect(lines[2]).toContain("github.com/quijote/agentos/commit/abc");
+  });
+
+  test("image paths become links on the dashboard domain", () => {
+    const [withImage, without] = withImageUrls(
+      [{ imagePath: "/api/files/abc" }, { imagePath: undefined }],
+      "https://app.hackspain.com/"
+    );
+    expect(withImage?.imageUrl).toBe("https://app.hackspain.com/api/files/abc");
+    expect(without?.imageUrl).toBeUndefined();
   });
 
   test("image content types by extension", () => {

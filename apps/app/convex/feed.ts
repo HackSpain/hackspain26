@@ -23,7 +23,8 @@ export const postReturn = v.object({
     }),
   ),
   teamName: v.optional(v.string()),
-  imageUrl: v.optional(v.string()),
+  /** Same-origin path (/api/files/<id>) served by the dashboard; never a storage URL. */
+  imagePath: v.optional(v.string()),
   github: v.optional(
     v.object({
       repo: v.string(),
@@ -35,6 +36,13 @@ export const postReturn = v.object({
   mine: v.boolean(),
 });
 
+/** Images are served through the dashboard so links carry our domain, not Convex's. */
+export function imagePathFor(
+  imageId: Doc<"posts">["imageId"] & string,
+): string {
+  return `/api/files/${imageId}`;
+}
+
 async function hydrate(
   ctx: QueryCtx | MutationCtx,
   post: Doc<"posts">,
@@ -43,9 +51,6 @@ async function hydrate(
   const author = post.authorId ? await ctx.db.get(post.authorId) : null;
   const signup = author ? await getSignupForUser(ctx, author) : null;
   const team = post.teamId ? await ctx.db.get(post.teamId) : null;
-  const imageUrl = post.imageId
-    ? ((await ctx.storage.getUrl(post.imageId)) ?? undefined)
-    : undefined;
   return {
     _id: post._id,
     kind: post.kind,
@@ -59,7 +64,7 @@ async function hydrate(
         }
       : undefined,
     teamName: team?.name,
-    imageUrl,
+    imagePath: post.imageId ? imagePathFor(post.imageId) : undefined,
     github: post.github,
     mine: post.authorId === viewerId,
   };
@@ -122,6 +127,23 @@ export const post = onboardedMutation({
       imageId: args.imageId,
       createdAt: Date.now(),
     });
+  },
+});
+
+/**
+ * Storage URL behind /api/files/<id>. Only images attached to a post resolve,
+ * and only for onboarded participants, like the feed itself.
+ */
+export const imageUrl = onboardedQuery({
+  args: { imageId: v.id("_storage") },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const post = await ctx.db
+      .query("posts")
+      .withIndex("by_image", (q) => q.eq("imageId", args.imageId))
+      .first();
+    if (!post) return null;
+    return await ctx.storage.getUrl(args.imageId);
   },
 });
 

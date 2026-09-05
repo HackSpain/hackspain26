@@ -123,6 +123,7 @@ export default defineSchema({
   })
     .index("by_created", ["createdAt"])
     .index("by_external", ["externalId"])
+    .index("by_image", ["imageId"])
     .index("by_team", ["teamId"]),
 
   milestones: defineTable({

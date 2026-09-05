@@ -79,7 +79,8 @@ One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.
 
 `hackspain feed` and `hackspain post` share one feed with the dashboard's `/feed` page: short
 messages, an optional image (uploaded through `/api/cli/upload`, shown as a link in the terminal
-and inline on the web), and GitHub activity. The server polls the public Events API of every
+and inline on the web; links are `https://app.hackspain.com/api/files/<id>` and need a dashboard
+login), and GitHub activity. The server polls the public Events API of every
 team repo (`hackspain team repo <url>`) every three minutes from a Convex cron and posts pushes,
 opened and merged pull requests, releases and tags. Nothing is read from the hacker's machine:
 push often and it shows up.

@@ -11,6 +11,9 @@ export type FeedItem = {
   createdAt: number;
   author?: { name?: string; email?: string };
   teamName?: string;
+  /** Dashboard path (/api/files/<id>) as returned by the server. */
+  imagePath?: string;
+  /** Absolute link on the dashboard domain, filled in by `withImageUrls`. */
   imageUrl?: string;
   github?: { repo: string; event: string; url: string; actor?: string };
 };
@@ -22,6 +25,18 @@ const IMAGE_TYPES: Record<string, string> = {
   ".webp": "image/webp",
   ".gif": "image/gif",
 };
+
+/** Turn the server's same-origin image paths into links people can open. */
+export function withImageUrls<T extends { imagePath?: string }>(
+  posts: T[],
+  baseUrl: string
+): (T & { imageUrl?: string })[] {
+  const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  return posts.map((post) => ({
+    ...post,
+    imageUrl: post.imagePath ? `${base}${post.imagePath}` : undefined,
+  }));
+}
 
 export function imageContentType(path: string): string {
   const type = IMAGE_TYPES[extname(path).toLowerCase()];

@@ -183,12 +183,12 @@ function PostCard({ post }: { post: Post }) {
             {post.text}
           </p>
         ) : null}
-        {post.imageUrl ? (
-          <a href={post.imageUrl} target="_blank" rel="noreferrer">
-            {/* User uploads served from Convex storage; next/image would need remotePatterns per deployment. */}
+        {post.imagePath ? (
+          <a href={post.imagePath} target="_blank" rel="noreferrer">
+            {/* Served by /api/files on our own origin; plain img keeps it out of next/image's optimizer. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={post.imageUrl}
+              src={post.imagePath}
               alt=""
               className="max-h-96 w-auto rounded-md border-2 border-hs-ink object-contain"
             />
