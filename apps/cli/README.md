@@ -22,8 +22,30 @@ hackspain perk list
 hackspain milestone add firstCommit|firstBuild|firstDemo|custom [--label …] [--at ISO]
 hackspain milestone list [--all]
 
+hackspain watch [--interval 30] [--backfill <hours>] [--no-toast] [--no-upload] [--once]
+hackspain telemetry stats       # what the watcher recorded on this machine
+
 hackspain --json <command>      # one JSON object on stdout, prompts disabled
 ```
+
+## Watcher
+
+`hackspain watch` runs during the hackathon. Every 30 s it reads the local session logs of the
+AI coding harnesses it finds (Claude Code, Codex, OpenCode, Cline), normalises them into one
+schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
+(`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
+`/api/cli/telemetry` with your session. The server acknowledges and validates batches; where it
+stores them is decided server-side (the store is still being chosen), so no CLI update is
+needed when that lands. `--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
+in `~/.config/hackspain/config.json` point the upload elsewhere.
+
+Every 10 s it also polls organiser broadcasts and shows them in the terminal and as a desktop
+notification (`notify-send`, macOS Notification Center, Windows toast). No prompt text or full
+paths ever leave the machine; only token counts, model, session ids, and a hash of the project
+directory. By default only usage after the watcher starts is reported; `--backfill 6` includes
+the last six hours.
+
+One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.
 
 Tracks live on the project: `track register` saves a draft with the chosen challenges, and
 `submit` freezes everything. Commands that need a team, an accepted signup, or completed

@@ -43,4 +43,7 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "milestones:add": mutation(api.milestones.add),
   "milestones:mine": query(api.milestones.mine),
   "milestones:list": query(api.milestones.list),
+
+  // watcher
+  "notifications:forMe": query(api.notifications.forMe),
 };

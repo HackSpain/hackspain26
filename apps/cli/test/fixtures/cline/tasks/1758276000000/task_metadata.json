@@ -1,0 +1,12 @@
+{
+  "files_in_context": [],
+  "model_usage": [
+    {
+      "ts": 1758276000000,
+      "model_id": "claude-sonnet-5",
+      "model_provider_id": "anthropic",
+      "mode": "act"
+    }
+  ],
+  "cwdOnTaskInitialization": "/home/hacker/agentos"
+}
