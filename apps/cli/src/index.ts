@@ -1,6 +1,13 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
 import { registerAuth } from "./commands/auth";
+import { registerMilestone } from "./commands/milestone";
+import { registerPerk } from "./commands/perk";
+import { registerProject } from "./commands/project";
+import { registerStack } from "./commands/stack";
+import { registerSubmit } from "./commands/submit";
+import { registerTeam } from "./commands/team";
+import { registerTrack } from "./commands/track";
 import { runCli } from "./lib/run";
 import { VERSION } from "./version";
 
@@ -17,5 +24,12 @@ const program = new Command()
   .showSuggestionAfterError();
 
 registerAuth(program);
+registerTeam(program);
+registerTrack(program);
+registerProject(program);
+registerSubmit(program);
+registerPerk(program);
+registerMilestone(program);
+registerStack(program);
 
 await runCli(program);
