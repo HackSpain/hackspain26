@@ -36,6 +36,9 @@ hackspain perk list
 hackspain milestone add firstCommit|firstBuild|firstDemo|custom [--label …] [--at ISO]
 hackspain milestone list [--all]
 
+hackspain feed [-n 20]          # posts from everyone + pushes and PRs from every team repo
+hackspain post "text" [--image photo.jpg]   # ≤500 chars; jpeg/png/webp/gif ≤5 MB
+
 hackspain watch [--interval 30] [--backfill <hours>] [--no-toast] [--no-upload] [--once]
 hackspain telemetry stats       # what the watcher recorded on this machine
 
@@ -47,8 +50,9 @@ hackspain --json <command>      # one JSON object on stdout, prompts disabled
 `hackspain watch` is meant to stay open in its own terminal all weekend. It takes over the
 screen with a short "Keep this open" note on why it matters, a panel for you and your team, a table of the AI
 harnesses it found (status, requests, tokens, last request), organiser announcements as they
-arrive, a table of the most recent requests it reported, and a status bar with the next scan
-and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
+arrive, a table of the most recent requests it reported, the feed across the bottom (posts from
+everyone plus GitHub activity from every team repo, links included), and a status bar with the
+next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
 `--plain` use the line-by-line mode instead.
 
 Every 30 s it reads the local session logs of the
@@ -60,7 +64,7 @@ stores them is decided server-side (the store is still being chosen), so no CLI 
 needed when that lands. `--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
 in `~/.config/hackspain/config.json` point the upload elsewhere.
 
-On the same tick it polls organiser broadcasts and shows them in the feed and as a desktop
+On the same tick it polls organiser broadcasts and the feed, and shows broadcasts as a desktop
 notification (`notify-send`, macOS Notification Center, Windows toast). It is built to sit on a
 laptop all weekend: one wakeup per second, the screen repaints only the rows that changed, one
 network round trip per scan, and after ten minutes without new usage the scan slows to once a
@@ -70,6 +74,15 @@ directory. By default only usage after the watcher starts is reported; `--backfi
 the last six hours.
 
 One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.
+
+## Feed
+
+`hackspain feed` and `hackspain post` share one feed with the dashboard's `/feed` page: short
+messages, an optional image (uploaded through `/api/cli/upload`, shown as a link in the terminal
+and inline on the web), and GitHub activity. The server polls the public Events API of every
+team repo (`hackspain team repo <url>`) every three minutes from a Convex cron and posts pushes,
+opened and merged pull requests, releases and tags. Nothing is read from the hacker's machine:
+push often and it shows up.
 
 Tracks live on the project: `track register` saves a draft with the chosen challenges, and
 `submit` freezes everything. Commands that need a team, an accepted signup, or completed

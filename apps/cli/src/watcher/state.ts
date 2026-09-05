@@ -1,3 +1,4 @@
+import type { FeedItem } from "../lib/feed-format";
 import type { HarnessId, TelemetryEvent } from "./schema";
 
 /** Everything the live screen shows. runWatch mutates it; the screen only reads. */
@@ -45,6 +46,8 @@ export type WatchState = {
     queued: number;
   };
   notifications: { subject: string; body: string; at: number }[];
+  /** Latest feed posts, newest first, refreshed on every scan tick. */
+  feed: FeedItem[];
   /** Last few diagnostics, newest last. */
   log: string[];
 };
@@ -121,6 +124,7 @@ export function createState(
     stopRequested: false,
     upload: { enabled: init.uploadEnabled, failing: false, queued: 0 },
     notifications: [],
+    feed: [],
     log: [],
   };
 }

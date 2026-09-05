@@ -55,6 +55,28 @@ function sampleState() {
   );
   state.nextScanAt = NOW + 18_000;
   state.upload.lastOkAt = NOW - 2000;
+  state.feed = [
+    {
+      _id: "f1",
+      kind: "post",
+      text: "Demo works on the big screen",
+      createdAt: NOW - 90_000,
+      author: { name: "Ana" },
+      teamName: "Quijote Labs",
+    },
+    {
+      _id: "f2",
+      kind: "github",
+      text: "ana pushed 2 commits to main: wire the feed",
+      createdAt: NOW - 200_000,
+      teamName: "Quijote Labs",
+      github: {
+        repo: "quijote/agentos",
+        event: "push",
+        url: "https://github.com/quijote/agentos/commit/1",
+      },
+    },
+  ];
   return state;
 }
 
@@ -97,6 +119,9 @@ describe("frame", () => {
     expect(text).toContain("claude-sonnet-5");
     expect(text).toContain("Pizza at 14:00");
     expect(text).toContain("Courtyard");
+    expect(text).toContain("Feed");
+    expect(text).toContain("Demo works on the big screen");
+    expect(text).toContain("pushed 2 commits");
   });
 
   test("tiny terminals keep the harness table and the feed", () => {

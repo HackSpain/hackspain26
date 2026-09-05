@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
 import { registerAuth } from "./commands/auth";
+import { registerFeed } from "./commands/feed";
 import { registerHome } from "./commands/home";
 import { registerMilestone } from "./commands/milestone";
 import { registerPerk } from "./commands/perk";
@@ -46,6 +47,7 @@ registerSubmit(program);
 registerPerk(program);
 registerMilestone(program);
 registerStack(program);
+registerFeed(program);
 registerWatch(program);
 registerTelemetry(program);
 registerUpdate(program);

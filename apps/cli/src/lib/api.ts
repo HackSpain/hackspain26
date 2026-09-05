@@ -221,6 +221,52 @@ export async function authSignOut(
 }
 
 /**
+ * Upload an image for a feed post through /api/cli/upload. Returns the
+ * storage id to pass to feed:post.
+ */
+export async function uploadImage(
+  session: Session,
+  bytes: Uint8Array,
+  contentType: string,
+  fetchImpl: FetchLike = fetch
+): Promise<string> {
+  const bearer = await session.token();
+  let response: Response;
+  try {
+    response = await fetchImpl(`${session.url}/api/cli/upload`, {
+      method: "POST",
+      headers: {
+        "content-type": contentType,
+        "user-agent": `hackspain-cli/${VERSION}`,
+        ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
+      },
+      body: new Blob([bytes.slice().buffer as ArrayBuffer], {
+        type: contentType,
+      }),
+    });
+  } catch {
+    throw new CliError("Could not reach the HackSpain server.", {
+      code: "NETWORK",
+      exitCode: EXIT.NETWORK,
+    });
+  }
+  const envelope = (await response.json().catch(() => null)) as Envelope<{
+    imageId: string;
+  }> | null;
+  if (!envelope) {
+    throw new CliError(
+      `Upload answered ${response.status} without a JSON body.`
+    );
+  }
+  if (!envelope.ok) {
+    throw envelope.error.kind === "convex"
+      ? new RemoteError(envelope.error.data)
+      : new Error(envelope.error.message);
+  }
+  return envelope.value.imageId;
+}
+
+/**
  * Open a session against the dashboard. With `requireAuth` a missing or
  * expired session is a hard error; otherwise calls go out anonymously.
  */

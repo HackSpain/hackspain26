@@ -48,4 +48,9 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
 
   // watcher
   "notifications:forMe": query(api.notifications.forMe),
+
+  // feed (image upload goes through /api/cli/upload, not rpc)
+  "feed:list": query(api.feed.list),
+  "feed:post": mutation(api.feed.post),
+  "feed:remove": mutation(api.feed.remove),
 };

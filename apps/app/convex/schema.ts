@@ -94,11 +94,36 @@ export default defineSchema({
     joinCode: v.optional(v.string()),
     repoUrl: v.optional(v.string()),
     techStack: v.optional(v.array(v.string())),
+    // GitHub feed polling: ETag for conditional requests, last poll time.
+    githubEtag: v.optional(v.string()),
+    githubPolledAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
     .index("by_join_code", ["joinCode"]),
+
+  posts: defineTable({
+    kind: v.union(v.literal("post"), v.literal("github")),
+    authorId: v.optional(v.id("users")),
+    teamId: v.optional(v.id("teams")),
+    text: v.string(),
+    imageId: v.optional(v.id("_storage")),
+    github: v.optional(
+      v.object({
+        repo: v.string(),
+        event: v.string(),
+        url: v.string(),
+        actor: v.optional(v.string()),
+      }),
+    ),
+    /** GitHub event id, so polling never inserts the same event twice. */
+    externalId: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_created", ["createdAt"])
+    .index("by_external", ["externalId"])
+    .index("by_team", ["teamId"]),
 
   milestones: defineTable({
     teamId: v.id("teams"),
