@@ -214,6 +214,45 @@ export async function authVerify(
   );
 }
 
+/**
+ * Start a browser (device-code) login. The CLI keeps `secret` to itself;
+ * the returned short-lived `code` goes into the /cli-auth URL the user
+ * approves in the dashboard.
+ */
+export async function deviceStart(
+  url: string,
+  secret: string,
+  fetchImpl: FetchLike = fetch
+): Promise<{ code: string; expiresAt: number }> {
+  return unwrap(
+    await post<{ code: string; expiresAt: number }>(
+      fetchImpl,
+      `${url}/api/cli/auth/device/start`,
+      { secret }
+    )
+  );
+}
+
+export type DevicePoll =
+  | { status: "pending" }
+  | { status: "expired" }
+  | { status: "approved"; tokens: Tokens; email: string | null };
+
+/** One poll of the browser login. "approved" comes back exactly once. */
+export async function devicePoll(
+  url: string,
+  code: string,
+  secret: string,
+  fetchImpl: FetchLike = fetch
+): Promise<DevicePoll> {
+  return unwrap(
+    await post<DevicePoll>(fetchImpl, `${url}/api/cli/auth/device/poll`, {
+      code,
+      secret,
+    })
+  );
+}
+
 export async function authSignOut(
   url: string,
   token: string,

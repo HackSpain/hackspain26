@@ -125,18 +125,22 @@ describe("currentToken", () => {
     writeCredentials(creds({ tokenExpiresAt: Date.now() + 1000 }));
     const exp = Math.floor(Date.now() / 1000) + 3600;
     let calls = 0;
+    const started = Promise.withResolvers<void>();
+    const hold = Promise.withResolvers<void>();
     const refresh = async (refreshToken: string) => {
       calls++;
-      await Bun.sleep(150);
+      started.resolve();
+      await hold.promise;
       if (refreshToken !== "r1") {
         return null; // reuse would be a logout
       }
       return { refreshToken: "r2", token: jwtExpiringAt(exp) };
     };
-    const [a, b] = await Promise.all([
-      currentToken(URL, refresh),
-      currentToken(URL, refresh),
-    ]);
+    const first = currentToken(URL, refresh);
+    await started.promise;
+    const second = currentToken(URL, refresh);
+    hold.resolve();
+    const [a, b] = await Promise.all([first, second]);
     expect(a).toBe(b);
     expect(calls).toBe(1);
     expect(readCredentials()?.refreshToken).toBe("r2");
@@ -181,17 +185,21 @@ describe("currentToken", () => {
 describe("withCredentialsLock", () => {
   test("serialises critical sections", async () => {
     const order: string[] = [];
-    await Promise.all([
-      withCredentialsLock(async () => {
-        order.push("a-in");
-        await Bun.sleep(100);
-        order.push("a-out");
-      }),
-      withCredentialsLock(async () => {
-        order.push("b-in");
-        order.push("b-out");
-      }),
-    ]);
+    const entered = Promise.withResolvers<void>();
+    const hold = Promise.withResolvers<void>();
+    const first = withCredentialsLock(async () => {
+      order.push("a-in");
+      entered.resolve();
+      await hold.promise;
+      order.push("a-out");
+    });
+    await entered.promise;
+    const second = withCredentialsLock(async () => {
+      order.push("b-in");
+      order.push("b-out");
+    });
+    hold.resolve();
+    await Promise.all([first, second]);
     expect(order).toEqual(["a-in", "a-out", "b-in", "b-out"]);
   });
 

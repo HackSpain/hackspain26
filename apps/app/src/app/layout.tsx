@@ -13,22 +13,26 @@ const dmSans = DM_Sans({
 });
 
 const bungee = Bungee({
+  weight: "400",
   subsets: ["latin"],
   variable: "--font-bungee-next",
-  weight: "400",
 });
 
 export const metadata: Metadata = {
-  description: "Panel de participantes y organización de HackSpain 2026.",
-  icons: {
-    apple: [{ url: "/apple-icon.png", type: "image/png" }],
-    icon: [{ url: "/icon.png", type: "image/png" }],
-  },
-  robots: { follow: false, index: false },
   title: "HackSpain",
+  description: "Panel de participantes y organización de HackSpain 2026.",
+  robots: { index: false, follow: false },
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", type: "image/png" }],
+  },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <ConvexAuthNextjsServerProvider>
       <html

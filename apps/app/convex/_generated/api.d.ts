@@ -11,6 +11,7 @@
 import type * as ResendOTP from "../ResendOTP.js";
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as cliAuth from "../cliAuth.js";
 import type * as crons from "../crons.js";
 import type * as devOtp from "../devOtp.js";
 import type * as feed from "../feed.js";
@@ -24,6 +25,7 @@ import type * as lib_dietary from "../lib/dietary.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_eventDetails from "../lib/eventDetails.js";
 import type * as lib_normalize from "../lib/normalize.js";
+import type * as lib_perkInputs from "../lib/perkInputs.js";
 import type * as lib_team from "../lib/team.js";
 import type * as lib_urls from "../lib/urls.js";
 import type * as lib_validators from "../lib/validators.js";
@@ -35,6 +37,7 @@ import type * as perks from "../perks.js";
 import type * as submissions from "../submissions.js";
 import type * as teams from "../teams.js";
 import type * as tracks from "../tracks.js";
+import type * as tv from "../tv.js";
 import type * as users from "../users.js";
 
 import type {
@@ -47,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   ResendOTP: typeof ResendOTP;
   admin: typeof admin;
   auth: typeof auth;
+  cliAuth: typeof cliAuth;
   crons: typeof crons;
   devOtp: typeof devOtp;
   feed: typeof feed;
@@ -60,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "lib/errors": typeof lib_errors;
   "lib/eventDetails": typeof lib_eventDetails;
   "lib/normalize": typeof lib_normalize;
+  "lib/perkInputs": typeof lib_perkInputs;
   "lib/team": typeof lib_team;
   "lib/urls": typeof lib_urls;
   "lib/validators": typeof lib_validators;
@@ -71,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   submissions: typeof submissions;
   teams: typeof teams;
   tracks: typeof tracks;
+  tv: typeof tv;
   users: typeof users;
 }>;
 

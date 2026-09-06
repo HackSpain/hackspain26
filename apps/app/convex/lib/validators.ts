@@ -23,6 +23,27 @@ export const claimStatusValidator = v.union(
   v.literal("assigned")
 );
 
+export const perkInputTypeValidator = v.union(
+  v.literal("text"),
+  v.literal("email"),
+  v.literal("url"),
+  v.literal("select"),
+);
+
+/** A field the participant fills in when claiming a perk. */
+export const perkInputValidator = v.object({
+  key: v.string(),
+  label: v.string(),
+  type: perkInputTypeValidator,
+  required: v.boolean(),
+  options: v.optional(v.array(v.string())),
+});
+
+export const perkAnswerValidator = v.object({
+  key: v.string(),
+  value: v.string(),
+});
+
 export const teamMemberStatusValidator = v.union(
   v.literal("member"),
   v.literal("pending")

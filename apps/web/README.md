@@ -19,7 +19,7 @@ Public marketing site for [HackSpain](https://hackspain.com) — Hack Spain 2026
 ## Requirements
 
 - [Node.js](https://nodejs.org/) **≥ 22.12**
-- [pnpm](https://pnpm.io/) **10.x** (see `packageManager` in `package.json`)
+- [pnpm](https://pnpm.io/) **≥ 10** (see `packageManager` in the repo-root `package.json`)
 
 ## Getting started
 
