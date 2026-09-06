@@ -8,10 +8,7 @@ import { CircleUser } from "lucide-react";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/app-header";
 import { api } from "@convex/_generated/api";
-import {
-  GithubLinkBanner,
-  GithubLinkResult,
-} from "@/components/github-link-banner";
+import { GithubLinkBanner, GithubLinkResult } from "@/components/github-link-banner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,6 +26,7 @@ const ADMIN_NAV = [
   { href: "/admin/applications", label: "Solicitudes" },
   { href: "/admin/tracks", label: "Retos" },
   { href: "/admin/notifications", label: "Avisos" },
+  { href: "/admin/tv", label: "TV" },
 ] as const;
 
 function adminNavActive(pathname: string, href: string) {
@@ -48,8 +46,7 @@ function AccountMenu({
   isAdmin: boolean;
 }) {
   const { signOut } = useAuthActions();
-  const profileActive =
-    pathname === "/profile" || pathname.startsWith("/profile/");
+  const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
   const adminActive = pathname.startsWith("/admin");
 
   return (
@@ -77,7 +74,7 @@ function AccountMenu({
             href="/profile"
             className={cn(
               "font-bungee uppercase",
-              profileActive && "bg-hs-gold text-hs-ink"
+              profileActive && "bg-hs-gold text-hs-ink",
             )}
           >
             Perfil
@@ -89,7 +86,7 @@ function AccountMenu({
               href="/admin"
               className={cn(
                 "font-bungee uppercase",
-                adminActive && "bg-hs-gold text-hs-ink"
+                adminActive && "bg-hs-gold text-hs-ink",
               )}
             >
               Admin
@@ -109,10 +106,7 @@ function AccountMenu({
 
 function AdminStrip({ pathname }: { pathname: string }) {
   return (
-    <nav
-      aria-label="Admin"
-      className="border-b-[3px] border-hs-ink bg-hs-paper"
-    >
+    <nav aria-label="Admin" className="border-b-[3px] border-hs-ink bg-hs-paper">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4">
         {ADMIN_NAV.map((item) => {
           const active = adminNavActive(pathname, item.href);
@@ -122,9 +116,7 @@ function AdminStrip({ pathname }: { pathname: string }) {
               href={item.href}
               className={cn(
                 "inline-flex min-h-11 items-center font-bungee text-xs uppercase",
-                active
-                  ? "text-hs-ink underline decoration-2 underline-offset-4"
-                  : "text-hs-brown"
+                active ? "text-hs-ink underline decoration-2 underline-offset-4" : "text-hs-brown",
               )}
             >
               {item.label}
@@ -140,8 +132,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isAuthenticated } = useConvexAuth();
   const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
+
+  // The public venue screen brings its own full-screen layout.
+  if (pathname === "/tv") {
+    return <>{children}</>;
+  }
+
   const hideChrome =
     pathname === "/login" ||
+    pathname === "/cli-auth" ||
     pathname === "/onboarding" ||
     pathname === "/unregistered" ||
     pathname === "/pending";
@@ -156,6 +155,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     me !== undefined &&
     me !== null &&
     !me.githubLinked &&
+    !pathname.startsWith("/admin") &&
     (isAdmin || (me.accepted && me.onboardingComplete));
 
   return (
@@ -174,12 +174,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AdminStrip pathname={pathname} />
       ) : null}
       {askGithub ? <GithubLinkBanner /> : null}
-      <main
-        className={cn(
-          "mx-auto py-6 sm:py-8",
-          pathname === "/participantes" ? "w-full" : "max-w-6xl px-4"
-        )}
-      >
+      <main className={cn(
+        "mx-auto py-6 sm:py-8",
+        pathname === "/participantes" ? "w-full" : "max-w-6xl px-4",
+      )}>
         <Suspense fallback={null}>
           <GithubLinkResult />
         </Suspense>

@@ -2,13 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "command": "bun run --filter web dev",
+      "command": "pnpm --filter web dev",
       "name": "Landing (Astro)",
       "request": "launch",
       "type": "node-terminal"
     },
     {
-      "command": "bun run --filter app dev",
+      "command": "pnpm --filter app dev",
       "name": "Dashboard (Next.js)",
       "request": "launch",
       "type": "node-terminal"

@@ -143,18 +143,27 @@ export function RecordList({
 export function RecordCard({
   title,
   subtitle,
+  badges,
   children,
   actions,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
+  badges?: ReactNode;
   children?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
     <Card className="gap-3">
       <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
+        {badges ? (
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base [&_[data-slot=badge]]:whitespace-nowrap">
+            <span>{title}</span>
+            {badges}
+          </CardTitle>
+        ) : (
+          <CardTitle className="text-base">{title}</CardTitle>
+        )}
         {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}
       </CardHeader>
       {children || actions ? (

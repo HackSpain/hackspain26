@@ -2,7 +2,11 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
-import { milestoneKindValidator } from "./lib/validators";
+import {
+  milestoneKindValidator,
+  perkAnswerValidator,
+  perkInputValidator,
+} from "./lib/validators";
 
 const authTablesWithoutUsers = Object.fromEntries(
   Object.entries(authTables).filter(([name]) => name !== "users")
@@ -80,6 +84,7 @@ export default defineSchema({
       v.literal("assigned")
     ),
     codeId: v.optional(v.id("perkCodes")),
+    answers: v.optional(v.array(perkAnswerValidator)),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -105,6 +110,8 @@ export default defineSchema({
     value: v.string(),
     description: v.string(),
     type: v.union(v.literal("email"), v.literal("code")),
+    sponsorUrl: v.optional(v.string()),
+    inputs: v.optional(v.array(perkInputValidator)),
     active: v.boolean(),
     createdBy: v.id("users"),
     createdAt: v.number(),
@@ -268,4 +275,151 @@ export default defineSchema({
     .index("by_attendance", ["attendanceStatus"])
     .index("by_github_id", ["githubId"])
     .index("by_github", ["githubUsername"]),
+
+  /** Pending `hackspain auth login` browser approvals. See convex/cliAuth.ts. */
+  cliAuthRequests: defineTable({
+    code: v.string(),
+    secret: v.string(),
+    status: v.union(v.literal("pending"), v.literal("approved")),
+    userId: v.optional(v.id("users")),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_expires", ["expiresAt"]),
+
+  tvMessages: defineTable({
+    text: v.string(),
+    zone: v.union(
+      v.literal("banner"),
+      v.literal("left"),
+      v.literal("right"),
+      v.literal("ticker")
+    ),
+    order: v.number(),
+    active: v.boolean(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_zone", ["zone", "order"]),
+
+  tvWidgets: defineTable({
+    kind: v.union(
+      v.literal("banner"),
+      v.literal("ticker"),
+      v.literal("clock"),
+      v.literal("message"),
+      v.literal("insightsStats"),
+      v.literal("insightsActivity"),
+      v.literal("insightsHarness"),
+      v.literal("insightsStacks"),
+      v.literal("insightsScatter"),
+      v.literal("insightsLeaderboard"),
+      v.literal("insightsEvolution"),
+      v.literal("liveCommits"),
+      v.literal("liveAgents"),
+      v.literal("liveTokens"),
+      v.literal("liveLeaderboard"),
+      v.literal("feed"),
+      v.literal("sponsorGrid"),
+      v.literal("sponsorTicker")
+    ),
+    x: v.number(),
+    y: v.number(),
+    w: v.number(),
+    h: v.number(),
+    z: v.number(),
+    text: v.string(),
+    sponsors: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          logoUrl: v.string(),
+          href: v.string(),
+          tier: v.union(
+            v.literal("gold"),
+            v.literal("silver"),
+            v.literal("community")
+          ),
+        })
+      )
+    ),
+    tickerSpeed: v.optional(
+      v.union(v.literal("slow"), v.literal("normal"), v.literal("fast"))
+    ),
+    feedMode: v.optional(v.union(v.literal("latest"), v.literal("rotate"))),
+    feedSource: v.optional(
+      v.union(
+        v.literal("all"),
+        v.literal("participants"),
+        v.literal("github")
+      )
+    ),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_z", ["z"]),
+
+  tvLayouts: defineTable({
+    name: v.string(),
+    isLive: v.boolean(),
+    widgets: v.array(
+      v.object({
+        kind: v.union(
+          v.literal("banner"),
+          v.literal("ticker"),
+          v.literal("clock"),
+          v.literal("message"),
+          v.literal("insightsStats"),
+          v.literal("insightsActivity"),
+          v.literal("insightsHarness"),
+          v.literal("insightsStacks"),
+          v.literal("insightsScatter"),
+          v.literal("insightsLeaderboard"),
+          v.literal("insightsEvolution"),
+          v.literal("liveCommits"),
+          v.literal("liveAgents"),
+          v.literal("liveTokens"),
+          v.literal("liveLeaderboard"),
+          v.literal("feed"),
+          v.literal("sponsorGrid"),
+          v.literal("sponsorTicker")
+        ),
+        x: v.number(),
+        y: v.number(),
+        w: v.number(),
+        h: v.number(),
+        z: v.number(),
+        text: v.string(),
+        sponsors: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              logoUrl: v.string(),
+              href: v.string(),
+              tier: v.union(
+                v.literal("gold"),
+                v.literal("silver"),
+                v.literal("community")
+              ),
+            })
+          )
+        ),
+        tickerSpeed: v.optional(
+          v.union(v.literal("slow"), v.literal("normal"), v.literal("fast"))
+        ),
+        feedMode: v.optional(v.union(v.literal("latest"), v.literal("rotate"))),
+        feedSource: v.optional(
+          v.union(
+            v.literal("all"),
+            v.literal("participants"),
+            v.literal("github")
+          )
+        ),
+      })
+    ),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_live", ["isLive"]),
 });

@@ -4,7 +4,7 @@ import { EXIT, explainError } from "./errors";
 import { printJsonError } from "./output";
 import { c, cmd } from "./style";
 
-function isCommanderError(err: unknown): err is CommanderError {
+export function isCommanderError(err: unknown): err is CommanderError {
   return (
     typeof err === "object" &&
     err !== null &&
