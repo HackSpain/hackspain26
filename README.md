@@ -6,6 +6,7 @@ Monorepo for [HackSpain](https://hackspain.com) (Hack Spain 2026, Madrid).
 | --- | --- | --- |
 | `apps/web` | Astro 6, React islands, Tailwind v4, Neon/Drizzle | [localhost:4321](http://localhost:4321) |
 | `apps/app` | Next.js, Convex, Convex Auth, shadcn | [localhost:3000](http://localhost:3000) |
+| `apps/cli` | Bun, Commander, clack; `hackspain` binary for participants | `bun dev:cli -- --help` |
 
 Package manager is Bun. Node.js ≥ 22.12.
 
@@ -33,6 +34,7 @@ The dashboard needs a Convex development deployment (`bun dev:convex` / `npx con
 | `bun preview` | Preview the landing build |
 | `bun check` | Astro + TypeScript checks |
 | `bun migrate:convex` | Import Neon signups/ambassadors into Convex |
+| `bun dev:cli -- <args>` / `bun test:cli` / `bun build:cli` | Run, test, or compile the `hackspain` CLI |
 | `bun db:generate` / `bun db:migrate` / `bun db:push` | Landing Drizzle |
 
 ## Convex auth and admin

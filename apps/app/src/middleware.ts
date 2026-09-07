@@ -4,7 +4,12 @@ import {
   nextjsMiddlewareRedirect,
 } from "@convex-dev/auth/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(["/login", "/api/login-check"]);
+// /api/cli/* authenticates with a bearer token, not the cookie session.
+const isPublicRoute = createRouteMatcher([
+  "/login",
+  "/api/login-check",
+  "/api/cli(.*)",
+]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const authenticated = await convexAuth.isAuthenticated();
