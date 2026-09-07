@@ -1,19 +1,21 @@
 import { api } from "@convex/_generated/api";
 import { fetchQuery } from "convex/nextjs";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
+import {
+  parseTelemetryEvent,
+  RawTreeConfigurationError,
+  storeTelemetryEvents,
+} from "./rawtree";
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
-const SCHEMA = "hackspain.telemetry.v1";
 
 /**
  * POST application/x-ndjson from `hackspain watch`, one canonical
  * `hackspain.telemetry.v1` event per line (apps/cli/docs/telemetry-schema.md).
  *
- * The telemetry store is still being decided (ClickHouse or an alternative),
- * so for now this endpoint authenticates the participant, validates the
- * lines, and acknowledges them without storing anything. Wiring the store
- * happens here, server-side, with no CLI release: the watcher already sends
- * the final format. Events also stay in the participant's local spool.
+ * The participant session is verified before canonical events are inserted in
+ * RawTree. The RawTree API key stays server-side. Events also stay in the
+ * participant's local spool.
  */
 export async function POST(request: Request) {
   const token = bearerToken(request);
@@ -25,32 +27,41 @@ export async function POST(request: Request) {
     return fail("Batch too large", 413);
   }
 
-  let me: Awaited<ReturnType<typeof fetchQuery<typeof api.users.me>>>;
+  let authContext: [
+    Awaited<ReturnType<typeof fetchQuery<typeof api.users.me>>>,
+    Awaited<ReturnType<typeof fetchQuery<typeof api.teams.mineId>>>,
+  ];
   try {
-    me = await fetchQuery(api.users.me, {}, { token });
+    authContext = await Promise.all([
+      fetchQuery(api.users.me, {}, { token }),
+      fetchQuery(api.teams.mineId, {}, { token }),
+    ]);
   } catch (err) {
     return fromError(err);
   }
+  const [me, teamId] = authContext;
   if (!me) {
     return fail("No has iniciado sesión", 401);
   }
 
   const text = await request.text();
-  let accepted = 0;
+  if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) {
+    return fail("Batch too large", 413);
+  }
+
+  const accepted = [];
   let rejected = 0;
   for (const line of text.split("\n")) {
     if (!line.trim()) {
       continue;
     }
     try {
-      const event = JSON.parse(line) as {
-        schema?: unknown;
-        eventId?: unknown;
-        identity?: { userId?: unknown };
-      };
-      const own = event.identity?.userId === me._id;
-      if (event.schema === SCHEMA && typeof event.eventId === "string" && own) {
-        accepted++;
+      const event = parseTelemetryEvent(JSON.parse(line), {
+        userId: me._id,
+        ...(teamId ? { teamId } : {}),
+      });
+      if (event) {
+        accepted.push(event);
       } else {
         rejected++;
       }
@@ -58,6 +69,12 @@ export async function POST(request: Request) {
       rejected++;
     }
   }
-  // TODO(telemetry-store): forward `accepted` events to the chosen store.
-  return ok({ accepted, rejected, stored: false }, 202);
+  try {
+    await storeTelemetryEvents(accepted);
+  } catch (error) {
+    const status = error instanceof RawTreeConfigurationError ? 503 : 502;
+    return fail("No se pudo guardar la telemetría; se reintentará", status);
+  }
+
+  return ok({ accepted: accepted.length, rejected, stored: true }, 202);
 }

@@ -65,9 +65,9 @@ Every 30 s it reads the local session logs of the
 AI coding harnesses it finds (Claude Code, Codex, OpenCode, Cline), normalises them into one
 schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
 (`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
-`/api/cli/telemetry` with your session. The server acknowledges and validates batches; where it
-stores them is decided server-side (the store is still being chosen), so no CLI update is
-needed when that lands. `--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
+`/api/cli/telemetry` with your session. The server authenticates and validates batches, then
+stores accepted events through the RawTree TypeScript SDK without exposing its key to the CLI.
+`--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
 in `~/.config/hackspain/config.json` point the upload elsewhere.
 
 On the same tick it polls organiser broadcasts and the feed, and shows broadcasts as a desktop

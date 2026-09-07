@@ -32,6 +32,12 @@
       "sourceType": "github",
       "computedHash": "6cc3ffae0a66c2f3165c3d4bae6784ebe44e8f6ac661d3f4e40ae56d9af35cb8"
     },
+    "rawtree": {
+      "source": "rawtreedb/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/rawtree/SKILL.md",
+      "computedHash": "090050c3044a05c4c89ef51bea3839df02a4caff6e84ccab8b2add757c16c5dc"
+    },
     "seo-aeo-best-practices": {
       "source": "sanity-io/agent-toolkit",
       "sourceType": "github",
