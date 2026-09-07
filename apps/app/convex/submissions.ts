@@ -221,6 +221,48 @@ export const submit = onboardedMutation({
   handler: async (ctx, args) => await upsertProject(ctx, args, "submit"),
 });
 
+const publicSubmissionReturn = v.object({
+  _id: v.id("submissions"),
+  teamId: v.optional(v.id("teams")),
+  teamName: v.optional(v.string()),
+  name: v.string(),
+  description: v.string(),
+  urls: urlsValidator,
+  challenges: v.array(challengeSummary),
+  status: submissionStatusValidator,
+  updatedAt: v.number(),
+  submittedAt: v.optional(v.number()),
+});
+
+export const listPublic = onboardedQuery({
+  args: {},
+  returns: v.array(publicSubmissionReturn),
+  handler: async (ctx) => {
+    const submissions = await ctx.db.query("submissions").collect();
+    const rows = [];
+    for (const submission of submissions) {
+      if (submission.status === "draft" && !submission.name.trim()) continue;
+      const hydrated = await hydrateSubmission(ctx, submission);
+      rows.push({
+        _id: hydrated._id,
+        teamId: hydrated.teamId,
+        teamName: hydrated.teamName,
+        name: hydrated.name,
+        description: hydrated.status === "submitted" ? hydrated.description : "",
+        urls: hydrated.urls,
+        challenges: hydrated.challenges,
+        status: hydrated.status,
+        updatedAt: hydrated.updatedAt,
+        submittedAt: hydrated.submittedAt,
+      });
+    }
+    return rows.sort((a, b) => {
+      if (a.status !== b.status) return a.status === "submitted" ? -1 : 1;
+      return a.name.localeCompare(b.name, "es");
+    });
+  },
+});
+
 export const adminList = adminQuery({
   args: {},
   returns: v.array(submissionReturn),

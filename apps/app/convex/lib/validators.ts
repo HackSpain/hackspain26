@@ -28,6 +28,13 @@ export const teamMemberStatusValidator = v.union(
   v.literal("pending"),
 );
 
+export const milestoneKindValidator = v.union(
+  v.literal("firstCommit"),
+  v.literal("firstBuild"),
+  v.literal("firstDemo"),
+  v.literal("custom"),
+);
+
 export const identifierTypeValidator = v.union(
   v.literal("email"),
   v.literal("github"),
