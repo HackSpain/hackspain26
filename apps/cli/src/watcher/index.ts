@@ -255,7 +255,12 @@ export async function runWatch(
   const recent = loadRecentIds();
   const sinks: Sink[] = [spoolSink(), ...(deps.extraSinks ?? [])];
   if (options.uploadUrl) {
-    sinks.push(httpSink(options.uploadUrl, () => session.token()));
+    sinks.push(
+      httpSink(options.uploadUrl, () => session.token(), fetch, {
+        onRejected: log,
+        pendingScope: me._id,
+      })
+    );
   }
   const batcher = createBatcher(sinks, log);
   const recording: Batcher = {

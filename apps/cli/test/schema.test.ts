@@ -15,7 +15,7 @@ export const validEvent: TelemetryEvent = {
   observedAt: "2026-09-19T10:00:05.000Z",
   harness: "claude-code",
   sessionId: "s1",
-  project: { dirHash: "abc", name: "agentos" },
+  project: { dirHash: "9f2c1a7b3e4d5c6a", name: "agentos" },
   model: { raw: "claude-sonnet-5", family: "claude", provider: "anthropic" },
   tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40 },
   identity: { userId: "u1", teamId: "t1", clientVersion: "0.1.0" },
@@ -36,7 +36,7 @@ describe("validateEvent", () => {
     expect(
       validateEvent({
         ...validEvent,
-        project: { dirHash: "x", name: "/home/x" },
+        project: { dirHash: "9f2c1a7b3e4d5c6a", name: "/home/x" },
       })
     ).toContain("project.name must be a basename, not a path");
     expect(
@@ -51,6 +51,12 @@ describe("validateEvent", () => {
         tokens: { input: -1, output: 0, cacheRead: 0, cacheWrite: 0 },
       })
     ).toContain("tokens.input must be a non-negative integer");
+    expect(
+      validateEvent({
+        ...validEvent,
+        native: { prompt: "do not collect this" },
+      })
+    ).toContain("native contains fields that are not safe for this harness");
     expect(validateEvent("nope")).toEqual(["not an object"]);
   });
 });

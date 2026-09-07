@@ -1,6 +1,15 @@
+import { createHash } from "node:crypto";
 import { RawTree, type JsonObject } from "@rawtree/sdk";
 
 const DEFAULT_TELEMETRY_TABLE = "hackspain_telemetry";
+
+export const TELEMETRY_BATCH_MAX = 200;
+export const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
+
+const MAX_EVENT_ID_LENGTH = 512;
+const MAX_SESSION_ID_LENGTH = 256;
+const MAX_SHORT_STRING_LENGTH = 256;
+const MAX_VERSION_LENGTH = 64;
 
 const EVENT_TYPES = ["usage", "session.start", "session.end"] as const;
 const HARNESSES = [
@@ -50,8 +59,15 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
-function isOptionalString(value: unknown): value is string | undefined {
-  return value === undefined || typeof value === "string";
+function isBoundedString(value: unknown, max: number): value is string {
+  return isNonEmptyString(value) && value.length <= max;
+}
+
+function isOptionalBoundedString(
+  value: unknown,
+  max: number
+): value is string | undefined {
+  return value === undefined || isBoundedString(value, max);
 }
 
 function isNonNegativeInteger(value: unknown): value is number {
@@ -59,7 +75,10 @@ function isNonNegativeInteger(value: unknown): value is number {
 }
 
 function isDate(value: unknown): value is string {
-  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+  return (
+    isBoundedString(value, MAX_VERSION_LENGTH) &&
+    !Number.isNaN(Date.parse(value))
+  );
 }
 
 function parseProject(
@@ -75,10 +94,10 @@ function parseProject(
   if (
     typeof dirHash !== "string" ||
     !/^[a-f\d]{16}$/i.test(dirHash) ||
-    !isNonEmptyString(name) ||
+    !isBoundedString(name, MAX_SHORT_STRING_LENGTH) ||
     name.includes("/") ||
     name.includes("\\") ||
-    !isOptionalString(gitBranch)
+    !isOptionalBoundedString(gitBranch, MAX_SHORT_STRING_LENGTH)
   ) {
     return null;
   }
@@ -96,9 +115,9 @@ function parseModel(
   }
   const { raw, family, provider } = value;
   if (
-    !isNonEmptyString(raw) ||
+    !isBoundedString(raw, MAX_SHORT_STRING_LENGTH) ||
     !MODEL_FAMILIES.includes(family as ModelFamily) ||
-    !isOptionalString(provider)
+    !isOptionalBoundedString(provider, MAX_SHORT_STRING_LENGTH)
   ) {
     return null;
   }
@@ -107,6 +126,27 @@ function parseModel(
     family: family as ModelFamily,
     ...(provider ? { provider } : {}),
   };
+}
+
+function parseNative(
+  value: unknown,
+  harness: Harness
+): TelemetryEvent["native"] | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value) || harness !== "claude-code") {
+    return null;
+  }
+  const keys = Object.keys(value);
+  if (
+    keys.length !== 1 ||
+    keys[0] !== "requestId" ||
+    !isBoundedString(value.requestId, MAX_EVENT_ID_LENGTH)
+  ) {
+    return null;
+  }
+  return { requestId: value.requestId };
 }
 
 function parseTokens(
@@ -149,17 +189,24 @@ export function parseTelemetryEvent(
   const model = parseModel(value.model);
   const tokens = parseTokens(value.tokens);
   const identity = value.identity;
-  const native = value.native;
+  const harness = HARNESSES.includes(value.harness as Harness)
+    ? (value.harness as Harness)
+    : null;
+  const native = harness
+    ? parseNative(value.native, harness)
+    : value.native === undefined
+      ? undefined
+      : null;
 
   if (
     value.schema !== "hackspain.telemetry.v1" ||
     !EVENT_TYPES.includes(value.type as EventType) ||
-    !isNonEmptyString(value.eventId) ||
+    !isBoundedString(value.eventId, MAX_EVENT_ID_LENGTH) ||
     !isDate(value.occurredAt) ||
     !isDate(value.observedAt) ||
-    !HARNESSES.includes(value.harness as Harness) ||
-    !isOptionalString(value.harnessVersion) ||
-    !isNonEmptyString(value.sessionId) ||
+    harness === null ||
+    !isOptionalBoundedString(value.harnessVersion, MAX_VERSION_LENGTH) ||
+    !isBoundedString(value.sessionId, MAX_SESSION_ID_LENGTH) ||
     project === null ||
     model === null ||
     tokens === null ||
@@ -170,9 +217,9 @@ export function parseTelemetryEvent(
         value.costUsd < 0)) ||
     !isRecord(identity) ||
     identity.userId !== authenticated.userId ||
-    !isOptionalString(identity.teamId) ||
-    !isNonEmptyString(identity.clientVersion) ||
-    (native !== undefined && !isRecord(native))
+    !isOptionalBoundedString(identity.teamId, MAX_SESSION_ID_LENGTH) ||
+    !isBoundedString(identity.clientVersion, MAX_VERSION_LENGTH) ||
+    native === null
   ) {
     return null;
   }
@@ -183,7 +230,7 @@ export function parseTelemetryEvent(
     eventId: value.eventId,
     occurredAt: value.occurredAt,
     observedAt: value.observedAt,
-    harness: value.harness as Harness,
+    harness,
     ...(value.harnessVersion ? { harnessVersion: value.harnessVersion } : {}),
     sessionId: value.sessionId,
     ...(project ? { project } : {}),
@@ -203,6 +250,31 @@ function toJsonObject(event: TelemetryEvent): JsonObject {
   return JSON.parse(JSON.stringify(event)) as JsonObject;
 }
 
+function sortedUniqueEvents(events: TelemetryEvent[]): TelemetryEvent[] {
+  const sorted = [...events].sort((left, right) =>
+    left.eventId.localeCompare(right.eventId)
+  );
+  for (let index = 1; index < sorted.length; index++) {
+    if (sorted[index - 1]?.eventId === sorted[index]?.eventId) {
+      throw new Error(`Duplicate telemetry event id: ${sorted[index]?.eventId}`);
+    }
+  }
+  return sorted;
+}
+
+function deduplicatingFetch(
+  fetchImpl: typeof fetch,
+  token: string
+): typeof fetch {
+  return (async (input, init) => {
+    const inputUrl = input instanceof Request ? input.url : String(input);
+    const url = new URL(inputUrl);
+    url.searchParams.set("deduplicate_insert", "enable");
+    url.searchParams.set("insert_deduplication_token", token);
+    return fetchImpl(url.toString(), init);
+  }) as typeof fetch;
+}
+
 export async function storeTelemetryEvents(
   events: TelemetryEvent[],
   fetchImpl: typeof fetch = fetch
@@ -219,24 +291,39 @@ export async function storeTelemetryEvents(
     );
   }
 
+  const table =
+    process.env.RAWTREE_TELEMETRY_TABLE ?? DEFAULT_TELEMETRY_TABLE;
+  const orderedEvents = sortedUniqueEvents(events);
+  const token = createHash("sha256")
+    .update("hackspain.telemetry.insert.v1\0")
+    .update(database)
+    .update("\0")
+    .update(table)
+    .update("\0")
+    .update(
+      JSON.stringify(
+        orderedEvents.map(({ eventId, identity }) => [identity.userId, eventId])
+      )
+    )
+    .digest("hex");
+
   const rawtree = new RawTree({
     apiKey,
     database,
     ...(process.env.RAWTREE_BASE_URL
       ? { baseUrl: process.env.RAWTREE_BASE_URL }
       : {}),
-    fetch: fetchImpl,
+    fetch: deduplicatingFetch(fetchImpl, token),
     userAgent: "hackspain-dashboard/1.0",
   });
   const result = await rawtree.insert({
-    table:
-      process.env.RAWTREE_TELEMETRY_TABLE ?? DEFAULT_TELEMETRY_TABLE,
-    values: events.map(toJsonObject),
+    table,
+    values: orderedEvents.map(toJsonObject),
     signal: AbortSignal.timeout(10_000),
   });
-  if (result.inserted !== events.length) {
+  if (result.inserted !== 0 && result.inserted !== orderedEvents.length) {
     throw new Error(
-      `RawTree inserted ${result.inserted} of ${events.length} telemetry events`
+      `RawTree inserted ${result.inserted} of ${orderedEvents.length} telemetry events`
     );
   }
 }

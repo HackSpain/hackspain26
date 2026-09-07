@@ -20,6 +20,14 @@ export type ModelFamily = (typeof MODEL_FAMILIES)[number];
 
 export type EventType = "usage" | "session.start" | "session.end";
 
+export const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
+
+const MAX_EVENT_ID_LENGTH = 512;
+const MAX_SESSION_ID_LENGTH = 256;
+const MAX_SHORT_STRING_LENGTH = 256;
+const MAX_VERSION_LENGTH = 64;
+const DIR_HASH_PATTERN = /^[a-f\d]{16}$/i;
+
 export type TelemetryEvent = {
   schema: typeof SCHEMA;
   type: EventType;
@@ -84,8 +92,45 @@ function isInt(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBoundedString(value: unknown, max: number): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= max;
+}
+
+function isOptionalBoundedString(value: unknown, max: number): boolean {
+  return value === undefined || isBoundedString(value, max);
+}
+
 function isIsoDate(value: unknown): value is string {
-  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+  return (
+    isBoundedString(value, MAX_VERSION_LENGTH) &&
+    !Number.isNaN(Date.parse(value))
+  );
+}
+
+function isValidModel(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    isBoundedString(value.raw, MAX_SHORT_STRING_LENGTH) &&
+    MODEL_FAMILIES.includes(value.family as ModelFamily) &&
+    isOptionalBoundedString(value.provider, MAX_SHORT_STRING_LENGTH)
+  );
+}
+
+function isValidIdentity(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    isBoundedString(value.userId, MAX_SESSION_ID_LENGTH) &&
+    isOptionalBoundedString(value.teamId, MAX_SESSION_ID_LENGTH) &&
+    isBoundedString(value.clientVersion, MAX_VERSION_LENGTH)
+  );
 }
 
 /**
@@ -104,8 +149,8 @@ export function validateEvent(value: unknown): string[] {
   if (!["usage", "session.start", "session.end"].includes(String(e.type))) {
     problems.push("type must be usage | session.start | session.end");
   }
-  if (typeof e.eventId !== "string" || !e.eventId) {
-    problems.push("eventId required");
+  if (!isBoundedString(e.eventId, MAX_EVENT_ID_LENGTH)) {
+    problems.push(`eventId must be 1-${MAX_EVENT_ID_LENGTH} characters`);
   }
   if (!isIsoDate(e.occurredAt)) {
     problems.push("occurredAt must be ISO-8601");
@@ -116,31 +161,36 @@ export function validateEvent(value: unknown): string[] {
   if (!HARNESSES.includes(e.harness as HarnessId)) {
     problems.push(`harness must be one of ${HARNESSES.join(", ")}`);
   }
-  if (typeof e.sessionId !== "string" || !e.sessionId) {
-    problems.push("sessionId required");
+  if (!isOptionalBoundedString(e.harnessVersion, MAX_VERSION_LENGTH)) {
+    problems.push(
+      `harnessVersion must be at most ${MAX_VERSION_LENGTH} characters`
+    );
+  }
+  if (!isBoundedString(e.sessionId, MAX_SESSION_ID_LENGTH)) {
+    problems.push(`sessionId must be 1-${MAX_SESSION_ID_LENGTH} characters`);
   }
   if (e.project !== undefined) {
-    const p = e.project as Record<string, unknown>;
-    if (typeof p?.dirHash !== "string" || typeof p?.name !== "string") {
+    const p = isRecord(e.project) ? e.project : null;
+    if (
+      !p ||
+      typeof p.dirHash !== "string" ||
+      !DIR_HASH_PATTERN.test(p.dirHash) ||
+      !isBoundedString(p.name, MAX_SHORT_STRING_LENGTH) ||
+      !isOptionalBoundedString(p.gitBranch, MAX_SHORT_STRING_LENGTH)
+    ) {
       problems.push("project needs dirHash and name");
     } else if (p.name.includes("/") || p.name.includes("\\")) {
       problems.push("project.name must be a basename, not a path");
     }
   }
-  if (e.model !== undefined) {
-    const m = e.model as Record<string, unknown>;
-    if (
-      typeof m?.raw !== "string" ||
-      !MODEL_FAMILIES.includes(m?.family as ModelFamily)
-    ) {
-      problems.push("model needs raw and a known family");
-    }
+  if (e.model !== undefined && !isValidModel(e.model)) {
+    problems.push("model needs raw and a known family");
   }
   if (e.type === "usage" && e.tokens === undefined) {
     problems.push("usage events need tokens");
   }
   if (e.tokens !== undefined) {
-    const t = e.tokens as Record<string, unknown>;
+    const t = isRecord(e.tokens) ? e.tokens : null;
     for (const key of ["input", "output", "cacheRead", "cacheWrite"]) {
       if (!isInt(t?.[key])) {
         problems.push(`tokens.${key} must be a non-negative integer`);
@@ -152,13 +202,39 @@ export function validateEvent(value: unknown): string[] {
   }
   if (
     e.costUsd !== undefined &&
-    (typeof e.costUsd !== "number" || e.costUsd < 0)
+    (typeof e.costUsd !== "number" ||
+      !Number.isFinite(e.costUsd) ||
+      e.costUsd < 0)
   ) {
     problems.push("costUsd must be a non-negative number");
   }
-  const id = e.identity as Record<string, unknown>;
-  if (typeof id?.userId !== "string" || typeof id?.clientVersion !== "string") {
+  if (!isValidIdentity(e.identity)) {
     problems.push("identity needs userId and clientVersion");
+  }
+  if (e.native !== undefined) {
+    const native = isRecord(e.native) ? e.native : null;
+    const keys = native ? Object.keys(native) : [];
+    if (
+      e.harness !== "claude-code" ||
+      !native ||
+      keys.length !== 1 ||
+      keys[0] !== "requestId" ||
+      !isBoundedString(native.requestId, MAX_EVENT_ID_LENGTH)
+    ) {
+      problems.push(
+        "native contains fields that are not safe for this harness"
+      );
+    }
+  }
+  try {
+    if (
+      new TextEncoder().encode(JSON.stringify(e)).byteLength >
+      TELEMETRY_EVENT_MAX_BYTES
+    ) {
+      problems.push(`event exceeds ${TELEMETRY_EVENT_MAX_BYTES} bytes`);
+    }
+  } catch {
+    problems.push("event must be JSON serializable");
   }
   return problems;
 }

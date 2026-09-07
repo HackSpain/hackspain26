@@ -61,6 +61,12 @@ describe("RawTree telemetry", () => {
         { userId: "user-1" }
       )
     ).toBeNull();
+    expect(
+      parseTelemetryEvent(
+        { ...event, native: { prompt: "do not collect this" } },
+        { userId: "user-1" }
+      )
+    ).toBeNull();
   });
 
   test("inserts the canonical events through the RawTree SDK", async () => {
@@ -77,8 +83,14 @@ describe("RawTree telemetry", () => {
 
     await storeTelemetryEvents([event], fetchImpl);
 
-    expect(request?.input).toBe(
-      "https://rawtree.example/v1/tables/cli_events?database=analytics"
+    const url = new URL(String(request?.input));
+    expect(`${url.origin}${url.pathname}`).toBe(
+      "https://rawtree.example/v1/tables/cli_events"
+    );
+    expect(url.searchParams.get("database")).toBe("analytics");
+    expect(url.searchParams.get("deduplicate_insert")).toBe("enable");
+    expect(url.searchParams.get("insert_deduplication_token")).toMatch(
+      /^[a-f\d]{64}$/
     );
     expect(new Headers(request?.init?.headers).get("authorization")).toBe(
       "Bearer rt_test"
@@ -86,15 +98,37 @@ describe("RawTree telemetry", () => {
     expect(JSON.parse(String(request?.init?.body))).toEqual([event]);
   });
 
-  test("fails the batch when RawTree inserts fewer events than requested", async () => {
+  test("accepts a deduplicated replay that inserts zero new rows", async () => {
     process.env.RAWTREE_API_KEY = "rt_test";
     process.env.RAWTREE_DATABASE = "analytics";
 
     const fetchImpl = (async () =>
       Response.json({ inserted: 0 })) as unknown as typeof fetch;
 
-    expect(storeTelemetryEvents([event], fetchImpl)).rejects.toThrow(
-      "RawTree inserted 0 of 1 telemetry events"
+    await expect(storeTelemetryEvents([event], fetchImpl)).resolves.toBeUndefined();
+  });
+
+  test("uses a stable token and order, and rejects a partial insert", async () => {
+    process.env.RAWTREE_API_KEY = "rt_test";
+    process.env.RAWTREE_DATABASE = "analytics";
+    const second = { ...event, eventId: "codex:session-1:43" };
+    const requests: { url: string; body: string }[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      requests.push({ url: String(input), body: String(init?.body) });
+      return Response.json({ inserted: requests.length === 3 ? 1 : 2 });
+    }) as typeof fetch;
+
+    await storeTelemetryEvents([second, event], fetchImpl);
+    await storeTelemetryEvents([event, second], fetchImpl);
+    const firstUrl = new URL(requests[0]?.url ?? "");
+    const secondUrl = new URL(requests[1]?.url ?? "");
+    expect(firstUrl.searchParams.get("insert_deduplication_token")).toBe(
+      secondUrl.searchParams.get("insert_deduplication_token")
+    );
+    expect(requests[0]?.body).toBe(requests[1]?.body);
+
+    await expect(storeTelemetryEvents([event, second], fetchImpl)).rejects.toThrow(
+      "RawTree inserted 1 of 2 telemetry events"
     );
   });
 });

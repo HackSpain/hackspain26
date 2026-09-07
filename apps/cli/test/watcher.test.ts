@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  existsSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -86,7 +87,11 @@ describe("http sink", () => {
     const sink = httpSink(
       "https://ingest.example/v1",
       async () => "tok",
-      fetchImpl
+      fetchImpl,
+      {
+        pendingPath: join(dir, "pending.json"),
+        rejectionsPath: join(dir, "rejections.ndjson"),
+      }
     );
     await sink.write([event(1), event(2)]);
     const headers = calls[0]?.init.headers as Record<string, string>;
@@ -97,9 +102,102 @@ describe("http sink", () => {
       code: "SINK_HTTP",
     });
   });
+
+  test("persists a failed batch and retries it after a restart", async () => {
+    const pendingPath = join(dir, "pending.json");
+    const failed = httpSink(
+      "https://ingest.example/v1",
+      async () => "tok",
+      (async () =>
+        new Response(null, {
+          status: 503,
+          statusText: "down",
+        })) as unknown as typeof fetch,
+      { pendingPath }
+    );
+
+    await expect(failed.write([event(1)])).rejects.toMatchObject({
+      code: "SINK_HTTP",
+    });
+    expect(existsSync(pendingPath)).toBe(true);
+
+    const bodies: string[] = [];
+    const recovered = httpSink(
+      "https://ingest.example/v1",
+      async () => "tok",
+      (async (_input, init) => {
+        bodies.push(String(init?.body));
+        return new Response(null, { status: 200 });
+      }) as typeof fetch,
+      { pendingPath }
+    );
+    await recovered.flushPending?.();
+
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]).toContain(event(1).eventId);
+    expect(existsSync(pendingPath)).toBe(false);
+  });
+
+  test("accounts for rejected events and keeps rejection details locally", async () => {
+    const messages: string[] = [];
+    const rejectionsPath = join(dir, "rejections.ndjson");
+    const sink = httpSink(
+      "https://ingest.example/v1",
+      async () => "tok",
+      (async () =>
+        Response.json(
+          {
+            ok: true,
+            value: {
+              accepted: 1,
+              rejected: 1,
+              rejections: [
+                { line: 2, eventId: event(2).eventId, reason: "invalid_event" },
+              ],
+              stored: true,
+            },
+          },
+          { status: 202 }
+        )) as unknown as typeof fetch,
+      {
+        pendingPath: join(dir, "pending.json"),
+        rejectionsPath,
+        onRejected: (message) => messages.push(message),
+      }
+    );
+
+    await sink.write([event(1), event(2)]);
+
+    expect(messages[0]).toContain("1 telemetry event was rejected");
+    expect(readFileSync(rejectionsPath, "utf8")).toContain("invalid_event");
+  });
 });
 
 describe("batcher", () => {
+  test("flushes a durable upload even with no new in-memory events", async () => {
+    let durable = 2;
+    let flushes = 0;
+    const batcher = createBatcher(
+      [
+        {
+          name: "durable",
+          write: async () => {},
+          flushPending: async () => {
+            flushes++;
+            durable = 0;
+          },
+          pending: () => durable,
+        },
+      ],
+      () => {}
+    );
+
+    expect(batcher.size()).toBe(2);
+    expect(await batcher.flush()).toBe(true);
+    expect(flushes).toBe(1);
+    expect(batcher.size()).toBe(0);
+  });
+
   test("splits into batches, keeps failed events, backs off, then recovers", async () => {
     const writes: number[] = [];
     let fail = true;
