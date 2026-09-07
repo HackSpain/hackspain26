@@ -1,0 +1,25 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types --strict-vars",
+    "check": "pnpm run types && pnpm run typecheck && wrangler deploy --dry-run",
+    "lint": "oxlint -c oxlint.config.mjs . && ultracite check",
+    "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.12",
+    "@types/node": "^20",
+    "oxlint": "1.81.0",
+    "typescript": "^5",
+    "wrangler": "latest"
+  }
+}
