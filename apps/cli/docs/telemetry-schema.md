@@ -3,12 +3,12 @@
 What `hackspain watch` records and sends, regardless of which AI coding harness produced it.
 Source of truth for the TypeScript type and validator: `apps/cli/src/watcher/schema.ts`.
 
-The telemetry store is still undecided (ClickHouse or an alternative). Until then the watcher
-writes every event to a local spool (`~/.local/state/hackspain/telemetry/YYYY-MM-DD.ndjson`,
-one JSON object per line) and, when a URL is configured, POSTs the same lines as
-`application/x-ndjson` with `Authorization: Bearer <Convex JWT>`. Whichever store is chosen only
-needs to accept that body; a ClickHouse `INSERT … FORMAT JSONEachRow` behind a small auth proxy
-fits directly.
+The watcher writes every event to a local spool
+(`~/.local/state/hackspain/telemetry/YYYY-MM-DD.ndjson`, one JSON object per line) and, when a URL
+is configured, POSTs the same lines as `application/x-ndjson` with
+`Authorization: Bearer <Convex JWT>`. The dashboard verifies the participant and inserts accepted
+events through the RawTree TypeScript SDK. RawTree stores the canonical objects in
+`hackspain_telemetry` by default.
 
 ## Event
 
@@ -16,7 +16,7 @@ fits directly.
 | --- | --- | --- |
 | `schema` | `"hackspain.telemetry.v1"` | Bump for breaking changes |
 | `type` | `usage` \| `session.start` \| `session.end` | `session.end` is reserved; no harness emits it yet |
-| `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key: the store must upsert on it |
+| `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key for queries and downstream processing |
 | `occurredAt` | ISO-8601 UTC | When the harness recorded it |
 | `observedAt` | ISO-8601 UTC | When the watcher read it |
 | `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |

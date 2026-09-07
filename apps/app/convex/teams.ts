@@ -224,6 +224,21 @@ export const mine = onboardedQuery({
   },
 });
 
+/** Cheap server-side identity lookup for telemetry and similar ingestion paths. */
+export const mineId = onboardedQuery({
+  args: {},
+  returns: v.union(v.id("teams"), v.null()),
+  handler: async (ctx) => {
+    const membership = await membershipForUser(ctx, ctx.user._id);
+    if (membership) return membership.teamId;
+    const owned = await ctx.db
+      .query("teams")
+      .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
+      .unique();
+    return owned?._id ?? null;
+  },
+});
+
 export const list = onboardedQuery({
   args: {},
   returns: v.array(teamSummaryReturn),
