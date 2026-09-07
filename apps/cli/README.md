@@ -6,10 +6,28 @@ routes (`apps/app/src/app/api/cli`). The binary only knows the dashboard's addre
 
 ```
 hackspain auth login            # email + 8-digit code, same as the dashboard
-hackspain auth status
-hackspain auth logout
+hackspain auth status | logout
+
+hackspain team create <name> [-m github:x -m a@b.c]
+hackspain team join <code>      # 8-character code from the owner
+hackspain team show | list | leave | code [--regenerate] | repo [url|--clear]
+hackspain stack set nextjs convex claude-code
+
+hackspain track list
+hackspain track register <slug…> | unregister <slug…> | move <from> <to>
+hackspain submit [--draft]      # interactive form; flags for scripts
+hackspain project show | list
+hackspain perk list
+
+hackspain milestone add firstCommit|firstBuild|firstDemo|custom [--label …] [--at ISO]
+hackspain milestone list [--all]
+
 hackspain --json <command>      # one JSON object on stdout, prompts disabled
 ```
+
+Tracks live on the project: `track register` saves a draft with the chosen challenges, and
+`submit` freezes everything. Commands that need a team, an accepted signup, or completed
+onboarding fail fast with the next step to take.
 
 ## Develop
 
@@ -18,6 +36,7 @@ bun dev:app                                        # the CLI talks to localhost:
 bun dev:cli -- auth login --email you@example.com --code 00000000
 bun run typecheck && bun run lint && bun test      # from apps/cli
 bun run build:bin:host && ./dist/hackspain --version
+HACKSPAIN_SMOKE_EMAIL=… scripts/smoke.sh           # end-to-end through the local dashboard
 ```
 
 - A dev Convex deployment with `ALLOW_EMAIL_OTP_STUB=true` accepts `00000000` as the code.
