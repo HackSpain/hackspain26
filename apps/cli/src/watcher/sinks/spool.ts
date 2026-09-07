@@ -12,6 +12,10 @@ import type { TelemetryEvent } from "../schema";
 export type Sink = {
   name: string;
   write(events: TelemetryEvent[]): Promise<void>;
+  /** Retry durable work when there are no new in-memory events. */
+  flushPending?(): Promise<void>;
+  /** Number of durable events still waiting outside the in-memory queue. */
+  pending?(): number;
 };
 
 export const SPOOL_CAP_BYTES = 50 * 1024 * 1024;

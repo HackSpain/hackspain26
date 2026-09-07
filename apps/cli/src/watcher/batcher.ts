@@ -47,11 +47,31 @@ export function createBatcher(
       let allOk = true;
       for (const sink of sinks) {
         const queue = pending.get(sink.name) ?? [];
-        if (queue.length === 0) {
+        const durablePending = sink.pending?.() ?? 0;
+        if (queue.length === 0 && durablePending === 0) {
           continue;
         }
         if ((notBefore.get(sink.name) ?? 0) > now()) {
           allOk = false;
+          continue;
+        }
+        if (queue.length === 0) {
+          try {
+            await sink.flushPending?.();
+            backoff.delete(sink.name);
+            notBefore.delete(sink.name);
+          } catch (err) {
+            const wait = Math.min(
+              BACKOFF_MAX_MS,
+              (backoff.get(sink.name) ?? BACKOFF_MIN_MS / 2) * 2
+            );
+            backoff.set(sink.name, wait);
+            notBefore.set(sink.name, now() + wait);
+            log(
+              `${sink.name}: ${String(err)} (retry in ${Math.round(wait / 1000)}s, ${durablePending} queued)`
+            );
+            allOk = false;
+          }
           continue;
         }
         while (queue.length > 0) {
@@ -78,7 +98,13 @@ export function createBatcher(
       }
       return allOk;
     },
-    size: () => Math.max(...[...pending.values()].map((q) => q.length), 0),
+    size: () =>
+      Math.max(
+        ...sinks.map((sink) =>
+          Math.max(pending.get(sink.name)?.length ?? 0, sink.pending?.() ?? 0)
+        ),
+        0
+      ),
     dropped: () => dropped,
   };
 }

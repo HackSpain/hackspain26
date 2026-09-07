@@ -67,13 +67,17 @@ schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a 
 (`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
 `/api/cli/telemetry` with your session. The server authenticates and validates batches, then
 stores accepted events through the RawTree TypeScript SDK without exposing its key to the CLI.
+The exact remote batch is saved locally before upload and retried after network failures or a
+restart. RawTree receives a stable deduplication token, so retrying an acknowledged-but-lost
+request does not count it twice. Server rejections are reported and recorded locally instead of
+being silently discarded.
 `--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
 in `~/.config/hackspain/config.json` point the upload elsewhere.
 
 On the same tick it polls organiser broadcasts and the feed, and shows broadcasts as a desktop
 notification (`notify-send`, macOS Notification Center, Windows toast). It is built to sit on a
-laptop all weekend: one wakeup per second, the screen repaints only the rows that changed, one
-network round trip per scan, and after ten minutes without new usage the scan slows to once a
+laptop all weekend: one wakeup per second, the screen repaints only the rows that changed, normally
+one network round trip per scan, and after ten minutes without new usage the scan slows to once a
 minute until activity resumes. No prompt text or full
 paths ever leave the machine; only token counts, model, session ids, and a hash of the project
 directory. By default only usage after the watcher starts is reported; `--backfill 6` includes

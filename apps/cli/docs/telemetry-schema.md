@@ -10,6 +10,18 @@ is configured, POSTs the same lines as `application/x-ndjson` with
 events through the RawTree TypeScript SDK. RawTree stores the canonical objects in
 `hackspain_telemetry` by default.
 
+Before an HTTP request, the CLI atomically saves the exact batch in a per-user pending-upload file.
+It removes that file only after a successful response, and retries it on the next flush or process
+start. The server sorts the accepted rows and sends RawTree a stable ClickHouse insert-deduplication
+token derived from the authenticated user and event ids. RawTree insert deduplication has a finite
+window, so every downstream query must still treat `(identity.userId, eventId)` as the permanent
+logical key.
+
+The dashboard receipt accounts for every input line as accepted or rejected. Rejections include a
+bounded event id, line number, and reason; the CLI records them in
+`~/.local/state/hackspain/telemetry-upload-rejections.ndjson` and leaves the original event in the
+local spool. Batches contain at most 200 events, and each event is limited to 32 KiB.
+
 ## Event
 
 | Field | Type | Notes |
@@ -27,7 +39,7 @@ events through the RawTree TypeScript SDK. RawTree stores the canonical objects 
 | `tokens` | `{ input, output, cacheRead, cacheWrite, reasoning? }`? | Non-negative integers. Required for `usage`. `input` excludes cache reads for every harness |
 | `costUsd` | number? | Only when the harness itself reports a price |
 | `identity` | `{ userId, teamId?, clientVersion }` | Stamped by the CLI from the logged-in user and their team at flush time |
-| `native` | object? | Small harness-specific remainder (e.g. Claude `requestId`) |
+| `native` | object? | Allowlisted harness-specific remainder. Currently only Claude `requestId` |
 
 Derived values for the dashboard: `tokens.total = input + output + cacheRead + cacheWrite`,
 `cachedTokens = cacheRead + cacheWrite`, sessions = distinct `sessionId` per harness, 30-minute
@@ -53,6 +65,7 @@ skip anything they cannot parse.
   test fails if a home path sneaks in.
 - Working directories are hashed; only the last path segment is kept.
 - No harness account ids. Identity is the HackSpain user and team.
+- `native` keys are allowlisted in both CLI and server validation; unknown keys are rejected.
 - `--backfill <hours>` is opt-in; by default only usage after the watcher starts is reported.
 
 ## Example
