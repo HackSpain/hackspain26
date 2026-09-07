@@ -3,7 +3,13 @@
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
-import { EmptyState, FormError, LoadingText, Page, errorMessage } from "@/components/page";
+import {
+  EmptyState,
+  FormError,
+  LoadingText,
+  Page,
+  errorMessage,
+} from "@/components/page";
 import { PerkCard } from "@/components/perk-card";
 
 export default function PerksPage() {
@@ -11,7 +17,9 @@ export default function PerksPage() {
   const claim = useMutation(api.perks.claim);
   const [error, setError] = useState<string | null>(null);
 
-  if (catalog === undefined) return <LoadingText />;
+  if (catalog === undefined) {
+    return <LoadingText />;
+  }
 
   return (
     <Page
@@ -21,7 +29,8 @@ export default function PerksPage() {
       <FormError message={error} />
       {catalog.length === 0 ? (
         <EmptyState title="Aún no hay perks">
-          Los beneficios de partners aparecerán aquí cuando la organización los publique.
+          Los beneficios de partners aparecerán aquí cuando la organización los
+          publique.
         </EmptyState>
       ) : (
         <div className="hs-stagger grid gap-4 sm:grid-cols-2">
@@ -32,8 +41,10 @@ export default function PerksPage() {
               claim={existing}
               onClaim={() => {
                 setError(null);
-                void claim({ perkId: perk._id }).catch((err: unknown) =>
-                  setError(errorMessage(err, "No se ha podido reclamar")),
+                void claim({ perkId: perk._id }).catch((caughtError: unknown) =>
+                  setError(
+                    errorMessage(caughtError, "No se ha podido reclamar")
+                  )
                 );
               }}
             />

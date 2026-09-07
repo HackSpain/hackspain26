@@ -22,14 +22,14 @@ export function tailJsonl(path: string, cursors: CursorStore): TailResult {
       stat.size < previous.offset);
   let offset = rotated || previous === undefined ? 0 : previous.offset;
   const cursor: FileCursor = {
-    offset,
     inode: stat.ino,
-    mtimeMs: stat.mtimeMs,
-    seenSessions: rotated ? [] : previous?.seenSessions,
     mark: rotated ? undefined : previous?.mark,
+    mtimeMs: stat.mtimeMs,
+    offset,
+    seenSessions: rotated ? [] : previous?.seenSessions,
   };
   if (stat.size <= offset) {
-    return { lines: [], cursor };
+    return { cursor, lines: [] };
   }
 
   const fd = openSync(path, "r");
@@ -52,13 +52,13 @@ export function tailJsonl(path: string, cursors: CursorStore): TailResult {
   const text = Buffer.concat(chunks).toString("utf8");
   const lastNewline = text.lastIndexOf("\n");
   if (lastNewline === -1) {
-    return { lines: [], cursor };
+    return { cursor, lines: [] };
   }
   const complete = text.slice(0, lastNewline);
   const consumedBytes = Buffer.byteLength(complete, "utf8") + 1;
   cursor.offset += consumedBytes;
   const lines = complete.split("\n").filter((line) => line.trim().length > 0);
-  return { lines, cursor };
+  return { cursor, lines };
 }
 
 export function parseJsonLine(line: string): unknown | null {

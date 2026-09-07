@@ -14,7 +14,7 @@ Public marketing site for [HackSpain](https://hackspain.com) — Hack Spain 2026
 | **Email** | Resend API, plain text and HTML |
 | **Observability** | [Sentry](https://sentry.io/), [@vercel/analytics](https://vercel.com/docs/analytics), [@vercel/speed-insights](https://vercel.com/docs/speed-insights) |
 | **Bot protection** | [BotID](https://botid.vercel.app/) on signup endpoints |
-| **Tooling** | TypeScript, [Ultracite](https://www.ultracite.dev/) / Biome (`pnpm check`, `pnpm fix`), [Knip](https://knip.dev/) |
+| **Tooling** | TypeScript, [Oxlint](https://oxc.rs/docs/guide/usage/linter.html), [Ultracite](https://www.ultracite.ai/) / Biome (`pnpm lint`, `pnpm fix`), [Knip](https://knip.dev/) |
 
 ## Requirements
 
@@ -44,7 +44,7 @@ Development server: [http://localhost:4321](http://localhost:4321).
 | `pnpm build` | Production build (`./dist/`) |
 | `pnpm preview` | Preview production build locally |
 | `pnpm astro check` | Astro and TypeScript checks |
-| `pnpm check` | Lint and format (Ultracite / Biome) |
+| `pnpm lint` | Check lint and formatting (Oxlint + Ultracite / Biome) |
 | `pnpm fix` | Auto-fix lint and format issues |
 | `pnpm knip` | Find unused exports, dependencies, and files |
 

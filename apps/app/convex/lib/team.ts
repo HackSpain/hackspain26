@@ -3,7 +3,7 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 export async function membershipForUser(
   ctx: QueryCtx | MutationCtx,
-  userId: Id<"users">,
+  userId: Id<"users">
 ): Promise<Doc<"teamMembers"> | null> {
   return await ctx.db
     .query("teamMembers")
@@ -13,7 +13,7 @@ export async function membershipForUser(
 
 export async function findOwnedSubmission(
   ctx: QueryCtx | MutationCtx,
-  userId: Id<"users">,
+  userId: Id<"users">
 ): Promise<Doc<"submissions"> | null> {
   const membership = await membershipForUser(ctx, userId);
   if (membership) {
@@ -21,7 +21,9 @@ export async function findOwnedSubmission(
       .query("submissions")
       .withIndex("by_team", (q) => q.eq("teamId", membership.teamId))
       .first();
-    if (byTeam) return byTeam;
+    if (byTeam) {
+      return byTeam;
+    }
   }
   return await ctx.db
     .query("submissions")

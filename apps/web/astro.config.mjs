@@ -6,10 +6,7 @@ import sentry from "@sentry/astro";
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  site: "https://hackspain.com",
-  output: "server",
   adapter: vercel(),
-  trailingSlash: "never",
   integrations: [
     react(),
     sentry({
@@ -18,4 +15,7 @@ export default defineConfig({
       authToken: process.env.SENTRY_AUTH_TOKEN,
     }),
   ],
+  output: "server",
+  site: "https://hackspain.com",
+  trailingSlash: "never",
 });

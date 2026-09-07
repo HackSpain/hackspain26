@@ -103,11 +103,11 @@ export function appendReferralToInternalHref(
   }
 
   const hashIdx = href.indexOf("#");
-  const base = hashIdx >= 0 ? href.slice(0, hashIdx) : href;
-  const hash = hashIdx >= 0 ? href.slice(hashIdx) : "";
+  const base = hashIdx === -1 ? href : href.slice(0, hashIdx);
+  const hash = hashIdx === -1 ? "" : href.slice(hashIdx);
   const qIdx = base.indexOf("?");
-  const path = qIdx >= 0 ? base.slice(0, qIdx) : base;
-  const query = qIdx >= 0 ? base.slice(qIdx + 1) : "";
+  const path = qIdx === -1 ? base : base.slice(0, qIdx);
+  const query = qIdx === -1 ? "" : base.slice(qIdx + 1);
   const params = new URLSearchParams(query);
   if (params.has(REFERRAL_QUERY_PARAM)) {
     return href;

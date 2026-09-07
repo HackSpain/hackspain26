@@ -29,15 +29,15 @@ export async function runCli(
   try {
     await program.parseAsync(argv);
     process.exit(EXIT.OK);
-  } catch (err) {
-    if (isCommanderError(err)) {
+  } catch (error) {
+    if (isCommanderError(error)) {
       const passthrough =
-        err.code === "commander.helpDisplayed" ||
-        err.code === "commander.version" ||
-        err.code === "commander.help";
+        error.code === "commander.helpDisplayed" ||
+        error.code === "commander.version" ||
+        error.code === "commander.help";
       process.exit(passthrough ? EXIT.OK : EXIT.USAGE);
     }
-    const explained = explainError(err);
+    const explained = explainError(error);
     if (json) {
       printJsonError(explained);
     } else {

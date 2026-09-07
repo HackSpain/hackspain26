@@ -31,19 +31,19 @@ export async function POST(request: Request) {
     const uploadUrl = await fetchMutation(
       api.feed.generateUploadUrl,
       {},
-      { token },
+      { token }
     );
     const stored = await fetch(uploadUrl, {
-      method: "POST",
-      headers: { "content-type": contentType },
       body: bytes,
+      headers: { "content-type": contentType },
+      method: "POST",
     });
     if (!stored.ok) {
       return fail(`Storage answered ${stored.status}`, 502);
     }
     const { storageId } = (await stored.json()) as { storageId: string };
     return ok({ imageId: storageId });
-  } catch (err) {
-    return fromError(err);
+  } catch (error) {
+    return fromError(error);
   }
 }

@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     await fetchAction(api.auth.signOut, {}, { token });
     return ok({ signedOut: true });
-  } catch (err) {
-    return fromError(err);
+  } catch (error) {
+    return fromError(error);
   }
 }

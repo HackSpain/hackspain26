@@ -35,11 +35,11 @@ export function Windmill({ className = "", style }: Props) {
       <div
         className="absolute"
         style={{
-          width: percent(SAILS_WIDTH_RATIO),
           height: percent(SAILS_HEIGHT_RATIO),
           left: percent(AXLE_X_RATIO - SAILS_WIDTH_RATIO / 2),
           top: percent(AXLE_Y_RATIO - SAILS_HEIGHT_RATIO / 2),
           transform: "rotate(var(--hs-sail-angle, 0deg))",
+          width: percent(SAILS_WIDTH_RATIO),
         }}
       >
         <InlineSvg className="h-full w-full" decorative svg={sailsSvg} />

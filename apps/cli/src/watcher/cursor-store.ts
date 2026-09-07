@@ -15,10 +15,6 @@ export function openCursorStore(path = cursorsPath()): CursorStore {
   let dirty = false;
   return {
     get: (file) => files[file],
-    set: (file, cursor) => {
-      files[file] = cursor;
-      dirty = true;
-    },
     save: () => {
       if (!dirty) {
         return;
@@ -26,6 +22,10 @@ export function openCursorStore(path = cursorsPath()): CursorStore {
       const data: Persisted = { version: 1, files };
       writeFileAtomic(path, `${JSON.stringify(data)}\n`, 0o600);
       dirty = false;
+    },
+    set: (file, cursor) => {
+      files[file] = cursor;
+      dirty = true;
     },
   };
 }
@@ -35,9 +35,9 @@ export function memoryCursorStore(): CursorStore {
   const files: Record<string, FileCursor> = {};
   return {
     get: (file) => files[file],
+    save: () => undefined,
     set: (file, cursor) => {
       files[file] = cursor;
     },
-    save: () => undefined,
   };
 }

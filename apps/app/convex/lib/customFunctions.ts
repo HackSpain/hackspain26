@@ -18,8 +18,8 @@ function wrapQuery(resolve: Resolve) {
   return customQuery(query, {
     args: {},
     input: async (ctx) => ({
-      ctx: { ...ctx, user: await resolve(ctx) },
       args: {},
+      ctx: { ...ctx, user: await resolve(ctx) },
     }),
   });
 }
@@ -28,8 +28,8 @@ function wrapMutation(resolve: Resolve) {
   return customMutation(mutation, {
     args: {},
     input: async (ctx) => ({
-      ctx: { ...ctx, user: await resolve(ctx) },
       args: {},
+      ctx: { ...ctx, user: await resolve(ctx) },
     }),
   });
 }

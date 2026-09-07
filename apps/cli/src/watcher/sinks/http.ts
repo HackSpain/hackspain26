@@ -148,13 +148,13 @@ export function httpSink(
   const send = async (upload: PendingUpload): Promise<void> => {
     const bearer = await token();
     const response = await fetchImpl(upload.url, {
-      method: "POST",
+      body: `${upload.events.map((event) => JSON.stringify(event)).join("\n")}\n`,
       headers: {
         "content-type": "application/x-ndjson",
         "user-agent": `hackspain-cli/${VERSION}`,
         ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
       },
-      body: `${upload.events.map((event) => JSON.stringify(event)).join("\n")}\n`,
+      method: "POST",
     });
     if (!response.ok) {
       throw new CliError(
@@ -203,7 +203,15 @@ export function httpSink(
   };
 
   return {
+    flushPending,
     name: "http",
+    pending: () => {
+      if (!existsSync(pendingPath)) {
+        return 0;
+      }
+      const pending = readJsonFile<unknown>(pendingPath);
+      return isPendingUpload(pending) ? pending.events.length : 1;
+    },
     write: async (events) => {
       if (events.length === 0) {
         return;
@@ -222,14 +230,6 @@ export function httpSink(
       writeFileAtomic(pendingPath, `${JSON.stringify(upload)}\n`, 0o600);
       await send(upload);
       clearPending();
-    },
-    flushPending,
-    pending: () => {
-      if (!existsSync(pendingPath)) {
-        return 0;
-      }
-      const pending = readJsonFile<unknown>(pendingPath);
-      return isPendingUpload(pending) ? pending.events.length : 1;
     },
   };
 }

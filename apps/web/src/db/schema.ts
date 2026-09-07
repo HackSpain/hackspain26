@@ -21,50 +21,12 @@ type SignupApprovalStatus =
 export const hackathonSignups = pgTable(
   "hackathon_signups",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    fullName: text("full_name").notNull(),
-    email: text("email").notNull().unique(),
-    xUrl: text("x_url"),
-    linkedinUrl: text("linkedin_url"),
-    githubUrl: text("github_url"),
-    webUrl: text("web_url"),
     achievements: text("achievements"),
-    freeTime: text("free_time"),
-    dietaryRestrictions: text("dietary_restrictions")
-      .array()
-      .default(sql`ARRAY[]::text[]`)
-      .notNull(),
-    dietaryDetails: text("dietary_details"),
-    dietaryConsentAt: timestamp("dietary_consent_at", { withTimezone: true }),
-    occupationStatuses: text("occupation_statuses")
-      .array()
-      .default(sql`ARRAY[]::text[]`)
-      .notNull(),
-    studyInstitution: text("study_institution"),
-    employer: text("employer"),
-    cameFromPreSignup: boolean("came_from_pre_signup").default(false).notNull(),
-    wantsAmbassador: boolean("wants_ambassador").default(false).notNull(),
     ambassadorMotivation: text("ambassador_motivation"),
-    heardFrom: text("heard_from_sources")
-      .array()
-      .default(sql`ARRAY[]::text[]`)
-      .notNull(),
-    referralCode: text("referral_code"),
     approvalStatus: text("approval_status")
       .$type<SignupApprovalStatus>()
       .default("pending")
       .notNull(),
-    managementToken: uuid("management_token")
-      .defaultRandom()
-      .notNull()
-      .unique(),
-    cancellationEmailSentAt: timestamp("cancellation_email_sent_at", {
-      withTimezone: true,
-    }),
-    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     /**
      * The photo they chose for their badge, as a data URI, downscaled in the
      * browser before it is sent. Stored so the social image can print it: that
@@ -75,6 +37,44 @@ export const hackathonSignups = pgTable(
     badgePhotoUpdatedAt: timestamp("badge_photo_updated_at", {
       withTimezone: true,
     }),
+    cameFromPreSignup: boolean("came_from_pre_signup").default(false).notNull(),
+    cancellationEmailSentAt: timestamp("cancellation_email_sent_at", {
+      withTimezone: true,
+    }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    dietaryConsentAt: timestamp("dietary_consent_at", { withTimezone: true }),
+    dietaryDetails: text("dietary_details"),
+    dietaryRestrictions: text("dietary_restrictions")
+      .array()
+      .default(sql`ARRAY[]::text[]`)
+      .notNull(),
+    email: text("email").notNull().unique(),
+    employer: text("employer"),
+    freeTime: text("free_time"),
+    fullName: text("full_name").notNull(),
+    githubUrl: text("github_url"),
+    heardFrom: text("heard_from_sources")
+      .array()
+      .default(sql`ARRAY[]::text[]`)
+      .notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    linkedinUrl: text("linkedin_url"),
+    managementToken: uuid("management_token")
+      .defaultRandom()
+      .notNull()
+      .unique(),
+    occupationStatuses: text("occupation_statuses")
+      .array()
+      .default(sql`ARRAY[]::text[]`)
+      .notNull(),
+    referralCode: text("referral_code"),
+    studyInstitution: text("study_institution"),
+    wantsAmbassador: boolean("wants_ambassador").default(false).notNull(),
+    webUrl: text("web_url"),
+    xUrl: text("x_url"),
   },
   (table) => [
     check(
@@ -85,26 +85,26 @@ export const hackathonSignups = pgTable(
 );
 
 export const hackathonPreSignups = pgTable("hackathon_pre_signups", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  fullName: text("full_name").notNull(),
-  email: text("email").notNull().unique(),
-  xUrl: text("x_url"),
-  linkedinUrl: text("linkedin_url"),
-  githubUrl: text("github_url"),
-  webUrl: text("web_url"),
-  referralCode: text("referral_code"),
-  signupToken: uuid("signup_token").defaultRandom().notNull().unique(),
   cancellationToken: uuid("cancellation_token")
     .defaultRandom()
     .notNull()
     .unique(),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  email: text("email").notNull().unique(),
+  fullName: text("full_name").notNull(),
+  githubUrl: text("github_url"),
+  id: uuid("id").defaultRandom().primaryKey(),
+  linkedinUrl: text("linkedin_url"),
+  referralCode: text("referral_code"),
   signupCompletedAt: timestamp("signup_completed_at", {
     withTimezone: true,
   }),
-  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  signupToken: uuid("signup_token").defaultRandom().notNull().unique(),
+  webUrl: text("web_url"),
+  xUrl: text("x_url"),
 });
 
 type MentorSponsorRole = "mentor" | "sponsor";
@@ -112,32 +112,32 @@ type MentorSponsorRole = "mentor" | "sponsor";
 export const mentorSponsorSignups = pgTable(
   "mentor_sponsor_signups",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    firstName: text("first_name").notNull(),
-    lastName: text("last_name").notNull(),
-    email: text("email").notNull().unique(),
-    company: text("company").notNull(),
-    /** Set by hand in the DB, never by the form. */
-    role: text("role").$type<MentorSponsorRole>(),
     /** `<day>_<slot>` keys, e.g. `fri_lunch`; drives food headcounts. */
     attendanceSlots: text("attendance_slots")
       .array()
       .default(sql`ARRAY[]::text[]`)
       .notNull(),
+    company: text("company").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    dietaryConsentAt: timestamp("dietary_consent_at", { withTimezone: true }),
+    dietaryDetails: text("dietary_details"),
     dietaryRestrictions: text("dietary_restrictions")
       .array()
       .default(sql`ARRAY[]::text[]`)
       .notNull(),
-    dietaryDetails: text("dietary_details"),
-    dietaryConsentAt: timestamp("dietary_consent_at", { withTimezone: true }),
-    notes: text("notes"),
+    email: text("email").notNull().unique(),
+    firstName: text("first_name").notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    lastName: text("last_name").notNull(),
     managementToken: uuid("management_token")
       .defaultRandom()
       .notNull()
       .unique(),
+    notes: text("notes"),
+    /** Set by hand in the DB, never by the form. */
+    role: text("role").$type<MentorSponsorRole>(),
   },
   (table) => [
     check(
@@ -154,26 +154,26 @@ export const mentorSponsorSignups = pgTable(
 export const shortlistReviews = pgTable(
   "shortlist_reviews",
   {
-    signupId: uuid("signup_id")
-      .primaryKey()
-      .references(() => hackathonSignups.id, { onDelete: "cascade" }),
-    decision: text("decision").$type<ShortlistDecision>(),
-    score: integer("score"),
-    notes: text("notes"),
-    aiRecommendation: text("ai_recommendation").$type<ShortlistDecision>(),
-    aiScore: integer("ai_score"),
-    aiNote: text("ai_note"),
     aiEvidenceSources: text("ai_evidence_sources")
       .array()
       .default(sql`ARRAY[]::text[]`)
       .notNull(),
+    aiNote: text("ai_note"),
+    aiRecommendation: text("ai_recommendation").$type<ShortlistDecision>(),
     aiReviewedAt: timestamp("ai_reviewed_at", { withTimezone: true }),
     aiRubricVersion: text("ai_rubric_version"),
-    sourceNotes: text("source_notes"),
-    sourceImportedAt: timestamp("source_imported_at", { withTimezone: true }),
+    aiScore: integer("ai_score"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    decision: text("decision").$type<ShortlistDecision>(),
+    notes: text("notes"),
+    score: integer("score"),
+    signupId: uuid("signup_id")
+      .primaryKey()
+      .references(() => hackathonSignups.id, { onDelete: "cascade" }),
+    sourceImportedAt: timestamp("source_imported_at", { withTimezone: true }),
+    sourceNotes: text("source_notes"),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

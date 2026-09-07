@@ -7,7 +7,13 @@ import type { Id } from "@convex/_generated/dataModel";
 import { Field, LoadingText, Page } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, Frame } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Frame,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { urlLabel } from "@/lib/urls";
@@ -25,19 +31,23 @@ export default function AdminTracksPage() {
   >({});
 
   useEffect(() => {
-    if (tracks === undefined) return;
+    if (tracks === undefined) {
+      return;
+    }
     const stale =
       tracks.length === 0 ||
       tracks.some(
         (track) =>
-          track.active && (track.slug === "ml" || track.slug === "non-tech"),
+          track.active && (track.slug === "ml" || track.slug === "non-tech")
       );
     if (stale) {
       void ensureDefaults({});
     }
   }, [tracks, ensureDefaults]);
 
-  if (!tracks || !settings || submissions === undefined) return <LoadingText />;
+  if (!tracks || !settings || submissions === undefined) {
+    return <LoadingText />;
+  }
 
   return (
     <Page
@@ -66,12 +76,12 @@ export default function AdminTracksPage() {
 
       {tracks.map((track) => {
         const draft = drafts[track._id] ?? {
-          label: track.label,
           body: track.body,
+          label: track.label,
           note: track.note,
         };
         const under = submissions.filter((row) =>
-          row.challengeIds.includes(track._id),
+          row.challengeIds.includes(track._id)
         );
         return (
           <Card key={track._id}>
@@ -149,7 +159,9 @@ export default function AdminTracksPage() {
                 </Button>
               </div>
               {under.length === 0 ? (
-                <p className="text-sm text-hs-brown">Aún no hay proyectos en este reto.</p>
+                <p className="text-sm text-hs-brown">
+                  Aún no hay proyectos en este reto.
+                </p>
               ) : (
                 <div className="space-y-3">
                   {under.map((row) => (

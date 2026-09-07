@@ -78,7 +78,9 @@ export function EmptyState({
 }
 
 export function FormError({ message }: { message: string | null }) {
-  if (!message) return null;
+  if (!message) {
+    return null;
+  }
   return (
     <Alert variant="error">
       <AlertDescription>{message}</AlertDescription>
@@ -93,7 +95,9 @@ export function FormNotice({
   message: string | null;
   variant?: "success" | "default";
 }) {
-  if (!message) return null;
+  if (!message) {
+    return null;
+  }
   return (
     <Alert variant={variant}>
       <AlertDescription>{message}</AlertDescription>
@@ -229,11 +233,16 @@ export function SocialMeta({
 }
 
 export function errorMessage(err: unknown, fallback: string): string {
-  if (!(err instanceof Error)) return fallback;
-  const thrown = /Uncaught (?:Convex)?Error: (.*?)(?:\s+at handler\b|\n|$)/.exec(
-    err.message,
-  )?.[1];
+  if (!(err instanceof Error)) {
+    return fallback;
+  }
+  const thrown =
+    /Uncaught (?:Convex)?Error: (.*?)(?:\s+at handler\b|\n|$)/.exec(
+      err.message
+    )?.[1];
   const message = (thrown ?? err.message).split("\n")[0]?.trim();
-  if (!message || message.startsWith("[CONVEX")) return fallback;
+  if (!message || message.startsWith("[CONVEX")) {
+    return fallback;
+  }
   return message;
 }

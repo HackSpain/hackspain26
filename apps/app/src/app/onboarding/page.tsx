@@ -5,9 +5,21 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
-import { AuthScreen, Field, FormError, LoadingText, errorMessage } from "@/components/page";
+import {
+  AuthScreen,
+  Field,
+  FormError,
+  LoadingText,
+  errorMessage,
+} from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { phoneVerifyMessage } from "@/lib/utils";
@@ -42,7 +54,9 @@ export default function OnboardingPage() {
   const consent = consentDraft ?? status?.notificationConsent ?? false;
 
   useEffect(() => {
-    if (!phoneToast || phoneToast.code) return;
+    if (!phoneToast || phoneToast.code) {
+      return;
+    }
     const timer = window.setTimeout(() => setPhoneToast(null), 4000);
     return () => window.clearTimeout(timer);
   }, [phoneToast]);
@@ -55,7 +69,7 @@ export default function OnboardingPage() {
     );
   }
 
-  const smsConfigured = status.smsConfigured;
+  const { smsConfigured } = status;
 
   async function sendPhone() {
     setError(null);
@@ -69,8 +83,8 @@ export default function OnboardingPage() {
           : "El SMS no está configurado. En local el código aparece aquí y en los logs de Convex. No se confirma solo.",
         code: result.debugCode,
       });
-    } catch (err) {
-      setError(errorMessage(err, "No hemos podido enviar el código"));
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No hemos podido enviar el código"));
     } finally {
       setPending(false);
     }
@@ -93,8 +107,10 @@ export default function OnboardingPage() {
           setPhoneToast(null);
         }
       }
-    } catch (err) {
-      setError(errorMessage(err, "No hemos podido verificar el teléfono"));
+    } catch (caughtError) {
+      setError(
+        errorMessage(caughtError, "No hemos podido verificar el teléfono")
+      );
     } finally {
       setPending(false);
     }
@@ -110,25 +126,27 @@ export default function OnboardingPage() {
     setPending(true);
     try {
       await confirmDetails({
-        travelOrigin,
-        termsAccepted,
         consent,
+        termsAccepted,
+        travelOrigin,
       });
       router.replace("/");
-    } catch (err) {
-      setError(errorMessage(err, "No hemos podido guardar tus datos"));
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No hemos podido guardar tus datos"));
     } finally {
       setPending(false);
     }
   }
 
-  const phoneConfirmed = status.phoneConfirmed;
+  const { phoneConfirmed } = status;
 
   return (
     <AuthScreen>
       <Card className="hs-enter w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-2xl sm:text-3xl">Confirma tus datos</CardTitle>
+          <CardTitle className="text-2xl sm:text-3xl">
+            Confirma tus datos
+          </CardTitle>
           <CardDescription>
             Teléfono y desde dónde viajas. La dieta ya la tenemos de la
             inscripción; puedes cambiarla en tu perfil.
@@ -140,11 +158,7 @@ export default function OnboardingPage() {
           <div className="space-y-4">
             {phoneConfirmed ? (
               <Field label="Teléfono (E.164)" htmlFor="phone">
-                <Input
-                  id="phone"
-                  value={status.phone ?? phone}
-                  disabled
-                />
+                <Input id="phone" value={status.phone ?? phone} disabled />
               </Field>
             ) : awaitingCode ? (
               <Field label="Código" htmlFor="phone-code">
@@ -236,8 +250,8 @@ export default function OnboardingPage() {
                 >
                   política de privacidad
                 </a>{" "}
-                de HackSpain y de la Asociación Exponential Fellowship, y
-                me comprometo a cumplir el{" "}
+                de HackSpain y de la Asociación Exponential Fellowship, y me
+                comprometo a cumplir el{" "}
                 <a
                   href="https://hackspain.com/conduct"
                   target="_blank"
@@ -252,9 +266,7 @@ export default function OnboardingPage() {
             <motion.label
               className="flex items-start gap-3 text-sm"
               animate={
-                consentShake > 0 && !reduceMotion
-                  ? { x: [...SHAKE] }
-                  : { x: 0 }
+                consentShake > 0 && !reduceMotion ? { x: [...SHAKE] } : { x: 0 }
               }
               transition={{
                 duration: 0.32,
@@ -266,7 +278,9 @@ export default function OnboardingPage() {
                 checked={consent}
                 onCheckedChange={(value) => {
                   setConsentDraft(value === true);
-                  if (value === true) setConsentWarned(false);
+                  if (value === true) {
+                    setConsentWarned(false);
+                  }
                 }}
               />
               <span>

@@ -20,18 +20,18 @@ function fakeFetch(
   ) => {
     const headers = new Headers(init?.headers);
     const call = {
-      url: String(input),
-      body: JSON.parse(String(init?.body ?? "null")),
       auth: headers.get("authorization"),
+      body: JSON.parse(String(init?.body ?? "null")),
+      url: String(input),
     };
     calls.push(call);
     const { status, body } = handler(call);
-    return new Response(JSON.stringify(body), {
-      status,
+    return Response.json(body, {
       headers: { "content-type": "application/json" },
+      status,
     });
   }) as typeof fetch;
-  return { fetch: fetchImpl, calls };
+  return { calls, fetch: fetchImpl };
 }
 
 describe("api proxy", () => {
@@ -47,16 +47,16 @@ describe("api proxy", () => {
 describe("createClient", () => {
   test("posts { name, args } with the bearer token and unwraps the value", async () => {
     const { fetch, calls } = fakeFetch(() => ({
-      status: 200,
       body: { ok: true, value: { _id: "u1" } },
+      status: 200,
     }));
     const client = createClient("https://app.test", async () => "tok", fetch);
     const me = await client.query(api.users.me, {});
     expect(me).toEqual({ _id: "u1" } as never);
     expect(calls[0]).toEqual({
-      url: "https://app.test/api/cli/rpc",
-      body: { name: "users:me", args: {} },
       auth: "Bearer tok",
+      body: { args: {}, name: "users:me" },
+      url: "https://app.test/api/cli/rpc",
     });
   });
 
@@ -64,24 +64,24 @@ describe("createClient", () => {
     const { fetch } = fakeFetch((call) =>
       (call.body as { name: string }).name === "teams:join"
         ? {
-            status: 400,
             body: {
-              ok: false,
               error: {
-                kind: "convex",
                 data: { code: "BAD_CODE", message: "nope" },
+                kind: "convex",
               },
+              ok: false,
             },
+            status: 400,
           }
         : {
-            status: 500,
             body: {
-              ok: false,
               error: {
                 kind: "error",
                 message: "El dueño no puede salir del equipo",
               },
+              ok: false,
             },
+            status: 500,
           }
     );
     const client = createClient("https://app.test", async () => "tok", fetch);
@@ -98,13 +98,13 @@ describe("createClient", () => {
     const { fetch, calls } = fakeFetch((call) => {
       attempt++;
       return call.auth === "Bearer fresh"
-        ? { status: 200, body: { ok: true, value: "ok" } }
+        ? { body: { ok: true, value: "ok" }, status: 200 }
         : {
-            status: 401,
             body: {
-              ok: false,
               error: { kind: "error", message: "No has iniciado sesión" },
+              ok: false,
             },
+            status: 401,
           };
     });
     const tokens = ["stale", "fresh"];
@@ -144,28 +144,28 @@ describe("createClient", () => {
 describe("auth endpoints", () => {
   test("verify returns tokens, refresh rotates them", async () => {
     const { fetch, calls } = fakeFetch((call) => ({
-      status: 200,
       body: {
         ok: true,
         value: {
           tokens: {
-            token: `t-${call.url.split("/").pop()}`,
             refreshToken: "r2",
+            token: `t-${call.url.split("/").pop()}`,
           },
         },
       },
+      status: 200,
     }));
     expect(
       await authVerify("https://app.test", "a@b.c", "00000000", fetch)
     ).toEqual({
-      token: "t-verify",
       refreshToken: "r2",
+      token: "t-verify",
     });
-    expect(calls[0]?.body).toEqual({ email: "a@b.c", code: "00000000" });
+    expect(calls[0]?.body).toEqual({ code: "00000000", email: "a@b.c" });
     const refresh = makeRefresh("https://app.test", fetch);
     expect(await refresh("r1")).toEqual({
-      token: "t-refresh",
       refreshToken: "r2",
+      token: "t-refresh",
     });
     expect(calls[1]?.body).toEqual({ refreshToken: "r1" });
   });

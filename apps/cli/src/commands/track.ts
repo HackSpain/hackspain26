@@ -2,8 +2,10 @@ import type { Command } from "commander";
 import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
-import { type Ui, uiFor } from "../lib/output";
-import { openParticipant, type Participant } from "../lib/participant";
+import type { Ui } from "../lib/output";
+import { uiFor } from "../lib/output";
+import type { Participant } from "../lib/participant";
+import { openParticipant } from "../lib/participant";
 import { alreadySubmitted, planTracks, projectArgsFrom } from "../lib/project";
 import { c, highlight } from "../lib/style";
 
@@ -48,8 +50,8 @@ async function applyPlan(
   );
   const entered = tracks.filter((t) => plan.next.includes(t._id));
   ui.result({
-    changed: true,
     added: plan.added.map((t) => t.slug),
+    changed: true,
     removed: plan.removed.map((t) => t.slug),
     tracks: entered.map((t) => t.slug),
   });
@@ -98,14 +100,14 @@ export function registerTrack(program: Command): void {
           ]),
         "Tracks"
       );
-      const entered = new Set(submission?.challengeIds ?? []);
+      const entered = new Set(submission?.challengeIds);
       ui.result({
         submissionsOpen: settings.submissionsOpen,
         tracks: tracks.map((t) => ({
-          slug: t.slug,
+          entered: entered.has(t._id),
           label: t.label,
           note: t.note,
-          entered: entered.has(t._id),
+          slug: t.slug,
         })),
       });
       ui.table(
@@ -162,8 +164,8 @@ export function registerTrack(program: Command): void {
       async (from: string, to: string, _opts: unknown, command: Command) => {
         const ctx = contextFor(command);
         await applyPlan(uiFor(ctx), await openParticipant(ctx), {
-          remove: [from],
           add: [to],
+          remove: [from],
         });
       }
     );

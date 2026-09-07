@@ -71,14 +71,14 @@ import type {
 } from "./mock-data";
 
 const METRICS: { id: Metric; label: string; icon: LucideIcon }[] = [
-  { id: "tokens", label: "Tokens", icon: Zap },
-  { id: "commits", label: "Commits", icon: GitCommitHorizontal },
-  { id: "pullRequests", label: "PRs", icon: GitPullRequest },
+  { icon: Zap, id: "tokens", label: "Tokens" },
+  { icon: GitCommitHorizontal, id: "commits", label: "Commits" },
+  { icon: GitPullRequest, id: "pullRequests", label: "PRs" },
 ];
 const NAV = [
-  { id: "overview", label: "Resumen", icon: Activity },
-  { id: "leaderboard", label: "Leaderboard", icon: Trophy },
-  { id: "evolution", label: "Evolución", icon: ChartNoAxesCombined },
+  { icon: Activity, id: "overview", label: "Resumen" },
+  { icon: Trophy, id: "leaderboard", label: "Leaderboard" },
+  { icon: ChartNoAxesCombined, id: "evolution", label: "Evolución" },
 ];
 
 function MetricSwitch({
@@ -108,7 +108,7 @@ function MetricSwitch({
             "flex min-h-11 items-center sm:min-h-10 gap-1.5 px-2.5 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-hs-navy",
             value === id
               ? "bg-hs-ink text-hs-paper"
-              : "text-hs-brown hover:bg-hs-sand",
+              : "text-hs-brown hover:bg-hs-sand"
           )}
         >
           <Icon className="size-4" aria-hidden />
@@ -138,7 +138,7 @@ function StatCard({
     <Card
       className={cn(
         "gap-4 border border-hs-ink/15 p-4 sm:p-5",
-        highlight && "bg-hs-gold",
+        highlight && "bg-hs-gold"
       )}
     >
       <div className="flex items-center justify-between">
@@ -164,9 +164,9 @@ function ToolMark({ id, small = false }: { id: HarnessId; small?: boolean }) {
     <span
       className={cn(
         "inline-flex shrink-0 items-center justify-center border border-current font-mono font-bold",
-        small ? "size-6 text-[9px]" : "size-8 text-[11px]",
+        small ? "size-6 text-[9px]" : "size-8 text-[11px]"
       )}
-      style={{ color: harness.color, backgroundColor: `${harness.color}12` }}
+      style={{ backgroundColor: `${harness.color}12`, color: harness.color }}
       aria-hidden
     >
       {harness.mark}
@@ -182,7 +182,7 @@ function HarnessUsage({
   onExplore: (id: HarnessId) => void;
 }) {
   const [metric, setMetric] = useState<"tokens" | "sessions">("tokens");
-  const sorted = [...rows].sort((a, b) => b[metric] - a[metric]);
+  const sorted = [...rows].toSorted((a, b) => b[metric] - a[metric]);
   const total = rows.reduce((sum, row) => sum + row[metric], 0);
   return (
     <Panel
@@ -245,8 +245,8 @@ function HarnessUsage({
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: `${total ? (row[metric] / total) * 100 : 0}%`,
                   backgroundColor: row.color,
+                  width: `${total ? (row[metric] / total) * 100 : 0}%`,
                 }}
               />
             </div>
@@ -283,17 +283,17 @@ function downloadCsv(rows: TeamRow[]) {
     ]),
   ]
     .map((row) =>
-      row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","),
+      row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")
     )
     .join("\r\n");
   const url = URL.createObjectURL(
-    new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" }),
+    new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" })
   );
   const link = document.createElement("a");
   link.href = url;
   link.download = "hackspain-insights-demo.csv";
   link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function Leaderboard({
@@ -319,9 +319,9 @@ function Leaderboard({
           team.secondary === harness) &&
         `${team.name} ${team.project}`
           .toLocaleLowerCase("es")
-          .includes(search.toLocaleLowerCase("es")),
+          .includes(search.toLocaleLowerCase("es"))
     )
-    .sort((a, b) => b[metric] - a[metric] || a.name.localeCompare(b.name));
+    .toSorted((a, b) => b[metric] - a[metric] || a.name.localeCompare(b.name));
   const max = Math.max(...filtered.map((team) => team[metric]), 1);
   return (
     <Panel
@@ -419,14 +419,14 @@ function Leaderboard({
                 key={team.id}
                 className={cn(
                   "group hover:bg-hs-sand/30",
-                  index === 0 && "bg-hs-gold/10",
+                  index === 0 && "bg-hs-gold/10"
                 )}
               >
                 <TableCell className="text-center">
                   <span
                     className={cn(
                       "inline-flex size-6 items-center justify-center font-mono text-xs",
-                      index === 0 ? "bg-hs-gold font-bold" : "text-hs-brown",
+                      index === 0 ? "bg-hs-gold font-bold" : "text-hs-brown"
                     )}
                   >
                     {index === 0 ? (
@@ -482,7 +482,7 @@ function Leaderboard({
                     key={item.id}
                     className={cn(
                       "text-right font-mono text-xs tabular-nums",
-                      metric === item.id && "font-bold text-hs-navy",
+                      metric === item.id && "font-bold text-hs-navy"
                     )}
                   >
                     <span>
@@ -514,9 +514,9 @@ function Leaderboard({
                               samples.filter(
                                 (sample) =>
                                   sample.teamId === team.id &&
-                                  sample.bucket === bucket,
-                              ),
-                            )[metric],
+                                  sample.bucket === bucket
+                              )
+                            )[metric]
                         )}
                     />
                   </div>
@@ -555,10 +555,10 @@ function Leaderboard({
 
 function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
   const tools = harnessRows(
-    samples.filter((sample) => sample.teamId === team.id),
+    samples.filter((sample) => sample.teamId === team.id)
   )
     .filter((row) => row.tokens > 0)
-    .sort((a, b) => b.tokens - a.tokens);
+    .toSorted((a, b) => b.tokens - a.tokens);
   return (
     <>
       <DialogHeader>
@@ -619,6 +619,7 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
 }
 
 export default function InsightsPage() {
+  // oxlint-disable-next-line no-warning-comments -- documents the planned data-source migration.
   // TODO: Replace simulated insights with real event data, including usage,
   // concurrent agents, team milestones, and declared technology stacks.
   const [activeTab, setActiveTab] = useState("overview");
@@ -644,19 +645,21 @@ export default function InsightsPage() {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") setTick((value) => value + 1);
-    }, 5_000);
+      if (document.visibilityState === "visible") {
+        setTick((value) => value + 1);
+      }
+    }, 5000);
     return () => window.clearInterval(timer);
   }, []);
 
   const allSamples = useMemo(() => getSamples(tick), [tick]);
   const samples = useMemo(
     () => filterSamples(allSamples, period, track),
-    [allSamples, period, track],
+    [allSamples, period, track]
   );
   const eventSamples = useMemo(
     () => filterSamples(allSamples, "event", track),
-    [allSamples, track],
+    [allSamples, track]
   );
   const eventTeams = teamRows(eventSamples);
   const totals = sumSamples(samples);
@@ -664,17 +667,15 @@ export default function InsightsPage() {
   const tools = harnessRows(samples);
   const detailSamples = activeTab === "evolution" ? eventSamples : samples;
   const selectedTeam = teamRows(detailSamples).find(
-    (team) => team.id === selectedTeamId,
+    (team) => team.id === selectedTeamId
   );
   const trend = (metric: Metric | "sessions") =>
     [...new Set(samples.map((sample) => sample.bucket))].map(
       (bucket) =>
-        sumSamples(samples.filter((sample) => sample.bucket === bucket))[
-          metric
-        ],
+        sumSamples(samples.filter((sample) => sample.bucket === bucket))[metric]
     );
-  const topCommitTeam = [...teams].sort((a, b) => b.commits - a.commits)[0];
-  const leadingTool = [...tools].sort((a, b) => b.tokens - a.tokens)[0];
+  const topCommitTeam = [...teams].toSorted((a, b) => b.commits - a.commits)[0];
+  const leadingTool = [...tools].toSorted((a, b) => b.tokens - a.tokens)[0];
 
   function openTeam(team: TeamRow) {
     returnFocus.current =
@@ -685,7 +686,9 @@ export default function InsightsPage() {
   }
 
   function changeTab(value: string) {
-    if (!NAV.some((tab) => tab.id === value)) return;
+    if (!NAV.some((tab) => tab.id === value)) {
+      return;
+    }
     setActiveTab(value);
     window.history.replaceState(window.history.state, "", `#${value}`);
   }
@@ -769,7 +772,9 @@ export default function InsightsPage() {
                 value={period}
                 onValueChange={(value) => {
                   const option = PERIODS.find((item) => item.id === value);
-                  if (option) setPeriod(option.id);
+                  if (option) {
+                    setPeriod(option.id);
+                  }
                 }}
               >
                 <SelectTrigger
@@ -907,7 +912,9 @@ export default function InsightsPage() {
       <Dialog
         open={Boolean(selectedTeam)}
         onOpenChange={(open) => {
-          if (!open) setSelectedTeamId(null);
+          if (!open) {
+            setSelectedTeamId(null);
+          }
         }}
       >
         <DialogContent

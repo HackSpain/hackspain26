@@ -5,6 +5,9 @@
     "ultracite/biome/astro",
     "ultracite/biome/react"
   ],
+  "files": {
+    "includes": ["!!drizzle/meta", "!!src/pages/brand.astro"]
+  },
   "linter": {
     "rules": {
       "style": {

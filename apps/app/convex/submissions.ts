@@ -13,8 +13,8 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 const challengeSummary = v.object({
   _id: v.id("tracks"),
-  slug: v.string(),
   label: v.string(),
+  slug: v.string(),
 });
 
 const perkSummary = v.object({
@@ -25,20 +25,20 @@ const perkSummary = v.object({
 
 const submissionReturn = v.object({
   _id: v.id("submissions"),
-  teamId: v.optional(v.id("teams")),
-  teamName: v.optional(v.string()),
-  submittedBy: v.id("users"),
-  name: v.string(),
-  description: v.string(),
-  urls: urlsValidator,
   challengeIds: v.array(v.id("tracks")),
-  perkIds: v.array(v.id("perks")),
   challenges: v.array(challengeSummary),
+  createdAt: v.number(),
+  description: v.string(),
+  name: v.string(),
+  perkIds: v.array(v.id("perks")),
   perks: v.array(perkSummary),
   status: submissionStatusValidator,
-  createdAt: v.number(),
-  updatedAt: v.number(),
   submittedAt: v.optional(v.number()),
+  submittedBy: v.id("users"),
+  teamId: v.optional(v.id("teams")),
+  teamName: v.optional(v.string()),
+  updatedAt: v.number(),
+  urls: urlsValidator,
 });
 
 function uniqueIds<T extends string>(ids: T[]): T[] {
@@ -47,7 +47,7 @@ function uniqueIds<T extends string>(ids: T[]): T[] {
 
 async function hydrateSubmission(
   ctx: QueryCtx | MutationCtx,
-  submission: Doc<"submissions">,
+  submission: Doc<"submissions">
 ) {
   const team = submission.teamId ? await ctx.db.get(submission.teamId) : null;
   const challenges = [];
@@ -56,8 +56,8 @@ async function hydrateSubmission(
     if (track) {
       challenges.push({
         _id: track._id,
-        slug: track.slug,
         label: track.label,
+        slug: track.slug,
       });
     }
   }
@@ -74,32 +74,34 @@ async function hydrateSubmission(
   }
   return {
     _id: submission._id,
-    teamId: submission.teamId,
-    teamName: team?.name,
-    submittedBy: submission.submittedBy,
-    name: submission.name,
-    description: submission.description,
-    urls: submission.urls,
     challengeIds: submission.challengeIds,
-    perkIds: submission.perkIds,
     challenges,
+    createdAt: submission.createdAt,
+    description: submission.description,
+    name: submission.name,
+    perkIds: submission.perkIds,
     perks,
     status: submission.status,
-    createdAt: submission.createdAt,
-    updatedAt: submission.updatedAt,
     submittedAt: submission.submittedAt,
+    submittedBy: submission.submittedBy,
+    teamId: submission.teamId,
+    teamName: team?.name,
+    updatedAt: submission.updatedAt,
+    urls: submission.urls,
   };
 }
 
 async function resolveChallengeIds(
   ctx: MutationCtx,
   challengeIds: Id<"tracks">[],
-  requireActive: boolean,
+  requireActive: boolean
 ): Promise<Id<"tracks">[]> {
   const unique = uniqueIds(challengeIds);
   for (const trackId of unique) {
     const track = await ctx.db.get(trackId);
-    if (!track) throw new Error("Reto no encontrado");
+    if (!track) {
+      throw new Error("Reto no encontrado");
+    }
     if (requireActive && !track.active) {
       throw new Error(`${track.label} no está abierto`);
     }
@@ -109,12 +111,14 @@ async function resolveChallengeIds(
 
 async function resolvePerkIds(
   ctx: MutationCtx,
-  perkIds: Id<"perks">[],
+  perkIds: Id<"perks">[]
 ): Promise<Id<"perks">[]> {
   const unique = uniqueIds(perkIds);
   for (const perkId of unique) {
     const perk = await ctx.db.get(perkId);
-    if (!perk) throw new Error("Perk de partner no encontrado");
+    if (!perk) {
+      throw new Error("Perk de partner no encontrado");
+    }
   }
   return unique;
 }
@@ -128,21 +132,23 @@ function projectUrls(repoUrl?: string, demoUrl?: string) {
 
 export const mine = onboardedQuery({
   args: {},
-  returns: v.union(submissionReturn, v.null()),
   handler: async (ctx) => {
     const submission = await findOwnedSubmission(ctx, ctx.user._id);
-    if (!submission) return null;
+    if (!submission) {
+      return null;
+    }
     return await hydrateSubmission(ctx, submission);
   },
+  returns: v.union(submissionReturn, v.null()),
 });
 
 const projectArgs = {
-  name: v.string(),
-  description: v.string(),
-  repoUrl: v.optional(v.string()),
-  demoUrl: v.optional(v.string()),
   challengeIds: v.array(v.id("tracks")),
+  demoUrl: v.optional(v.string()),
+  description: v.string(),
+  name: v.string(),
   perkIds: v.array(v.id("perks")),
+  repoUrl: v.optional(v.string()),
 };
 
 async function upsertProject(
@@ -155,7 +161,7 @@ async function upsertProject(
     challengeIds: Id<"tracks">[];
     perkIds: Id<"perks">[];
   },
-  mode: "draft" | "submit",
+  mode: "draft" | "submit"
 ) {
   const existing = await findOwnedSubmission(ctx, ctx.user._id);
   if (existing && existing.status === "submitted") {
@@ -167,7 +173,7 @@ async function upsertProject(
   const challengeIds = await resolveChallengeIds(
     ctx,
     args.challengeIds,
-    mode === "submit",
+    mode === "submit"
   );
   const perkIds = await resolvePerkIds(ctx, args.perkIds);
 
@@ -175,7 +181,9 @@ async function upsertProject(
     if (!(await submissionsAreOpen(ctx))) {
       throw new Error("El envío de proyectos aún no está abierto");
     }
-    if (name.length < 2) throw new Error("El nombre del proyecto es obligatorio");
+    if (name.length < 2) {
+      throw new Error("El nombre del proyecto es obligatorio");
+    }
     if (description.length < 10) {
       throw new Error("Añade una descripción breve del proyecto");
     }
@@ -187,15 +195,17 @@ async function upsertProject(
   const membership = await membershipForUser(ctx, ctx.user._id);
   const now = Date.now();
   const fields = {
-    teamId: membership?.teamId,
-    submittedBy: ctx.user._id,
-    name,
-    description,
-    urls: projectUrls(args.repoUrl, args.demoUrl),
     challengeIds,
+    description,
+    name,
     perkIds,
-    status: (mode === "submit" ? "submitted" : "draft") as "draft" | "submitted",
+    status: (mode === "submit" ? "submitted" : "draft") as
+      | "draft"
+      | "submitted",
+    submittedBy: ctx.user._id,
+    teamId: membership?.teamId,
     updatedAt: now,
+    urls: projectUrls(args.repoUrl, args.demoUrl),
     ...(mode === "submit" ? { submittedAt: now } : {}),
   };
 
@@ -211,44 +221,46 @@ async function upsertProject(
 
 export const saveDraft = onboardedMutation({
   args: projectArgs,
-  returns: v.id("submissions"),
   handler: async (ctx, args) => await upsertProject(ctx, args, "draft"),
+  returns: v.id("submissions"),
 });
 
 export const submit = onboardedMutation({
   args: projectArgs,
-  returns: v.id("submissions"),
   handler: async (ctx, args) => await upsertProject(ctx, args, "submit"),
+  returns: v.id("submissions"),
 });
 
 const publicSubmissionReturn = v.object({
   _id: v.id("submissions"),
+  challenges: v.array(challengeSummary),
+  description: v.string(),
+  name: v.string(),
+  status: submissionStatusValidator,
+  submittedAt: v.optional(v.number()),
   teamId: v.optional(v.id("teams")),
   teamName: v.optional(v.string()),
-  name: v.string(),
-  description: v.string(),
-  urls: urlsValidator,
-  challenges: v.array(challengeSummary),
-  status: submissionStatusValidator,
   updatedAt: v.number(),
-  submittedAt: v.optional(v.number()),
+  urls: urlsValidator,
 });
 
 export const listPublic = onboardedQuery({
   args: {},
-  returns: v.array(publicSubmissionReturn),
   handler: async (ctx) => {
     const submissions = await ctx.db.query("submissions").collect();
     const rows = [];
     for (const submission of submissions) {
-      if (submission.status === "draft" && !submission.name.trim()) continue;
+      if (submission.status === "draft" && !submission.name.trim()) {
+        continue;
+      }
       const hydrated = await hydrateSubmission(ctx, submission);
       rows.push({
         _id: hydrated._id,
         teamId: hydrated.teamId,
         teamName: hydrated.teamName,
         name: hydrated.name,
-        description: hydrated.status === "submitted" ? hydrated.description : "",
+        description:
+          hydrated.status === "submitted" ? hydrated.description : "",
         urls: hydrated.urls,
         challenges: hydrated.challenges,
         status: hydrated.status,
@@ -256,21 +268,24 @@ export const listPublic = onboardedQuery({
         submittedAt: hydrated.submittedAt,
       });
     }
-    return rows.sort((a, b) => {
-      if (a.status !== b.status) return a.status === "submitted" ? -1 : 1;
+    return rows.toSorted((a, b) => {
+      if (a.status !== b.status) {
+        return a.status === "submitted" ? -1 : 1;
+      }
       return a.name.localeCompare(b.name, "es");
     });
   },
+  returns: v.array(publicSubmissionReturn),
 });
 
 export const adminList = adminQuery({
   args: {},
-  returns: v.array(submissionReturn),
   handler: async (ctx) => {
     const submissions = await ctx.db.query("submissions").collect();
     const rows = await Promise.all(
-      submissions.map((row) => hydrateSubmission(ctx, row)),
+      submissions.map((row) => hydrateSubmission(ctx, row))
     );
-    return rows.sort((a, b) => b.updatedAt - a.updatedAt);
+    return rows.toSorted((a, b) => b.updatedAt - a.updatedAt);
   },
+  returns: v.array(submissionReturn),
 });

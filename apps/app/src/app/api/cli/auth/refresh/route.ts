@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const result = await fetchAction(api.auth.signIn, { refreshToken });
     return ok({ tokens: result.tokens ?? null });
-  } catch (err) {
-    return fromError(err);
+  } catch (error) {
+    return fromError(error);
   }
 }

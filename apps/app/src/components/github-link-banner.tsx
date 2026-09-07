@@ -9,12 +9,27 @@ import { errorMessage } from "@/components/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
-const RESULT_MESSAGES: Record<string, { text: string; variant: "success" | "error" }> = {
+const RESULT_MESSAGES: Record<
+  string,
+  { text: string; variant: "success" | "error" }
+> = {
+  cancelled: {
+    text: "Has cancelado la vinculación con GitHub.",
+    variant: "error",
+  },
+  error: {
+    text: "No hemos podido vincular tu GitHub. Inténtalo otra vez.",
+    variant: "error",
+  },
+  expired: {
+    text: "El enlace ha caducado. Vuelve a intentarlo.",
+    variant: "error",
+  },
   linked: { text: "GitHub vinculado.", variant: "success" },
-  cancelled: { text: "Has cancelado la vinculación con GitHub.", variant: "error" },
-  expired: { text: "El enlace ha caducado. Vuelve a intentarlo.", variant: "error" },
-  taken: { text: "Esa cuenta de GitHub ya está vinculada a otro usuario.", variant: "error" },
-  error: { text: "No hemos podido vincular tu GitHub. Inténtalo otra vez.", variant: "error" },
+  taken: {
+    text: "Esa cuenta de GitHub ya está vinculada a otro usuario.",
+    variant: "error",
+  },
 };
 
 export function useGithubLink() {
@@ -28,13 +43,15 @@ export function useGithubLink() {
     try {
       const { url } = await startLink({});
       window.location.assign(url);
-    } catch (err: unknown) {
-      setError(errorMessage(err, "No hemos podido empezar la vinculación"));
+    } catch (caughtError: unknown) {
+      setError(
+        errorMessage(caughtError, "No hemos podido empezar la vinculación")
+      );
       setPending(false);
     }
   }
 
-  return { link, pending, error };
+  return { error, link, pending };
 }
 
 export function GithubLinkResult() {
@@ -42,24 +59,33 @@ export function GithubLinkResult() {
   const pathname = usePathname();
   const params = useSearchParams();
   const status = params.get("github");
-  const [shown, setShown] = useState<{ status: string; pathname: string } | null>(null);
+  const [shown, setShown] = useState<{
+    status: string;
+    pathname: string;
+  } | null>(null);
 
   if (status && shown?.status !== status) {
-    setShown({ status, pathname });
+    setShown({ pathname, status });
   } else if (!status && shown && shown.pathname !== pathname) {
     setShown(null);
   }
 
   useEffect(() => {
-    if (!status) return;
+    if (!status) {
+      return;
+    }
     const next = new URLSearchParams(params);
     next.delete("github");
     const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
   }, [params, pathname, router, status]);
 
   const result = shown ? RESULT_MESSAGES[shown.status] : undefined;
-  if (!result) return null;
+  if (!result) {
+    return null;
+  }
   return (
     <Alert variant={result.variant} className="mb-6">
       <AlertDescription className="text-hs-ink">{result.text}</AlertDescription>
@@ -76,7 +102,9 @@ export function GithubLinkBanner() {
         <div className="flex min-w-0 items-start gap-3">
           <Github className="mt-0.5 size-5 shrink-0" aria-hidden />
           <div className="min-w-0">
-            <p className="font-bungee text-sm leading-tight">Por favor, vincula tu GitHub</p>
+            <p className="font-bungee text-sm leading-tight">
+              Por favor, vincula tu GitHub
+            </p>
             <p className="text-sm">
               Lo usamos para encontrarte en tu equipo y ligar tu proyecto.
               {error ? <span className="text-hs-red"> {error}</span> : null}

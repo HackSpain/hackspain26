@@ -1,11 +1,11 @@
 export const EXIT = {
-  OK: 0,
-  ERROR: 1,
-  USAGE: 2,
   AUTH: 3,
+  ERROR: 1,
   INELIGIBLE: 4,
-  NETWORK: 5,
   INTERRUPTED: 130,
+  NETWORK: 5,
+  OK: 0,
+  USAGE: 2,
 } as const;
 
 export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
@@ -51,7 +51,7 @@ export class RemoteError extends Error {
 }
 
 export function usageError(message: string, hint?: string): CliError {
-  return new CliError(message, { code: "USAGE", hint, exitCode: EXIT.USAGE });
+  return new CliError(message, { code: "USAGE", exitCode: EXIT.USAGE, hint });
 }
 
 export function authError(
@@ -60,8 +60,8 @@ export function authError(
 ): CliError {
   return new CliError(message, {
     code: "UNAUTHENTICATED",
-    hint,
     exitCode: EXIT.AUTH,
+    hint,
   });
 }
 
@@ -71,91 +71,91 @@ export function authError(
  * "[Request ID: …] Server Error\nUncaught Error: <message>", so substring
  * matching is the only option. Keep these in sync with convex/lib/auth.ts.
  */
-const GATE_MESSAGES: Array<{
+const GATE_MESSAGES: {
   needle: string;
   explained: Omit<Explained, "message"> & { message: string };
-}> = [
+}[] = [
   {
-    needle: "No has iniciado sesión",
     explained: {
       code: "UNAUTHENTICATED",
-      message: "You are not logged in.",
+      exitCode: EXIT.AUTH,
       hint: "Run `hackspain auth login`.",
-      exitCode: EXIT.AUTH,
+      message: "You are not logged in.",
     },
+    needle: "No has iniciado sesión",
   },
   {
-    needle: "Usuario no encontrado",
     explained: {
       code: "UNAUTHENTICATED",
-      message: "Your session points at a user that no longer exists.",
-      hint: "Run `hackspain auth login` again.",
       exitCode: EXIT.AUTH,
+      hint: "Run `hackspain auth login` again.",
+      message: "Your session points at a user that no longer exists.",
     },
+    needle: "Usuario no encontrado",
   },
   {
-    needle: "No hay inscripción a la hackathon con este email",
     explained: {
       code: "NOT_REGISTERED",
-      message: "This email has no HackSpain signup.",
-      hint: "Log in with the email you applied with, or sign up at https://hackspain.com/signup.",
       exitCode: EXIT.INELIGIBLE,
+      hint: "Log in with the email you applied with, or sign up at https://hackspain.com/signup.",
+      message: "This email has no HackSpain signup.",
     },
+    needle: "No hay inscripción a la hackathon con este email",
   },
   {
-    needle: "Aún no te han aceptado",
     explained: {
       code: "NOT_ACCEPTED",
-      message: "Your application has not been accepted yet.",
-      hint: "You will get an email when it is. Check the dashboard for status.",
       exitCode: EXIT.INELIGIBLE,
+      hint: "You will get an email when it is. Check the dashboard for status.",
+      message: "Your application has not been accepted yet.",
     },
+    needle: "Aún no te han aceptado",
   },
   {
-    needle: "Confirma tus datos primero",
     explained: {
       code: "NOT_ONBOARDED",
-      message: "You still need to confirm your details.",
-      hint: "Finish onboarding in the dashboard, then retry.",
       exitCode: EXIT.INELIGIBLE,
+      hint: "Finish onboarding in the dashboard, then retry.",
+      message: "You still need to confirm your details.",
     },
+    needle: "Confirma tus datos primero",
   },
   {
-    needle: "Se necesita acceso de admin",
     explained: {
       code: "NOT_ADMIN",
-      message: "This action needs an organiser account.",
       exitCode: EXIT.INELIGIBLE,
+      message: "This action needs an organiser account.",
     },
+    needle: "Se necesita acceso de admin",
   },
   {
     // @convex-dev/auth, wrong or expired one-time code.
     needle: "Could not verify code",
     explained: {
       code: "BAD_OTP",
-      message: "That code was not accepted.",
-      hint: "Codes expire after 15 minutes. Run `hackspain auth login` to get a new one.",
       exitCode: EXIT.ERROR,
+      hint: "Codes expire after 15 minutes. Run `hackspain auth login` to get a new one.",
+      message: "That code was not accepted.",
     },
   },
 ];
 
 const CODED_EXIT: Record<string, ExitCode> = {
-  UNAUTHENTICATED: EXIT.AUTH,
-  NOT_FOUND: EXIT.ERROR,
-  NOT_OWNER: EXIT.ERROR,
-  NOT_MEMBER: EXIT.ERROR,
-  NO_TEAM: EXIT.ERROR,
   ALREADY_IN_TEAM: EXIT.ERROR,
   BAD_CODE: EXIT.ERROR,
+  NOT_FOUND: EXIT.ERROR,
+  NOT_MEMBER: EXIT.ERROR,
+  NOT_OWNER: EXIT.ERROR,
+  NO_TEAM: EXIT.ERROR,
+  UNAUTHENTICATED: EXIT.AUTH,
   VALIDATION: EXIT.USAGE,
 };
 
 const CODED_HINT: Record<string, string> = {
-  NO_TEAM:
-    "Create one with `hackspain team create <name>` or join with `hackspain team join <code>`.",
   ALREADY_IN_TEAM: "Leave it first with `hackspain team leave`.",
   BAD_CODE: "Ask the team owner for the code shown by `hackspain team show`.",
+  NO_TEAM:
+    "Create one with `hackspain team create <name>` or join with `hackspain team join <code>`.",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -191,9 +191,9 @@ export function explainError(err: unknown): Explained {
   if (err instanceof CliError) {
     return {
       code: err.code,
-      message: err.message,
-      hint: err.hint,
       exitCode: err.exitCode,
+      hint: err.hint,
+      message: err.message,
     };
   }
 
@@ -204,15 +204,15 @@ export function explainError(err: unknown): Explained {
         typeof data.message === "string" ? data.message : String(data.code);
       return {
         code: data.code,
-        message,
-        hint: CODED_HINT[data.code],
         exitCode: CODED_EXIT[data.code] ?? EXIT.ERROR,
+        hint: CODED_HINT[data.code],
+        message,
       };
     }
     return {
       code: "SERVER",
-      message: typeof data === "string" ? data : err.message,
       exitCode: EXIT.ERROR,
+      message: typeof data === "string" ? data : err.message,
     };
   }
 
@@ -225,17 +225,17 @@ export function explainError(err: unknown): Explained {
     if (isNetworkError(err)) {
       return {
         code: "NETWORK",
-        message: "Could not reach the HackSpain server.",
-        hint: "Check your connection, or pass --url if you are targeting a dev server.",
         exitCode: EXIT.NETWORK,
+        hint: "Check your connection, or pass --url if you are targeting a dev server.",
+        message: "Could not reach the HackSpain server.",
       };
     }
     return {
       code: "SERVER",
-      message: serverMessage(err.message),
       exitCode: EXIT.ERROR,
+      message: serverMessage(err.message),
     };
   }
 
-  return { code: "UNKNOWN", message: String(err), exitCode: EXIT.ERROR };
+  return { code: "UNKNOWN", exitCode: EXIT.ERROR, message: String(err) };
 }

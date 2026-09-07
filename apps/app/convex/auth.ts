@@ -1,7 +1,9 @@
-import { convexAuth, type Tokens } from "@convex-dev/auth/server";
+import { convexAuth } from "@convex-dev/auth/server";
+import type { Tokens } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
-import { action, type ActionCtx } from "./_generated/server";
+import { action } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
 import { ResendOTP } from "./ResendOTP";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
 import { adminEmailAllowlist, normalizeEmail } from "./lib/normalize";
@@ -16,7 +18,6 @@ export const {
   store,
   isAuthenticated,
 } = convexAuth({
-  providers: [ResendOTP],
   callbacks: {
     async createOrUpdateUser(ctx, args) {
       const rawEmail =
@@ -78,16 +79,26 @@ export const {
       });
     },
   },
+  providers: [ResendOTP],
 });
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-async function resolveStubCode(ctx: ActionCtx, params: unknown): Promise<unknown> {
-  if (!emailOtpStubEnabled() || !isRecord(params)) return params;
-  if (params.code !== STUB_CODE || typeof params.email !== "string") return params;
-  const code = await ctx.runQuery(internal.devOtp.lookup, { email: params.email });
+async function resolveStubCode(
+  ctx: ActionCtx,
+  params: unknown
+): Promise<unknown> {
+  if (!emailOtpStubEnabled() || !isRecord(params)) {
+    return params;
+  }
+  if (params.code !== STUB_CODE || typeof params.email !== "string") {
+    return params;
+  }
+  const code = await ctx.runQuery(internal.devOtp.lookup, {
+    email: params.email,
+  });
   return code ? { ...params, code } : params;
 }
 
@@ -100,14 +111,17 @@ type SignInResult = {
 
 export const signIn = action({
   args: {
-    provider: v.optional(v.string()),
-    params: v.optional(v.any()),
-    verifier: v.optional(v.string()),
-    refreshToken: v.optional(v.string()),
     calledBy: v.optional(v.string()),
+    params: v.optional(v.any()),
+    provider: v.optional(v.string()),
+    refreshToken: v.optional(v.string()),
+    verifier: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<SignInResult> => {
     const params: unknown = await resolveStubCode(ctx, args.params);
-    return await ctx.runAction(api.auth.signInWithProvider, { ...args, params });
+    return await ctx.runAction(api.auth.signInWithProvider, {
+      ...args,
+      params,
+    });
   },
 });

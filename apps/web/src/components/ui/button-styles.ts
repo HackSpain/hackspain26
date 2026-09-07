@@ -3,17 +3,17 @@ const hsButtonBase =
 
 const hsButtonVariants = {
   gold: "border-hs-ink bg-hs-gold",
-  teal: "border-hs-ink bg-hs-teal/35",
   goldInverse: "border-hs-paper bg-hs-gold focus-visible:border-hs-gold",
+  teal: "border-hs-ink bg-hs-teal/35",
 } as const;
 
 const hsButtonSizes = {
-  md: "px-6 py-2.5",
-  lg: "px-6 py-3 sm:px-8",
-  hero: "px-5 py-2.5",
   /** Home hero signup CTA — responsive type scale */
   compact:
     "px-4 py-2 text-[clamp(0.75rem,2.4vw,1rem)] tracking-wide focus-visible:border-hs-navy",
+  hero: "px-5 py-2.5",
+  lg: "px-6 py-3 sm:px-8",
+  md: "px-6 py-2.5",
   /** Mosaic tiles and other very tight layouts */
   micro:
     "!border-2 px-2 py-0.5 !text-[clamp(0.55rem,1.45vw,0.72rem)] tracking-wide focus-visible:!border-hs-navy",

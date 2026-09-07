@@ -84,14 +84,14 @@ export function credentialsFromTokens(
   email: string
 ): Credentials {
   return {
-    version: 1,
     appUrl,
     email,
-    token: tokens.token,
     refreshToken: tokens.refreshToken,
+    token: tokens.token,
     tokenExpiresAt:
       decodeJwtExpiry(tokens.token) ?? Date.now() + 55 * 60 * 1000,
     updatedAt: Date.now(),
+    version: 1,
   };
 }
 
@@ -113,9 +113,9 @@ export async function withCredentialsLock<T>(fn: () => Promise<T>): Promise<T> {
       const fd = openSync(path, "wx");
       closeSync(fd);
       break;
-    } catch (err) {
-      if ((err as { code?: string }).code !== "EEXIST") {
-        throw err;
+    } catch (error) {
+      if ((error as { code?: string }).code !== "EEXIST") {
+        throw error;
       }
       try {
         if (Date.now() - statSync(path).mtimeMs > LOCK_STALE_MS) {
@@ -153,8 +153,8 @@ export type RefreshFn = (refreshToken: string) => Promise<Tokens | null>;
 export function sessionExpired(): CliError {
   return new CliError("Your session has expired.", {
     code: "SESSION_EXPIRED",
-    hint: "Run `hackspain auth login` again.",
     exitCode: EXIT.AUTH,
+    hint: "Run `hackspain auth login` again.",
   });
 }
 

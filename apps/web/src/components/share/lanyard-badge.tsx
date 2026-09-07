@@ -1,30 +1,25 @@
 import { Environment, Lightformer } from "@react-three/drei";
-import {
-  Canvas,
-  extend,
-  type ThreeElement,
-  useFrame,
-  useThree,
-} from "@react-three/fiber";
+import type { ThreeElement } from "@react-three/fiber";
+import { Canvas, extend, useFrame, useThree } from "@react-three/fiber";
+import type { RapierRigidBody } from "@react-three/rapier";
 import {
   BallCollider,
   CuboidCollider,
   Physics,
-  type RapierRigidBody,
   RigidBody,
   useRapier,
   useRopeJoint,
   useSphericalJoint,
 } from "@react-three/rapier";
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
-import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { BufferGeometry, Mesh } from "three";
 import {
-  type BufferGeometry,
   CanvasTexture,
   CatmullRomCurve3,
   DoubleSide,
   Euler,
-  type Mesh,
   MeshPhysicalMaterial,
   Quaternion,
   RepeatWrapping,
@@ -207,7 +202,7 @@ function useBadgeTexture(
     avatar: HTMLImageElement | null;
     logo: HTMLImageElement | null;
     fontsReady: boolean;
-  }>({ avatar: null, logo: null, fontsReady: false });
+  }>({ avatar: null, fontsReady: false, logo: null });
 
   const canvas = useMemo(
     () => createTextureCanvas(BADGE_TEXTURE_WIDTH, BADGE_TEXTURE_HEIGHT),
@@ -292,7 +287,7 @@ function useBadgeTexture(
     [texture, backTexture]
   );
 
-  return { texture, backTexture };
+  return { backTexture, texture };
 }
 
 function useLanyardTexture() {
@@ -598,7 +593,7 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
     curve.points[3].copy(lerped1);
     curve.points[4].set(tail.x, tail.y, tail.z);
 
-    const geometry = band.current?.geometry as
+    const bandGeometry = band.current?.geometry as
       | (BufferGeometry & {
           setPoints?: (points: Vector3[]) => void;
         })
@@ -613,7 +608,7 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
      * frame because the points move under it.
      */
     curve.needsUpdate = true;
-    geometry?.setPoints?.(curve.getSpacedPoints(CURVE_SEGMENTS));
+    bandGeometry?.setPoints?.(curve.getSpacedPoints(CURVE_SEGMENTS));
 
     const angular = card.current.angvel();
     const rotation = card.current.rotation();

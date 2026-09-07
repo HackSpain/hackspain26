@@ -5,8 +5,10 @@ import type {
 } from "convex/server";
 import type { api as AppApi } from "../../../app/convex/_generated/api";
 import { VERSION } from "../version";
-import { currentToken, type RefreshFn, type Tokens } from "./auth-store";
-import { resolveAppUrl, type UrlSource } from "./config";
+import type { RefreshFn, Tokens } from "./auth-store";
+import { currentToken } from "./auth-store";
+import type { UrlSource } from "./config";
+import { resolveAppUrl } from "./config";
 import type { CliContext } from "./context";
 import { authError, CliError, EXIT, RemoteError } from "./errors";
 
@@ -61,22 +63,22 @@ async function post<T>(
   let response: Response;
   try {
     response = await fetchImpl(url, {
-      method: "POST",
+      body: JSON.stringify(body),
       headers: {
         "content-type": "application/json",
         "user-agent": `hackspain-cli/${VERSION}`,
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify(body),
+      method: "POST",
     });
   } catch {
     return {
-      status: 0,
       error: new CliError("Could not reach the HackSpain server.", {
         code: "NETWORK",
         hint: `Tried ${url}. Check your connection, or pass --url for a dev server.`,
         exitCode: EXIT.NETWORK,
       }),
+      status: 0,
     };
   }
   let envelope: Envelope<T> | null = null;
@@ -87,7 +89,6 @@ async function post<T>(
   }
   if (!envelope) {
     return {
-      status: response.status,
       error: new CliError(
         `Server answered ${response.status} without a JSON body.`,
         {
@@ -95,6 +96,7 @@ async function post<T>(
           hint: `Is ${url} the dashboard? Pass --url if you are targeting a dev server.`,
         }
       ),
+      status: response.status,
     };
   }
   if (envelope.ok) {
@@ -102,11 +104,11 @@ async function post<T>(
   }
   if (envelope.error.kind === "convex") {
     return {
-      status: response.status,
       error: new RemoteError(envelope.error.data),
+      status: response.status,
     };
   }
-  return { status: response.status, error: new Error(envelope.error.message) };
+  return { error: new Error(envelope.error.message), status: response.status };
 }
 
 function unwrap<T>(result: PostResult<T>): T {
@@ -146,16 +148,16 @@ export function createClient(
     const name = functionName(ref);
     const endpoint = `${url}/api/cli/rpc`;
     let bearer = await token();
-    let result = await post<T>(fetchImpl, endpoint, { name, args }, bearer);
+    let result = await post<T>(fetchImpl, endpoint, { args, name }, bearer);
     if (result.status === 401 && bearer) {
       bearer = await token(true);
       if (bearer) {
-        result = await post<T>(fetchImpl, endpoint, { name, args }, bearer);
+        result = await post<T>(fetchImpl, endpoint, { args, name }, bearer);
       }
     }
     return unwrap(result);
   };
-  return { query: call, mutation: call, action: call };
+  return { action: call, mutation: call, query: call };
 }
 
 export type Session = {
@@ -206,7 +208,7 @@ export async function authVerify(
       await post<{ tokens: Tokens | null }>(
         fetchImpl,
         `${url}/api/cli/auth/verify`,
-        { email, code }
+        { code, email }
       )
     ).tokens ?? null
   );
@@ -234,15 +236,15 @@ export async function uploadImage(
   let response: Response;
   try {
     response = await fetchImpl(`${session.url}/api/cli/upload`, {
-      method: "POST",
+      body: new Blob([[...bytes].buffer as ArrayBuffer], {
+        type: contentType,
+      }),
       headers: {
         "content-type": contentType,
         "user-agent": `hackspain-cli/${VERSION}`,
         ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
       },
-      body: new Blob([bytes.slice().buffer as ArrayBuffer], {
-        type: contentType,
-      }),
+      method: "POST",
     });
   } catch {
     throw new CliError("Could not reach the HackSpain server.", {
@@ -283,10 +285,10 @@ export async function openSession(
     throw authError();
   }
   return {
+    authenticated: Boolean(initial),
+    client: createClient(url, token),
+    token,
     url,
     urlSource: source,
-    client: createClient(url, token),
-    authenticated: Boolean(initial),
-    token,
   };
 }

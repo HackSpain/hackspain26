@@ -9,7 +9,8 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "oxlint -c oxlint.config.mjs .",
+    "fix": "oxlint -c oxlint.config.mjs --fix .",
     "typecheck": "tsc --noEmit",
     "dev:convex": "convex dev",
     "convex:dev": "convex dev",
@@ -46,8 +47,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
     "typescript": "^5"

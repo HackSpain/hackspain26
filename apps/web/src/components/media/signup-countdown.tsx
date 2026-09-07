@@ -17,14 +17,14 @@ interface Remaining {
 function remainingAt(now: number): Remaining {
   const delta = EVENT_START_MS - now;
   if (delta <= 0) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
+    return { days: 0, expired: true, hours: 0, minutes: 0, seconds: 0 };
   }
   return {
     days: Math.floor(delta / DAY_MS),
+    expired: false,
     hours: Math.floor((delta % DAY_MS) / HOUR_MS),
     minutes: Math.floor((delta % HOUR_MS) / MINUTE_MS),
     seconds: Math.floor((delta % MINUTE_MS) / SECOND_MS),
-    expired: false,
   };
 }
 
@@ -50,27 +50,27 @@ function ariaLabelFor(r: Remaining) {
  * the compact layout against the viewport (matching the rest of each layout).
  */
 const SIZES = {
-  mosaic: {
-    digit: "text-[clamp(1.2rem,min(12cqw,20cqh),3rem)]",
-    unit: "text-[clamp(0.5rem,2.8cqw,0.8rem)]",
-    gap: "gap-x-3 gap-y-1",
-  },
-  /** Mosaic cells that already hold a headline — the home hero card. */
-  mosaicSm: {
-    digit: "text-[clamp(0.9rem,min(7cqw,11cqh),1.7rem)]",
-    unit: "text-[clamp(0.42rem,2.2cqw,0.65rem)]",
-    gap: "gap-x-2 gap-y-0.5",
-  },
   compact: {
     digit: "text-[clamp(1.6rem,8vw,3.2rem)]",
-    unit: "text-[clamp(0.58rem,2.5vw,0.9rem)]",
     gap: "gap-x-4 gap-y-1",
+    unit: "text-[clamp(0.58rem,2.5vw,0.9rem)]",
   },
   /** Compact cards that already hold a headline — the home hero card. */
   compactSm: {
     digit: "text-[clamp(1rem,5vw,1.8rem)]",
-    unit: "text-[clamp(0.5rem,2.1vw,0.75rem)]",
     gap: "gap-x-2 gap-y-0.5",
+    unit: "text-[clamp(0.5rem,2.1vw,0.75rem)]",
+  },
+  mosaic: {
+    digit: "text-[clamp(1.2rem,min(12cqw,20cqh),3rem)]",
+    gap: "gap-x-3 gap-y-1",
+    unit: "text-[clamp(0.5rem,2.8cqw,0.8rem)]",
+  },
+  /** Mosaic cells that already hold a headline — the home hero card. */
+  mosaicSm: {
+    digit: "text-[clamp(0.9rem,min(7cqw,11cqh),1.7rem)]",
+    gap: "gap-x-2 gap-y-0.5",
+    unit: "text-[clamp(0.42rem,2.2cqw,0.65rem)]",
   },
 } as const;
 
@@ -127,10 +127,10 @@ export function SignupCountdown({
 
   const size = SIZES[variant];
   const units: { key: string; value: number; label: string }[] = [
-    { key: "d", value: remaining.days, label: "Días" },
-    { key: "h", value: remaining.hours, label: "Horas" },
-    { key: "m", value: remaining.minutes, label: "Min" },
-    { key: "s", value: remaining.seconds, label: "Seg" },
+    { key: "d", label: "Días", value: remaining.days },
+    { key: "h", label: "Horas", value: remaining.hours },
+    { key: "m", label: "Min", value: remaining.minutes },
+    { key: "s", label: "Seg", value: remaining.seconds },
   ];
 
   if (layout === "inline") {

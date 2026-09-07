@@ -3,7 +3,10 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../../db";
 import { hackathonSignups, shortlistReviews } from "../../db/schema";
-import { isShortlistAuthorized, SHORTLIST_COOKIE_NAME } from "../../lib/shortlist-auth";
+import {
+  isShortlistAuthorized,
+  SHORTLIST_COOKIE_NAME,
+} from "../../lib/shortlist-auth";
 import { listPendingShortlistParticipants } from "../../lib/shortlist-server";
 import type {
   ShortlistImportResponse,
@@ -38,7 +41,7 @@ const csvImportSchema = z.object({
 const notFound = (): Response =>
   Response.json({ error: "not_found" }, { status: 404 });
 
-const isAuthorizedShortlistRequest = async (cookies: {
+const isAuthorizedShortlistRequest = (cookies: {
   get: (name: string) => { value: string } | undefined;
 }): Promise<boolean> =>
   isShortlistAuthorized(cookies.get(SHORTLIST_COOKIE_NAME)?.value);

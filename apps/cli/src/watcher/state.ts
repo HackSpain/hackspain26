@@ -90,9 +90,9 @@ export function seriesWindow(
   for (let i = count - 1; i >= 0; i--) {
     out.push(
       state.series.get(end - i * BUCKET_MS) ?? {
+        byHarness: {},
         requests: 0,
         tokens: 0,
-        byHarness: {},
       }
     );
   }
@@ -105,27 +105,27 @@ export function createState(
   }
 ): WatchState {
   return {
-    startedAt: Date.now(),
-    me: init.me,
-    team: init.team,
-    project: init.project,
+    feed: [],
     harnesses: [],
+    log: [],
+    me: init.me,
+    notifications: [],
+    paused: false,
+    project: init.project,
     recent: [],
+    scanning: false,
+    series: new Map(),
+    startedAt: Date.now(),
+    stopRequested: false,
+    team: init.team,
     totals: {
-      requests: 0,
-      sessions: new Set(),
+      cached: 0,
       input: 0,
       output: 0,
-      cached: 0,
+      requests: 0,
+      sessions: new Set(),
     },
-    series: new Map(),
-    scanning: false,
-    paused: false,
-    stopRequested: false,
     upload: { enabled: init.uploadEnabled, failing: false, queued: 0 },
-    notifications: [],
-    feed: [],
-    log: [],
   };
 }
 
@@ -153,11 +153,11 @@ export function recordEvent(state: WatchState, event: TelemetryEvent): void {
   // order; keep the list sorted newest first regardless.
   const entry: RecentRequest = {
     at,
-    harness: event.harness,
-    model: event.model?.raw ?? "unknown",
-    input: event.tokens.input,
-    output: event.tokens.output,
     cached,
+    harness: event.harness,
+    input: event.tokens.input,
+    model: event.model?.raw ?? "unknown",
+    output: event.tokens.output,
     sessionId: event.sessionId,
   };
   const index = state.recent.findIndex((r) => r.at <= at);
@@ -165,9 +165,9 @@ export function recordEvent(state: WatchState, event: TelemetryEvent): void {
   state.recent.splice(RECENT_KEPT);
   const bucket = bucketOf(at);
   const point = state.series.get(bucket) ?? {
+    byHarness: {},
     requests: 0,
     tokens: 0,
-    byHarness: {},
   };
   point.requests++;
   point.tokens += event.tokens.input + event.tokens.output;
@@ -185,7 +185,7 @@ export function recordNotification(
   body: string,
   at: number
 ): void {
-  state.notifications.unshift({ subject, body, at });
+  state.notifications.unshift({ at, body, subject });
   state.notifications.splice(NOTIFICATIONS_KEPT);
 }
 

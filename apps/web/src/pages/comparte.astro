@@ -34,11 +34,11 @@ const ogImagePath = badgeOgImagePath(badge, photoVersion);
 // from this machine. An absolute URL passes through untouched, so in development
 // the preview points back at this server and can actually be opened.
 const ogImage = {
+  height: OG_BADGE_HEIGHT,
   path: import.meta.env.DEV
     ? new URL(ogImagePath, Astro.url.origin).href
     : ogImagePath,
   width: OG_BADGE_WIDTH,
-  height: OG_BADGE_HEIGHT,
 };
 ---
 

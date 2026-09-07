@@ -22,13 +22,13 @@ export const CONNECTION_STYLES: Record<
   AffinityKind,
   { label: string; color: string }
 > = {
-  city: { label: "Ciudad", color: "#b86746" },
-  university: { label: "Universidad", color: "#a48732" },
-  company: { label: "Empresa", color: "#438e82" },
-  degree: { label: "Grado", color: "#8a72ad" },
-  team: { label: "Equipo", color: "#c78732" },
-  skills: { label: "Habilidades", color: "#608eae" },
-  interests: { label: "Intereses", color: "#b77792" },
+  city: { color: "#b86746", label: "Ciudad" },
+  company: { color: "#438e82", label: "Empresa" },
+  degree: { color: "#8a72ad", label: "Grado" },
+  interests: { color: "#b77792", label: "Intereses" },
+  skills: { color: "#608eae", label: "Habilidades" },
+  team: { color: "#c78732", label: "Equipo" },
+  university: { color: "#a48732", label: "Universidad" },
 };
 export interface NetworkHandle {
   focus: (id: string) => void;
@@ -62,10 +62,10 @@ function bounds(points: GraphPoint[]) {
   const top = Math.min(0, ...ys) - 75,
     bottom = Math.max(0, ...ys) + 90;
   return {
+    height: bottom - top,
+    width: right - left,
     x: (left + right) / 2,
     y: (top + bottom) / 2,
-    width: right - left,
-    height: bottom - top,
   };
 }
 
@@ -90,11 +90,11 @@ export function NetworkCanvas({
   const springs = useMemo(() => networkSprings(network), [network]);
   const initialBounds = useMemo(() => bounds(initial), [initial]);
   const [points, setPoints] = useState(initial);
-  const [size, setSize] = useState({ width: 1000, height: 700 });
+  const [size, setSize] = useState({ height: 700, width: 1000 });
   const [camera, setCamera] = useState<Camera>({
+    scale: 1,
     x: initialBounds.x,
     y: initialBounds.y,
-    scale: 1,
   });
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -113,16 +113,16 @@ export function NetworkCanvas({
   const fitZoom =
     Math.min(
       size.width / (portrait ? initialBounds.height : initialBounds.width),
-      size.height / (portrait ? initialBounds.width : initialBounds.height),
+      size.height / (portrait ? initialBounds.width : initialBounds.height)
     ) * 0.88;
   const zoom = fitZoom * camera.scale;
   const edges = useMemo(
     () => network.edges.filter((edge) => visibleKinds.has(edge.kind)),
-    [network, visibleKinds],
+    [network, visibleKinds]
   );
   const pointById = new Map(points.map((point) => [point.id, point]));
   const peopleById = new Map(
-    network.participants.map((person) => [person.id, person]),
+    network.participants.map((person) => [person.id, person])
   );
   const activeId = hoveredId ?? selectedId;
   const neighbors = new Set(
@@ -131,8 +131,8 @@ export function NetworkCanvas({
         ? [edge.target]
         : edge.target === activeId
           ? [edge.source]
-          : [],
-    ),
+          : []
+    )
   );
   const degree = new Map<string, number>();
   for (const spring of springs) {
@@ -147,10 +147,12 @@ export function NetworkCanvas({
   const teams = new Map<string, { name: string; members: GraphPoint[] }>();
   for (const person of network.participants) {
     const point = pointById.get(person.id);
-    if (!person.team || !point) continue;
+    if (!person.team || !point) {
+      continue;
+    }
     const team = teams.get(person.team.id) ?? {
-      name: person.team.name,
       members: [],
+      name: person.team.name,
     };
     team.members.push(point);
     teams.set(person.team.id, team);
@@ -158,12 +160,14 @@ export function NetworkCanvas({
 
   useEffect(() => {
     const element = viewportRef.current;
-    if (!element) return;
+    if (!element) {
+      return;
+    }
     const observer = new ResizeObserver(([entry]) =>
       setSize({
-        width: entry.contentRect.width,
         height: entry.contentRect.height,
-      }),
+        width: entry.contentRect.width,
+      })
     );
     observer.observe(element);
     return () => observer.disconnect();
@@ -180,8 +184,9 @@ export function NetworkCanvas({
       tickForces(model, springs, heat, control.pinnedId);
       publish();
       heat *= 0.965;
-      if (heat > 0.008 && !preference.matches)
+      if (heat > 0.008 && !preference.matches) {
         frame = requestAnimationFrame(step);
+      }
     };
     const control: Simulation = {
       points: model,
@@ -192,7 +197,9 @@ export function NetworkCanvas({
           return;
         }
         heat = Math.max(heat, 0.32);
-        if (!frame) frame = requestAnimationFrame(step);
+        if (!frame) {
+          frame = requestAnimationFrame(step);
+        }
       },
     };
     const motionChanged = () => {
@@ -202,7 +209,9 @@ export function NetworkCanvas({
       }
     };
     simulation.current = control;
-    if (!preference.matches) frame = requestAnimationFrame(step);
+    if (!preference.matches) {
+      frame = requestAnimationFrame(step);
+    }
     preference.addEventListener("change", motionChanged);
     return () => {
       cancelAnimationFrame(frame);
@@ -214,15 +223,15 @@ export function NetworkCanvas({
   function fit() {
     const extent = bounds(simulation.current?.points ?? points);
     setCamera({
-      x: extent.x,
-      y: extent.y,
       scale:
         (Math.min(
           size.width / (portrait ? extent.height : extent.width),
-          size.height / (portrait ? extent.width : extent.height),
+          size.height / (portrait ? extent.width : extent.height)
         ) *
           0.88) /
         fitZoom,
+      x: extent.x,
+      y: extent.y,
     });
   }
   function clear() {
@@ -232,17 +241,19 @@ export function NetworkCanvas({
   }
   function focus(id: string) {
     const point = (simulation.current?.points ?? points).find(
-      (item) => item.id === id,
+      (item) => item.id === id
     );
-    if (!point) return;
+    if (!point) {
+      return;
+    }
     onSelect(id);
     setCamera({
+      scale: Math.max(camera.scale, Math.min(3, 1 / fitZoom)),
       x: point.x,
       y: point.y,
-      scale: Math.max(camera.scale, Math.min(3, 1 / fitZoom)),
     });
   }
-  useImperativeHandle(ref, () => ({ focus, clear }));
+  useImperativeHandle(ref, () => ({ clear, focus }));
 
   function zoomAt(nextScale: number, x: number, y: number) {
     const scale = Math.max(0.45, Math.min(6, nextScale));
@@ -256,20 +267,24 @@ export function NetworkCanvas({
 
   useEffect(() => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg) {
+      return;
+    }
     const wheel = (event: WheelEvent) => {
-      if (!event.ctrlKey && !event.metaKey) return;
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
       event.preventDefault();
       const rect = svg.getBoundingClientRect();
       const { x, y } = worldDelta(
         event.clientX - rect.left - size.width / 2,
         event.clientY - rect.top - size.height / 2,
-        portrait,
+        portrait
       );
       setCamera((old) => {
         const scale = Math.max(
           0.45,
-          Math.min(6, old.scale * Math.exp(-event.deltaY * 0.005)),
+          Math.min(6, old.scale * Math.exp(-event.deltaY * 0.005))
         );
         return {
           scale,
@@ -283,7 +298,9 @@ export function NetworkCanvas({
   }, [size, fitZoom, portrait]);
 
   function startDrag(event: PointerEvent<SVGSVGElement>) {
-    if (event.button !== 0) return;
+    if (event.button !== 0) {
+      return;
+    }
     const svg = event.currentTarget;
     svg.setPointerCapture(event.pointerId);
     pointers.current.set(event.pointerId, {
@@ -296,39 +313,45 @@ export function NetworkCanvas({
       const delta = worldDelta(
         (a.x + b.x) / 2 - rect.left - size.width / 2,
         (a.y + b.y) / 2 - rect.top - size.height / 2,
-        portrait,
+        portrait
       );
       pinch.current = {
-        distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
         camera,
+        distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
         worldX: camera.x + delta.x / zoom,
         worldY: camera.y + delta.y / zoom,
       };
       drag.current = null;
       suppressClick.current = true;
-      if (simulation.current) simulation.current.pinnedId = undefined;
+      if (simulation.current) {
+        simulation.current.pinnedId = undefined;
+      }
       return;
     }
-    const id =
-      (event.target as Element)
-        .closest("[data-person]")
-        ?.getAttribute("data-person") ?? undefined;
+    const personElement = (event.target as Element).closest<SVGElement>(
+      "[data-person]"
+    );
+    const id = personElement?.dataset.person;
     const point = id
       ? simulation.current?.points.find((item) => item.id === id)
       : undefined;
     drag.current = {
+      camera,
       id,
-      x: event.clientX,
-      y: event.clientY,
       originalX: point?.x ?? 0,
       originalY: point?.y ?? 0,
-      camera,
+      x: event.clientX,
+      y: event.clientY,
     };
     suppressClick.current = false;
-    if (simulation.current) simulation.current.pinnedId = id;
+    if (simulation.current) {
+      simulation.current.pinnedId = id;
+    }
   }
   function moveDrag(event: PointerEvent<SVGSVGElement>) {
-    if (!pointers.current.has(event.pointerId)) return;
+    if (!pointers.current.has(event.pointerId)) {
+      return;
+    }
     pointers.current.set(event.pointerId, {
       x: event.clientX,
       y: event.clientY,
@@ -341,13 +364,13 @@ export function NetworkCanvas({
         Math.min(
           6,
           (pinch.current.camera.scale * Math.hypot(a.x - b.x, a.y - b.y)) /
-            pinch.current.distance,
-        ),
+            pinch.current.distance
+        )
       );
       const delta = worldDelta(
         (a.x + b.x) / 2 - rect.left - size.width / 2,
         (a.y + b.y) / 2 - rect.top - size.height / 2,
-        portrait,
+        portrait
       );
       setCamera({
         scale,
@@ -356,29 +379,36 @@ export function NetworkCanvas({
       });
       return;
     }
-    if (!drag.current) return;
+    if (!drag.current) {
+      return;
+    }
     const { x: dx, y: dy } = worldDelta(
       event.clientX - drag.current.x,
       event.clientY - drag.current.y,
-      portrait,
+      portrait
     );
-    if (Math.hypot(dx, dy) > 4) suppressClick.current = true;
-    if (!suppressClick.current) return;
+    if (Math.hypot(dx, dy) > 4) {
+      suppressClick.current = true;
+    }
+    if (!suppressClick.current) {
+      return;
+    }
     if (drag.current.id) {
       const point = simulation.current?.points.find(
-        (item) => item.id === drag.current?.id,
+        (item) => item.id === drag.current?.id
       );
       if (point) {
         point.x = drag.current.originalX + dx / zoom;
         point.y = drag.current.originalY + dy / zoom;
         simulation.current?.wake();
       }
-    } else
+    } else {
       setCamera({
         ...drag.current.camera,
         x: drag.current.camera.x - dx / zoom,
         y: drag.current.camera.y - dy / zoom,
       });
+    }
   }
   function endDrag(event: PointerEvent<SVGSVGElement>) {
     if (
@@ -395,9 +425,12 @@ export function NetworkCanvas({
       drag.current = null;
       pinch.current = null;
     }
-    if (simulation.current) simulation.current.pinnedId = undefined;
-    if (event.currentTarget.hasPointerCapture(event.pointerId))
+    if (simulation.current) {
+      simulation.current.pinnedId = undefined;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   }
 
   return (
@@ -406,7 +439,7 @@ export function NetworkCanvas({
         ref={svgRef}
         className="ng-canvas"
         viewBox={`0 0 ${size.width} ${size.height}`}
-        role="group"
+        role="application"
         tabIndex={0}
         aria-label="Grafo global de participantes. Arrastra los nodos o el fondo. Usa los controles para ampliar."
         onPointerDown={startDrag}
@@ -429,10 +462,10 @@ export function NetworkCanvas({
             return;
           }
           const direction = {
+            ArrowDown: [0, 60],
             ArrowLeft: [-60, 0],
             ArrowRight: [60, 0],
             ArrowUp: [0, -60],
-            ArrowDown: [0, 60],
           }[event.key];
           if (direction) {
             event.preventDefault();
@@ -450,7 +483,9 @@ export function NetworkCanvas({
         >
           {visibleKinds.has("team") &&
             [...teams].map(([id, team]) => {
-              if (team.members.length < 2) return null;
+              if (team.members.length < 2) {
+                return null;
+              }
               const left = Math.min(...team.members.map((p) => p.x)),
                 right = Math.max(...team.members.map((p) => p.x));
               const top = Math.min(...team.members.map((p) => p.y)),
@@ -487,7 +522,9 @@ export function NetworkCanvas({
           {edges.map((edge) => {
             const a = pointById.get(edge.source),
               b = pointById.get(edge.target);
-            if (!a || !b) return null;
+            if (!a || !b) {
+              return null;
+            }
             const siblings =
               pairEdges.get(JSON.stringify([edge.source, edge.target])) ?? [];
             const offset =
@@ -518,9 +555,11 @@ export function NetworkCanvas({
           })}
           {points.map((point) => {
             const person = peopleById.get(point.id);
-            if (!person) return null;
+            if (!person) {
+              return null;
+            }
             const radius = graphCoordinate(
-              6 + Math.sqrt(degree.get(point.id) ?? 0) * 1.6,
+              6 + Math.sqrt(degree.get(point.id) ?? 0) * 1.6
             );
             const highlighted = activeId === person.id;
             const relevant = activeId
@@ -539,7 +578,9 @@ export function NetworkCanvas({
                 opacity={relevant ? 1 : 0.22}
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (!suppressClick.current) focus(person.id);
+                  if (!suppressClick.current) {
+                    focus(person.id);
+                  }
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -549,8 +590,9 @@ export function NetworkCanvas({
                   }
                 }}
                 onPointerEnter={(event) => {
-                  if (event.pointerType === "mouse" && !drag.current)
+                  if (event.pointerType === "mouse" && !drag.current) {
                     setHoveredId(person.id);
+                  }
                 }}
                 onPointerLeave={() => setHoveredId(null)}
                 onFocus={() => setHoveredId(person.id)}
@@ -564,9 +606,9 @@ export function NetworkCanvas({
                       Math.min(
                         ...points
                           .filter((p) => p.id !== point.id)
-                          .map((p) => Math.hypot(p.x - point.x, p.y - point.y)),
-                      ) * 0.45,
-                    ),
+                          .map((p) => Math.hypot(p.x - point.x, p.y - point.y))
+                      ) * 0.45
+                    )
                   )}
                   fill="transparent"
                   className="ng-node-target"

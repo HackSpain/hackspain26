@@ -39,9 +39,9 @@ const {
 } = Astro.props;
 
 const ogImageAsset = Astro.props.ogImage ?? {
+  height: SOCIAL_SHARE_IMAGE.height,
   path: SOCIAL_SHARE_IMAGE.path,
   width: SOCIAL_SHARE_IMAGE.width,
-  height: SOCIAL_SHARE_IMAGE.height,
 };
 
 const canonicalPath =

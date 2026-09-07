@@ -11,9 +11,9 @@ async function run(cmd: string[]): Promise<boolean> {
   try {
     const proc = Bun.spawn(cmd, {
       env: process.env,
-      stdout: "ignore",
       stderr: "ignore",
       stdin: "ignore",
+      stdout: "ignore",
     });
     return (await proc.exited) === 0;
   } catch {
@@ -22,11 +22,11 @@ async function run(cmd: string[]): Promise<boolean> {
 }
 
 function appleScriptString(text: string): string {
-  return text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return text.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
 function powerShellString(text: string): string {
-  return text.replace(/'/g, "''");
+  return text.replaceAll("'", "''");
 }
 
 export async function toastLinux(
@@ -72,11 +72,14 @@ export async function toastWindows(
 
 export function platformToaster(platform = process.platform): Toaster {
   switch (platform) {
-    case "darwin":
+    case "darwin": {
       return toastMac;
-    case "win32":
+    }
+    case "win32": {
       return toastWindows;
-    default:
+    }
+    default: {
       return toastLinux;
+    }
   }
 }

@@ -4,22 +4,22 @@ import { connectionsFor, sharedAffinities } from "./affinities";
 import type { DirectoryParticipant } from "./types";
 
 const anchor: DirectoryParticipant = {
-  id: "anchor",
-  displayName: "Álex",
   city: " Málaga ",
-  university: "Universidad de Málaga",
+  displayName: "Álex",
+  id: "anchor",
+  interests: ["Educación"],
   role: "Developer",
   skills: ["React", "react", "TypeScript"],
-  interests: ["Educación"],
+  university: "Universidad de Málaga",
 };
 const peer: DirectoryParticipant = {
-  id: "peer",
-  displayName: "Nora",
   city: "malaga",
-  university: "universidad de malaga",
+  displayName: "Nora",
+  id: "peer",
+  interests: ["educacion"],
   role: "Designer",
   skills: ["REACT"],
-  interests: ["educacion"],
+  university: "universidad de malaga",
 };
 
 test("normalizes accents, case and whitespace without counting duplicate skills", () => {
@@ -27,7 +27,7 @@ test("normalizes accents, case and whitespace without counting duplicate skills"
   assert.equal(shared.length, 4);
   assert.deepEqual(
     shared.map((item) => item.kind),
-    ["university", "city", "skills", "interests"],
+    ["university", "city", "skills", "interests"]
   );
 });
 
@@ -36,9 +36,9 @@ test("never links a profile to itself or matches missing data", () => {
   const empty = {
     ...anchor,
     city: " ",
-    university: undefined,
-    skills: [],
     interests: [],
+    skills: [],
+    university: undefined,
   };
   assert.deepEqual(sharedAffinities(empty, { ...empty, id: "other" }), []);
 });
@@ -46,17 +46,17 @@ test("never links a profile to itself or matches missing data", () => {
 test("ranks concrete shared categories and excludes unrelated people", () => {
   const skillOnly = {
     ...peer,
-    id: "skills",
-    university: undefined,
     city: "Bilbao",
+    id: "skills",
     interests: [],
+    university: undefined,
   };
   const unrelated = { ...skillOnly, id: "unrelated", skills: ["Go"] };
   assert.deepEqual(
     connectionsFor(anchor, [anchor, skillOnly, unrelated, peer]).map(
-      (item) => item.participant.id,
+      (item) => item.participant.id
     ),
-    ["peer", "skills"],
+    ["peer", "skills"]
   );
 });
 
@@ -65,7 +65,7 @@ test("filters by relationship and searches university with accent-insensitive ma
   assert.equal(results.length, 1);
   assert.deepEqual(
     results[0].affinities.map((item) => item.kind),
-    ["university"],
+    ["university"]
   );
   assert.equal(connectionsFor(anchor, [peer], "all", "no existe").length, 0);
 });

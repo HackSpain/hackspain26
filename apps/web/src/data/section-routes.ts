@@ -34,7 +34,7 @@ export function parsePath(pathname: string): { sectionIndex: number } {
     return { sectionIndex: 0 };
   }
   const i = SECTION_SLUGS.indexOf(parts[0] as SectionSlug);
-  if (i >= 0 && parts.length === 1) {
+  if (i !== -1 && parts.length === 1) {
     return { sectionIndex: i + 1 };
   }
   return { sectionIndex: 0 };

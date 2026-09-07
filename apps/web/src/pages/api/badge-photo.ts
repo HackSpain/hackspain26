@@ -20,7 +20,7 @@ const RESPONSE_HEADERS = {
 } as const;
 
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
+  return Response.json(body, {
     headers: RESPONSE_HEADERS,
     status,
   });

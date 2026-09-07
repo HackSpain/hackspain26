@@ -1,5 +1,6 @@
 import type { FunctionReturnType } from "convex/server";
-import { api, type Session } from "./api";
+import type { Session } from "./api";
+import { api } from "./api";
 import { authError, CliError, EXIT } from "./errors";
 
 export type Me = NonNullable<FunctionReturnType<typeof api.users.me>>;
@@ -16,31 +17,31 @@ export type Gate = { state: GateState; message: string; hint?: string };
 /** Mirrors the ladder in convex/lib/auth.ts and src/components/auth-gate.tsx. */
 export function describeGate(me: Me): Gate {
   if (me.role === "admin") {
-    return { state: "admin", message: "Organiser account" };
+    return { message: "Organiser account", state: "admin" };
   }
   if (!me.isRegistered) {
     return {
-      state: "unregistered",
-      message: "No HackSpain signup for this email.",
       hint: "Log in with the email you applied with, or sign up at https://hackspain.com/signup.",
+      message: "No HackSpain signup for this email.",
+      state: "unregistered",
     };
   }
   if (!me.accepted) {
     return {
-      state: "pending",
-      message: "Application received, not accepted yet.",
       hint: "You will get an email when it is.",
+      message: "Application received, not accepted yet.",
+      state: "pending",
     };
   }
   if (!me.onboardingComplete) {
     return {
-      state: "onboarding",
+      hint: "Finish onboarding in the dashboard, then retry.",
       message:
         "Accepted. Confirm your details to unlock teams and submissions.",
-      hint: "Finish onboarding in the dashboard, then retry.",
+      state: "onboarding",
     };
   }
-  return { state: "ready", message: "Accepted and onboarded" };
+  return { message: "Accepted and onboarded", state: "ready" };
 }
 
 export async function fetchMe(session: Session): Promise<Me | null> {
@@ -66,7 +67,7 @@ export async function requireOnboarded(session: Session): Promise<Me> {
   }
   throw new CliError(gate.message, {
     code: `NOT_${gate.state.toUpperCase()}`,
-    hint: gate.hint,
     exitCode: EXIT.INELIGIBLE,
+    hint: gate.hint,
   });
 }

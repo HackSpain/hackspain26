@@ -1,10 +1,5 @@
-import {
-  type RefObject,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import type { RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** iOS gates the sensor behind a permission call that needs a user gesture. */
 type PermissionCapableOrientation = typeof DeviceOrientationEvent & {
@@ -91,5 +86,5 @@ export function useDeviceTilt(): DeviceTilt {
     }
   }, []);
 
-  return { tilt, needsPermission, requestAccess };
+  return { needsPermission, requestAccess, tilt };
 }

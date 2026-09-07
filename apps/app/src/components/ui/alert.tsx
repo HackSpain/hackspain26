@@ -1,11 +1,15 @@
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
   "relative w-full border-[3px] px-3 py-2.5 text-left text-sm",
   {
+    defaultVariants: {
+      variant: "default",
+    },
     variants: {
       variant: {
         default: "border-hs-navy bg-hs-slate/20",
@@ -13,10 +17,7 @@ const alertVariants = cva(
         success: "border-hs-teal bg-hs-teal/15",
       },
     },
-    defaultVariants: {
-      variant: "default",
-    },
-  },
+  }
 );
 
 function Alert({

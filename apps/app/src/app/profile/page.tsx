@@ -44,18 +44,20 @@ function useProfileAction() {
   const [error, setError] = useState<string | null>(null);
 
   async function run(action: () => Promise<string>) {
-    if (pending) return;
+    if (pending) {
+      return;
+    }
     setPending(true);
     setMessage(null);
     setError(null);
     try {
       setMessage(await action());
-    } catch (err: unknown) {
+    } catch (caughtError: unknown) {
       setError(
         errorMessage(
-          err,
-          "No hemos podido guardar el cambio. Inténtalo de nuevo.",
-        ),
+          caughtError,
+          "No hemos podido guardar el cambio. Inténtalo de nuevo."
+        )
       );
     } finally {
       setPending(false);
@@ -67,7 +69,7 @@ function useProfileAction() {
     setError(null);
   }
 
-  return { pending, message, error, run, clearFeedback };
+  return { clearFeedback, error, message, pending, run };
 }
 
 function Feedback({
@@ -145,7 +147,7 @@ function AttendanceCard({ status }: { status: Profile["attendanceStatus"] }) {
           "border-l-[3px] p-3",
           attending
             ? "border-hs-teal bg-hs-teal/10"
-            : "border-hs-orange bg-hs-orange/10",
+            : "border-hs-orange bg-hs-orange/10"
         )}
       >
         <p className="font-semibold">
@@ -228,7 +230,7 @@ function GithubCard({
         <span
           className={cn(
             "shrink-0 px-2 py-1 text-xs font-semibold",
-            linked ? "bg-hs-teal/15 text-hs-navy" : "bg-hs-sand text-hs-brown",
+            linked ? "bg-hs-teal/15 text-hs-navy" : "bg-hs-sand text-hs-brown"
           )}
         >
           {linked ? "Vinculada" : "Sin vincular"}
@@ -298,8 +300,8 @@ function EventDetailsCard({ me }: { me: Profile }) {
           event.preventDefault();
           void action.run(async () => {
             await updateEventDetails({
-              dietaryRestrictions,
               dietaryDetails: dietaryDetails || undefined,
+              dietaryRestrictions,
               travelOrigin,
             });
             setDietaryDraft(undefined);
@@ -397,7 +399,7 @@ function PhoneCard({ me }: { me: Profile }) {
         <span
           className={cn(
             "flex items-center gap-1.5 text-xs font-semibold",
-            me.phoneConfirmed ? "text-hs-navy" : "text-hs-brown",
+            me.phoneConfirmed ? "text-hs-navy" : "text-hs-brown"
           )}
         >
           {me.phoneConfirmed ? (
@@ -415,8 +417,9 @@ function PhoneCard({ me }: { me: Profile }) {
                 event.preventDefault();
                 void action.run(async () => {
                   const result = await verifyPhoneCode({ code });
-                  if (!result.ok)
+                  if (!result.ok) {
                     throw new Error(phoneVerifyMessage(result.reason));
+                  }
                   setCode("");
                   setPhone("");
                   setSentPhone(null);
@@ -453,7 +456,7 @@ function PhoneCard({ me }: { me: Profile }) {
                   placeholder="000000"
                   disabled={action.pending}
                   onChange={(event) =>
-                    setCode(event.target.value.replace(/\D/g, ""))
+                    setCode(event.target.value.replaceAll(/\D/g, ""))
                   }
                 />
               </Field>
@@ -571,8 +574,9 @@ function NotificationsCard({ consent }: { consent: boolean }) {
       description="Tú eliges si quieres recibirlos."
       icon={Bell}
     >
-      <label className="flex cursor-pointer items-start gap-3 border border-hs-ink/15 bg-hs-sand/30 p-4">
+      <div className="flex items-start gap-3 border border-hs-ink/15 bg-hs-sand/30 p-4">
         <Checkbox
+          aria-labelledby="notification-consent-label"
           className="mt-0.5"
           checked={consent}
           disabled={action.pending}
@@ -586,12 +590,14 @@ function NotificationsCard({ consent }: { consent: boolean }) {
           }
         />
         <span className="space-y-1">
-          <span className="block font-semibold">Recibir avisos operativos</span>
+          <span id="notification-consent-label" className="block font-semibold">
+            Recibir avisos operativos
+          </span>
           <span className="block text-sm leading-relaxed text-hs-brown">
             Comunicaciones de la organización sobre HackSpain.
           </span>
         </span>
-      </label>
+      </div>
       <Feedback action={action} />
     </ProfileSection>
   );
@@ -599,7 +605,9 @@ function NotificationsCard({ consent }: { consent: boolean }) {
 
 export default function ProfilePage() {
   const me = useQuery(api.users.me);
-  if (!me) return <LoadingText />;
+  if (!me) {
+    return <LoadingText />;
+  }
 
   const initials = me.name
     ?.trim()

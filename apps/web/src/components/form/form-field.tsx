@@ -1,9 +1,5 @@
-import {
-  cloneElement,
-  isValidElement,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import type { ReactElement, ReactNode } from "react";
+import { cloneElement, isValidElement } from "react";
 import {
   hsHintClass,
   hsLabelBungeeClass,
@@ -45,7 +41,9 @@ export function FormField({
           {label}
           {required ? " *" : null}
         </span>
-        {hint == null ? null : <span className={hsHintClass}>{hint}</span>}
+        {hint === null || hint === undefined ? null : (
+          <span className={hsHintClass}>{hint}</span>
+        )}
         {control}
       </label>
     </div>

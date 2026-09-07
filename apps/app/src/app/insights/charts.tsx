@@ -38,12 +38,14 @@ import type {
 } from "./mock-data";
 
 const INK = "#1e3958";
-const AXIS = { fontSize: 11, fill: "#4a2c1f" };
+const AXIS = { fill: "#4a2c1f", fontSize: 11 };
 const GRID = "#1e395814";
 const STAGE = "rounded-2xl bg-hs-navy/[0.035] p-3 sm:p-4";
 
 function ChartTooltip({ active, payload, label }: TooltipContentProps) {
-  if (!active || !payload.length) return null;
+  if (!active || !payload.length) {
+    return null;
+  }
   const point: unknown = payload[0]?.payload;
   const title =
     point &&
@@ -54,9 +56,9 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps) {
       : label;
   return (
     <div className="min-w-40 rounded-xl border border-hs-navy/10 bg-hs-paper px-3 py-2.5 text-xs shadow-lg">
-      {title != null ? (
+      {title === null || title === undefined ? null : (
         <p className="mb-2 font-semibold text-hs-ink">{title}</p>
-      ) : null}
+      )}
       <dl className="space-y-1.5">
         {payload.map((entry) => (
           <div
@@ -93,7 +95,7 @@ export function Sparkline({
         width={96}
         height={40}
         data={values.map((value) => ({ value }))}
-        margin={{ top: 4, right: 2, bottom: 4, left: 2 }}
+        margin={{ bottom: 4, left: 2, right: 2, top: 4 }}
         accessibilityLayer={false}
       >
         <Line
@@ -131,18 +133,18 @@ export function ActivityChart({
           sumSamples(group.filter((sample) => sample.harness === harness.id))[
             metric
           ],
-        ]),
+        ])
       ),
       totals: sumSamples(group),
     };
   });
   const selected =
-    rows.find((row) => row.bucket === selectedBucket) ?? rows[rows.length - 1];
+    rows.find((row) => row.bucket === selectedBucket) ?? rows.at(-1);
   const unit = metric === "tokens" ? "tokens" : "commits";
   const activeTools = HARNESSES.filter((harness) =>
     samples.some(
-      (sample) => sample.harness === harness.id && sample[metric] > 0,
-    ),
+      (sample) => sample.harness === harness.id && sample[metric] > 0
+    )
   );
   return (
     <div>
@@ -150,7 +152,7 @@ export function ActivityChart({
         <ResponsiveContainer width="100%" height={248} minWidth={0}>
           <BarChart
             data={rows}
-            margin={{ top: 12, right: 0, left: -12, bottom: 0 }}
+            margin={{ bottom: 0, left: -12, right: 0, top: 12 }}
             barCategoryGap="26%"
             accessibilityLayer
             aria-label={`${unit} por intervalos de 30 minutos. Usa las flechas para explorar.`}
@@ -281,7 +283,9 @@ export function UsageDonut({
           isAnimationActive={false}
           shape={(props) => {
             const row = data[props.index];
-            if (!row) return <g />;
+            if (!row) {
+              return <g />;
+            }
             return (
               <Sector
                 {...props}
@@ -371,7 +375,7 @@ export function TeamScatter({
         </div>
         <ResponsiveContainer width="100%" height={248} minWidth={0}>
           <ScatterChart
-            margin={{ top: 12, right: 14, left: -12, bottom: 0 }}
+            margin={{ bottom: 0, left: -12, right: 14, top: 12 }}
             accessibilityLayer
             aria-label="Consumo de tokens y commits por equipo"
           >
@@ -418,8 +422,9 @@ export function TeamScatter({
                   typeof props.cx !== "number" ||
                   typeof props.cy !== "number" ||
                   !("payload" in props)
-                )
+                ) {
                   return <g />;
+                }
                 const payload: unknown = props.payload;
                 const team =
                   payload && typeof payload === "object" && "id" in payload

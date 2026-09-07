@@ -6,7 +6,7 @@ export const urlKindValidator = v.union(
   v.literal("github"),
   v.literal("web"),
   v.literal("repo"),
-  v.literal("demo"),
+  v.literal("demo")
 );
 
 export const urlEntryValidator = v.object({
@@ -16,31 +16,27 @@ export const urlEntryValidator = v.object({
 
 export const urlsValidator = v.array(urlEntryValidator);
 
-export type UrlKind =
-  | "x"
-  | "linkedin"
-  | "github"
-  | "web"
-  | "repo"
-  | "demo";
+export type UrlKind = "x" | "linkedin" | "github" | "web" | "repo" | "demo";
 
 export type UrlEntry = { kind: UrlKind; url: string };
 
 export function urlOf(
   urls: UrlEntry[] | undefined,
-  kind: UrlKind,
+  kind: UrlKind
 ): string | undefined {
   return urls?.find((entry) => entry.kind === kind)?.url;
 }
 
 export function buildUrls(
-  entries: Array<{ kind: UrlKind; url?: string | null }>,
+  entries: { kind: UrlKind; url?: string | null }[]
 ): UrlEntry[] {
   const seen = new Set<UrlKind>();
   const out: UrlEntry[] = [];
   for (const entry of entries) {
     const url = entry.url?.trim();
-    if (!url || seen.has(entry.kind)) continue;
+    if (!url || seen.has(entry.kind)) {
+      continue;
+    }
     seen.add(entry.kind);
     out.push({ kind: entry.kind, url });
   }
@@ -54,7 +50,9 @@ export function urlsFromRecord(row: {
   linkedinUrl?: string;
   webUrl?: string;
 }): UrlEntry[] {
-  if (row.urls && row.urls.length > 0) return row.urls;
+  if (row.urls && row.urls.length > 0) {
+    return row.urls;
+  }
   return buildUrls([
     { kind: "x", url: row.xUrl },
     { kind: "linkedin", url: row.linkedinUrl },

@@ -19,7 +19,6 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   if (!isPublicRoute(request) && !authenticated) {
     return nextjsMiddlewareRedirect(request, "/login");
   }
-  return undefined;
 });
 
 export const config = {

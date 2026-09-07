@@ -58,7 +58,7 @@ export function TechnologyStacks({ teams }: { teams: TeamRow[] }) {
   const [category, setCategory] = useState("Frontend");
   const rows = technologyRows(
     teams.map((team) => team.id),
-    category,
+    category
   );
   return (
     <Panel
@@ -96,8 +96,8 @@ export function TechnologyStacks({ teams }: { teams: TeamRow[] }) {
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: `${(row.teams.length / Math.max(teams.length, 1)) * 100}%`,
                   backgroundColor: row.color,
+                  width: `${(row.teams.length / Math.max(teams.length, 1)) * 100}%`,
                 }}
               />
             </div>
@@ -127,32 +127,32 @@ export function EventInsights({
   const scopedSamples = useMemo(
     () =>
       samples.filter((sample) => scope === "all" || sample.teamId === scope),
-    [samples, scope],
+    [samples, scope]
   );
   const scopedTeams = teams.filter(
-    (team) => scope === "all" || team.id === scope,
+    (team) => scope === "all" || team.id === scope
   );
   const phases = phaseRows(scopedSamples);
   const concurrency = useMemo(
     () => concurrencyRows(scopedSamples),
-    [scopedSamples],
+    [scopedSamples]
   );
   const peak = Math.max(...concurrency.map((row) => row.total), 0);
   const snapshot = concurrency[SNAPSHOT_MINUTE]?.total ?? 0;
   const milestones = MILESTONES.filter((milestone) =>
-    scopedTeams.some((team) => team.id === milestone.teamId),
+    scopedTeams.some((team) => team.id === milestone.teamId)
   );
   const deployed = milestones.filter(
-    (milestone) => milestone.firstDemo !== null,
+    (milestone) => milestone.firstDemo !== null
   );
   const costRows = scopedTeams
     .map((team) => ({
-      team,
       cost: usageUsd(
-        scopedSamples.filter((sample) => sample.teamId === team.id),
+        scopedSamples.filter((sample) => sample.teamId === team.id)
       ),
+      team,
     }))
-    .sort((a, b) => b.cost - a.cost);
+    .toSorted((a, b) => b.cost - a.cost);
   const meanCost = usageUsd(scopedSamples) / Math.max(scopedTeams.length, 1);
   const ratio = phases[0].hourlyTokens
     ? phases[2].hourlyTokens / phases[0].hourlyTokens

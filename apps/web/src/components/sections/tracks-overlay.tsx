@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import {
-  TRACK_SPONSORS_DETAIL,
-  type TrackSponsor,
-} from "../../data/track-sponsors";
+import type { TrackSponsor } from "../../data/track-sponsors";
+import { TRACK_SPONSORS_DETAIL } from "../../data/track-sponsors";
 import { shuffled } from "../../lib/shuffle";
 import { useOverlayLock } from "../overlay/overlay-lock";
 import { hsButtonClass } from "../ui/button-styles";
@@ -13,14 +11,14 @@ const TITLE_ID = "tracks-overlay-title";
 /** Logos are white silhouettes; mask + bg tints them to any brand color. */
 function logoMaskStyle(src: string): React.CSSProperties {
   return {
-    maskImage: `url(${src})`,
-    maskPosition: "left center",
-    maskRepeat: "no-repeat",
-    maskSize: "contain",
     WebkitMaskImage: `url(${src})`,
     WebkitMaskPosition: "left center",
     WebkitMaskRepeat: "no-repeat",
     WebkitMaskSize: "contain",
+    maskImage: `url(${src})`,
+    maskPosition: "left center",
+    maskRepeat: "no-repeat",
+    maskSize: "contain",
   };
 }
 

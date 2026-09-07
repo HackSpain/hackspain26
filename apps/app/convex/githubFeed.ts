@@ -22,23 +22,16 @@ const EVENTS_PER_REPO = 30;
 const MAX_TEXT = 200;
 
 const eventInput = v.object({
-  externalId: v.string(),
-  event: v.string(),
-  text: v.string(),
-  url: v.string(),
   actor: v.optional(v.string()),
   createdAt: v.number(),
+  event: v.string(),
+  externalId: v.string(),
+  text: v.string(),
+  url: v.string(),
 });
 
 export const reposToPoll = internalQuery({
   args: {},
-  returns: v.array(
-    v.object({
-      teamId: v.id("teams"),
-      repo: v.string(),
-      etag: v.optional(v.string()),
-    }),
-  ),
   handler: async (ctx) => {
     const teams = await ctx.db.query("teams").collect();
     const out = [];
@@ -50,12 +43,18 @@ export const reposToPoll = internalQuery({
     }
     return out;
   },
+  returns: v.array(
+    v.object({
+      teamId: v.id("teams"),
+      repo: v.string(),
+      etag: v.optional(v.string()),
+    })
+  ),
 });
 
 /** Which of these externalIds are not in the feed yet, so we only enrich new events. */
 export const unseen = internalQuery({
   args: { externalIds: v.array(v.string()) },
-  returns: v.array(v.string()),
   handler: async (ctx, args) => {
     const out = [];
     for (const externalId of args.externalIds) {
@@ -63,10 +62,13 @@ export const unseen = internalQuery({
         .query("posts")
         .withIndex("by_external", (q) => q.eq("externalId", externalId))
         .first();
-      if (!existing) out.push(externalId);
+      if (!existing) {
+        out.push(externalId);
+      }
     }
     return out;
   },
+  returns: v.array(v.string()),
 });
 
 /**
@@ -75,7 +77,6 @@ export const unseen = internalQuery({
  */
 export const purgeRepo = internalMutation({
   args: { repo: v.string() },
-  returns: v.number(),
   handler: async (ctx, args) => {
     const posts = await ctx.db
       .query("posts")
@@ -90,16 +91,16 @@ export const purgeRepo = internalMutation({
     }
     return removed;
   },
+  returns: v.number(),
 });
 
 export const recordEvents = internalMutation({
   args: {
-    teamId: v.id("teams"),
-    repo: v.string(),
     etag: v.optional(v.string()),
     events: v.array(eventInput),
+    repo: v.string(),
+    teamId: v.id("teams"),
   },
-  returns: v.number(),
   handler: async (ctx, args) => {
     let inserted = 0;
     for (const event of args.events) {
@@ -107,7 +108,9 @@ export const recordEvents = internalMutation({
         .query("posts")
         .withIndex("by_external", (q) => q.eq("externalId", event.externalId))
         .first();
-      if (existing) continue;
+      if (existing) {
+        continue;
+      }
       await ctx.db.insert("posts", {
         kind: "github",
         teamId: args.teamId,
@@ -129,10 +132,13 @@ export const recordEvents = internalMutation({
     });
     return inserted;
   },
+  returns: v.number(),
 });
 
 export function repoSlug(repoUrl: string | undefined): string | null {
-  if (!repoUrl) return null;
+  if (!repoUrl) {
+    return null;
+  }
   const match = /github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(repoUrl);
   return match ? `${match[1]}/${match[2]}` : null;
 }
@@ -173,14 +179,16 @@ function firstLine(text: string | undefined): string {
 /** Map one GitHub event onto a feed line; null for events we do not show. */
 export function describeEvent(
   repo: string,
-  event: GitHubEvent,
+  event: GitHubEvent
 ): Described | null {
   const actor = event.actor?.login ?? "someone";
   const p = event.payload ?? {};
   switch (event.type) {
     case "PushEvent": {
       const branch = (p.ref ?? "").replace("refs/heads/", "");
-      if (!branch || !p.head) return null;
+      if (!branch || !p.head) {
+        return null;
+      }
       return {
         event: "push",
         text: `${actor} pushed to ${branch} (${p.head.slice(0, 7)})`,
@@ -190,26 +198,30 @@ export function describeEvent(
     case "PullRequestEvent": {
       const pr = p.pull_request ?? {};
       const number = p.number ?? pr.number;
-      if (!number) return null;
-      const verb =
-        p.action === "opened"
-          ? "opened"
-          : p.action === "closed"
-            ? pr.merged
-              ? "merged"
-              : "closed"
-            : null;
-      if (!verb) return null;
+      if (!number) {
+        return null;
+      }
+      let verb: "closed" | "merged" | "opened" | null = null;
+      if (p.action === "opened") {
+        verb = "opened";
+      } else if (p.action === "closed") {
+        verb = pr.merged ? "merged" : "closed";
+      }
+      if (!verb) {
+        return null;
+      }
       const title = firstLine(pr.title);
       return {
+        detailUrl: pr.title === undefined ? pr.url : undefined,
         event: "pull_request",
         text: `${actor} ${verb} #${number}${title ? `: ${title}` : ""}`,
         url: `https://github.com/${repo}/pull/${number}`,
-        detailUrl: pr.title === undefined ? pr.url : undefined,
       };
     }
     case "ReleaseEvent": {
-      if (p.action !== "published") return null;
+      if (p.action !== "published") {
+        return null;
+      }
       const rel = p.release ?? {};
       return {
         event: "release",
@@ -218,15 +230,18 @@ export function describeEvent(
       };
     }
     case "CreateEvent": {
-      if (p.ref_type !== "tag") return null;
+      if (p.ref_type !== "tag") {
+        return null;
+      }
       return {
         event: "tag",
         text: `${actor} tagged ${p.ref ?? ""}`.trim(),
         url: `https://github.com/${repo}/releases/tag/${p.ref ?? ""}`,
       };
     }
-    default:
+    default: {
       return null;
+    }
   }
 }
 
@@ -247,14 +262,18 @@ function githubHeaders(etag?: string): Record<string, string> {
 export async function enrichPullRequest(
   described: Described,
   actor: string,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = fetch
 ): Promise<Described> {
-  if (!described.detailUrl) return described;
+  if (!described.detailUrl) {
+    return described;
+  }
   try {
     const response = await fetchImpl(described.detailUrl, {
       headers: githubHeaders(),
     });
-    if (!response.ok) return described;
+    if (!response.ok) {
+      return described;
+    }
     const pr = (await response.json()) as {
       title?: string;
       merged?: boolean;
@@ -262,7 +281,10 @@ export async function enrichPullRequest(
     };
     const title = firstLine(pr.title);
     const closed = / closed #\d+/.test(described.text);
-    const verb = closed ? (pr.merged ? "merged" : "closed") : "opened";
+    let verb = "opened";
+    if (closed) {
+      verb = pr.merged ? "merged" : "closed";
+    }
     return {
       ...described,
       text: `${actor} ${verb} #${pr.number ?? ""}${title ? `: ${title}` : ""}`,
@@ -274,7 +296,9 @@ export async function enrichPullRequest(
 
 function authHeader(): Record<string, string> {
   const token = process.env.GITHUB_TOKEN;
-  if (token) return { authorization: `Bearer ${token}` };
+  if (token) {
+    return { authorization: `Bearer ${token}` };
+  }
   const id = process.env.GITHUB_CLIENT_ID;
   const secret = process.env.GITHUB_CLIENT_SECRET;
   if (id && secret) {
@@ -285,7 +309,6 @@ function authHeader(): Record<string, string> {
 
 export const pollRepos = internalAction({
   args: {},
-  returns: v.object({ polled: v.number(), inserted: v.number() }),
   handler: async (ctx) => {
     const repos = await ctx.runQuery(internal.githubFeed.reposToPoll, {});
     let polled = 0;
@@ -293,10 +316,12 @@ export const pollRepos = internalAction({
     for (const { teamId, repo, etag } of repos) {
       const response = await fetch(
         `https://api.github.com/repos/${repo}/events?per_page=${EVENTS_PER_REPO}`,
-        { headers: githubHeaders(etag) },
+        { headers: githubHeaders(etag) }
       );
       polled++;
-      if (response.status === 304) continue;
+      if (response.status === 304) {
+        continue;
+      }
       if (response.status === 403 || response.status === 429) {
         const remaining = response.headers.get("x-ratelimit-remaining") ?? "?";
         const reset = response.headers.get("x-ratelimit-reset");
@@ -304,7 +329,7 @@ export const pollRepos = internalAction({
           ? new Date(Number(reset) * 1000).toISOString()
           : "?";
         console.warn(
-          `github feed: ${response.status} while polling ${repo} (remaining ${remaining}, resets ${resetAt}, ${authHeader().authorization ? "authenticated" : "unauthenticated"}); stopping this run`,
+          `github feed: ${response.status} while polling ${repo} (remaining ${remaining}, resets ${resetAt}, ${authHeader().authorization ? "authenticated" : "unauthenticated"}); stopping this run`
         );
         break;
       }
@@ -316,7 +341,9 @@ export const pollRepos = internalAction({
       const candidates = [];
       for (const event of events) {
         const described = describeEvent(repo, event);
-        if (!described) continue;
+        if (!described) {
+          continue;
+        }
         candidates.push({
           externalId: `github:${event.id}`,
           described,
@@ -327,14 +354,16 @@ export const pollRepos = internalAction({
       const fresh = new Set(
         await ctx.runQuery(internal.githubFeed.unseen, {
           externalIds: candidates.map((c) => c.externalId),
-        }),
+        })
       );
       const mapped = [];
       for (const candidate of candidates) {
-        if (!fresh.has(candidate.externalId)) continue;
+        if (!fresh.has(candidate.externalId)) {
+          continue;
+        }
         const described = await enrichPullRequest(
           candidate.described,
-          candidate.actor ?? "someone",
+          candidate.actor ?? "someone"
         );
         mapped.push({
           externalId: candidate.externalId,
@@ -354,4 +383,5 @@ export const pollRepos = internalAction({
     }
     return { polled, inserted };
   },
+  returns: v.object({ polled: v.number(), inserted: v.number() }),
 });

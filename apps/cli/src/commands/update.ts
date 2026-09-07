@@ -11,7 +11,7 @@ export const REPO = "HackSpain/hackspain26";
 const TAG_PREFIX = /^cli-v/;
 const V_PREFIX = /^v/;
 const WHITESPACE = /\s+/;
-const CPUS: Record<string, string> = { x64: "x64", arm64: "arm64" };
+const CPUS: Record<string, string> = { arm64: "arm64", x64: "x64" };
 
 export function assetName(
   platform = process.platform,

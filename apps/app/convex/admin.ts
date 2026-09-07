@@ -16,55 +16,58 @@ import type { UrlEntry } from "./lib/urls";
 
 async function teamForUser(
   ctx: QueryCtx,
-  userId: Id<"users">,
+  userId: Id<"users">
 ): Promise<{ name: string; status: string } | null> {
   const membership = await membershipForUser(ctx, userId);
-  if (!membership) return null;
+  if (!membership) {
+    return null;
+  }
   const team = await ctx.db.get(membership.teamId);
-  if (!team) return null;
+  if (!team) {
+    return null;
+  }
   return { name: team.name, status: membership.status };
 }
 
 const participantSummary = v.object({
-  signupId: v.optional(v.id("signups")),
-  userId: v.optional(v.id("users")),
-  email: v.string(),
-  name: v.string(),
-  role: v.optional(roleValidator),
   accepted: v.boolean(),
-  phone: v.optional(v.string()),
-  dietaryRestrictions: v.optional(v.string()),
-  travelOrigin: v.optional(v.string()),
   attendanceStatus: v.optional(attendanceValidator),
-  onboardingComplete: v.optional(v.boolean()),
-  isRegistered: v.boolean(),
-  hasAccount: v.boolean(),
-  teamName: v.optional(v.string()),
-  wantsAmbassador: v.optional(v.boolean()),
   createdAt: v.number(),
+  dietaryRestrictions: v.optional(v.string()),
+  email: v.string(),
+  hasAccount: v.boolean(),
+  isRegistered: v.boolean(),
+  name: v.string(),
+  onboardingComplete: v.optional(v.boolean()),
+  phone: v.optional(v.string()),
+  role: v.optional(roleValidator),
+  signupId: v.optional(v.id("signups")),
+  teamName: v.optional(v.string()),
+  travelOrigin: v.optional(v.string()),
+  userId: v.optional(v.id("users")),
+  wantsAmbassador: v.optional(v.boolean()),
 });
 
 export const listParticipants = adminQuery({
   args: {
-    search: v.optional(v.string()),
-    attendance: v.optional(attendanceValidator),
     accepted: v.optional(v.boolean()),
-    role: v.optional(roleValidator),
+    attendance: v.optional(attendanceValidator),
     hasAccount: v.optional(v.boolean()),
+    role: v.optional(roleValidator),
+    search: v.optional(v.string()),
   },
-  returns: v.array(participantSummary),
   handler: async (ctx, args) => {
     const signups = await ctx.db.query("signups").collect();
     const users = await ctx.db.query("users").collect();
     const usersBySignup = new Map(
       users
         .filter((user) => user.signupId !== undefined)
-        .map((user) => [user.signupId as string, user]),
+        .map((user) => [user.signupId as string, user])
     );
     const usersByEmail = new Map(
       users
         .filter((user) => user.email)
-        .map((user) => [user.email as string, user]),
+        .map((user) => [user.email as string, user])
     );
 
     const rows = [];
@@ -73,7 +76,9 @@ export const listParticipants = adminQuery({
     for (const signup of signups) {
       const user =
         usersBySignup.get(signup._id) ?? usersByEmail.get(signup.email);
-      if (user) seenUserIds.add(user._id);
+      if (user) {
+        seenUserIds.add(user._id);
+      }
 
       const team = user ? await teamForUser(ctx, user._id) : null;
 
@@ -98,7 +103,9 @@ export const listParticipants = adminQuery({
     }
 
     for (const user of users) {
-      if (seenUserIds.has(user._id)) continue;
+      if (seenUserIds.has(user._id)) {
+        continue;
+      }
       rows.push({
         userId: user._id,
         email: user.email ?? "unknown",
@@ -121,30 +128,42 @@ export const listParticipants = adminQuery({
       .filter((row) => {
         if (args.attendance === "attending") {
           if (
-            row.attendanceStatus == null ||
+            row.attendanceStatus === null ||
+            row.attendanceStatus === undefined ||
             !countsAsAttending(row.attendanceStatus)
           ) {
             return false;
           }
-        } else if (args.attendance && row.attendanceStatus !== args.attendance) {
+        } else if (
+          args.attendance &&
+          row.attendanceStatus !== args.attendance
+        ) {
           return false;
         }
         if (args.accepted !== undefined && row.accepted !== args.accepted) {
           return false;
         }
-        if (args.role && row.role !== args.role) return false;
-        if (args.hasAccount !== undefined && row.hasAccount !== args.hasAccount) {
+        if (args.role && row.role !== args.role) {
           return false;
         }
-        if (!needle) return true;
+        if (
+          args.hasAccount !== undefined &&
+          row.hasAccount !== args.hasAccount
+        ) {
+          return false;
+        }
+        if (!needle) {
+          return true;
+        }
         return (
           row.email.toLowerCase().includes(needle) ||
           row.name.toLowerCase().includes(needle) ||
           (row.teamName?.toLowerCase().includes(needle) ?? false)
         );
       })
-      .sort((a, b) => b.createdAt - a.createdAt);
+      .toSorted((a, b) => b.createdAt - a.createdAt);
   },
+  returns: v.array(participantSummary),
 });
 
 export const getParticipant = adminQuery({
@@ -152,73 +171,6 @@ export const getParticipant = adminQuery({
     signupId: v.optional(v.id("signups")),
     userId: v.optional(v.id("users")),
   },
-  returns: v.union(
-    v.object({
-      signup: v.optional(
-        v.object({
-          _id: v.id("signups"),
-          ...signupPublicValidator.fields,
-          ambassadorMotivation: v.optional(v.string()),
-          ambassadorStudyWhere: v.optional(v.string()),
-          accepted: v.boolean(),
-          createdAt: v.number(),
-        }),
-      ),
-      user: v.optional(
-        v.object({
-          _id: v.id("users"),
-          email: v.optional(v.string()),
-          name: v.optional(v.string()),
-          role: roleValidator,
-          phone: v.optional(v.string()),
-          phoneConfirmed: v.boolean(),
-          notificationConsent: v.boolean(),
-          dietaryRestrictions: v.optional(v.string()),
-          dietaryDetails: v.optional(v.string()),
-          travelOrigin: v.optional(v.string()),
-          attendanceStatus: attendanceValidator,
-          onboardingComplete: v.boolean(),
-          adminNotes: v.optional(v.string()),
-        }),
-      ),
-      ambassador: v.optional(
-        v.object({
-          institution: v.string(),
-          cityRegion: v.string(),
-          motivation: v.string(),
-          outreachPlan: v.string(),
-        }),
-      ),
-      team: v.optional(
-        v.object({
-          name: v.string(),
-          status: v.string(),
-        }),
-      ),
-      claims: v.array(
-        v.object({
-          _id: v.id("perkClaims"),
-          title: v.string(),
-          company: v.string(),
-          type: v.union(v.literal("email"), v.literal("code")),
-          status: claimStatusValidator,
-          code: v.optional(v.string()),
-        }),
-      ),
-      submission: v.optional(
-        v.object({
-          _id: v.id("submissions"),
-          name: v.string(),
-          description: v.string(),
-          urls: urlsValidator,
-          status: submissionStatusValidator,
-          challengeLabels: v.array(v.string()),
-          perkLabels: v.array(v.string()),
-        }),
-      ),
-    }),
-    v.null(),
-  ),
   handler: async (ctx, args) => {
     const signup = args.signupId ? await ctx.db.get(args.signupId) : null;
     let user = args.userId ? await ctx.db.get(args.userId) : null;
@@ -233,7 +185,9 @@ export const getParticipant = adminQuery({
           .withIndex("email", (q) => q.eq("email", signup.email))
           .unique());
     }
-    if (!signup && !user) return null;
+    if (!signup && !user) {
+      return null;
+    }
 
     const email = user?.email ?? signup?.email;
     const ambassador = email
@@ -243,7 +197,9 @@ export const getParticipant = adminQuery({
           .unique()
       : null;
 
-    const team = user ? ((await teamForUser(ctx, user._id)) ?? undefined) : undefined;
+    const team = user
+      ? ((await teamForUser(ctx, user._id)) ?? undefined)
+      : undefined;
 
     const claims = [];
     let submission:
@@ -264,7 +220,9 @@ export const getParticipant = adminQuery({
         .collect();
       for (const claim of rows) {
         const perk = await ctx.db.get(claim.perkId);
-        if (!perk) continue;
+        if (!perk) {
+          continue;
+        }
         let code: string | undefined;
         if (claim.codeId) {
           const assigned = await ctx.db.get(claim.codeId);
@@ -285,7 +243,9 @@ export const getParticipant = adminQuery({
         const challengeLabels = [];
         for (const trackId of owned.challengeIds) {
           const track = await ctx.db.get(trackId);
-          if (track) challengeLabels.push(track.label);
+          if (track) {
+            challengeLabels.push(track.label);
+          }
         }
         const perkLabels = [];
         for (const perkId of owned.perkIds) {
@@ -356,52 +316,126 @@ export const getParticipant = adminQuery({
       submission,
     };
   },
+  returns: v.union(
+    v.object({
+      signup: v.optional(
+        v.object({
+          _id: v.id("signups"),
+          ...signupPublicValidator.fields,
+          ambassadorMotivation: v.optional(v.string()),
+          ambassadorStudyWhere: v.optional(v.string()),
+          accepted: v.boolean(),
+          createdAt: v.number(),
+        })
+      ),
+      user: v.optional(
+        v.object({
+          _id: v.id("users"),
+          email: v.optional(v.string()),
+          name: v.optional(v.string()),
+          role: roleValidator,
+          phone: v.optional(v.string()),
+          phoneConfirmed: v.boolean(),
+          notificationConsent: v.boolean(),
+          dietaryRestrictions: v.optional(v.string()),
+          dietaryDetails: v.optional(v.string()),
+          travelOrigin: v.optional(v.string()),
+          attendanceStatus: attendanceValidator,
+          onboardingComplete: v.boolean(),
+          adminNotes: v.optional(v.string()),
+        })
+      ),
+      ambassador: v.optional(
+        v.object({
+          institution: v.string(),
+          cityRegion: v.string(),
+          motivation: v.string(),
+          outreachPlan: v.string(),
+        })
+      ),
+      team: v.optional(
+        v.object({
+          name: v.string(),
+          status: v.string(),
+        })
+      ),
+      claims: v.array(
+        v.object({
+          _id: v.id("perkClaims"),
+          title: v.string(),
+          company: v.string(),
+          type: v.union(v.literal("email"), v.literal("code")),
+          status: claimStatusValidator,
+          code: v.optional(v.string()),
+        })
+      ),
+      submission: v.optional(
+        v.object({
+          _id: v.id("submissions"),
+          name: v.string(),
+          description: v.string(),
+          urls: urlsValidator,
+          status: submissionStatusValidator,
+          challengeLabels: v.array(v.string()),
+          perkLabels: v.array(v.string()),
+        })
+      ),
+    }),
+    v.null()
+  ),
 });
 
 export const setRole = adminMutation({
-  args: { userId: v.id("users"), role: roleValidator },
-  returns: v.null(),
+  args: { role: roleValidator, userId: v.id("users") },
   handler: async (ctx, args) => {
     if (args.userId === ctx.user._id && args.role !== "admin") {
       throw new Error("No puedes quitarte el rol de admin a ti mismo");
     }
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Usuario no encontrado");
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
     await ctx.db.patch(user._id, { role: args.role });
     return null;
   },
+  returns: v.null(),
 });
 
 export const setAccepted = adminMutation({
-  args: { signupId: v.id("signups"), accepted: v.boolean() },
-  returns: v.null(),
+  args: { accepted: v.boolean(), signupId: v.id("signups") },
   handler: async (ctx, args) => {
     const signup = await ctx.db.get(args.signupId);
-    if (!signup) throw new Error("Solicitud no encontrada");
+    if (!signup) {
+      throw new Error("Solicitud no encontrada");
+    }
     await ctx.db.patch(signup._id, { accepted: args.accepted });
     return null;
   },
+  returns: v.null(),
 });
 
 export const setAttendance = adminMutation({
-  args: { userId: v.id("users"), attendanceStatus: attendanceValidator },
-  returns: v.null(),
+  args: { attendanceStatus: attendanceValidator, userId: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Usuario no encontrado");
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
     await ctx.db.patch(user._id, { attendanceStatus: args.attendanceStatus });
     return null;
   },
+  returns: v.null(),
 });
 
 export const setNotes = adminMutation({
-  args: { userId: v.id("users"), notes: v.string() },
-  returns: v.null(),
+  args: { notes: v.string(), userId: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Usuario no encontrado");
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
     await ctx.db.patch(user._id, { adminNotes: args.notes.trim() });
     return null;
   },
+  returns: v.null(),
 });
-

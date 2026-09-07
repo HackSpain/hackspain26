@@ -22,7 +22,7 @@ export function Panel({
       id={id}
       className={cn(
         "min-w-0 scroll-mt-6 gap-5 border border-hs-ink/15 py-5",
-        className,
+        className
       )}
     >
       <CardHeader className="flex flex-wrap items-start justify-between gap-3 px-5">

@@ -1,10 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import {
-  FINAL_AWARD_JUDGES,
-  GENERAL_JUDGES,
-  type Judge,
-} from "../../data/judges";
+import type { Judge } from "../../data/judges";
+import { FINAL_AWARD_JUDGES, GENERAL_JUDGES } from "../../data/judges";
 import { useOverlayLock } from "../overlay/overlay-lock";
 
 const TITLE_ID = "judges-overlay-title";

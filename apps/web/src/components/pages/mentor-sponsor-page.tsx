@@ -7,20 +7,20 @@ import {
   withScope,
 } from "@sentry/astro";
 import { initBotId } from "botid/client/core";
-import { type ComponentPropsWithRef, useEffect, useState } from "react";
-import { Controller, type SubmitHandler, useForm } from "react-hook-form";
+import type { ComponentPropsWithRef } from "react";
+import { useEffect, useState } from "react";
+import type { SubmitHandler } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { ATTENDANCE_COMPANIES } from "../../data/attendance-companies";
 import { HACKSPAIN_SOCIAL_URLS } from "../../data/landing-meta";
+import type { AttendanceSlotId } from "../../lib/mentor-sponsor-validation";
 import {
   ATTENDANCE_DAY_OPTIONS,
   ATTENDANCE_MEAL_OPTIONS,
-  type AttendanceSlotId,
   parseMentorSponsorBody,
 } from "../../lib/mentor-sponsor-validation";
-import {
-  DIETARY_RESTRICTION_OPTIONS,
-  type DietaryRestrictionId,
-} from "../../lib/signup-validation";
+import type { DietaryRestrictionId } from "../../lib/signup-validation";
+import { DIETARY_RESTRICTION_OPTIONS } from "../../lib/signup-validation";
 import { hsControlBaseClass } from "../form/field-classes";
 import { FormField } from "../form/form-field";
 import { Input } from "../form/input";
@@ -93,15 +93,15 @@ interface FormValues {
 }
 
 const EMPTY_VALUES: FormValues = {
-  firstName: "",
-  lastName: "",
-  email: "",
+  attendanceSlots: [],
   companyChoice: "",
   companyOther: "",
-  attendanceSlots: [],
-  dietaryRestrictions: [],
-  dietaryDetails: "",
   dietaryDataConsent: false,
+  dietaryDetails: "",
+  dietaryRestrictions: [],
+  email: "",
+  firstName: "",
+  lastName: "",
   notes: "",
 };
 
@@ -109,65 +109,72 @@ const cellBase = "border-b-[3px] border-hs-ink bg-hs-paper p-4";
 const cellLeftSm = `${cellBase} sm:border-r-[3px]`;
 
 const t = {
-  title: "Confirma tu asistencia",
-  subtitle:
-    "Para mentores y sponsors de HackSpain 2026 — 18 a 20 de septiembre, Madrid. Dinos qué días y en qué franjas estarás para que podamos organizar comidas y logística.",
-  firstName: "Nombre",
-  lastName: "Apellidos",
-  email: "Email",
-  company: "Empresa",
-  companyPlaceholder: "Elige tu empresa…",
-  companyOtherOption: "Otra empresa",
-  companyOtherLabel: "¿Cuál?",
-  attendanceTitle: "¿Cuándo estarás?",
+  alreadyConfirmed:
+    "Ya tenemos una confirmación con este correo. Si necesitas cambiar tus días o franjas, escríbenos a contact@hackspain.com.",
   attendanceHint:
     "Marca todas las franjas en las que cuentas con estar. Comida y cena nos sirven para calcular el catering.",
-  dietaryRestrictions: "Restricciones alimentarias",
-  dietaryRestrictionsHint: "Puedes marcar varias opciones.",
+  attendanceTitle: "¿Cuándo estarás?",
+  backHome: "Inicio",
+  company: "Empresa",
+  companyOtherLabel: "¿Cuál?",
+  companyOtherOption: "Otra empresa",
+  companyPlaceholder: "Elige tu empresa…",
+  dietaryDataConsent:
+    "Si has indicado una restricción o alergia, consiento expresamente que HackSpain trate estos datos únicamente para organizar comidas seguras y atender mis necesidades durante el evento.",
   dietaryDetails: "Detalles de alergias o restricciones",
   dietaryDetailsHint:
     "Cuéntanos cualquier detalle que debamos conocer para organizar las comidas.",
-  dietaryDataConsent:
-    "Si has indicado una restricción o alergia, consiento expresamente que HackSpain trate estos datos únicamente para organizar comidas seguras y atender mis necesidades durante el evento.",
+  dietaryRestrictions: "Restricciones alimentarias",
+  dietaryRestrictionsHint: "Puedes marcar varias opciones.",
+  email: "Email",
+  errorAccessDenied:
+    "No hemos podido verificar la solicitud. Recarga la página e inténtalo de nuevo, o usa un navegador normal con JavaScript activado.",
+  errorAttendance: "Marca al menos una franja para saber cuándo estarás.",
+  errorCompany: "Indica tu empresa.",
+  errorDietaryConsent:
+    "Debes consentir expresamente el tratamiento de los datos alimentarios que has indicado.",
+  errorFirstName: "Indica tu nombre.",
+  errorGeneric:
+    "No hemos podido registrar tu asistencia. Inténtalo de nuevo en unos minutos o escríbenos a contact@hackspain.com.",
+  errorInvalidEmail: "Introduce un correo electrónico válido.",
+  errorLastName: "Indica tus apellidos.",
+  firstName: "Nombre",
+  lastName: "Apellidos",
   notes: "Notas",
   notesHint:
     "Cualquier cosa que debamos saber — horas de llegada o salida, acompañantes, dudas…",
-  submit: "Confirmar asistencia",
-  submitting: "Enviando…",
   received:
     "¡Gracias! Hemos registrado tu asistencia y te hemos enviado un correo de confirmación.",
-  alreadyConfirmed:
-    "Ya tenemos una confirmación con este correo. Si necesitas cambiar tus días o franjas, escríbenos a contact@hackspain.com.",
-  backHome: "Inicio",
-  errorGeneric:
-    "No hemos podido registrar tu asistencia. Inténtalo de nuevo en unos minutos o escríbenos a contact@hackspain.com.",
-  errorFirstName: "Indica tu nombre.",
-  errorLastName: "Indica tus apellidos.",
-  errorInvalidEmail: "Introduce un correo electrónico válido.",
-  errorCompany: "Indica tu empresa.",
-  errorAttendance: "Marca al menos una franja para saber cuándo estarás.",
-  errorDietaryConsent:
-    "Debes consentir expresamente el tratamiento de los datos alimentarios que has indicado.",
-  errorAccessDenied:
-    "No hemos podido verificar la solicitud. Recarga la página e inténtalo de nuevo, o usa un navegador normal con JavaScript activado.",
+  submit: "Confirmar asistencia",
+  submitting: "Enviando…",
+  subtitle:
+    "Para mentores y sponsors de HackSpain 2026 — 18 a 20 de septiembre, Madrid. Dinos qué días y en qué franjas estarás para que podamos organizar comidas y logística.",
+  title: "Confirma tu asistencia",
 } as const;
 
 function messageForErrorCode(code: string): string {
   switch (code) {
-    case "first_name_required":
+    case "first_name_required": {
       return t.errorFirstName;
-    case "last_name_required":
+    }
+    case "last_name_required": {
       return t.errorLastName;
-    case "invalid_email":
+    }
+    case "invalid_email": {
       return t.errorInvalidEmail;
-    case "company_required":
+    }
+    case "company_required": {
       return t.errorCompany;
-    case "attendance_required":
+    }
+    case "attendance_required": {
       return t.errorAttendance;
-    case "dietary_consent_required":
+    }
+    case "dietary_consent_required": {
       return t.errorDietaryConsent;
-    default:
+    }
+    default: {
       return t.errorGeneric;
+    }
   }
 }
 
@@ -191,7 +198,7 @@ export function MentorSponsorPage() {
       return;
     }
     initBotId({
-      protect: [{ path: "/api/mentor-sponsor-signup", method: "POST" }],
+      protect: [{ method: "POST", path: "/api/mentor-sponsor-signup" }],
     });
   }, []);
 
@@ -204,8 +211,8 @@ export function MentorSponsorPage() {
 
     addBreadcrumb({
       category: "ui",
-      message: "mentor-sponsor: submit",
       level: "info",
+      message: "mentor-sponsor: submit",
     });
 
     const company =
@@ -213,14 +220,14 @@ export function MentorSponsorPage() {
         ? data.companyOther.trim()
         : data.companyChoice;
     const payload = {
+      attendanceSlots: data.attendanceSlots,
+      company,
+      dietaryDataConsent: data.dietaryDataConsent,
+      dietaryDetails: data.dietaryDetails,
+      dietaryRestrictions: data.dietaryRestrictions,
+      email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
-      email: data.email,
-      company,
-      attendanceSlots: data.attendanceSlots,
-      dietaryRestrictions: data.dietaryRestrictions,
-      dietaryDetails: data.dietaryDetails,
-      dietaryDataConsent: data.dietaryDataConsent,
       notes: data.notes,
     };
 
@@ -228,9 +235,9 @@ export function MentorSponsorPage() {
     if (!parsed.ok) {
       addBreadcrumb({
         category: "mentor-sponsor",
-        message: "client validation",
         data: { code: parsed.error },
         level: "info",
+        message: "client validation",
       });
       setErrorMessage(messageForErrorCode(parsed.error));
       setStatus("error");
@@ -261,19 +268,19 @@ export function MentorSponsorPage() {
       if (resJson.error === "duplicate_email" || res.status === 409) {
         addBreadcrumb({
           category: "http",
-          type: "http",
-          data: { status: res.status, error: resJson.error },
+          data: { error: resJson.error, status: res.status },
           level: "info",
           message: "mentor-sponsor duplicate email (expected)",
+          type: "http",
         });
         setStatus("alreadyConfirmed");
         return;
       }
       addBreadcrumb({
         category: "http",
-        type: "http",
-        data: { status: res.status, error: resJson.error },
+        data: { error: resJson.error, status: res.status },
         level: "error",
+        type: "http",
       });
       withScope((scope) => {
         scope.setTag("flow", "mentor-sponsor-signup");
@@ -295,12 +302,12 @@ export function MentorSponsorPage() {
         setErrorMessage(t.errorGeneric);
       }
       setStatus("error");
-    } catch (err) {
-      if (err instanceof Error) {
+    } catch (error) {
+      if (error instanceof Error) {
         withScope((scope) => {
           scope.setTag("flow", "mentor-sponsor-signup");
           scope.setTag("source", "client");
-          captureException(err);
+          captureException(error);
         });
       }
       setErrorMessage(t.errorGeneric);

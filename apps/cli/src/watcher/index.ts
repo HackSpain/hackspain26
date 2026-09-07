@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { api, type Session } from "../lib/api";
+import type { Session } from "../lib/api";
+import { api } from "../lib/api";
 import {
   ensureDir,
   readJsonFile,
@@ -11,27 +12,22 @@ import { CliError, EXIT } from "../lib/errors";
 import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
 import { VERSION } from "../version";
-import { type Batcher, createBatcher } from "./batcher";
+import type { Batcher } from "./batcher";
+import { createBatcher } from "./batcher";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
 import { openCodeCollector } from "./collectors/opencode";
 import { openCursorStore } from "./cursor-store";
-import { platformToaster, type Toaster } from "./notify";
-import {
-  type RawEvent,
-  SCHEMA,
-  type TelemetryEvent,
-  validateEvent,
-} from "./schema";
+import type { Toaster } from "./notify";
+import { platformToaster } from "./notify";
+import type { RawEvent, TelemetryEvent } from "./schema";
+import { SCHEMA, validateEvent } from "./schema";
 import { httpSink } from "./sinks/http";
-import { type Sink, spoolSink } from "./sinks/spool";
-import {
-  recordEvent,
-  recordLog,
-  recordNotification,
-  type WatchState,
-} from "./state";
+import type { Sink } from "./sinks/spool";
+import { spoolSink } from "./sinks/spool";
+import type { WatchState } from "./state";
+import { recordEvent, recordLog, recordNotification } from "./state";
 import type { Collector, CollectorContext } from "./types";
 
 export const COLLECTORS: Collector[] = [
@@ -161,7 +157,7 @@ export function saveRecentIds(ids: Set<string>): void {
   const list = [...ids].slice(-RECENT_IDS_CAP);
   writeFileAtomic(
     recentIdsPath(),
-    `${JSON.stringify({ version: 1, ids: list })}\n`,
+    `${JSON.stringify({ ids: list, version: 1 })}\n`,
     0o600
   );
 }
@@ -192,7 +188,7 @@ export async function scanOnce(
   identity: TelemetryEvent["identity"],
   recent: Set<string>
 ): Promise<ScanResult> {
-  const result: ScanResult = { events: 0, skipped: 0, byHarness: {} };
+  const result: ScanResult = { byHarness: {}, events: 0, skipped: 0 };
   for (const collector of collectors) {
     const roots = await collector.discover();
     if (roots.length === 0) {
@@ -219,8 +215,8 @@ export async function scanOnce(
         result.byHarness[collector.id] =
           (result.byHarness[collector.id] ?? 0) + 1;
       }
-    } catch (err) {
-      ctx.log(`${collector.id}: collector failed: ${String(err)}`);
+    } catch (error) {
+      ctx.log(`${collector.id}: collector failed: ${String(error)}`);
     }
   }
   return result;
@@ -235,7 +231,7 @@ export function formatNotification(
     hour: "2-digit",
     minute: "2-digit",
   });
-  return `[${time}] Organisers: ${subject}\n${body.replace(/\n/g, "\n  ")}`;
+  return `[${time}] Organisers: ${subject}\n${body.replaceAll("\n", "\n  ")}`;
 }
 
 export async function runWatch(
@@ -243,7 +239,7 @@ export async function runWatch(
   deps: WatchDeps
 ): Promise<number> {
   const { session, me, say } = deps;
-  const state = deps.state;
+  const { state } = deps;
   const log = (message: string) => {
     deps.log(message);
     if (state) {
@@ -272,14 +268,14 @@ export async function runWatch(
       batcher.push(event);
     },
   };
-  let teamId = deps.teamId;
+  let { teamId } = deps;
   let teamCheckedAt = Date.now();
   const identity = (): TelemetryEvent["identity"] => ({
     userId: me._id,
     ...(teamId ? { teamId } : {}),
     clientVersion: VERSION,
   });
-  const ctx: CollectorContext = { cursors, since: options.since, log };
+  const ctx: CollectorContext = { cursors, log, since: options.since };
 
   const discovered: string[] = [];
   for (const c of collectors) {
@@ -289,8 +285,8 @@ export async function runWatch(
   }
   if (state) {
     state.harnesses = collectors.map((c) => ({
-      id: c.id,
       found: discovered.includes(c.id),
+      id: c.id,
       requests: 0,
       tokens: 0,
     }));
@@ -316,8 +312,8 @@ export async function runWatch(
       rows = await session.client.query(api.notifications.forMe, {
         since: lastSeen,
       });
-    } catch (err) {
-      log(`notifications: ${String(err)}`);
+    } catch (error) {
+      log(`notifications: ${String(error)}`);
       return;
     }
     for (const row of rows) {
@@ -353,8 +349,8 @@ export async function runWatch(
         await session.client.query(api.feed.list, { limit: 15 }),
         session.url
       );
-    } catch (err) {
-      log(`feed: ${String(err)}`);
+    } catch (error) {
+      log(`feed: ${String(error)}`);
     }
   };
 
@@ -370,8 +366,8 @@ export async function runWatch(
       teamCheckedAt = Date.now();
       try {
         teamId = (await session.client.query(api.teams.mine, {}))?._id;
-      } catch (err) {
-        log(`team lookup failed: ${String(err)}`);
+      } catch (error) {
+        log(`team lookup failed: ${String(error)}`);
       }
     }
     if (state) {

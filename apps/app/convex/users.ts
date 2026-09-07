@@ -23,29 +23,34 @@ export async function resolvePendingInvites(
   email: string | undefined,
   signupId: Id<"signups"> | undefined,
   githubUsername: string | undefined,
-  twitterHandle: string | undefined,
+  twitterHandle: string | undefined
 ): Promise<void> {
-  const candidates: Array<{
+  const candidates: {
     type: "email" | "github" | "twitter";
     value: string;
-  }> = [];
-  if (email) candidates.push({ type: "email", value: email });
-  if (githubUsername)
+  }[] = [];
+  if (email) {
+    candidates.push({ type: "email", value: email });
+  }
+  if (githubUsername) {
     candidates.push({ type: "github", value: githubUsername });
-  if (twitterHandle) candidates.push({ type: "twitter", value: twitterHandle });
+  }
+  if (twitterHandle) {
+    candidates.push({ type: "twitter", value: twitterHandle });
+  }
 
-  const matches: Array<Doc<"teamMembers">> = [];
+  const matches: Doc<"teamMembers">[] = [];
   for (const candidate of candidates) {
     const rows = await ctx.db
       .query("teamMembers")
       .withIndex("by_identifier", (q) =>
-        q
-          .eq("identifierType", candidate.type)
-          .eq("identifier", candidate.value),
+        q.eq("identifierType", candidate.type).eq("identifier", candidate.value)
       )
       .collect();
     for (const row of rows) {
-      if (row.userId && row.userId !== userId) continue;
+      if (row.userId && row.userId !== userId) {
+        continue;
+      }
       matches.push(row);
     }
   }
@@ -53,20 +58,26 @@ export async function resolvePendingInvites(
   const existing = await membershipForUser(ctx, userId);
   let teamId = existing?.teamId;
   if (!teamId) {
-    const oldest = [...matches].sort((a, b) => a.createdAt - b.createdAt)[0];
+    const oldest = [...matches].toSorted(
+      (a, b) => a.createdAt - b.createdAt
+    )[0];
     teamId = oldest?.teamId;
   }
-  if (!teamId) return;
+  if (!teamId) {
+    return;
+  }
 
   let resolved = existing ?? null;
   for (const member of matches) {
-    if (member.teamId !== teamId) continue;
+    if (member.teamId !== teamId) {
+      continue;
+    }
     if (!resolved) {
       if (member.status !== "member" || member.userId !== userId) {
         await ctx.db.patch(member._id, {
-          userId,
           signupId: member.signupId ?? signupId,
           status: "member",
+          userId,
         });
       }
       resolved = member;
@@ -80,12 +91,15 @@ export async function resolvePendingInvites(
 
 export const me = query({
   args: {},
-  returns: v.union(meValidator, v.null()),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    if (!userId) {
+      return null;
+    }
     const user = await ctx.db.get(userId);
-    if (!user) return null;
+    if (!user) {
+      return null;
+    }
     const signup = await getSignupForUser(ctx, user);
     return {
       _id: user._id,
@@ -98,7 +112,7 @@ export const me = query({
       notificationConsentAt: user.notificationConsentAt,
       attendanceStatus: defaultedAttendance(
         user.attendanceStatus,
-        user.onboardingComplete || user.role === "admin",
+        user.onboardingComplete || user.role === "admin"
       ),
       dietaryRestrictions: user.dietaryRestrictions,
       dietaryDetails: user.dietaryDetails,
@@ -111,14 +125,16 @@ export const me = query({
       githubLinked: user.githubLinkedAt !== undefined,
     };
   },
+  returns: v.union(meValidator, v.null()),
 });
 
 export const mySignup = authedQuery({
   args: {},
-  returns: v.union(signupPublicValidator, v.null()),
   handler: async (ctx) => {
     const signup = await getSignupForUser(ctx, ctx.user);
-    if (!signup) return null;
+    if (!signup) {
+      return null;
+    }
     return {
       fullName: signup.fullName,
       email: signup.email,
@@ -128,11 +144,11 @@ export const mySignup = authedQuery({
       wantsAmbassador: signup.wantsAmbassador,
     };
   },
+  returns: v.union(signupPublicValidator, v.null()),
 });
 
 export const attachAfterLogin = authedMutation({
   args: {},
-  returns: v.null(),
   handler: async (ctx) => {
     const signup = await getSignupForUser(ctx, ctx.user);
     const patch: {
@@ -164,41 +180,41 @@ export const attachAfterLogin = authedMutation({
       ctx.user.githubUsername ??
         signup?.githubUsername ??
         (githubUrl ? normalizeGithub(githubUrl) : undefined),
-      signup?.twitterHandle ?? (xUrl ? normalizeTwitter(xUrl) : undefined),
+      signup?.twitterHandle ?? (xUrl ? normalizeTwitter(xUrl) : undefined)
     );
     return null;
   },
+  returns: v.null(),
 });
 
 export const setName = authedMutation({
   args: { name: v.string() },
-  returns: v.string(),
   handler: async (ctx, args) => {
-    const name = args.name.trim().replace(/\s+/g, " ");
+    const name = args.name.trim().replaceAll(/\s+/g, " ");
     if (name.length < 2 || name.length > 80) {
       fail("VALIDATION", "El nombre debe tener entre 2 y 80 caracteres");
     }
     await ctx.db.patch(ctx.user._id, { name });
     return name;
   },
+  returns: v.string(),
 });
 
 export const setAttendance = onboardedMutation({
   args: {
     attendanceStatus: v.union(v.literal("attending"), v.literal("cancelled")),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.patch(ctx.user._id, {
       attendanceStatus: args.attendanceStatus,
     });
     return null;
   },
+  returns: v.null(),
 });
 
 export const setNotificationConsent = onboardedMutation({
   args: { consent: v.boolean() },
-  returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.patch(ctx.user._id, {
       notificationConsent: args.consent,
@@ -206,18 +222,19 @@ export const setNotificationConsent = onboardedMutation({
     });
     return null;
   },
+  returns: v.null(),
 });
 
 export const updateEventDetails = onboardedMutation({
   args: {
-    dietaryRestrictions: v.string(),
     dietaryDetails: v.optional(v.string()),
+    dietaryRestrictions: v.string(),
     travelOrigin: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const details = parseEventDetails(args);
     await ctx.db.patch(ctx.user._id, details);
     return null;
   },
+  returns: v.null(),
 });

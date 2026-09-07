@@ -1,4 +1,5 @@
-import { type CreateEmailOptions, Resend } from "resend";
+import type { CreateEmailOptions } from "resend";
+import { Resend } from "resend";
 import {
   ACCEPTANCE_EMAIL_SUBJECT,
   acceptanceEmailHtml,
@@ -82,18 +83,18 @@ async function sendEmail(
     });
     if (result.error) {
       return {
+        detail: `${result.error.name}: ${result.error.message}`,
         ok: false,
         reason: "send_failed",
-        detail: `${result.error.name}: ${result.error.message}`,
       };
     }
-    return { ok: true, messageId: result.data.id };
+    return { messageId: result.data.id, ok: true };
   } catch (error) {
     const detail =
       error instanceof Error
         ? `${error.name}: ${error.message}`
         : String(error).slice(0, 256);
-    return { ok: false, reason: "send_failed", detail };
+    return { detail, ok: false, reason: "send_failed" };
   }
 }
 

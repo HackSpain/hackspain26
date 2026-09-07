@@ -1,8 +1,6 @@
 import type { ClipboardEvent, FocusEvent } from "react";
-import {
-  cleanProfilePasteText,
-  type ProfileFieldKind,
-} from "../../lib/signup-validation";
+import type { ProfileFieldKind } from "../../lib/signup-validation";
+import { cleanProfilePasteText } from "../../lib/signup-validation";
 
 const socialComboWrapClass =
   "flex w-full min-w-0 rounded-sm border-[3px] border-hs-ink bg-hs-paper transition-[border-color] duration-150 ease-out focus-within:border-hs-navy [&:-webkit-autofill]:shadow-[inset_0_0_0_1000px_var(--color-hs-paper)]";

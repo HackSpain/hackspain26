@@ -1,7 +1,9 @@
 import type { FunctionReturnType } from "convex/server";
-import { type api, openSession, type Session } from "./api";
+import type { api, Session } from "./api";
+import { openSession } from "./api";
 import type { CliContext } from "./context";
-import { type Me, requireOnboarded } from "./me";
+import type { Me } from "./me";
+import { requireOnboarded } from "./me";
 
 export type Participant = { session: Session; me: Me };
 
@@ -23,5 +25,5 @@ export type Milestone = FunctionReturnType<typeof api.milestones.mine>[number];
 export async function openParticipant(ctx: CliContext): Promise<Participant> {
   const session = await openSession(ctx, { requireAuth: true });
   const me = await requireOnboarded(session);
-  return { session, me };
+  return { me, session };
 }

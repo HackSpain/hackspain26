@@ -83,15 +83,15 @@ export function registerSubmit(program: Command): void {
 
       const name = await textOrFlag(ctx, opts.name, {
         flag: "--name",
-        message: "Project name",
         initialValue: existing.name,
+        message: "Project name",
         validate: (v) =>
           v.trim().length >= 2 ? undefined : "At least 2 characters",
       });
       const description = await textOrFlag(ctx, opts.description, {
         flag: "--description",
-        message: "What does it do? (one or two sentences)",
         initialValue: existing.description,
+        message: "What does it do? (one or two sentences)",
         validate: (v) =>
           mode === "draft" || v.trim().length >= 10
             ? undefined
@@ -99,17 +99,17 @@ export function registerSubmit(program: Command): void {
       });
       const repoUrl = await textOrFlag(ctx, opts.repo, {
         flag: "--repo",
-        message: "GitHub repository",
         initialValue: existing.repoUrl ?? team?.repoUrl ?? "",
-        placeholder: "https://github.com/org/repo",
+        message: "GitHub repository",
         optional: true,
+        placeholder: "https://github.com/org/repo",
         validate: (v) =>
           GITHUB_URL.test(v.trim()) ? undefined : "https://github.com/org/repo",
       });
       const demoUrl = await textOrFlag(ctx, opts.demo, {
         flag: "--demo",
-        message: "Demo URL (optional)",
         initialValue: existing.demoUrl ?? "",
+        message: "Demo URL (optional)",
         optional: true,
         validate: (v) =>
           HTTP_URL.test(v.trim()) ? undefined : "Must start with http(s)://",
@@ -127,16 +127,16 @@ export function registerSubmit(program: Command): void {
         ctx,
         opts.track.length > 0 ? opts.track : undefined,
         {
-          flag: "--track",
-          message: "Tracks to enter",
           choices: tracks.map((t) => ({
             value: t.slug,
             label: t.label,
             hint: t.note,
           })),
+          flag: "--track",
           initial: tracks
             .filter((t) => existing.challengeIds.includes(t._id))
             .map((t) => t.slug),
+          message: "Tracks to enter",
           required: mode === "submit",
         }
       );
@@ -165,24 +165,24 @@ export function registerSubmit(program: Command): void {
           ? (opts.perk as typeof existing.perkIds)
           : undefined,
         {
-          flag: "--perk",
-          message: "Partner perks you used (optional)",
           choices: perks.map((p) => ({
             value: p.perk._id,
             label: `${p.perk.company}: ${p.perk.title}`,
             hint: p.perk.value,
           })),
+          flag: "--perk",
           initial: existing.perkIds,
+          message: "Partner perks you used (optional)",
         }
       );
 
       const args = {
-        name: name.trim(),
-        description: description.trim(),
-        repoUrl: repoUrl.trim() || undefined,
-        demoUrl: demoUrl.trim() || undefined,
         challengeIds,
+        demoUrl: demoUrl.trim() || undefined,
+        description: description.trim(),
+        name: name.trim(),
         perkIds,
+        repoUrl: repoUrl.trim() || undefined,
       };
 
       if (mode === "submit") {
@@ -200,8 +200,8 @@ export function registerSubmit(program: Command): void {
         );
         const ok = await confirmOrFlag(ctx, opts.yes, {
           flag: "--yes",
-          message: "Submit now?",
           initialValue: false,
+          message: "Submit now?",
         });
         if (!ok) {
           await ui.spin(
@@ -209,7 +209,7 @@ export function registerSubmit(program: Command): void {
             () => session.client.mutation(api.submissions.saveDraft, args),
             "Draft saved"
           );
-          ui.result({ submitted: false, savedDraft: true });
+          ui.result({ savedDraft: true, submitted: false });
           ui.info(
             "Not submitted. Your draft is safe; run `hackspain submit` when ready."
           );

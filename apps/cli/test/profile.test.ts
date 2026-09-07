@@ -5,23 +5,23 @@ import { stripAnsi } from "../src/lib/style";
 
 const base: Me = {
   _id: "u1" as Me["_id"],
+  accepted: true,
+  attendanceStatus: "attending",
+  dietaryDetails: undefined,
+  dietaryRestrictions: "Vegetarian",
   email: "ana@example.com",
+  githubLinked: true,
+  githubUsername: "ana",
+  isRegistered: true,
   name: "Ana",
-  role: "user",
-  phone: "+34600111222",
-  phoneConfirmed: true,
   notificationConsent: true,
   notificationConsentAt: undefined,
-  attendanceStatus: "attending",
-  dietaryRestrictions: "Vegetarian",
-  dietaryDetails: undefined,
-  travelOrigin: "Valencia",
   onboardingComplete: true,
-  isRegistered: true,
-  accepted: true,
+  phone: "+34600111222",
+  phoneConfirmed: true,
+  role: "user",
   signupId: undefined,
-  githubUsername: "ana",
-  githubLinked: true,
+  travelOrigin: "Valencia",
 };
 
 function row(me: Me, label: string): string {
@@ -40,13 +40,13 @@ describe("profile", () => {
   test("missing pieces point at the command that fills them", () => {
     const me: Me = {
       ...base,
+      dietaryDetails: "no nuts",
+      dietaryRestrictions: undefined,
+      githubLinked: false,
+      name: undefined,
+      notificationConsent: false,
       phone: undefined,
       phoneConfirmed: false,
-      name: undefined,
-      dietaryRestrictions: undefined,
-      dietaryDetails: "no nuts",
-      notificationConsent: false,
-      githubLinked: false,
     };
     expect(row(me, "Name")).toContain("hackspain profile edit");
     expect(row(me, "Phone")).toContain("hackspain profile phone");

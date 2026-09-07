@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
-import { EmptyState, LoadingText, Page, RecordCard, RecordList } from "@/components/page";
+import {
+  EmptyState,
+  LoadingText,
+  Page,
+  RecordCard,
+  RecordList,
+} from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,9 +44,9 @@ export default function AdminCrmPage() {
   }, [search]);
 
   const rows = useQuery(api.admin.listParticipants, {
-    search: searchQuery || undefined,
-    attendance: attendance === "all" ? undefined : attendance,
     accepted: accepted === "all" ? undefined : accepted === "yes",
+    attendance: attendance === "all" ? undefined : attendance,
+    search: searchQuery || undefined,
   });
 
   return (
@@ -68,7 +74,9 @@ export default function AdminCrmPage() {
         <Select
           value={attendance}
           onValueChange={(value) =>
-            setAttendance(value as "all" | "attending" | "cancelled" | "undecided")
+            setAttendance(
+              value as "all" | "attending" | "cancelled" | "undecided"
+            )
           }
         >
           <SelectTrigger>
@@ -82,101 +90,109 @@ export default function AdminCrmPage() {
           </SelectContent>
         </Select>
       </div>
-      {!rows ? (
-        <LoadingText />
-      ) : rows.length === 0 ? (
-        <EmptyState title="Ningún participante coincide">
-          Prueba otra búsqueda o quita los filtros.
-        </EmptyState>
-      ) : (
-        <RecordList
-          desktop={
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Aceptado</TableHead>
-                  <TableHead>Teléfono</TableHead>
-                  <TableHead>Dieta</TableHead>
-                  <TableHead>Origen</TableHead>
-                  <TableHead>Asistencia</TableHead>
-                  <TableHead>Equipo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => {
-                  const href = row.signupId
-                    ? `/admin/users/${row.signupId}?kind=signup`
-                    : `/admin/users/${row.userId}?kind=user`;
-                  const attendance = displayedAttendance(
-                    row.attendanceStatus,
-                    row.onboardingComplete === true,
-                  );
-                  return (
-                    <TableRow key={`${row.signupId ?? ""}-${row.userId ?? ""}`}>
-                      <TableCell>
-                        <Link href={href} className="underline underline-offset-2">
-                          {row.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{row.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={row.accepted ? "gold" : "default"}>
-                          {row.accepted ? "aceptado" : "no aceptado"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{row.phone ?? "—"}</TableCell>
-                      <TableCell>{row.dietaryRestrictions ?? "—"}</TableCell>
-                      <TableCell>{row.travelOrigin ?? "—"}</TableCell>
-                      <TableCell>
-                        <Badge>
-                          {attendance ? attendanceLabel(attendance) : "—"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{row.teamName ?? "—"}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          }
-        >
-          {rows.map((row) => {
-            const href = row.signupId
-              ? `/admin/users/${row.signupId}?kind=signup`
-              : `/admin/users/${row.userId}?kind=user`;
-            const attendance = displayedAttendance(
-              row.attendanceStatus,
-              row.onboardingComplete === true,
-            );
-            return (
-              <Link
-                key={`${row.signupId ?? ""}-${row.userId ?? ""}`}
-                href={href}
-                className="block motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
-              >
-                <RecordCard
-                  title={row.name}
-                  subtitle={row.email}
+      {rows ? (
+        rows.length === 0 ? (
+          <EmptyState title="Ningún participante coincide">
+            Prueba otra búsqueda o quita los filtros.
+          </EmptyState>
+        ) : (
+          <RecordList
+            desktop={
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Aceptado</TableHead>
+                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Dieta</TableHead>
+                    <TableHead>Origen</TableHead>
+                    <TableHead>Asistencia</TableHead>
+                    <TableHead>Equipo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => {
+                    const href = row.signupId
+                      ? `/admin/users/${row.signupId}?kind=signup`
+                      : `/admin/users/${row.userId}?kind=user`;
+                    const displayedStatus = displayedAttendance(
+                      row.attendanceStatus,
+                      row.onboardingComplete === true
+                    );
+                    return (
+                      <TableRow
+                        key={`${row.signupId ?? ""}-${row.userId ?? ""}`}
+                      >
+                        <TableCell>
+                          <Link
+                            href={href}
+                            className="underline underline-offset-2"
+                          >
+                            {row.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{row.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={row.accepted ? "gold" : "default"}>
+                            {row.accepted ? "aceptado" : "no aceptado"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{row.phone ?? "—"}</TableCell>
+                        <TableCell>{row.dietaryRestrictions ?? "—"}</TableCell>
+                        <TableCell>{row.travelOrigin ?? "—"}</TableCell>
+                        <TableCell>
+                          <Badge>
+                            {displayedStatus
+                              ? attendanceLabel(displayedStatus)
+                              : "—"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{row.teamName ?? "—"}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            }
+          >
+            {rows.map((row) => {
+              const href = row.signupId
+                ? `/admin/users/${row.signupId}?kind=signup`
+                : `/admin/users/${row.userId}?kind=user`;
+              const displayedStatus = displayedAttendance(
+                row.attendanceStatus,
+                row.onboardingComplete === true
+              );
+              return (
+                <Link
+                  key={`${row.signupId ?? ""}-${row.userId ?? ""}`}
+                  href={href}
+                  className="block motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
                 >
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant={row.accepted ? "gold" : "default"}>
-                      {row.accepted ? "aceptado" : "no aceptado"}
-                    </Badge>
-                    <Badge>
-                      {attendance ? attendanceLabel(attendance) : "—"}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-hs-brown">
-                    {row.teamName ?? "Sin equipo"}
-                    {row.travelOrigin ? ` · ${row.travelOrigin}` : ""}
-                  </p>
-                </RecordCard>
-              </Link>
-            );
-          })}
-        </RecordList>
+                  <RecordCard title={row.name} subtitle={row.email}>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant={row.accepted ? "gold" : "default"}>
+                        {row.accepted ? "aceptado" : "no aceptado"}
+                      </Badge>
+                      <Badge>
+                        {displayedStatus
+                          ? attendanceLabel(displayedStatus)
+                          : "—"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-hs-brown">
+                      {row.teamName ?? "Sin equipo"}
+                      {row.travelOrigin ? ` · ${row.travelOrigin}` : ""}
+                    </p>
+                  </RecordCard>
+                </Link>
+              );
+            })}
+          </RecordList>
+        )
+      ) : (
+        <LoadingText />
       )}
     </Page>
   );

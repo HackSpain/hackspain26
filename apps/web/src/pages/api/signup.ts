@@ -15,8 +15,8 @@ export const prerender = false;
 function safeSentry(report: () => void): void {
   try {
     report();
-  } catch (e) {
-    console.error("[signup] Sentry reporting failed:", e);
+  } catch (error) {
+    console.error("[signup] Sentry reporting failed:", error);
   }
 }
 
@@ -28,7 +28,11 @@ function emptyToNull(s: string): string | null {
 function isPostgresUniqueViolation(e: unknown): boolean {
   const seen = new Set<unknown>();
   let cur: unknown = e;
-  for (let depth = 0; depth < 14 && cur != null; depth++) {
+  for (
+    let depth = 0;
+    depth < 14 && cur !== null && cur !== undefined;
+    depth++
+  ) {
     if (seen.has(cur)) {
       break;
     }
@@ -41,13 +45,13 @@ function isPostgresUniqueViolation(e: unknown): boolean {
     ) {
       return true;
     }
-    if (cur instanceof Error && cur.cause != null) {
+    if (cur instanceof Error && cur.cause !== null && cur.cause !== undefined) {
       cur = cur.cause;
       continue;
     }
     if (typeof cur === "object" && cur !== null && "cause" in cur) {
       const next = (cur as { cause: unknown }).cause;
-      if (next == null) {
+      if (next === null || next === undefined) {
         break;
       }
       cur = next;
@@ -75,15 +79,15 @@ export const POST: APIRoute = async ({ request }) => {
         });
         return Response.json({ error: "access_denied" }, { status: 403 });
       }
-    } catch (e) {
+    } catch (error) {
       safeSentry(() => {
         withScope((scope) => {
           scope.setTag("api", "signup");
           scope.setTag("outcome", "botid_check_failed");
-          captureException(e);
+          captureException(error);
         });
       });
-      console.error("BotID check failed:", e);
+      console.error("BotID check failed:", error);
     }
   }
 
@@ -238,35 +242,35 @@ export const POST: APIRoute = async ({ request }) => {
 
     try {
       await db.insert(hackathonSignups).values({
-        id: signupId,
-        fullName,
-        email,
-        xUrl: emptyToNull(xUrl),
-        linkedinUrl: emptyToNull(linkedinUrl),
-        githubUrl: emptyToNull(githubUrl),
-        webUrl: emptyToNull(webUrl),
         achievements: emptyToNull(achievements),
-        freeTime: emptyToNull(freeTime),
-        dietaryRestrictions,
-        dietaryDetails: emptyToNull(dietaryDetails),
+        ambassadorMotivation: motivationDb,
+        cameFromPreSignup: relatedPreSignupId !== null,
         dietaryConsentAt:
           hasDietaryData && dietaryDataConsent ? new Date() : null,
-        occupationStatuses,
-        studyInstitution: emptyToNull(studyInstitution),
+        dietaryDetails: emptyToNull(dietaryDetails),
+        dietaryRestrictions,
+        email,
         employer: emptyToNull(employer),
-        cameFromPreSignup: relatedPreSignupId !== null,
-        wantsAmbassador,
-        ambassadorMotivation: motivationDb,
+        freeTime: emptyToNull(freeTime),
+        fullName,
+        githubUrl: emptyToNull(githubUrl),
         heardFrom,
+        id: signupId,
+        linkedinUrl: emptyToNull(linkedinUrl),
+        occupationStatuses,
         referralCode: emptyToNull(
           referralCode || relatedPreSignupReferralCode || ""
         ),
+        studyInstitution: emptyToNull(studyInstitution),
+        wantsAmbassador,
+        webUrl: emptyToNull(webUrl),
+        xUrl: emptyToNull(xUrl),
       });
-    } catch (e: unknown) {
-      if (isPostgresUniqueViolation(e)) {
+    } catch (error: unknown) {
+      if (isPostgresUniqueViolation(error)) {
         return Response.json({ error: "duplicate_email" }, { status: 409 });
       }
-      throw e;
+      throw error;
     }
   } catch {
     console.error("[signup] Failed to save application");
@@ -304,8 +308,8 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const emailResult = await sendSignupConfirmationEmail({
-      fullName,
       email,
+      fullName,
       signupId,
       wantsAmbassador,
     });

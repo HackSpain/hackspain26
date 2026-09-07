@@ -3,28 +3,29 @@ import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
 import { formatWhen, uiFor } from "../lib/output";
-import { type Milestone, openParticipant } from "../lib/participant";
+import type { Milestone } from "../lib/participant";
+import { openParticipant } from "../lib/participant";
 import { c, highlight } from "../lib/style";
 
 const KINDS = ["firstCommit", "firstBuild", "firstDemo", "custom"] as const;
 type Kind = (typeof KINDS)[number];
 
 const KIND_LABEL: Record<Kind, string> = {
-  firstCommit: "First commit",
-  firstBuild: "First build",
-  firstDemo: "First demo",
   custom: "Milestone",
+  firstBuild: "First build",
+  firstCommit: "First commit",
+  firstDemo: "First demo",
 };
 
 const KIND_CHEER: Record<Kind, string> = {
-  firstCommit: "the repo is no longer empty.",
-  firstBuild: "it builds. Everything after this is polish.",
-  firstDemo: "you have something to show.",
   custom: "logged.",
+  firstBuild: "it builds. Everything after this is polish.",
+  firstCommit: "the repo is no longer empty.",
+  firstDemo: "you have something to show.",
 };
 
 function parseKind(raw: string): Kind {
-  const normalized = raw.replace(/[-_\s]/g, "").toLowerCase();
+  const normalized = raw.replaceAll(/[-_\s]/g, "").toLowerCase();
   const kind = KINDS.find((k) => k.toLowerCase() === normalized);
   if (!kind) {
     throw usageError(
@@ -83,9 +84,9 @@ export function registerMilestone(program: Command): void {
           "Recording…",
           () =>
             session.client.mutation(api.milestones.add, {
+              at: parseAt(opts.at),
               kind,
               label: opts.label,
-              at: parseAt(opts.at),
             }),
           "Recorded"
         );

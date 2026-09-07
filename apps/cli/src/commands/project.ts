@@ -2,8 +2,10 @@ import type { Command } from "commander";
 import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { CliError } from "../lib/errors";
-import { formatAgo, formatWhen, type Ui, uiFor } from "../lib/output";
-import { openParticipant, type Submission } from "../lib/participant";
+import type { Ui } from "../lib/output";
+import { formatAgo, formatWhen, uiFor } from "../lib/output";
+import type { Submission } from "../lib/participant";
+import { openParticipant } from "../lib/participant";
 import { c, highlight } from "../lib/style";
 
 export function renderSubmission(ui: Ui, submission: Submission): void {

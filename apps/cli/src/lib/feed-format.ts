@@ -19,11 +19,11 @@ export type FeedItem = {
 };
 
 const IMAGE_TYPES: Record<string, string> = {
-  ".jpg": "image/jpeg",
+  ".gif": "image/gif",
   ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
   ".png": "image/png",
   ".webp": "image/webp",
-  ".gif": "image/gif",
 };
 
 /** Turn the server's same-origin image paths into links people can open. */

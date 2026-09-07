@@ -15,14 +15,14 @@ export async function POST(request: Request) {
   }
   try {
     const result = await fetchAction(api.auth.signIn, {
+      params: { code, email },
       provider: "resend-otp",
-      params: { email, code },
     });
     if (!result.tokens) {
       return fail("Could not verify code", 401);
     }
     return ok({ tokens: result.tokens });
-  } catch (err) {
-    return fromError(err);
+  } catch (error) {
+    return fromError(error);
   }
 }

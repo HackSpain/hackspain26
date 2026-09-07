@@ -44,7 +44,7 @@ export function stateDir(): string {
 
 export function ensureDir(path: string, mode = 0o700): void {
   if (!existsSync(path)) {
-    mkdirSync(path, { recursive: true, mode });
+    mkdirSync(path, { mode, recursive: true });
   }
 }
 
@@ -113,7 +113,7 @@ export function resolveAppUrl(override?: string): {
         "It should look like https://app.hackspain.com or http://localhost:3000"
       );
     }
-    return { url: url.replace(TRAILING_SLASHES, ""), source };
+    return { source, url: url.replace(TRAILING_SLASHES, "") };
   }
   throw usageError(
     "No HackSpain server configured.",

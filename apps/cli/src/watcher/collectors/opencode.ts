@@ -3,7 +3,8 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { projectRef } from "../project";
-import { eventId, modelFamily, type RawEvent } from "../schema";
+import type { RawEvent } from "../schema";
+import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 
 export const OPENCODE = "opencode" as const;
@@ -49,26 +50,26 @@ export function normalizeOpenCode(row: MessageRow): RawEvent | null {
   }
   const model = data.modelID ?? "unknown";
   return {
-    type: "usage",
     eventId: eventId(OPENCODE, row.session_id, row.id),
-    occurredAt: new Date(data.time.completed).toISOString(),
     harness: OPENCODE,
-    sessionId: row.session_id,
-    project: projectRef(data.path?.cwd),
     model: {
-      raw: model,
       family: modelFamily(model),
       provider: data.providerID,
+      raw: model,
     },
+    occurredAt: new Date(data.time.completed).toISOString(),
+    project: projectRef(data.path?.cwd),
+    sessionId: row.session_id,
     tokens: {
-      input: data.tokens.input ?? 0,
-      output: data.tokens.output ?? 0,
       cacheRead: data.tokens.cache?.read ?? 0,
       cacheWrite: data.tokens.cache?.write ?? 0,
+      input: data.tokens.input ?? 0,
+      output: data.tokens.output ?? 0,
       ...(data.tokens.reasoning === undefined
         ? {}
         : { reasoning: data.tokens.reasoning }),
     },
+    type: "usage",
     ...(typeof data.cost === "number" && data.cost > 0
       ? { costUsd: data.cost }
       : {}),
@@ -90,12 +91,12 @@ export async function* collectOpenCode(
   for (const path of dbPaths) {
     const previous = ctx.cursors.get(path);
     let since = typeof previous?.mark === "number" ? previous.mark : ctx.since;
-    const announced = new Set(previous?.seenSessions ?? []);
+    const announced = new Set(previous?.seenSessions);
     let db: Database;
     try {
       db = new Database(path, { readonly: true });
-    } catch (err) {
-      ctx.log(`opencode: cannot open ${path}: ${String(err)}`);
+    } catch (error) {
+      ctx.log(`opencode: cannot open ${path}: ${String(error)}`);
       continue;
     }
     try {
@@ -116,12 +117,12 @@ export async function* collectOpenCode(
           if (!announced.has(event.sessionId)) {
             announced.add(event.sessionId);
             yield {
-              type: "session.start",
               eventId: eventId(OPENCODE, event.sessionId, "start"),
-              occurredAt: event.occurredAt,
               harness: OPENCODE,
-              sessionId: event.sessionId,
+              occurredAt: event.occurredAt,
               project: event.project,
+              sessionId: event.sessionId,
+              type: "session.start",
             };
           }
           yield event;
@@ -130,24 +131,24 @@ export async function* collectOpenCode(
           break;
         }
       }
-    } catch (err) {
-      ctx.log(`opencode: query failed on ${path}: ${String(err)}`);
+    } catch (error) {
+      ctx.log(`opencode: query failed on ${path}: ${String(error)}`);
     } finally {
       db.close();
     }
     ctx.cursors.set(path, {
-      offset: 0,
-      mtimeMs: Date.now(),
-      seenSessions: [...announced],
       mark: since,
+      mtimeMs: Date.now(),
+      offset: 0,
+      seenSessions: [...announced],
     });
     await Promise.resolve();
   }
 }
 
 export const openCodeCollector: Collector = {
-  id: OPENCODE,
+  collect: (ctx) => collectOpenCode([openCodeDbPath()], ctx),
   discover: () =>
     Promise.resolve(existsSync(openCodeDbPath()) ? [openCodeDbPath()] : []),
-  collect: (ctx) => collectOpenCode([openCodeDbPath()], ctx),
+  id: OPENCODE,
 };

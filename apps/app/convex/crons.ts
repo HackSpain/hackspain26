@@ -9,7 +9,7 @@ crons.interval(
   "poll team repos for the feed",
   { minutes: 3 },
   internal.githubFeed.pollRepos,
-  {},
+  {}
 );
 
 export default crons;

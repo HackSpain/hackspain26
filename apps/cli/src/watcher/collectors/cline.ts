@@ -3,7 +3,8 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { readJsonFile } from "../../lib/config";
 import { projectRef } from "../project";
-import { eventId, modelFamily, type RawEvent } from "../schema";
+import type { RawEvent } from "../schema";
+import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 
 export const CLINE = "cline" as const;
@@ -31,11 +32,11 @@ type ApiReq = {
 };
 
 type TaskMetadata = {
-  model_usage?: Array<{
+  model_usage?: {
     model_id?: string;
     model_provider_id?: string;
     ts?: number;
-  }>;
+  }[];
   cwdOnTaskInitialization?: string;
 };
 
@@ -61,7 +62,7 @@ export function normalizeCline(
   }
   const models = (task.metadata?.model_usage ?? [])
     .filter((m) => typeof m.model_id === "string")
-    .sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+    .toSorted((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
   const modelAt = (ts: number) => {
     let current = models[0];
     for (const m of models) {
@@ -79,7 +80,7 @@ export function normalizeCline(
         m.say === "api_req_started" &&
         typeof m.ts === "number"
     )
-    .sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+    .toSorted((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
   for (const message of sorted) {
     const ts = message.ts ?? 0;
     if (ts <= afterTs) {
@@ -97,23 +98,23 @@ export function normalizeCline(
     const model = modelAt(ts);
     const raw = model?.model_id ?? "unknown";
     events.push({
-      type: "usage",
       eventId: eventId(CLINE, task.taskId, ts),
-      occurredAt: new Date(ts).toISOString(),
       harness: CLINE,
-      sessionId: task.taskId,
-      project: projectRef(cwd),
       model: {
-        raw,
         family: modelFamily(raw),
         provider: model?.model_provider_id,
+        raw,
       },
+      occurredAt: new Date(ts).toISOString(),
+      project: projectRef(cwd),
+      sessionId: task.taskId,
       tokens: {
-        input: req.tokensIn ?? 0,
-        output: req.tokensOut ?? 0,
         cacheRead: req.cacheReads ?? 0,
         cacheWrite: req.cacheWrites ?? 0,
+        input: req.tokensIn ?? 0,
+        output: req.tokensOut ?? 0,
       },
+      type: "usage",
       ...(typeof req.cost === "number" ? { costUsd: req.cost } : {}),
     });
     mark = ts;
@@ -165,8 +166,8 @@ export async function* collectCline(
       taskDirs = readdirSync(root, { withFileTypes: true })
         .filter((d) => d.isDirectory())
         .map((d) => join(root, d.name));
-    } catch (err) {
-      ctx.log(`cline: cannot list ${root}: ${String(err)}`);
+    } catch (error) {
+      ctx.log(`cline: cannot list ${root}: ${String(error)}`);
       continue;
     }
     for (const dir of taskDirs) {
@@ -185,40 +186,40 @@ export async function* collectCline(
       let messages: unknown;
       try {
         messages = JSON.parse(readFileSync(file, "utf8"));
-      } catch (err) {
-        ctx.log(`cline: cannot parse ${file}: ${String(err)}`);
+      } catch (error) {
+        ctx.log(`cline: cannot parse ${file}: ${String(error)}`);
         continue;
       }
       const afterTs =
         typeof previous?.mark === "number" ? previous.mark : ctx.since;
       const { events, mark } = normalizeCline(
         {
-          taskId: basename(dir) || dir,
           messages,
           metadata: readJsonFile<TaskMetadata>(join(dir, "task_metadata.json")),
+          taskId: basename(dir) || dir,
         },
         afterTs
       );
-      const announced = new Set(previous?.seenSessions ?? []);
+      const announced = new Set(previous?.seenSessions);
       for (const event of events) {
         if (!announced.has(event.sessionId)) {
           announced.add(event.sessionId);
           yield {
-            type: "session.start",
             eventId: eventId(CLINE, event.sessionId, "start"),
-            occurredAt: event.occurredAt,
             harness: CLINE,
-            sessionId: event.sessionId,
+            occurredAt: event.occurredAt,
             project: event.project,
+            sessionId: event.sessionId,
+            type: "session.start",
           };
         }
         yield event;
       }
       ctx.cursors.set(file, {
-        offset: 0,
-        mtimeMs: stat.mtimeMs,
-        seenSessions: [...announced],
         mark,
+        mtimeMs: stat.mtimeMs,
+        offset: 0,
+        seenSessions: [...announced],
       });
     }
     await Promise.resolve();
@@ -226,7 +227,7 @@ export async function* collectCline(
 }
 
 export const clineCollector: Collector = {
-  id: CLINE,
-  discover: () => Promise.resolve(globalStorageRoots()),
   collect: (ctx) => collectCline(globalStorageRoots(), ctx),
+  discover: () => Promise.resolve(globalStorageRoots()),
+  id: CLINE,
 };

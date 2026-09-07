@@ -99,12 +99,12 @@ export function registerFeed(program: Command): void {
           "Posting…",
           () =>
             session.client.mutation(api.feed.post, {
-              text,
               imageId: imageId as never,
+              text,
             }),
           "Posted"
         );
-        ui.result({ id, text, image: Boolean(imageId) });
+        ui.result({ id, image: Boolean(imageId), text });
         ui.celebrate("Posted to the feed.");
         ui.next([["hackspain feed", "see it alongside everyone else's"]]);
       }

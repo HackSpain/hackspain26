@@ -14,11 +14,11 @@ export async function POST(request: Request) {
   }
   try {
     const result = await fetchAction(api.auth.signIn, {
-      provider: "resend-otp",
       params: { email },
+      provider: "resend-otp",
     });
     return ok({ started: Boolean(result.started) });
-  } catch (err) {
-    return fromError(err);
+  } catch (error) {
+    return fromError(error);
   }
 }

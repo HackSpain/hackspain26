@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { neon } from "@neondatabase/serverless";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
@@ -42,16 +41,22 @@ type AmbassadorRow = {
   outreach_plan: string;
 };
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const repoRoot = resolve(import.meta.dirname, "../../..");
 
 function loadEnvFile(path: string, overrideKeys?: Set<string>): void {
-  if (!existsSync(path)) return;
+  if (!existsSync(path)) {
+    return;
+  }
   for (const raw of readFileSync(path, "utf8").split("\n")) {
     const line = raw.trim();
-    if (!line || line.startsWith("#")) continue;
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
     const trimmed = line.startsWith("export ") ? line.slice(7).trim() : line;
     const eq = trimmed.indexOf("=");
-    if (eq < 1) continue;
+    if (eq < 1) {
+      continue;
+    }
     const key = trimmed.slice(0, eq).trim();
     let value = trimmed.slice(eq + 1).trim();
     if (
@@ -71,16 +76,22 @@ loadEnvFile(resolve(repoRoot, "apps/web/.env"), new Set(["DATABASE_URL"]));
 
 function loadAcceptedEmails(): Set<string> {
   const path = resolve(repoRoot, "apps/web/src/data/shortlistApplicants.json");
-  if (!existsSync(path)) return new Set();
-  const rows = JSON.parse(readFileSync(path, "utf8")) as Array<{
+  if (!existsSync(path)) {
+    return new Set();
+  }
+  const rows = JSON.parse(readFileSync(path, "utf8")) as {
     email?: string;
     finalSelected?: boolean;
-  }>;
+  }[];
   const emails = new Set<string>();
   for (const row of rows) {
-    if (!row.finalSelected) continue;
+    if (!row.finalSelected) {
+      continue;
+    }
     const email = row.email?.trim().toLowerCase();
-    if (email) emails.add(email);
+    if (email) {
+      emails.add(email);
+    }
   }
   return emails;
 }
@@ -93,7 +104,7 @@ function toMillis(value: Date | string): number {
 
 function optional(value: string | null | undefined): string | undefined {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
+  return trimmed || undefined;
 }
 
 function urlsFromNeon(row: {
@@ -101,17 +112,24 @@ function urlsFromNeon(row: {
   linkedin_url: string | null;
   github_url: string | null;
   web_url: string | null;
-}): Array<{ kind: "x" | "linkedin" | "github" | "web"; url: string }> {
-  const urls: Array<{ kind: "x" | "linkedin" | "github" | "web"; url: string }> =
-    [];
+}): { kind: "x" | "linkedin" | "github" | "web"; url: string }[] {
+  const urls: { kind: "x" | "linkedin" | "github" | "web"; url: string }[] = [];
   const xUrl = optional(row.x_url);
   const linkedinUrl = optional(row.linkedin_url);
   const githubUrl = optional(row.github_url);
   const webUrl = optional(row.web_url);
-  if (xUrl) urls.push({ kind: "x", url: xUrl });
-  if (linkedinUrl) urls.push({ kind: "linkedin", url: linkedinUrl });
-  if (githubUrl) urls.push({ kind: "github", url: githubUrl });
-  if (webUrl) urls.push({ kind: "web", url: webUrl });
+  if (xUrl) {
+    urls.push({ kind: "x", url: xUrl });
+  }
+  if (linkedinUrl) {
+    urls.push({ kind: "linkedin", url: linkedinUrl });
+  }
+  if (githubUrl) {
+    urls.push({ kind: "github", url: githubUrl });
+  }
+  if (webUrl) {
+    urls.push({ kind: "web", url: webUrl });
+  }
   return urls;
 }
 
@@ -136,7 +154,9 @@ async function main(): Promise<void> {
     throw new Error("NEXT_PUBLIC_CONVEX_URL is required (apps/app/.env.local)");
   }
   if (!secret) {
-    throw new Error("MIGRATION_SECRET is required (apps/app/.env.local, must match Convex env)");
+    throw new Error(
+      "MIGRATION_SECRET is required (apps/app/.env.local, must match Convex env)"
+    );
   }
 
   const sql = neon(databaseUrl);
@@ -149,7 +169,7 @@ async function main(): Promise<void> {
     SELECT column_name
     FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'hackathon_signups'
-  `) as Array<{ column_name: string }>;
+  `) as { column_name: string }[];
   const availableColumns = new Set(signupColumns.map((row) => row.column_name));
   const requiredColumns = [
     "id",
@@ -166,11 +186,11 @@ async function main(): Promise<void> {
     "ambassador_motivation",
   ];
   const missingRequired = requiredColumns.filter(
-    (column) => !availableColumns.has(column),
+    (column) => !availableColumns.has(column)
   );
   if (missingRequired.length > 0) {
     throw new Error(
-      `hackathon_signups is missing expected columns: ${missingRequired.join(", ")}`,
+      `hackathon_signups is missing expected columns: ${missingRequired.join(", ")}`
     );
   }
   const optionalColumns = [
@@ -182,7 +202,7 @@ async function main(): Promise<void> {
   const hasApprovalStatus = availableColumns.has("approval_status");
 
   const signups = (await sql.query(
-    `SELECT ${[...requiredColumns, ...optionalColumns].join(", ")} FROM hackathon_signups`,
+    `SELECT ${[...requiredColumns, ...optionalColumns].join(", ")} FROM hackathon_signups`
   )) as SignupRow[];
 
   const ambassadorTables = (await sql`
@@ -190,7 +210,7 @@ async function main(): Promise<void> {
     FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name = 'ambassador_applications'
     LIMIT 1
-  `) as Array<{ ok: number }>;
+  `) as { ok: number }[];
 
   const ambassadors = ambassadorTables.length
     ? ((await sql`
@@ -211,19 +231,19 @@ async function main(): Promise<void> {
     const result = await convex.mutation(api.migrations.importSignups, {
       secret,
       signups: group.map((row) => ({
-        email: row.email,
-        fullName: row.full_name,
-        urls: urlsFromNeon(row),
+        accepted: rowAccepted(row),
         achievements: optional(row.achievements),
-        freeTime: optional(row.free_time),
-        wantsAmbassador: Boolean(row.wants_ambassador),
         ambassadorMotivation: optional(row.ambassador_motivation),
         ambassadorStudyWhere: optional(row.ambassador_study_where),
-        dietaryRestrictionIds: row.dietary_restrictions ?? undefined,
-        dietaryDetails: optional(row.dietary_details),
         createdAt: toMillis(row.created_at),
+        dietaryDetails: optional(row.dietary_details),
+        dietaryRestrictionIds: row.dietary_restrictions ?? undefined,
+        email: row.email,
+        freeTime: optional(row.free_time),
+        fullName: row.full_name,
         neonId: row.id,
-        accepted: rowAccepted(row),
+        urls: urlsFromNeon(row),
+        wantsAmbassador: Boolean(row.wants_ambassador),
       })),
     });
     signupInserted += result.inserted;
@@ -234,7 +254,6 @@ async function main(): Promise<void> {
   let ambassadorUpdated = 0;
   for (const group of chunk(ambassadors, 50)) {
     const result = await convex.mutation(api.migrations.importAmbassadors, {
-      secret,
       applications: group.map((row) => ({
         email: row.email,
         fullName: row.full_name,
@@ -246,6 +265,7 @@ async function main(): Promise<void> {
         createdAt: toMillis(row.created_at),
         neonId: row.id,
       })),
+      secret,
     });
     ambassadorInserted += result.inserted;
     ambassadorUpdated += result.updated;
@@ -253,13 +273,13 @@ async function main(): Promise<void> {
 
   const acceptedInBatch = signups.filter(rowAccepted).length;
   console.log(
-    `Signups: ${signups.length} read, ${signupInserted} inserted, ${signupUpdated} updated, ${acceptedInBatch} marked accepted (Neon confirmed + shortlist)`,
+    `Signups: ${signups.length} read, ${signupInserted} inserted, ${signupUpdated} updated, ${acceptedInBatch} marked accepted (Neon confirmed + shortlist)`
   );
   if (ambassadorTables.length === 0) {
     console.log("Ambassador applications: table not in Neon, skipped");
   } else {
     console.log(
-      `Ambassador applications: ${ambassadors.length} read, ${ambassadorInserted} inserted, ${ambassadorUpdated} updated`,
+      `Ambassador applications: ${ambassadors.length} read, ${ambassadorInserted} inserted, ${ambassadorUpdated} updated`
     );
   }
 }

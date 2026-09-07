@@ -16,14 +16,14 @@ export function prepareIllustrationSvg(raw: string): string {
   out = out.replace(STROKE_WIDTH_ATTR_RE, 'stroke-width="3"');
 
   // Normalize dark export colors to the site ink token
-  out = out.replace(/#4a2c1f/gi, "var(--color-hs-ink)");
-  out = out.replace(/#401a05/gi, "var(--color-hs-ink)");
-  out = out.replace(/#33211a/gi, "var(--color-hs-ink)");
-  out = out.replace(/#3f291e/gi, "var(--color-hs-ink)");
-  out = out.replace(/#3b2719/gi, "var(--color-hs-ink)");
-  out = out.replace(/#010b1b/gi, "var(--color-hs-ink)");
-  out = out.replace(/#000000/gi, "var(--color-hs-ink)");
-  out = out.replace(/#000\b/gi, "var(--color-hs-ink)");
+  out = out.replaceAll(/#4a2c1f/gi, "var(--color-hs-ink)");
+  out = out.replaceAll(/#401a05/gi, "var(--color-hs-ink)");
+  out = out.replaceAll(/#33211a/gi, "var(--color-hs-ink)");
+  out = out.replaceAll(/#3f291e/gi, "var(--color-hs-ink)");
+  out = out.replaceAll(/#3b2719/gi, "var(--color-hs-ink)");
+  out = out.replaceAll(/#010b1b/gi, "var(--color-hs-ink)");
+  out = out.replaceAll(/#000000/gi, "var(--color-hs-ink)");
+  out = out.replaceAll(/#000\b/gi, "var(--color-hs-ink)");
 
   out = out.replace(
     OPEN_SVG_TAG_RE,

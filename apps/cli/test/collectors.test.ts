@@ -28,25 +28,26 @@ import {
 } from "../src/watcher/collectors/opencode";
 import { memoryCursorStore } from "../src/watcher/cursor-store";
 import { stamp } from "../src/watcher/index";
-import { type RawEvent, validateEvent } from "../src/watcher/schema";
+import type { RawEvent } from "../src/watcher/schema";
+import { validateEvent } from "../src/watcher/schema";
 import type { CollectorContext } from "../src/watcher/types";
 
 const FIXTURES = join(import.meta.dir, "fixtures");
-const IDENTITY = { userId: "u1", teamId: "t1", clientVersion: "test" };
+const IDENTITY = { clientVersion: "test", teamId: "t1", userId: "u1" };
 
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "hackspain-collectors-"));
 });
 afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { force: true, recursive: true });
 });
 
 function ctx(overrides: Partial<CollectorContext> = {}): CollectorContext {
   return {
     cursors: memoryCursorStore(),
-    since: 0,
     log: () => {},
+    since: 0,
     ...overrides,
   };
 }
@@ -78,9 +79,9 @@ describe("claude-code", () => {
     expect(events.filter(Boolean)).toHaveLength(6);
     const first = events.find(Boolean);
     expect(first?.model).toEqual({
-      raw: "claude-fable-5-1",
       family: "claude",
       provider: "anthropic",
+      raw: "claude-fable-5-1",
     });
     expect(first?.tokens).toMatchObject({ input: 2, output: 344 });
     expect(first?.project?.name).toBe("agentos");
@@ -116,23 +117,23 @@ describe("claude-code", () => {
     appendFileSync(
       file,
       `${JSON.stringify({
-        type: "assistant",
-        sessionId: first[0]?.sessionId,
-        timestamp: "2026-09-05T11:00:00.000Z",
-        cwd: "/home/hacker/agentos",
-        requestId: "req_new",
         apiBlockIndex: 0,
+        cwd: "/home/hacker/agentos",
         message: {
           id: "msg_new",
           model: "claude-opus-5",
           role: "assistant",
           usage: {
-            input_tokens: 5,
-            output_tokens: 6,
             cache_creation_input_tokens: 0,
             cache_read_input_tokens: 7,
+            input_tokens: 5,
+            output_tokens: 6,
           },
         },
+        requestId: "req_new",
+        sessionId: first[0]?.sessionId,
+        timestamp: "2026-09-05T11:00:00.000Z",
+        type: "assistant",
       })}\n`
     );
     const appended = await drain(collectClaudeCode([root], ctx({ cursors })));
@@ -186,28 +187,28 @@ describe("codex", () => {
     expect(usage).toHaveLength(2);
     expect(usage[0]?.sessionId).toBe("0f3c1c9e-1b2a-4c3d-8e4f-5a6b7c8d9e0f");
     expect(usage[0]?.model).toEqual({
-      raw: "gpt-5-codex",
       family: "gpt",
       provider: "openai",
+      raw: "gpt-5-codex",
     });
     expect(usage[0]?.tokens).toEqual({
-      input: 400,
-      output: 150,
       cacheRead: 800,
       cacheWrite: 0,
+      input: 400,
+      output: 150,
       reasoning: 40,
     });
     expect(usage[1]?.tokens).toEqual({
-      input: 200,
-      output: 250,
       cacheRead: 1600,
       cacheWrite: 0,
+      input: 200,
+      output: 250,
       reasoning: 60,
     });
     expect(usage[0]?.project).toEqual({
       dirHash: expect.any(String),
-      name: "agentos",
       gitBranch: "main",
+      name: "agentos",
     });
     expect(usage[0]?.eventId).not.toBe(usage[1]?.eventId);
   });
@@ -215,24 +216,24 @@ describe("codex", () => {
   test("normalize: falls back to deltas of totals when last_token_usage is missing", () => {
     const state = initialCodexState("rollout-x.jsonl");
     normalizeCodex(
-      { type: "turn_context", payload: { model: "gpt-5" } },
+      { payload: { model: "gpt-5" }, type: "turn_context" },
       state
     );
     const mk = (total: Record<string, number>) => ({
+      payload: { info: { total_token_usage: total }, type: "token_count" },
       timestamp: "2026-09-19T10:00:00Z",
       type: "event_msg",
-      payload: { type: "token_count", info: { total_token_usage: total } },
     });
     const a = normalizeCodex(
-      mk({ input_tokens: 100, cached_input_tokens: 0, output_tokens: 10 }),
+      mk({ cached_input_tokens: 0, input_tokens: 100, output_tokens: 10 }),
       state
     );
     const b = normalizeCodex(
-      mk({ input_tokens: 250, cached_input_tokens: 100, output_tokens: 30 }),
+      mk({ cached_input_tokens: 100, input_tokens: 250, output_tokens: 30 }),
       state
     );
     expect(a?.tokens).toMatchObject({ input: 100, output: 10 });
-    expect(b?.tokens).toMatchObject({ input: 50, output: 20, cacheRead: 100 });
+    expect(b?.tokens).toMatchObject({ cacheRead: 100, input: 50, output: 20 });
   });
 
   test("collect: walks sessions/, announces once, restart yields nothing", async () => {
@@ -266,28 +267,28 @@ describe("cline", () => {
 
   test("normalize: completed requests only, stops at the in-flight one, model from metadata", () => {
     const task = {
-      taskId: "1758276000000",
       messages: JSON.parse(
         readFileSync(join(taskDir, "ui_messages.json"), "utf8")
       ),
       metadata: JSON.parse(
         readFileSync(join(taskDir, "task_metadata.json"), "utf8")
       ),
+      taskId: "1758276000000",
     };
     const { events, mark } = normalizeCline(task, 0);
     expect(events).toHaveLength(2);
     expect(mark).toBe(1_758_276_010_000);
     expect(events[0]?.tokens).toEqual({
-      input: 5200,
-      output: 310,
       cacheRead: 3900,
       cacheWrite: 1200,
+      input: 5200,
+      output: 310,
     });
     expect(events[0]?.costUsd).toBe(0.021);
     expect(events[0]?.model).toEqual({
-      raw: "claude-sonnet-5",
       family: "claude",
       provider: "anthropic",
+      raw: "claude-sonnet-5",
     });
     expect(events[0]?.project?.name).toBe("agentos");
     expect(normalizeCline(task, mark).events).toEqual([]);
@@ -322,20 +323,20 @@ describe("opencode", () => {
         updated - 1000,
         updated,
         JSON.stringify({
-          role: "assistant",
-          modelID: "gpt-5",
-          providerID: "openai",
           cost: 0.01,
+          modelID: "gpt-5",
           path: { cwd: "/home/hacker/agentos" },
-          tokens: {
-            input: 100,
-            output: 20,
-            reasoning: 5,
-            cache: { read: 50, write: 0 },
-          },
+          providerID: "openai",
+          role: "assistant",
           time: {
             created: updated - 1000,
             ...(completed ? { completed } : {}),
+          },
+          tokens: {
+            cache: { read: 50, write: 0 },
+            input: 100,
+            output: 20,
+            reasoning: 5,
           },
         })
       );
@@ -356,10 +357,10 @@ describe("opencode", () => {
     makeDb(path);
     expect(
       normalizeOpenCode({
+        data: '{"role":"user"}',
         id: "x",
         session_id: "s",
         time_updated: 1,
-        data: '{"role":"user"}',
       })
     ).toBeNull();
     const cursors = memoryCursorStore();
@@ -369,10 +370,10 @@ describe("opencode", () => {
       ["usage", "opencode:ses_1:msg_a"],
     ]);
     expect(first[1]?.tokens).toEqual({
-      input: 100,
-      output: 20,
       cacheRead: 50,
       cacheWrite: 0,
+      input: 100,
+      output: 20,
       reasoning: 5,
     });
     expect(first[1]?.costUsd).toBe(0.01);

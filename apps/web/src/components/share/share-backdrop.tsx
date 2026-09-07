@@ -1,4 +1,5 @@
-import { type RefObject, useEffect, useRef } from "react";
+import type { RefObject } from "react";
+import { useEffect, useRef } from "react";
 import { InlineSvg } from "../media/inline-svg";
 import { sunSvg } from "../theme/assets";
 import { Windmill } from "./windmill";

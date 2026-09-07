@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,7 @@ export function AppHeader({
           href="/"
           className="inline-flex min-h-11 items-center justify-self-start motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
         >
-          <img
+          <Image
             src="/logo.svg"
             alt="HackSpain"
             width={125}
@@ -31,10 +32,13 @@ export function AppHeader({
             aria-current={pathname === "/insights" ? "page" : undefined}
             className={cn(
               "inline-flex min-h-11 items-center justify-center gap-1.5 text-xs font-semibold whitespace-nowrap text-hs-red underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-red sm:gap-2 sm:text-sm",
-              pathname === "/insights" && "underline",
+              pathname === "/insights" && "underline"
             )}
           >
-            <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />
+            <span
+              className="size-1.5 shrink-0 rounded-full bg-current"
+              aria-hidden
+            />
             Insights en vivo
             <ChevronRight className="size-4 shrink-0" aria-hidden />
           </Link>
@@ -43,15 +47,13 @@ export function AppHeader({
             aria-current={pathname === "/feed" ? "page" : undefined}
             className={cn(
               "inline-flex min-h-11 items-center justify-center gap-1.5 text-xs font-semibold whitespace-nowrap text-hs-navy underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-navy sm:gap-2 sm:text-sm",
-              pathname === "/feed" && "underline",
+              pathname === "/feed" && "underline"
             )}
           >
             Feed
           </Link>
         </div>
-        <div className="justify-self-end">
-          {accountMenu}
-        </div>
+        <div className="justify-self-end">{accountMenu}</div>
       </div>
     </header>
   );

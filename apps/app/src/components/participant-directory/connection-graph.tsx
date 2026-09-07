@@ -42,14 +42,14 @@ export function ConnectionGraph({
 }) {
   const network = useMemo(() => buildNetwork(participants), [participants]);
   const [visibleKinds, setVisibleKinds] = useState(
-    () => new Set<AffinityKind>(AFFINITY_KINDS),
+    () => new Set<AffinityKind>(AFFINITY_KINDS)
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const mapRef = useRef<NetworkHandle>(null);
   const profileRef = useRef<HTMLElement>(null);
   const selected = network.participants.find(
-    (person) => person.id === selectedId,
+    (person) => person.id === selectedId
   );
   const search = normalize(query);
   const matches = new Set(
@@ -60,16 +60,16 @@ export function ConnectionGraph({
             person.displayName,
             person.role,
             ...AFFINITY_KINDS.flatMap((kind) => valuesFor(person, kind)),
-          ].join(" "),
-        ).includes(search),
+          ].join(" ")
+        ).includes(search)
       )
-      .map((person) => person.id),
+      .map((person) => person.id)
   );
   const visibleEdges = network.edges.filter((edge) =>
-    visibleKinds.has(edge.kind),
+    visibleKinds.has(edge.kind)
   );
   const teamCount = new Set(
-    participants.flatMap((person) => (person.team ? [person.team.id] : [])),
+    participants.flatMap((person) => (person.team ? [person.team.id] : []))
   ).size;
   const neighbors = selected
     ? network.participants
@@ -77,22 +77,25 @@ export function ConnectionGraph({
           const links = visibleEdges.filter(
             (edge) =>
               (edge.source === selected.id && edge.target === person.id) ||
-              (edge.target === selected.id && edge.source === person.id),
+              (edge.target === selected.id && edge.source === person.id)
           );
-          return links.length ? [{ person, links }] : [];
+          return links.length ? [{ links, person }] : [];
         })
-        .sort(
+        .toSorted(
           (a, b) =>
             b.links.length - a.links.length ||
-            a.person.displayName.localeCompare(b.person.displayName, "es"),
+            a.person.displayName.localeCompare(b.person.displayName, "es")
         )
     : [];
 
   function toggleKind(kind: AffinityKind) {
     setVisibleKinds((previous) => {
       const next = new Set(previous);
-      if (next.has(kind)) next.delete(kind);
-      else next.add(kind);
+      if (next.has(kind)) {
+        next.delete(kind);
+      } else {
+        next.add(kind);
+      }
       return next;
     });
   }
@@ -101,7 +104,7 @@ export function ConnectionGraph({
     setQuery("");
     if (id && window.matchMedia("(max-width: 700px)").matches) {
       requestAnimationFrame(() =>
-        profileRef.current?.scrollIntoView({ block: "start" }),
+        profileRef.current?.scrollIntoView({ block: "start" })
       );
     }
   }
@@ -197,7 +200,7 @@ export function ConnectionGraph({
               {LEGEND_ORDER.map((kind) => {
                 const style = CONNECTION_STYLES[kind];
                 const count = network.edges.filter(
-                  (edge) => edge.kind === kind,
+                  (edge) => edge.kind === kind
                 ).length;
                 return (
                   <DropdownMenuPrimitive.CheckboxItem
@@ -265,7 +268,7 @@ export function ConnectionGraph({
               {LEGEND_ORDER.filter(
                 (kind) =>
                   !["skills", "interests"].includes(kind) &&
-                  valuesFor(selected, kind).length,
+                  valuesFor(selected, kind).length
               ).map((kind) => (
                 <div key={kind}>
                   <dt>

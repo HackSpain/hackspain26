@@ -28,8 +28,8 @@ export function InlineSvg({
   fill,
 }: Props) {
   let a11y: HTMLAttributes<HTMLSpanElement>;
-  if (label != null) {
-    a11y = { role: "img", "aria-label": label };
+  if (label !== null && label !== undefined) {
+    a11y = { "aria-label": label, role: "img" };
   } else if (decorative) {
     a11y = { "aria-hidden": true };
   } else {

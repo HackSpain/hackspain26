@@ -1,9 +1,6 @@
 import type { ComponentPropsWithoutRef, Ref } from "react";
-import {
-  type HsButtonSize,
-  type HsButtonVariant,
-  hsButtonClass,
-} from "./button-styles";
+import type { HsButtonSize, HsButtonVariant } from "./button-styles";
+import { hsButtonClass } from "./button-styles";
 
 export type ButtonProps = ComponentPropsWithoutRef<"button"> & {
   variant?: HsButtonVariant;
@@ -37,14 +34,13 @@ export const ButtonLink = function ButtonLink({
   variant = "gold",
   size = "md",
   className,
+  children,
   ref,
   ...props
 }: ButtonLinkProps & { ref?: Ref<HTMLAnchorElement | null> }) {
   return (
-    <a
-      className={hsButtonClass(variant, size, className)}
-      ref={ref}
-      {...props}
-    />
+    <a className={hsButtonClass(variant, size, className)} ref={ref} {...props}>
+      {children}
+    </a>
   );
 };

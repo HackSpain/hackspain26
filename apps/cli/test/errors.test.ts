@@ -19,8 +19,8 @@ describe("explainError", () => {
     const e = explainError(usageError("bad flag", "try --help"));
     expect(e).toMatchObject({
       code: "USAGE",
-      hint: "try --help",
       exitCode: EXIT.USAGE,
+      hint: "try --help",
     });
   });
 
@@ -70,8 +70,8 @@ describe("explainError", () => {
     const e = explainError(convexWrapped("El dueño no puede salir del equipo"));
     expect(e).toMatchObject({
       code: "SERVER",
-      message: "El dueño no puede salir del equipo",
       exitCode: EXIT.ERROR,
+      message: "El dueño no puede salir del equipo",
     });
     expect(serverMessage("plain message")).toBe("plain message");
   });
