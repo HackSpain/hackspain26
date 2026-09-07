@@ -18,6 +18,7 @@ Contact: contact@hackspain.com. Official social profiles: @hackspain26 on X and 
 - [Tracks](https://hackspain.com/tracks): Five official tracks, startup partners and available compute.
 - [Grand prize](https://hackspain.com/gran-premio): €5,000 overall prize and the venture capital firms judging it.
 - [Ambassador programme](https://hackspain.com/ambassador): Campus ambassador information; applications use the main signup form.
+- [Brand resources](https://hackspain.com/brand): Official HackSpain logos, color palette, typography and usage guidelines, with downloadable SVG and PNG assets.
 
 ## Official references
 

@@ -20,6 +20,7 @@ export function getAllSitemapPageUrls(): string[] {
     ...SECTION_SLUGS.map((s) => `${o}/${s}`),
     `${o}/signup`,
     `${o}/ambassador`,
+    `${o}/brand`,
     `${o}/privacy`,
   ];
   return [...new Set(raw.map(normalizeSitemapPageUrl))];

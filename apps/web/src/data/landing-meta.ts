@@ -113,6 +113,18 @@ export function privacySeo(): PageSeo {
   };
 }
 
+export const BRAND_KEYWORDS =
+  "marca HackSpain, logo HackSpain, identidad visual HackSpain, recursos de prensa HackSpain, brand assets HackSpain";
+
+export function brandSeo(): PageSeo {
+  return {
+    title: "Marca y recursos — HackSpain",
+    description:
+      "Descarga los logos oficiales de HackSpain y consulta las pautas de color, tipografía, espaciado y uso de la marca.",
+    ogImageAlt: "HackSpain — guía de marca y recursos oficiales",
+  };
+}
+
 const KEYWORDS_BASE =
   "HackSpain, Hack Spain, hackathon Madrid, hackathon España, builders jóvenes, UPM ETSIT, hackspain.com";
 

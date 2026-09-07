@@ -1,0 +1,993 @@
+---
+export const prerender = true;
+
+import { BRAND_KEYWORDS, brandSeo } from "../data/landing-meta";
+import Layout from "../layouts/layout.astro";
+
+const seo = brandSeo();
+
+const logoGroups = [
+  {
+    description:
+      "La firma completa es la opción principal para comunicación, colaboraciones y piezas editoriales.",
+    id: "wordmark",
+    label: "Logotipo",
+    variants: [
+      {
+        background: "paper",
+        label: "Color",
+        png: "/brand-assets/hackspain-wordmark-color@2x.png",
+        svg: "/brand-assets/hackspain-wordmark-color.svg",
+      },
+      {
+        background: "white",
+        label: "Negro",
+        png: "/brand-assets/hackspain-wordmark-black@2x.png",
+        svg: "/brand-assets/hackspain-wordmark-black.svg",
+      },
+      {
+        background: "navy",
+        label: "Blanco",
+        png: "/brand-assets/hackspain-wordmark-white@2x.png",
+        svg: "/brand-assets/hackspain-wordmark-white.svg",
+      },
+    ],
+  },
+  {
+    description:
+      "Usa el símbolo cuando el formato sea compacto o la marca ya esté claramente identificada.",
+    id: "symbol",
+    label: "Símbolo",
+    variants: [
+      {
+        background: "paper",
+        label: "Color",
+        png: "/brand-assets/hackspain-symbol-color@2x.png",
+        svg: "/brand-assets/hackspain-symbol-color.svg",
+      },
+      {
+        background: "white",
+        label: "Negro",
+        png: "/brand-assets/hackspain-symbol-black@2x.png",
+        svg: "/brand-assets/hackspain-symbol-black.svg",
+      },
+      {
+        background: "navy",
+        label: "Blanco",
+        png: "/brand-assets/hackspain-symbol-white@2x.png",
+        svg: "/brand-assets/hackspain-symbol-white.svg",
+      },
+    ],
+  },
+] as const;
+
+const logoColors = [
+  { hex: "#CA0005", name: "Rojo HackSpain", text: "white" },
+  { hex: "#F29100", name: "Naranja HackSpain", text: "ink" },
+  { hex: "#000000", name: "Negro", text: "white" },
+  { hex: "#FFFFFF", name: "Blanco", text: "ink" },
+] as const;
+
+const supportColors = [
+  { hex: "#F4ECD8", name: "Papel", text: "ink" },
+  { hex: "#2A170F", name: "Tinta", text: "white" },
+  { hex: "#EAB619", name: "Oro", text: "ink" },
+  { hex: "#35858A", name: "Turquesa", text: "white" },
+] as const;
+
+const navItems = [
+  { href: "#logos", label: "Logos", number: "01" },
+  { href: "#color", label: "Color", number: "02" },
+  { href: "#tipografia", label: "Tipografía", number: "03" },
+  { href: "#uso", label: "Uso", number: "04" },
+] as const;
+
+const downloadIcon = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+    <path d="M12 3v12m0 0 5-5m-5 5-5-5" />
+    <path d="M4 16v4h16v-4" />
+  </svg>
+`;
+---
+
+<Layout
+  allowScroll
+  canonicalPathOverride="/brand"
+  description={seo.description}
+  keywordsOverride={BRAND_KEYWORDS}
+  ogImageAlt={seo.ogImageAlt}
+  sectionIndex={0}
+  title={seo.title}
+>
+  <div class="brand-page min-h-dvh bg-hs-paper text-hs-ink">
+    <header
+      class="sticky top-0 z-50 border-hs-ink border-b-[3px] bg-hs-paper/95 backdrop-blur-md"
+    >
+      <div
+        class="mx-auto flex min-h-16 max-w-7xl items-stretch justify-between px-3 sm:px-5"
+      >
+        <a
+          href="/"
+          class="brand-home-link my-2 flex min-h-11 items-center gap-2.5 pr-2 focus-visible:outline-none"
+          aria-label="HackSpain / Brand — Volver a la portada"
+        >
+          <img
+            src="/brand-assets/hackspain-wordmark-color.svg"
+            alt=""
+            width="928"
+            height="306"
+            class="h-7 w-auto sm:h-8"
+          />
+          <span class="font-black text-sm tracking-[0.08em] sm:text-base"
+            >/ BRAND</span
+          >
+        </a>
+
+        <a
+          href="/brand-assets/hackspain-brand-kit.zip"
+          download
+          class="brand-download-link my-2 inline-flex min-h-11 items-center gap-2 border-[3px] border-hs-ink bg-hs-gold pl-4 pr-3.5 font-bungee text-[0.68rem] tracking-wide focus-visible:outline-none sm:text-xs"
+        >
+          <span class="hidden sm:inline">Descargar kit</span>
+          <span class="sm:hidden">Kit</span>
+          <Fragment set:html={downloadIcon} />
+        </a>
+      </div>
+    </header>
+
+    <main id="main" class="mx-auto max-w-7xl">
+      <section
+        class="flex items-center justify-center bg-hs-paper px-5 py-20 text-center sm:px-8 sm:py-28"
+        aria-labelledby="brand-title"
+      >
+        <div class="mx-auto max-w-4xl">
+          <h1
+            id="brand-title"
+            class="text-balance font-sans text-[clamp(2.5rem,6vw,4.5rem)] font-black leading-[1.02] tracking-[-0.045em]"
+          >
+            Brand kit de HackSpain
+          </h1>
+          <p
+            class="mx-auto mt-6 max-w-xl text-pretty text-base font-bold leading-relaxed text-hs-ink/65 sm:text-lg"
+          >
+            Logos y recursos oficiales para usar nuestra identidad.
+          </p>
+        </div>
+      </section>
+
+      <div
+        class="border-[3px] border-b-0 border-hs-ink lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]"
+      >
+        <aside
+          class="hidden border-hs-ink border-r-[3px] bg-hs-sand/55 lg:block"
+          aria-label="Índice de la guía"
+        >
+          <div class="sticky top-16">
+            <p
+              class="border-hs-ink border-b-[3px] px-6 py-5 font-black text-[0.65rem] uppercase tracking-[0.17em] text-hs-ink/55"
+            >
+              Guía de marca
+            </p>
+            <ol>
+              {navItems.map((item) => (
+                <li class="border-hs-ink/25 border-b">
+                  <a
+                    href={item.href}
+                    class="brand-index-link flex min-h-14 items-center gap-4 px-6 font-extrabold text-sm"
+                  >
+                    <span class="font-bungee text-[0.62rem] text-hs-red">
+                      {item.number}
+                    </span>
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+            <div class="p-6">
+              <p class="text-pretty text-sm font-bold leading-relaxed text-hs-ink/65">
+                ¿Tienes un uso que no aparece aquí?
+              </p>
+              <a
+                href="mailto:contact@hackspain.com?subject=Uso%20de%20la%20marca%20HackSpain"
+                class="brand-text-link mt-3 inline-block font-black text-sm"
+              >
+                Escríbenos →
+              </a>
+            </div>
+          </div>
+        </aside>
+
+        <div class="min-w-0">
+          <section id="logos" class="scroll-mt-20 border-hs-ink border-b-[3px]">
+            <header class="brand-section-header">
+              <span>01</span>
+              <div>
+                <p>Activos principales</p>
+                <h2>Logos</h2>
+              </div>
+            </header>
+
+            <div class="px-4 py-8 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
+              <p class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg">
+                La versión a color es la firma principal. Las versiones en negro
+                y blanco resuelven contextos monocromos o fondos con poco contraste.
+                No reconstruyas ni edites los archivos maestros.
+              </p>
+
+              {logoGroups.map((group) => (
+                <section class="mt-10" aria-labelledby={`${group.id}-title`}>
+                  <div class="mb-4 max-w-2xl">
+                    <h3
+                      id={`${group.id}-title`}
+                      class="font-bungee text-xl leading-tight sm:text-2xl"
+                    >
+                      {group.label}
+                    </h3>
+                    <p class="mt-2 text-pretty text-sm font-bold leading-relaxed text-hs-ink/65 sm:text-base">
+                      {group.description}
+                    </p>
+                  </div>
+                  <div class="brand-asset-grid">
+                    {group.variants.map((variant) => (
+                      <article class="brand-asset-card">
+                        <div
+                          class:list={[
+                            "brand-asset-preview",
+                            `brand-asset-preview--${variant.background}`,
+                            group.id === "symbol" && "brand-asset-preview--symbol",
+                          ]}
+                        >
+                          <img
+                            src={variant.svg}
+                            alt={`${group.label} de HackSpain, versión ${variant.label.toLowerCase()}`}
+                            width={group.id === "symbol" ? "275" : "928"}
+                            height={group.id === "symbol" ? "301" : "306"}
+                            loading="lazy"
+                            decoding="async"
+                          >
+                        </div>
+                        <div class="flex min-h-16 items-center justify-between gap-3 bg-hs-paper px-4 py-2.5">
+                          <span class="font-black text-sm">{variant.label}</span>
+                          <div class="flex items-center gap-1">
+                            <a
+                              href={variant.svg}
+                              download
+                              class="brand-format-link"
+                              aria-label={`Descargar ${group.label.toLowerCase()} ${variant.label.toLowerCase()} en SVG`}
+                            >
+                              SVG
+                            </a>
+                            <a
+                              href={variant.png}
+                              download
+                              class="brand-format-link"
+                              aria-label={`Descargar ${group.label.toLowerCase()} ${variant.label.toLowerCase()} en PNG`}
+                            >
+                              PNG
+                            </a>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+
+              <div class="mt-10 grid gap-[3px] bg-hs-ink lg:grid-cols-2">
+                <figure class="bg-hs-sand px-5 py-7 sm:px-8 sm:py-9">
+                  <div class="safe-area mx-auto">
+                    <span aria-hidden="true">¼ H</span>
+                    <img
+                      src="/brand-assets/hackspain-symbol-color.svg"
+                      alt="Símbolo de HackSpain con su área de seguridad"
+                      width="275"
+                      height="301"
+                      loading="lazy"
+                      decoding="async"
+                    >
+                  </div>
+                  <figcaption class="mt-6">
+                    <h3 class="font-bungee text-lg">Área de seguridad</h3>
+                    <p class="mt-2 text-pretty text-sm font-bold leading-relaxed text-hs-ink/70">
+                      Mantén libre alrededor del logo un espacio mínimo equivalente
+                      a un cuarto de la altura del símbolo.
+                    </p>
+                  </figcaption>
+                </figure>
+                <div class="bg-hs-gold px-5 py-7 sm:px-8 sm:py-9">
+                  <p class="font-black text-[0.65rem] uppercase tracking-[0.16em]">
+                    Tamaño digital mínimo
+                  </p>
+                  <div class="mt-8 flex items-end justify-around gap-8">
+                    <div class="min-w-0 flex-1 text-center">
+                      <img
+                        src="/brand-assets/hackspain-wordmark-black.svg"
+                        alt=""
+                        width="928"
+                        height="306"
+                        class="mx-auto h-auto w-full max-w-[11.25rem]"
+                        loading="lazy"
+                        decoding="async"
+                      >
+                      <p class="mt-5 font-black text-xs uppercase tracking-[0.12em]">
+                        Logotipo · 180 px
+                      </p>
+                    </div>
+                    <div class="w-20 shrink-0 text-center">
+                      <img
+                        src="/brand-assets/hackspain-symbol-black.svg"
+                        alt=""
+                        width="275"
+                        height="301"
+                        class="mx-auto h-auto w-12"
+                        loading="lazy"
+                        decoding="async"
+                      >
+                      <p class="mt-5 font-black text-xs uppercase tracking-[0.12em]">
+                        Símbolo · 48 px
+                      </p>
+                    </div>
+                  </div>
+                  <p class="mt-9 text-pretty text-sm font-bold leading-relaxed text-hs-ink/70">
+                    Si la firma completa pierde legibilidad, cambia al símbolo en
+                    lugar de reducirla más.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="color" class="scroll-mt-20 border-hs-ink border-b-[3px]">
+            <header class="brand-section-header">
+              <span>02</span>
+              <div>
+                <p>Sistema cromático</p>
+                <h2>Color</h2>
+              </div>
+            </header>
+            <div class="px-4 py-8 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
+              <p class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg">
+                Rojo y naranja viven dentro del logo. Papel, tinta, oro y turquesa
+                amplían el sistema para superficies, texto y comunicación digital.
+              </p>
+
+              <div class="mt-9">
+                <h3 class="font-bungee text-lg sm:text-xl">Colores del logo</h3>
+                <div class="brand-color-grid mt-4">
+                  {logoColors.map((color) => (
+                    <button
+                      type="button"
+                      class:list={[
+                        "brand-color-card",
+                        color.text === "white" && "brand-color-card--light-text",
+                      ]}
+                      style={`--swatch: ${color.hex}`}
+                      data-copy-color={color.hex}
+                      aria-label={`Copiar ${color.name}, ${color.hex}`}
+                    >
+                      <span class="brand-color-name">{color.name}</span>
+                      <span class="brand-color-value">
+                        <span>{color.hex}</span>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="square"
+                          stroke-linejoin="miter"
+                          aria-hidden="true"
+                        >
+                          <rect x="8" y="8" width="11" height="11"></rect>
+                          <path d="M16 8V5H5v11h3"></path>
+                        </svg>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="mt-9">
+                <h3 class="font-bungee text-lg sm:text-xl">Paleta de apoyo</h3>
+                <div class="brand-color-grid mt-4">
+                  {supportColors.map((color) => (
+                    <button
+                      type="button"
+                      class:list={[
+                        "brand-color-card",
+                        color.text === "white" && "brand-color-card--light-text",
+                      ]}
+                      style={`--swatch: ${color.hex}`}
+                      data-copy-color={color.hex}
+                      aria-label={`Copiar ${color.name}, ${color.hex}`}
+                    >
+                      <span class="brand-color-name">{color.name}</span>
+                      <span class="brand-color-value">
+                        <span>{color.hex}</span>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="square"
+                          stroke-linejoin="miter"
+                          aria-hidden="true"
+                        >
+                          <rect x="8" y="8" width="11" height="11"></rect>
+                          <path d="M16 8V5H5v11h3"></path>
+                        </svg>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p id="copy-status" class="sr-only" aria-live="polite"></p>
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="tipografia"
+            class="scroll-mt-20 border-hs-ink border-b-[3px]"
+          >
+            <header class="brand-section-header">
+              <span>03</span>
+              <div>
+                <p>Voz visual</p>
+                <h2>Tipografía</h2>
+              </div>
+            </header>
+            <div class="px-4 py-8 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
+              <p class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg">
+                Bungee aporta carácter en titulares breves. DM Sans sostiene todo
+                lo demás con una lectura directa y contemporánea.
+              </p>
+              <div class="mt-9 grid gap-[3px] bg-hs-ink lg:grid-cols-2">
+                <article class="flex min-h-[24rem] flex-col justify-between bg-[#CA0005] p-6 text-white sm:p-8">
+                  <div>
+                    <p class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-white/70">
+                      Display · Bungee Regular
+                    </p>
+                    <p class="mt-7 text-balance font-bungee text-[clamp(2.3rem,6vw,4.7rem)] leading-[0.98] tracking-[-0.03em]">
+                      Ideas con acento propio.
+                    </p>
+                  </div>
+                  <p class="font-bungee text-sm tracking-wide text-white/75">
+                    ABCDEFGHIJKLMNÑOPQRSTUVWXYZ<br>0123456789
+                  </p>
+                </article>
+                <article class="flex min-h-[24rem] flex-col justify-between bg-hs-paper p-6 sm:p-8">
+                  <div>
+                    <p class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-hs-ink/55">
+                      Texto · DM Sans
+                    </p>
+                    <p class="mt-7 max-w-[19ch] text-pretty text-[clamp(1.7rem,4.5vw,3.4rem)] font-black leading-[1.04] tracking-[-0.035em]">
+                      Construye algo que todavía no existe.
+                    </p>
+                  </div>
+                  <div class="space-y-1 text-sm leading-relaxed">
+                    <p class="font-bold">Bold 700 · Texto y jerarquía</p>
+                    <p class="font-black">Black 900 · Énfasis y etiquetas</p>
+                  </div>
+                </article>
+              </div>
+              <p class="mt-5 text-pretty text-sm font-bold leading-relaxed text-hs-ink/65">
+                Usa Bungee con moderación: titulares, cifras y llamadas cortas. Para
+                párrafos, navegación y datos, usa DM Sans.
+              </p>
+            </div>
+          </section>
+
+          <section id="uso" class="scroll-mt-20 border-hs-ink border-b-[3px]">
+            <header class="brand-section-header">
+              <span>04</span>
+              <div>
+                <p>Consistencia</p>
+                <h2>Uso</h2>
+              </div>
+            </header>
+            <div class="px-4 py-8 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
+              <div class="grid gap-[3px] bg-hs-ink md:grid-cols-2">
+                <article class="bg-hs-teal p-6 text-white sm:p-8">
+                  <p class="font-bungee text-xl">Haz</p>
+                  <ul class="mt-5 space-y-3 text-pretty text-sm font-bold leading-relaxed sm:text-base">
+                    <li>Usa los archivos originales sin alterar su proporción.</li>
+                    <li>Elige la versión con mayor contraste sobre el fondo.</li>
+                    <li>Reserva aire suficiente alrededor de la marca.</li>
+                    <li>Prioriza el logotipo; recurre al símbolo en formatos compactos.</li>
+                  </ul>
+                </article>
+                <article class="bg-hs-red p-6 text-white sm:p-8">
+                  <p class="font-bungee text-xl">Evita</p>
+                  <ul class="mt-5 space-y-3 text-pretty text-sm font-bold leading-relaxed sm:text-base">
+                    <li>Estirar, comprimir, girar o recortar la marca.</li>
+                    <li>Recolorear partes del logo o cambiar su construcción.</li>
+                    <li>Añadir sombras, brillos, degradados o contornos.</li>
+                    <li>Colocarla sobre fondos que dificulten su lectura.</li>
+                  </ul>
+                </article>
+              </div>
+
+              <div class="brand-misuse-grid mt-10">
+                <figure>
+                  <div class="brand-misuse-preview bg-hs-paper">
+                    <img
+                      src="/brand-assets/hackspain-wordmark-color.svg"
+                      alt="Logotipo correcto de HackSpain"
+                      width="928"
+                      height="306"
+                      loading="lazy"
+                      decoding="async"
+                    >
+                  </div>
+                  <figcaption><strong>Sí</strong> · proporción original</figcaption>
+                </figure>
+                <figure>
+                  <div class="brand-misuse-preview brand-misuse-preview--squashed bg-hs-paper">
+                    <img
+                      src="/brand-assets/hackspain-wordmark-color.svg"
+                      alt="Ejemplo incorrecto: logotipo comprimido"
+                      width="928"
+                      height="306"
+                      loading="lazy"
+                      decoding="async"
+                    >
+                    <span aria-hidden="true">No</span>
+                  </div>
+                  <figcaption><strong>No</strong> · deformar</figcaption>
+                </figure>
+                <figure>
+                  <div class="brand-misuse-preview brand-misuse-preview--effects bg-hs-navy">
+                    <img
+                      src="/brand-assets/hackspain-wordmark-white.svg"
+                      alt="Ejemplo incorrecto: logotipo con efectos"
+                      width="928"
+                      height="306"
+                      loading="lazy"
+                      decoding="async"
+                    >
+                    <span aria-hidden="true">No</span>
+                  </div>
+                  <figcaption><strong>No</strong> · añadir efectos</figcaption>
+                </figure>
+              </div>
+
+              <div class="mt-12 border-[3px] border-hs-ink bg-hs-gold p-6 sm:p-9">
+                <p class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-hs-ink/60">
+                  Prensa, partners y colaboraciones
+                </p>
+                <div class="mt-4 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+                  <h3 class="max-w-[18ch] text-balance font-bungee text-2xl leading-tight sm:text-3xl">
+                    ¿Necesitas una adaptación especial?
+                  </h3>
+                  <a
+                    href="mailto:contact@hackspain.com?subject=Uso%20de%20la%20marca%20HackSpain"
+                    class="brand-contact-link inline-flex min-h-12 items-center border-[3px] border-hs-ink bg-hs-paper px-5 font-bungee text-xs tracking-wide focus-visible:outline-none sm:text-sm"
+                  >
+                    contact@hackspain.com
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <footer
+        class="flex flex-col gap-4 border-[3px] border-t-0 border-hs-ink bg-hs-ink px-5 py-6 text-hs-paper sm:flex-row sm:items-center sm:justify-between sm:px-8"
+      >
+        <p class="font-black text-xs uppercase tracking-[0.14em]">
+          HackSpain · Madrid 2026
+        </p>
+        <p class="text-pretty text-xs font-bold text-hs-paper/65">
+          Usa estos activos de forma respetuosa y sin sugerir una colaboración no autorizada.
+        </p>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    import { copyToClipboard } from "../lib/copy-to-clipboard";
+
+    const copyButtons = document.querySelectorAll<HTMLButtonElement>(
+      "[data-copy-color]"
+    );
+    const copyStatus = document.querySelector<HTMLElement>("#copy-status");
+
+    for (const button of copyButtons) {
+      button.addEventListener("click", async () => {
+        const color = button.dataset.copyColor;
+        if (!color) {
+          return;
+        }
+
+        try {
+          const copied = await copyToClipboard(color);
+          if (!copied) {
+            throw new Error("clipboard unavailable");
+          }
+          button.dataset.copied = "true";
+          if (copyStatus) {
+            copyStatus.textContent = `${color} copiado al portapapeles`;
+          }
+          window.setTimeout(() => {
+            delete button.dataset.copied;
+          }, 1200);
+        } catch {
+          if (copyStatus) {
+            copyStatus.textContent = `No se ha podido copiar ${color}`;
+          }
+        }
+      });
+    }
+  </script>
+</Layout>
+
+<style>
+  :global(html) {
+    scroll-padding-top: 5rem;
+  }
+
+  .brand-page {
+    background-image:
+      linear-gradient(rgba(42, 23, 15, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42, 23, 15, 0.025) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .brand-index-link,
+  .brand-text-link,
+  .brand-format-link,
+  .brand-contact-link {
+    transition-property: color, background-color;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+
+  .brand-text-link:hover {
+    color: var(--color-hs-red);
+  }
+
+  .brand-home-link {
+    transition-property: filter, scale;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+
+  .brand-home-link:hover {
+    filter: brightness(0.94);
+  }
+
+  .brand-home-link:active {
+    scale: 0.96;
+  }
+
+  .brand-home-link:focus-visible,
+  .brand-index-link:focus-visible,
+  .brand-text-link:focus-visible,
+  .brand-format-link:focus-visible {
+    outline: 3px solid var(--color-hs-navy);
+    outline-offset: -3px;
+  }
+
+  .brand-index-link:hover {
+    background-color: color-mix(in srgb, var(--color-hs-gold) 55%, transparent);
+  }
+
+  .brand-download-link,
+  .brand-contact-link,
+  .brand-format-link,
+  .brand-color-card {
+    transition-property: filter, scale, background-color, color;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+
+  .brand-download-link:hover,
+  .brand-contact-link:hover,
+  .brand-format-link:hover {
+    filter: brightness(0.95);
+  }
+
+  .brand-download-link:active,
+  .brand-contact-link:active,
+  .brand-format-link:active,
+  .brand-color-card:active {
+    scale: 0.96;
+  }
+
+  .brand-download-link:focus-visible,
+  .brand-contact-link:focus-visible,
+  .brand-color-card:focus-visible {
+    outline: 3px solid var(--color-hs-navy);
+    outline-offset: 3px;
+  }
+
+  .brand-download-link :global(svg) {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: 0 0 auto;
+  }
+
+  .brand-section-header {
+    display: grid;
+    grid-template-columns: 4.25rem minmax(0, 1fr);
+    min-height: 8.25rem;
+    border-bottom: 3px solid var(--color-hs-ink);
+    background: var(--color-hs-sand);
+  }
+
+  .brand-section-header > span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 3px solid var(--color-hs-ink);
+    background: var(--color-hs-gold);
+    font-family: var(--font-bungee);
+    font-size: 0.72rem;
+  }
+
+  .brand-section-header > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .brand-section-header p {
+    font-size: 0.65rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: color-mix(in srgb, var(--color-hs-ink) 58%, transparent);
+  }
+
+  .brand-section-header h2 {
+    margin-top: 0.35rem;
+    font-family: var(--font-bungee);
+    font-size: clamp(1.65rem, 5vw, 2.7rem);
+    line-height: 1;
+    text-wrap: balance;
+  }
+
+  .brand-asset-grid {
+    display: grid;
+    gap: 3px;
+    border: 3px solid var(--color-hs-ink);
+    background: var(--color-hs-ink);
+  }
+
+  .brand-asset-card {
+    min-width: 0;
+    background: var(--color-hs-paper);
+  }
+
+  .brand-asset-preview {
+    display: flex;
+    min-height: 12rem;
+    align-items: center;
+    justify-content: center;
+    padding: 2.25rem 1.5rem;
+  }
+
+  .brand-asset-preview--paper {
+    background: var(--color-hs-paper);
+  }
+
+  .brand-asset-preview--white {
+    background: #fff;
+  }
+
+  .brand-asset-preview--navy {
+    background: var(--color-hs-navy);
+  }
+
+  .brand-asset-preview img {
+    width: min(100%, 17rem);
+    height: auto;
+    max-height: 8rem;
+    object-fit: contain;
+  }
+
+  .brand-asset-preview--symbol img {
+    width: min(55%, 8.75rem);
+    max-height: 10.5rem;
+  }
+
+  .brand-format-link {
+    display: inline-flex;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  .brand-format-link:hover {
+    background: var(--color-hs-gold);
+  }
+
+  .safe-area {
+    position: relative;
+    display: grid;
+    width: min(100%, 16rem);
+    aspect-ratio: 1;
+    place-items: center;
+    border: 2px dashed color-mix(in srgb, var(--color-hs-ink) 50%, transparent);
+    background:
+      linear-gradient(rgba(42, 23, 15, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42, 23, 15, 0.07) 1px, transparent 1px);
+    background-size: 25% 25%;
+    padding: 12.5%;
+  }
+
+  .safe-area > span {
+    position: absolute;
+    top: 0.45rem;
+    left: 0.6rem;
+    font-size: 0.62rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  .safe-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .brand-color-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+    border: 3px solid var(--color-hs-ink);
+    background: var(--color-hs-ink);
+  }
+
+  .brand-color-card {
+    display: flex;
+    min-height: 9.5rem;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1rem;
+    border: 0;
+    background: var(--swatch);
+    color: var(--color-hs-ink);
+    cursor: copy;
+    text-align: left;
+  }
+
+  .brand-color-card:hover {
+    filter: brightness(0.94);
+  }
+
+  .brand-color-card--light-text {
+    color: #fff;
+  }
+
+  .brand-color-name {
+    font-weight: 900;
+    font-size: 0.85rem;
+  }
+
+  .brand-color-value {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  .brand-color-value svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: 0 0 auto;
+  }
+
+  .brand-color-card[data-copied="true"] .brand-color-value span::after {
+    content: " · COPIADO";
+  }
+
+  .brand-misuse-grid {
+    display: grid;
+    gap: 3px;
+    border: 3px solid var(--color-hs-ink);
+    background: var(--color-hs-ink);
+  }
+
+  .brand-misuse-grid figure {
+    min-width: 0;
+    background: var(--color-hs-paper);
+  }
+
+  .brand-misuse-preview {
+    position: relative;
+    display: flex;
+    min-height: 10.5rem;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 2rem 1.25rem;
+  }
+
+  .brand-misuse-preview img {
+    width: min(100%, 14rem);
+    height: auto;
+  }
+
+  .brand-misuse-preview--squashed img {
+    transform: scaleX(0.58);
+  }
+
+  .brand-misuse-preview--effects img {
+    transform: rotate(-7deg);
+    filter: drop-shadow(0 0 12px #eab619) drop-shadow(8px 10px 0 #ca0005);
+  }
+
+  .brand-misuse-preview > span {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    background: var(--color-hs-red);
+    color: white;
+    font-size: 0.62rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .brand-misuse-grid figcaption {
+    min-height: 3.5rem;
+    padding: 1.05rem 1.15rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .brand-misuse-grid figcaption strong {
+    color: var(--color-hs-red);
+    text-transform: uppercase;
+  }
+
+  @media (min-width: 40rem) {
+    .brand-asset-grid,
+    .brand-misuse-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .brand-color-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .brand-section-header {
+      grid-template-columns: 5.25rem minmax(0, 1fr);
+      min-height: 9rem;
+    }
+
+    .brand-section-header > div {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html) {
+      scroll-behavior: auto;
+    }
+
+    .brand-home-link,
+    .brand-index-link,
+    .brand-text-link,
+    .brand-format-link,
+    .brand-contact-link,
+    .brand-download-link,
+    .brand-color-card {
+      transition-duration: 0.01ms;
+    }
+  }
+</style>
