@@ -32,7 +32,13 @@
             // Async stubs standing in for network calls rarely await anything.
             "useAwait": "off",
             // File-mode assertions mask with 0o777.
-            "noBitwiseOperators": "off"
+            "noBitwiseOperators": "off",
+            // No-op callbacks for stubbed stores and sinks.
+            "noEmptyBlockStatements": "off"
+          },
+          "performance": {
+            // Inline `toMatch(/…/)` reads better than hoisted constants in tests.
+            "useTopLevelRegex": "off"
           }
         }
       }

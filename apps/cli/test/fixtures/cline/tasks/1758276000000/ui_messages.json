@@ -1,0 +1,22 @@
+[
+  { "ts": 1758276000000, "type": "say", "say": "text", "text": "[redacted]" },
+  {
+    "ts": 1758276001000,
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"[redacted]\",\"tokensIn\":5200,\"tokensOut\":310,\"cacheWrites\":1200,\"cacheReads\":3900,\"cost\":0.021}"
+  },
+  { "ts": 1758276002000, "type": "say", "say": "text", "text": "[redacted]" },
+  {
+    "ts": 1758276010000,
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"[redacted]\",\"tokensIn\":6100,\"tokensOut\":420,\"cacheWrites\":0,\"cacheReads\":5100,\"cost\":0.018}"
+  },
+  {
+    "ts": 1758276020000,
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"[redacted]\"}"
+  }
+]

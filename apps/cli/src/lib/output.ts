@@ -85,6 +85,13 @@ export function printJsonError(explained: {
   console.log(JSON.stringify({ ok: false, ...explained }));
 }
 
+export function compactNumber(value: number): string {
+  return new Intl.NumberFormat("en", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 export function formatWhen(epochMs: number): string {
   return new Date(epochMs).toLocaleString("en-GB", {
     dateStyle: "medium",
