@@ -5,6 +5,7 @@ import {
   multiselect,
   type Option,
   password,
+  select,
   text,
 } from "@clack/prompts";
 import type { CliContext } from "./context";
@@ -91,6 +92,25 @@ export async function confirmOrFlag(
       message: options.message,
       initialValue: options.initialValue ?? true,
     })
+  );
+}
+
+/** Single choice; non-interactive callers must pass the value as a flag/argument. */
+export async function pickOne<T extends string>(
+  ctx: CliContext,
+  flagValue: T | undefined,
+  options: {
+    flag: string;
+    message: string;
+    choices: Option<T>[];
+  }
+): Promise<T> {
+  if (flagValue !== undefined) {
+    return flagValue;
+  }
+  requireInteractive(ctx, options.flag);
+  return guard(
+    await select<T>({ message: options.message, options: options.choices })
   );
 }
 

@@ -54,6 +54,10 @@ step "milestone"; run milestone add custom --label "smoke $(date +%s)" | ok
 run milestone list | jq -c '.data | length'
 run milestone list --all | jq -c '.data | length'
 
+step "transfer with nobody else exits 1"; set +e; run team transfer >/dev/null; [[ $? -eq 1 ]] && echo "exit 1 ok"; set -e
+step "dissolve (owner, alone)"; run team dissolve --yes | jq -c '.data.dissolved'
+set +e; run team show >/dev/null 2>&1; rc=$?; set -e; [[ $rc -ne 0 ]] && echo "team gone"
+
 step "logout"; run auth logout | ok
 echo
 echo "smoke: all good"

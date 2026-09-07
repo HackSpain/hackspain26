@@ -565,6 +565,85 @@ export const setTechStack = onboardedMutation({
   },
 });
 
+export const transferOwnership = onboardedMutation({
+  args: { memberId: v.id("teamMembers") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const team = await requireMemberTeam(ctx);
+    if (team.ownerId !== ctx.user._id) {
+      fail("NOT_OWNER", "Solo el dueño puede transferir el equipo");
+    }
+    const member = await ctx.db.get(args.memberId);
+    if (!member || member.teamId !== team._id) {
+      fail("NOT_FOUND", "Miembro no encontrado");
+    }
+    if (member.status !== "member" || !member.userId) {
+      fail(
+        "VALIDATION",
+        "Solo se puede transferir a alguien que ya haya entrado en el equipo",
+      );
+    }
+    if (member.userId === ctx.user._id) {
+      fail("VALIDATION", "Ya eres el dueño del equipo");
+    }
+    await ctx.db.patch(team._id, {
+      ownerId: member.userId,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Delete a team that has no other members. Pending invites, the team's
+ * draft and its milestones go with it; a submitted project blocks it.
+ */
+export const dissolve = onboardedMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const team = await requireMemberTeam(ctx);
+    if (team.ownerId !== ctx.user._id) {
+      fail("NOT_OWNER", "Solo el dueño puede disolver el equipo");
+    }
+    const members = await ctx.db
+      .query("teamMembers")
+      .withIndex("by_team", (q) => q.eq("teamId", team._id))
+      .collect();
+    const others = members.filter(
+      (m) => m.status === "member" && m.userId !== ctx.user._id,
+    );
+    if (others.length > 0) {
+      fail(
+        "VALIDATION",
+        "El equipo aún tiene miembros: transfiere la propiedad o quítalos antes",
+      );
+    }
+    const submission = await ctx.db
+      .query("submissions")
+      .withIndex("by_team", (q) => q.eq("teamId", team._id))
+      .first();
+    if (submission?.status === "submitted") {
+      fail("VALIDATION", "El equipo ya ha enviado un proyecto y no se puede disolver");
+    }
+    if (submission) {
+      await ctx.db.delete(submission._id);
+    }
+    const milestones = await ctx.db
+      .query("milestones")
+      .withIndex("by_team", (q) => q.eq("teamId", team._id))
+      .collect();
+    for (const milestone of milestones) {
+      await ctx.db.delete(milestone._id);
+    }
+    for (const member of members) {
+      await ctx.db.delete(member._id);
+    }
+    await ctx.db.delete(team._id);
+    return null;
+  },
+});
+
 // One-off for teams created before join codes existed. Run from the dashboard.
 export const backfillJoinCodes = internalMutation({
   args: {},

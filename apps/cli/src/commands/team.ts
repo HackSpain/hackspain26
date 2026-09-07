@@ -5,7 +5,7 @@ import { CliError, usageError } from "../lib/errors";
 import { formatMember, parseMember } from "../lib/members";
 import { formatWhen, type Ui, uiFor } from "../lib/output";
 import { openParticipant, type Team } from "../lib/participant";
-import { confirmOrFlag } from "../lib/prompts";
+import { confirmOrFlag, pickOne } from "../lib/prompts";
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -148,7 +148,7 @@ export function registerTeam(program: Command): void {
       if (mine.isOwner) {
         throw new CliError("Owners cannot leave their team.", {
           code: "NOT_ALLOWED",
-          hint: "Ask an organiser to transfer or dissolve the team.",
+          hint: "Hand it over with `hackspain team transfer`, or delete it with `hackspain team dissolve` once everyone else has left.",
         });
       }
       const ok = await confirmOrFlag(ctx, opts.yes, {
@@ -235,4 +235,132 @@ export function registerTeam(program: Command): void {
         );
       }
     );
+
+  team
+    .command("transfer [member]")
+    .description(
+      "Hand the team to a teammate (owner only); match by email, GitHub login or name"
+    )
+    .option("-y, --yes", "skip the confirmation")
+    .action(
+      async (
+        memberArg: string | undefined,
+        opts: { yes?: boolean },
+        command: Command
+      ) => {
+        const ctx = contextFor(command);
+        const ui = uiFor(ctx);
+        const { session, me } = await openParticipant(ctx);
+        const mine = await session.client.query(api.teams.mine, {});
+        if (!mine) {
+          noTeam();
+        }
+        if (!mine.isOwner) {
+          throw new CliError("Only the team owner can transfer it.", {
+            code: "NOT_OWNER",
+          });
+        }
+        const candidates = mine.members.filter(
+          (m) => m.status === "member" && m.userId && m.userId !== me._id
+        );
+        if (candidates.length === 0) {
+          throw new CliError("Nobody else has joined the team yet.", {
+            code: "NO_MEMBERS",
+            hint: "Share the join code first, or run `hackspain team dissolve` if you want to delete it.",
+          });
+        }
+        const label = (m: (typeof candidates)[number]) =>
+          [m.name, m.email ?? formatMember(m)].filter(Boolean).join(" · ");
+        let memberId: string | undefined;
+        if (memberArg) {
+          const needle = memberArg.trim().toLowerCase();
+          const matches = candidates.filter((m) =>
+            [m.name, m.email, m.identifier]
+              .filter((v): v is string => Boolean(v))
+              .some(
+                (v) =>
+                  v.toLowerCase() === needle || v.toLowerCase().includes(needle)
+              )
+          );
+          if (matches.length !== 1) {
+            throw usageError(
+              matches.length === 0
+                ? `No teammate matches "${memberArg}".`
+                : `"${memberArg}" matches several teammates.`,
+              `Teammates: ${candidates.map(label).join("; ")}`
+            );
+          }
+          memberId = matches[0]?._id;
+        }
+        const chosen = await pickOne(ctx, memberId, {
+          flag: "<member>",
+          message: "Transfer ownership to",
+          choices: candidates.map((m) => ({
+            value: m._id as string,
+            label: label(m),
+          })),
+        });
+        const target = candidates.find((m) => m._id === chosen);
+        const ok = await confirmOrFlag(ctx, opts.yes, {
+          flag: "--yes",
+          message: `Make ${target ? label(target) : chosen} the owner of ${mine.name}? You stay as a member.`,
+          initialValue: false,
+        });
+        if (!ok) {
+          ui.info("Ownership unchanged.");
+          return;
+        }
+        await session.client.mutation(api.teams.transferOwnership, {
+          memberId: chosen as (typeof candidates)[number]["_id"],
+        });
+        const after = await session.client.query(api.teams.mine, {});
+        if (after) {
+          renderTeam(ui, after, me._id);
+        }
+        ui.success(
+          `${target ? label(target) : "Your teammate"} now owns ${mine.name}.`
+        );
+      }
+    );
+
+  team
+    .command("dissolve")
+    .description("Delete a team nobody else has joined (owner only)")
+    .option("-y, --yes", "skip the confirmation")
+    .action(async (opts: { yes?: boolean }, command: Command) => {
+      const ctx = contextFor(command);
+      const ui = uiFor(ctx);
+      const { session, me } = await openParticipant(ctx);
+      const mine = await session.client.query(api.teams.mine, {});
+      if (!mine) {
+        noTeam();
+      }
+      if (!mine.isOwner) {
+        throw new CliError("Only the team owner can dissolve it.", {
+          code: "NOT_OWNER",
+          hint: "Run `hackspain team leave` to leave it instead.",
+        });
+      }
+      const others = mine.members.filter(
+        (m) => m.status === "member" && m.userId && m.userId !== me._id
+      );
+      if (others.length > 0) {
+        throw new CliError("The team still has other members.", {
+          code: "VALIDATION",
+          hint: "Transfer it with `hackspain team transfer`, or ask them to `hackspain team leave` first.",
+        });
+      }
+      const ok = await confirmOrFlag(ctx, opts.yes, {
+        flag: "--yes",
+        message: `Delete ${mine.name}? Its draft project, milestones and pending invites go with it.`,
+        initialValue: false,
+      });
+      if (!ok) {
+        ui.info("Kept the team.");
+        return;
+      }
+      await session.client.mutation(api.teams.dissolve, {});
+      ui.result({ dissolved: mine.name });
+      ui.success(`Dissolved ${mine.name}.`);
+    });
 }
