@@ -6,7 +6,8 @@ on:
       - "apps/cli/**"
       - "apps/app/convex/**"
       - "package.json"
-      - "bun.lock"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - ".github/workflows/cli-ci.yml"
   push:
     branches: [master]
@@ -24,18 +25,25 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.1.1"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: pnpm
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.1"
-      - run: bun install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - name: Typecheck
-        run: bun run --filter cli typecheck
+        run: pnpm --filter cli typecheck
       - name: Lint
-        run: bun run --filter cli lint
+        run: pnpm --filter cli lint
       - name: Test
-        run: bun run --filter cli test
+        run: pnpm --filter cli test
       - name: Compile host binary and smoke it
         run: |
-          bun run --filter cli build:bin:host
+          pnpm --filter cli build:bin:host
           ./apps/cli/dist/hackspain --version
           ./apps/cli/dist/hackspain auth status --json --url https://app.example | jq -e '.ok == true and .data.loggedIn == false'

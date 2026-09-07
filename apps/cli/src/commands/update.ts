@@ -21,7 +21,7 @@ export function assetName(
   const cpu = CPUS[arch];
   if (!(["linux", "darwin", "windows"].includes(os) && cpu)) {
     throw new CliError(`No prebuilt binary for ${platform}/${arch}.`, {
-      hint: "Build from source: bun run --filter cli build:bin:host",
+      hint: "Build from source: pnpm --filter cli build:bin:host",
     });
   }
   return `hackspain-${os}-${cpu}${os === "windows" ? ".exe" : ""}`;

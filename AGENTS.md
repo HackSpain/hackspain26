@@ -2,7 +2,7 @@
 
 Marketing site for HackSpain 2026 (Madrid) at https://hackspain.com, plus the participant/admin dashboard.
 
-Setup, env vars, and Convex login live in the [README](README.md). Bun workspaces. Node ≥ 22.12.
+Setup, env vars, and Convex login live in the [README](README.md). pnpm workspaces. Node ≥ 22.12.
 
 ```text
 apps/web    # Astro 6 landing (Vercel, React islands, Tailwind v4, Neon/Drizzle)
@@ -11,15 +11,15 @@ apps/cli    # `hackspain` terminal client for participants (Bun binary, same Con
 ```
 
 ```sh
-bun install
-bun dev                 # landing — localhost:4321
-bun dev:app             # dashboard — localhost:3000
-bun dev:convex          # Convex dev (not production deploy)
-bun dev:all             # landing + dashboard + Convex
-bun migrate:convex      # Neon → Convex. Idempotent on email. Do not run unless importing.
+pnpm install
+pnpm dev                 # landing — localhost:4321
+pnpm dev:app             # dashboard — localhost:3000
+pnpm dev:convex          # Convex dev (not production deploy)
+pnpm dev:all             # landing + dashboard + Convex
+pnpm migrate:convex      # Neon → Convex. Idempotent on email. Do not run unless importing.
 ```
 
-Do not run `npx convex deploy` unless you are shipping Convex to production.
+Do not run `pnpm --filter app exec convex deploy` unless you are shipping Convex to production.
 
 Copy `apps/web/.env.example` → `apps/web/.env` for signup APIs. Copy `apps/app/.env.example` → `apps/app/.env.local` for the dashboard. Static landing pages run without a database.
 
@@ -84,7 +84,7 @@ Validation is Zod in `src/lib/signup-validation.ts` and `src/lib/mentor-sponsor-
 
 `POST` handlers (`prerender = false`) check BotID, require `application/json`, reject duplicate emails (409), write through `getDb()`, and send transactional mail through Resend when configured.
 
-Tables in `src/db/schema.ts` include `hackathon_signups`, `hackathon_pre_signups`, `mentor_sponsor_signups`, `shortlist_reviews`. Change schema with Drizzle (`bun db:generate` then migrate). Do not hand-edit applied SQL as the source of truth.
+Tables in `src/db/schema.ts` include `hackathon_signups`, `hackathon_pre_signups`, `mentor_sponsor_signups`, `shortlist_reviews`. Change schema with Drizzle (`pnpm db:generate` then migrate). Do not hand-edit applied SQL as the source of truth.
 
 New dashboard data lives in Convex, not Neon. Keep using Neon for the public signup API until that is migrated separately.
 
@@ -104,7 +104,7 @@ GitHub linking is a custom OAuth flow, not a Convex Auth provider (Convex Auth o
 
 Profiles store social links as `urls: { kind, url }[]`. `githubUsername` / `twitterHandle` stay denormalized for team lookup. One submission can enter multiple challenges via `challengeIds` and records partner perks in `perkIds`. Submit stays closed until an admin opens the window. Drafts can be saved before that.
 
-`bun migrate:convex` is idempotent on email. It uses `apps/web/.env` for Neon. `approval_status = confirmed` and shortlist `finalSelected` emails are marked accepted. Re-runs do not un-accept someone an admin already marked. Waitlist / pending / rejected stay unaccepted. The rest of the shortlist JSON is not imported.
+`pnpm migrate:convex` is idempotent on email. It uses `apps/web/.env` for Neon. `approval_status = confirmed` and shortlist `finalSelected` emails are marked accepted. Re-runs do not un-accept someone an admin already marked. Waitlist / pending / rejected stay unaccepted. The rest of the shortlist JSON is not imported.
 
 ### Dashboard routes
 
@@ -129,14 +129,15 @@ Profiles store social links as `urls: { kind, url }[]`. `githubUsername` / `twit
 Commander + `@clack/prompts` on Bun, compiled to standalone binaries with `bun build --compile`. See [apps/cli/README.md](apps/cli/README.md).
 
 - The CLI never talks to Convex. It calls the dashboard's `/api/cli/*` route handlers (`apps/app/src/app/api/cli`), which run allowlisted Convex functions server-side with the participant's own Convex Auth session (`fetchQuery` / `fetchMutation` / `fetchAction` from `convex/nextjs` with the bearer token). Same users as the web login. Add a function to `_lib/functions.ts` when a command needs it; `/api/cli(.*)` is public in `src/middleware.ts` because it authenticates with the bearer token, not the cookie.
-- Backend types come from `apps/app/convex/_generated/api.d.ts` via a type-only import in `src/lib/api.ts`; at runtime `api.x.y` is only the name `"x:y"`. Run `bun dev:convex` after changing Convex functions so the CLI typecheck sees them.
+- Backend types come from `apps/app/convex/_generated/api.d.ts` via a type-only import in `src/lib/api.ts`; at runtime `api.x.y` is only the name `"x:y"`. Run `pnpm dev:convex` after changing Convex functions so the CLI typecheck sees them.
 - Functions the CLI calls throw `ConvexError({ code, message })` from `convex/lib/errors.ts`; the route relays them as `{ kind: "convex", data }` and the CLI raises `RemoteError`. Older web-facing functions throw plain `Error`; `src/lib/errors.ts` maps those Spanish gate messages to English hints and exit codes.
-- Credentials: `~/.config/hackspain/credentials.json`, refreshed through `/api/cli/auth/refresh` under a lock file (Convex Auth rotates refresh tokens; a stale reuse logs every process out). State (cursors, spool) goes to `~/.local/state/hackspain/`. From a source checkout the CLI targets `http://localhost:3000` (`bun dev:app`); release binaries target `https://app.hackspain.com`.
+- Credentials: `~/.config/hackspain/credentials.json`, refreshed through `/api/cli/auth/refresh` under a lock file (Convex Auth rotates refresh tokens; a stale reuse logs every process out). State (cursors, spool) goes to `~/.local/state/hackspain/`. From a source checkout the CLI targets `http://localhost:3000` (`pnpm dev:app`); release binaries target `https://app.hackspain.com`.
 - `--json` prints exactly one JSON object on stdout and disables prompts; everything else goes to stderr.
 - `hackspain watch` collects AI-harness usage into the canonical `hackspain.telemetry.v1` event (`apps/cli/src/watcher/schema.ts`, documented in `apps/cli/docs/telemetry-schema.md`). Collectors live in `src/watcher/collectors/` and must fail soft. Events go to a local NDJSON spool and are uploaded to `POST /api/cli/telemetry` (`apps/app/src/app/api/cli/telemetry/route.ts`), which authenticates, validates, and inserts them in RawTree server-side through `@rawtree/sdk`. RawTree needs `RAWTREE_API_KEY` and `RAWTREE_DATABASE` in the dashboard environment; the default table is `hackspain_telemetry`. The insights page still reads mock data. Organiser broadcasts are polled through `/api/cli/rpc` (`notifications:forMe`). Fixtures under `apps/cli/test/fixtures` are redacted; a test rejects home paths.
-- Feed: `posts` table (`convex/feed.ts`: list/post/remove, images in Convex file storage via `feed.generateUploadUrl`; the CLI uploads through `/api/cli/upload`). Posts carry `imagePath` (`/api/files/<storageId>`), never a Convex storage URL: `src/app/api/files/[id]/route.ts` checks the cookie or bearer session, asks `feed.imageUrl` (only ids attached to a post resolve) and streams the bytes under our domain; unauthenticated requests are redirected to `/login`. GitHub activity is polled server-side by `convex/crons.ts` → `internal.githubFeed.pollRepos` every 3 minutes from each team's `repoUrl`, deduped on `externalId`, with ETags so quiet repos cost nothing. **`GITHUB_TOKEN` must be set on the Convex deployment**: unauthenticated calls share 60/hour per egress IP and Convex's shared IPs are always exhausted. GitHub's Events API returns trimmed payloads (no commit list, no PR title), so pushes are described from ref + sha and pull requests get one extra detail request. Changing a team's repo resets its ETag; dissolving a team deletes its GitHub posts. `bunx convex run githubFeed:purgeRepo '{"repo":"org/name"}'` clears a repo's posts.
+- Telemetry update checklist: when adding or changing collected data, update `apps/cli/src/watcher/schema.ts`, the matching type and validator in `apps/app/src/app/api/cli/telemetry/rawtree.ts`, `apps/cli/docs/telemetry-schema.md`, the relevant collector/ingestion tests, and every RawTree query or dashboard that consumes it. A new optional field can use RawTree's Dynamic schema without a migration. Renaming a field, changing its type, or changing its meaning is breaking: bump `SCHEMA`, document the compatibility window, and keep ingestion compatible with the previous version during rollout. Keep `native` small and never place prompts, responses, code, full paths, environment variables, credentials, or harness account ids in telemetry.
+- Feed: `posts` table (`convex/feed.ts`: list/post/remove, images in Convex file storage via `feed.generateUploadUrl`; the CLI uploads through `/api/cli/upload`). Posts carry `imagePath` (`/api/files/<storageId>`), never a Convex storage URL: `src/app/api/files/[id]/route.ts` checks the cookie or bearer session, asks `feed.imageUrl` (only ids attached to a post resolve) and streams the bytes under our domain; unauthenticated requests are redirected to `/login`. GitHub activity is polled server-side by `convex/crons.ts` → `internal.githubFeed.pollRepos` every 3 minutes from each team's `repoUrl`, deduped on `externalId`, with ETags so quiet repos cost nothing. **`GITHUB_TOKEN` must be set on the Convex deployment**: unauthenticated calls share 60/hour per egress IP and Convex's shared IPs are always exhausted. GitHub's Events API returns trimmed payloads (no commit list, no PR title), so pushes are described from ref + sha and pull requests get one extra detail request. Changing a team's repo resets its ETag; dissolving a team deletes its GitHub posts. `pnpm --filter app exec convex run githubFeed:purgeRepo '{"repo":"org/name"}'` clears a repo's posts.
 - `hackspain profile` mirrors `src/app/profile/page.tsx` minus attendance (the CLI is used at the venue) plus a name (`users.setName`, `users.updateEventDetails`, `users.setNotificationConsent`, `onboarding.requestPhoneCode/verifyPhoneCode`, `github.startLink/unlink`); `auth login` runs `completeProfile` afterwards, which asks for a missing name, unconfirmed phone (accepted users only) or GitHub link, each skippable. GitHub linking is the same OAuth flow: the CLI prints the authorise URL and the callback lands on the dashboard.
-- Lint with `ultracite` (Biome) like `apps/web`; tests are `bun test` under `apps/cli/test`.
+- Lint with `ultracite` (Biome) like `apps/web`; run it with `pnpm lint`. CLI tests use Bun's test runner through `pnpm test`.
 
 ## Conventions
 
