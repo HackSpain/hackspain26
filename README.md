@@ -34,7 +34,7 @@ The dashboard needs a Convex development deployment (`bun dev:convex` / `npx con
 | `bun preview` | Preview the landing build |
 | `bun check` | Astro + TypeScript checks |
 | `bun migrate:convex` | Import Neon signups/ambassadors into Convex |
-| `bun dev:cli -- <args>` / `bun test:cli` / `bun build:cli` | Run, test, or compile the `hackspain` CLI |
+| `bun dev:cli -- <args>` / `bun test:cli` / `bun build:cli` | Run, test, or compile the `hackspain` CLI (participants install it with `curl -fsSL https://hackspain.com/install.sh \| sh`) |
 | `bun db:generate` / `bun db:migrate` / `bun db:push` | Landing Drizzle |
 
 ## Convex auth and admin

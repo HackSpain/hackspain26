@@ -9,6 +9,7 @@ import { registerSubmit } from "./commands/submit";
 import { registerTeam } from "./commands/team";
 import { registerTelemetry } from "./commands/telemetry";
 import { registerTrack } from "./commands/track";
+import { registerUpdate } from "./commands/update";
 import { registerWatch } from "./commands/watch";
 import { runCli } from "./lib/run";
 import { VERSION } from "./version";
@@ -35,5 +36,6 @@ registerMilestone(program);
 registerStack(program);
 registerWatch(program);
 registerTelemetry(program);
+registerUpdate(program);
 
 await runCli(program);

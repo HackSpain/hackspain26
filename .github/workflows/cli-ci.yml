@@ -1,0 +1,41 @@
+name: cli-ci
+
+on:
+  pull_request:
+    paths:
+      - "apps/cli/**"
+      - "apps/app/convex/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/cli-ci.yml"
+  push:
+    branches: [master]
+    paths:
+      - "apps/cli/**"
+      - "apps/app/convex/**"
+
+concurrency:
+  group: cli-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.1"
+      - run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bun run --filter cli typecheck
+      - name: Lint
+        run: bun run --filter cli lint
+      - name: Test
+        run: bun run --filter cli test
+      - name: Compile host binary and smoke it
+        run: |
+          bun run --filter cli build:bin:host
+          ./apps/cli/dist/hackspain --version
+          ./apps/cli/dist/hackspain auth status --json --url https://app.example | jq -e '.ok == true and .data.loggedIn == false'
