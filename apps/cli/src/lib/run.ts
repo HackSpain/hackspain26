@@ -1,6 +1,8 @@
+import { log } from "@clack/prompts";
 import type { Command, CommanderError } from "commander";
 import { EXIT, explainError } from "./errors";
 import { printJsonError } from "./output";
+import { c, cmd } from "./style";
 
 function isCommanderError(err: unknown): err is CommanderError {
   return (
@@ -39,9 +41,12 @@ export async function runCli(
     if (json) {
       printJsonError(explained);
     } else {
-      process.stderr.write(`error: ${explained.message}\n`);
-      if (explained.hint) {
-        process.stderr.write(`  ${explained.hint}\n`);
+      const hint = explained.hint ? `\n${c.dim(explained.hint)}` : "";
+      log.error(`${c.red(explained.message)}${hint}`);
+      if (explained.exitCode === EXIT.ERROR && !explained.hint) {
+        process.stderr.write(
+          `${c.dim(`  Stuck? ${cmd("hackspain --help")} lists every command; organisers are on Discord.`)}\n`
+        );
       }
     }
     process.exit(explained.exitCode);

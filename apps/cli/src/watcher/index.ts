@@ -25,6 +25,12 @@ import {
 } from "./schema";
 import { httpSink } from "./sinks/http";
 import { type Sink, spoolSink } from "./sinks/spool";
+import {
+  recordEvent,
+  recordLog,
+  recordNotification,
+  type WatchState,
+} from "./state";
 import type { Collector, CollectorContext } from "./types";
 
 export const COLLECTORS: Collector[] = [
@@ -50,6 +56,10 @@ export type WatchDeps = {
   teamId?: string;
   log: (message: string) => void;
   say: (message: string) => void;
+  /** Renders an organiser message; defaults to `say(formatNotification(...))`. */
+  announce?: (subject: string, body: string, at: number) => void;
+  /** Live-screen state; when given, runWatch keeps it current and honours pause/stop. */
+  state?: WatchState;
   toaster?: Toaster;
   collectors?: Collector[];
   extraSinks?: Sink[];
@@ -57,8 +67,46 @@ export type WatchDeps = {
 
 const RECENT_IDS_CAP = 5000;
 const TEAM_REFRESH_MS = 5 * 60 * 1000;
-/** Organiser messages are polled through the same server API as everything else. */
-export const NOTIFY_POLL_MS = 10 * 1000;
+/** After this long without a usage event, scans slow down to save battery. */
+export const IDLE_AFTER_MS = 10 * 60 * 1000;
+export const IDLE_INTERVAL_MS = 60 * 1000;
+
+/**
+ * Scan cadence: the configured interval while there is activity, at most
+ * once a minute once the machine has been idle for a while. Organiser
+ * messages are polled on the same tick, so one wakeup covers both.
+ */
+export function scanIntervalFor(
+  baseMs: number,
+  lastEventAt: number | undefined,
+  now: number,
+  startedAt: number
+): number {
+  const reference = lastEventAt ?? startedAt;
+  if (now - reference >= IDLE_AFTER_MS) {
+    return Math.max(baseMs, IDLE_INTERVAL_MS);
+  }
+  return baseMs;
+}
+
+/** Sleep for `ms`, or until something calls `state.wake()` (a key press). */
+function sleepOrWake(state: WatchState | undefined, ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      if (state) {
+        state.wake = undefined;
+      }
+      resolve();
+    }, ms);
+    if (state) {
+      state.wake = () => {
+        clearTimeout(timer);
+        state.wake = undefined;
+        resolve();
+      };
+    }
+  });
+}
 
 function lockPath(): string {
   return join(stateDir(), "watch.lock");
@@ -193,7 +241,14 @@ export async function runWatch(
   options: WatchOptions,
   deps: WatchDeps
 ): Promise<number> {
-  const { session, me, log, say } = deps;
+  const { session, me, say } = deps;
+  const state = deps.state;
+  const log = (message: string) => {
+    deps.log(message);
+    if (state) {
+      recordLog(state, message);
+    }
+  };
   const collectors = deps.collectors ?? COLLECTORS;
   const cursors = openCursorStore();
   const recent = loadRecentIds();
@@ -202,6 +257,15 @@ export async function runWatch(
     sinks.push(httpSink(options.uploadUrl, () => session.token()));
   }
   const batcher = createBatcher(sinks, log);
+  const recording: Batcher = {
+    ...batcher,
+    push: (event) => {
+      if (state) {
+        recordEvent(state, event);
+      }
+      batcher.push(event);
+    },
+  };
   let teamId = deps.teamId;
   let teamCheckedAt = Date.now();
   const identity = (): TelemetryEvent["identity"] => ({
@@ -216,6 +280,14 @@ export async function runWatch(
     if ((await c.discover()).length > 0) {
       discovered.push(c.id);
     }
+  }
+  if (state) {
+    state.harnesses = collectors.map((c) => ({
+      id: c.id,
+      found: discovered.includes(c.id),
+      requests: 0,
+      tokens: 0,
+    }));
   }
   say(
     discovered.length
@@ -247,7 +319,14 @@ export async function runWatch(
         continue;
       }
       lastSeen = row.sentAt;
-      say(formatNotification(row.subject, row.body, row.sentAt));
+      if (state) {
+        recordNotification(state, row.subject, row.body, row.sentAt);
+      }
+      (deps.announce ?? ((s, b, at) => say(formatNotification(s, b, at))))(
+        row.subject,
+        row.body,
+        row.sentAt
+      );
       if (options.toast) {
         toaster(row.subject, row.body).then((ok) => {
           if (!ok) {
@@ -274,10 +353,13 @@ export async function runWatch(
         log(`team lookup failed: ${String(err)}`);
       }
     }
+    if (state) {
+      state.scanning = true;
+    }
     const scanned = await scanOnce(
       collectors,
       ctx,
-      batcher,
+      recording,
       identity(),
       recent
     );
@@ -285,6 +367,15 @@ export async function runWatch(
     if (ok) {
       cursors.save();
       saveRecentIds(recent);
+    }
+    if (state) {
+      state.scanning = false;
+      state.lastScanAt = Date.now();
+      state.upload.failing = !ok;
+      state.upload.queued = batcher.size();
+      if (ok && state.upload.enabled) {
+        state.upload.lastOkAt = Date.now();
+      }
     }
     if (scanned.events > 0 || options.verbose) {
       const parts = Object.entries(scanned.byHarness).map(
@@ -302,19 +393,40 @@ export async function runWatch(
     if (options.once) {
       return EXIT.OK;
     }
-    let nextScan = Date.now() + options.intervalMs;
-    let nextPoll = Date.now();
-    while (!stopping) {
+    const startedAt = Date.now();
+    let lastEventAt: number | undefined = state?.lastEventAt;
+    const interval = () =>
+      scanIntervalFor(
+        options.intervalMs,
+        state?.lastEventAt ?? lastEventAt,
+        Date.now(),
+        startedAt
+      );
+    await pollNotifications();
+    let nextScan = Date.now() + interval();
+    if (state) {
+      state.nextScanAt = nextScan;
+    }
+    while (!(stopping || state?.stopRequested)) {
       const now = Date.now();
-      if (now >= nextPoll) {
-        await pollNotifications();
-        nextPoll = Date.now() + NOTIFY_POLL_MS;
-      }
       if (now >= nextScan) {
-        await tick();
-        nextScan = Date.now() + options.intervalMs;
+        if (state?.paused) {
+          nextScan = Date.now() + 1000;
+        } else {
+          // One wakeup does both the scan and the organiser-message poll.
+          const scanned = await tick();
+          if (scanned.events > 0) {
+            lastEventAt = Date.now();
+          }
+          await pollNotifications();
+          nextScan = Date.now() + interval();
+        }
+        if (state) {
+          state.nextScanAt = nextScan;
+        }
       }
-      await Bun.sleep(250);
+      // One wakeup per second at most; a key press wakes it immediately.
+      await sleepOrWake(state, state?.paused ? 5000 : 1000);
     }
     say("Stopping, flushing…");
     await batcher.flush();

@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { contextFor } from "../lib/context";
-import { compactNumber, uiFor } from "../lib/output";
+import { compactNumber, formatWhen, uiFor } from "../lib/output";
+import { c } from "../lib/style";
 import type { TelemetryEvent } from "../watcher/schema";
 import { readSpool, spoolDir } from "../watcher/sinks/spool";
 
@@ -109,10 +110,15 @@ export function registerTelemetry(program: Command): void {
           [...summary.byFamily].map(([k, v]) => [k, serial(v)])
         ),
       });
+      ui.intro("telemetry");
       if (summary.all.events === 0 && summary.all.sessions.size === 0) {
-        ui.info(
-          `Nothing recorded yet in ${spoolDir()}. Run \`hackspain watch\`.`
-        );
+        ui.info("Nothing recorded on this machine yet.");
+        ui.next([
+          [
+            "hackspain watch",
+            "start reporting your AI usage to the live board",
+          ],
+        ]);
         return;
       }
       const header = [
@@ -131,12 +137,14 @@ export function registerTelemetry(program: Command): void {
         ],
         header
       );
-      ui.line("");
       ui.table(
         [...summary.byFamily].map(([k, v]) => row(k, v)),
         ["Model", "Requests", "Sessions", "Input", "Output", "Cached", "Cost"]
       );
-      ui.line("");
-      ui.info(`${summary.first} → ${summary.last}\n${spoolDir()}`);
+      ui.line(
+        c.dim(
+          `${formatWhen(Date.parse(summary.first ?? ""))} → ${formatWhen(Date.parse(summary.last ?? ""))} · ${spoolDir()}`
+        )
+      );
     });
 }

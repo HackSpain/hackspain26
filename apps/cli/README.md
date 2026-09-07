@@ -16,6 +16,7 @@ Windows: download `hackspain-windows-x64.exe` from the
 Binaries are self-contained; nothing else to install.
 
 ```
+hackspain                       # where you stand and what to do next
 hackspain auth login            # email + 8-digit code, same as the dashboard
 hackspain auth status | logout
 
@@ -43,7 +44,14 @@ hackspain --json <command>      # one JSON object on stdout, prompts disabled
 
 ## Watcher
 
-`hackspain watch` runs during the hackathon. Every 30 s it reads the local session logs of the
+`hackspain watch` is meant to stay open in its own terminal all weekend. It takes over the
+screen with a short "Keep this open" note on why it matters, a panel for you and your team, a table of the AI
+harnesses it found (status, requests, tokens, last request), organiser announcements as they
+arrive, a table of the most recent requests it reported, and a status bar with the next scan
+and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
+`--plain` use the line-by-line mode instead.
+
+Every 30 s it reads the local session logs of the
 AI coding harnesses it finds (Claude Code, Codex, OpenCode, Cline), normalises them into one
 schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
 (`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
@@ -52,8 +60,11 @@ stores them is decided server-side (the store is still being chosen), so no CLI 
 needed when that lands. `--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
 in `~/.config/hackspain/config.json` point the upload elsewhere.
 
-Every 10 s it also polls organiser broadcasts and shows them in the terminal and as a desktop
-notification (`notify-send`, macOS Notification Center, Windows toast). No prompt text or full
+On the same tick it polls organiser broadcasts and shows them in the feed and as a desktop
+notification (`notify-send`, macOS Notification Center, Windows toast). It is built to sit on a
+laptop all weekend: one wakeup per second, the screen repaints only the rows that changed, one
+network round trip per scan, and after ten minutes without new usage the scan slows to once a
+minute until activity resumes. No prompt text or full
 paths ever leave the machine; only token counts, model, session ids, and a hash of the project
 directory. By default only usage after the watcher starts is reported; `--backfill 6` includes
 the last six hours.

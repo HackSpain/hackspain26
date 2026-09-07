@@ -6,6 +6,7 @@ import { uiFor } from "../lib/output";
 import { openParticipant } from "../lib/participant";
 import { alreadySubmitted, projectArgsFrom } from "../lib/project";
 import { confirmOrFlag, pickMany, textOrFlag } from "../lib/prompts";
+import { c, highlight } from "../lib/style";
 import { renderSubmission } from "./project";
 
 const GITHUB_URL = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/;
@@ -52,19 +53,25 @@ export function registerSubmit(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const { session } = await openParticipant(ctx);
+      const mode: "draft" | "submit" = opts.draft ? "draft" : "submit";
+      ui.intro(mode === "draft" ? "submit · draft" : "submit");
 
-      const [current, tracks, settings, perks, team] = await Promise.all([
-        session.client.query(api.submissions.mine, {}),
-        session.client.query(api.tracks.list, {}),
-        session.client.query(api.tracks.settings, {}),
-        session.client.query(api.perks.listCatalog, {}),
-        session.client.query(api.teams.mine, {}),
-      ]);
+      const [current, tracks, settings, perks, team] = await ui.spin(
+        "Loading your project…",
+        () =>
+          Promise.all([
+            session.client.query(api.submissions.mine, {}),
+            session.client.query(api.tracks.list, {}),
+            session.client.query(api.tracks.settings, {}),
+            session.client.query(api.perks.listCatalog, {}),
+            session.client.query(api.teams.mine, {}),
+          ]),
+        "Loaded"
+      );
       if (current?.status === "submitted") {
         renderSubmission(ui, current);
         throw alreadySubmitted();
       }
-      const mode: "draft" | "submit" = opts.draft ? "draft" : "submit";
       if (mode === "submit" && !settings.submissionsOpen) {
         throw new CliError("Submissions are not open yet.", {
           code: "SUBMISSIONS_CLOSED",
@@ -73,9 +80,6 @@ export function registerSubmit(program: Command): void {
       }
 
       const existing = projectArgsFrom(current);
-      ui.intro(
-        mode === "draft" ? "hackspain submit --draft" : "hackspain submit"
-      );
 
       const name = await textOrFlag(ctx, opts.name, {
         flag: "--name",
@@ -182,17 +186,17 @@ export function registerSubmit(program: Command): void {
       };
 
       if (mode === "submit") {
-        ui.table([
-          ["Project", args.name],
+        ui.kv([
+          ["Project", highlight(args.name)],
           [
             "Tracks",
             trackSlugs.map((s) => bySlug.get(s)?.label ?? s).join(", "),
           ],
-          ["Repo", args.repoUrl ?? "-"],
-          ["Demo", args.demoUrl ?? "-"],
+          ["Repo", args.repoUrl ?? c.dim("–")],
+          ["Demo", args.demoUrl ?? c.dim("–")],
         ]);
         ui.warn(
-          "Submitting is final: the project cannot be edited afterwards."
+          "Submitting is final. After this the project cannot be edited."
         );
         const ok = await confirmOrFlag(ctx, opts.yes, {
           flag: "--yes",
@@ -200,16 +204,29 @@ export function registerSubmit(program: Command): void {
           initialValue: false,
         });
         if (!ok) {
-          await session.client.mutation(api.submissions.saveDraft, args);
+          await ui.spin(
+            "Saving a draft instead…",
+            () => session.client.mutation(api.submissions.saveDraft, args),
+            "Draft saved"
+          );
           ui.result({ submitted: false, savedDraft: true });
-          ui.info("Not submitted. Saved as a draft instead.");
+          ui.info(
+            "Not submitted. Your draft is safe; run `hackspain submit` when ready."
+          );
           return;
         }
       }
 
-      await session.client.mutation(
-        mode === "submit" ? api.submissions.submit : api.submissions.saveDraft,
-        args
+      await ui.spin(
+        mode === "submit" ? "Submitting…" : "Saving draft…",
+        () =>
+          session.client.mutation(
+            mode === "submit"
+              ? api.submissions.submit
+              : api.submissions.saveDraft,
+            args
+          ),
+        mode === "submit" ? "Submitted" : "Draft saved"
       );
       if (args.repoUrl && team && !team.repoUrl) {
         try {
@@ -224,10 +241,21 @@ export function registerSubmit(program: Command): void {
       if (saved) {
         renderSubmission(ui, saved);
       }
-      ui.outro(
-        mode === "submit"
-          ? "Submitted. Good luck!"
-          : "Draft saved. Run `hackspain submit` when you are ready."
-      );
+      if (mode === "submit") {
+        ui.celebrate(
+          `${highlight(args.name)} is in. That is the hard part done.`
+        );
+        ui.next([
+          ["hackspain project list", "see what everyone else shipped"],
+          ["hackspain watch", "keep the usage board live until judging"],
+        ]);
+        ui.outro("Good luck at the demo ⚡");
+      } else {
+        ui.next([
+          ["hackspain submit", "when you are ready to lock it in"],
+          ["hackspain track list", "double-check the tracks you are entering"],
+        ]);
+        ui.outro("Draft saved. Keep building.");
+      }
     });
 }

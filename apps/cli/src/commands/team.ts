@@ -6,37 +6,48 @@ import { formatMember, parseMember } from "../lib/members";
 import { formatWhen, type Ui, uiFor } from "../lib/output";
 import { openParticipant, type Team } from "../lib/participant";
 import { confirmOrFlag, pickOne } from "../lib/prompts";
+import { c, cmd, highlight } from "../lib/style";
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
 
+function roleOf(member: Team["members"][number], team: Team): string {
+  if (member.userId === team.ownerId) {
+    return c.gold("owner");
+  }
+  return member.status === "pending" ? c.dim("invited") : "member";
+}
+
 function renderTeam(ui: Ui, team: Team, myId: string): void {
   ui.result(team);
-  ui.table([
-    ["Team", team.name],
-    ["Created", formatWhen(team.createdAt)],
-    ["Repo", team.repoUrl ?? "(not set, run `hackspain team repo <url>`)"],
-    ["Stack", team.techStack.length ? team.techStack.join(", ") : "(not set)"],
-    ...(team.isOwner
-      ? [
-          [
-            "Join code",
-            team.joinCode ?? "(run `hackspain team code --regenerate`)",
-          ],
-        ]
-      : []),
+  ui.kv([
+    [
+      "Team",
+      `${highlight(team.name)} ${c.dim(`· since ${formatWhen(team.createdAt)}`)}`,
+    ],
+    ["Repo", team.repoUrl ?? c.dim("not set · hackspain team repo <url>")],
+    [
+      "Stack",
+      team.techStack.length
+        ? team.techStack.join(", ")
+        : c.dim("not set · hackspain stack set <tech…>"),
+    ],
   ]);
-  ui.line("");
   ui.table(
     team.members.map((m) => [
-      m.name ?? formatMember(m),
-      m.email ?? formatMember(m),
-      m.userId === team.ownerId ? "owner" : m.status,
-      m.userId === myId ? "(you)" : "",
+      `${m.name ?? formatMember(m)}${m.userId === myId ? c.dim(" (you)") : ""}`,
+      c.dim(m.email ?? formatMember(m)),
+      roleOf(m, team),
     ]),
-    ["Member", "Contact", "Role", ""]
+    ["Member", "Contact", "Role"]
   );
+  if (team.isOwner && team.joinCode) {
+    ui.note(
+      `${highlight(team.joinCode)}\n\nTeammates run ${cmd(`hackspain team join ${team.joinCode}`)}`,
+      "Join code"
+    );
+  }
 }
 
 function noTeam(): never {
@@ -58,7 +69,11 @@ export function registerTeam(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const { session, me } = await openParticipant(ctx);
-      const mine = await session.client.query(api.teams.mine, {});
+      const mine = await ui.spin(
+        "Fetching your team…",
+        () => session.client.query(api.teams.mine, {}),
+        "Your team"
+      );
       if (!mine) {
         noTeam();
       }
@@ -72,19 +87,27 @@ export function registerTeam(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const { session } = await openParticipant(ctx);
-      const teams = await session.client.query(api.teams.list, {});
+      const teams = await ui.spin(
+        "Fetching teams…",
+        () => session.client.query(api.teams.list, {}),
+        "Teams"
+      );
       ui.result(teams);
       if (teams.length === 0) {
-        ui.info("No teams yet.");
+        ui.info("No teams yet. Be the first: hackspain team create <name>.");
         return;
       }
       ui.table(
         teams.map((t) => [
-          t.isMine ? `${t.name} (you)` : t.name,
-          `${t.memberCount}${t.pendingCount ? ` +${t.pendingCount} pending` : ""}`,
-          t.tracks.map((x) => x.slug).join(", ") || "-",
-          t.submissionStatus ?? "-",
-          t.repoUrl ?? "-",
+          t.isMine ? `${highlight(t.name)}${c.dim(" (you)")}` : t.name,
+          `${t.memberCount}${t.pendingCount ? c.dim(` +${t.pendingCount} invited`) : ""}`,
+          t.tracks.map((x) => x.slug).join(", ") || c.dim("–"),
+          t.submissionStatus === "submitted"
+            ? c.green("submitted")
+            : (t.submissionStatus ?? c.dim("–")),
+          t.repoUrl
+            ? c.dim(t.repoUrl.replace("https://github.com/", ""))
+            : c.dim("–"),
         ]),
         ["Team", "Members", "Tracks", "Project", "Repo"]
       );
@@ -105,15 +128,26 @@ export function registerTeam(program: Command): void {
         const ui = uiFor(ctx);
         const { session, me } = await openParticipant(ctx);
         const members = opts.member.map(parseMember);
-        await session.client.mutation(api.teams.create, { name, members });
-        const mine = await session.client.query(api.teams.mine, {});
+        ui.intro("team create");
+        const mine = await ui.spin(
+          `Creating ${name}…`,
+          async () => {
+            await session.client.mutation(api.teams.create, { name, members });
+            return await session.client.query(api.teams.mine, {});
+          },
+          "Team created"
+        );
         if (!mine) {
           throw new CliError("Team was created but could not be read back.");
         }
+        ui.celebrate(`${highlight(mine.name)} is live and you own it.`);
         renderTeam(ui, mine, me._id);
-        ui.outro(
-          `Share the join code ${mine.joinCode ?? ""} with your teammates: \`hackspain team join ${mine.joinCode ?? "<code>"}\``
-        );
+        ui.next([
+          ["hackspain team repo <url>", "point organisers at your GitHub repo"],
+          ["hackspain track list", "choose the tracks you are entering"],
+          ["hackspain stack set <tech…>", "brag about your stack"],
+        ]);
+        ui.outro("Now go find your teammates.");
       }
     );
 
@@ -124,13 +158,25 @@ export function registerTeam(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const { session, me } = await openParticipant(ctx);
-      await session.client.mutation(api.teams.join, { code });
-      const mine = await session.client.query(api.teams.mine, {});
+      ui.intro("team join");
+      const mine = await ui.spin(
+        "Joining…",
+        async () => {
+          await session.client.mutation(api.teams.join, { code });
+          return await session.client.query(api.teams.mine, {});
+        },
+        "Joined"
+      );
       if (!mine) {
         throw new CliError("Joined, but the team could not be read back.");
       }
+      ui.celebrate(`You are in ${highlight(mine.name)}. Welcome aboard.`);
       renderTeam(ui, mine, me._id);
-      ui.success(`You are now in ${mine.name}.`);
+      ui.next([
+        ["hackspain", "see where the team stands"],
+        ["hackspain watch", "start reporting your usage to the live board"],
+      ]);
+      ui.outro("Go build.");
     });
 
   team
@@ -195,8 +241,13 @@ export function registerTeam(program: Command): void {
         });
       }
       ui.result({ code, regenerated: Boolean(opts.regenerate) });
-      ui.line(code);
-      ui.info(`Teammates join with: hackspain team join ${code}`);
+      if (opts.regenerate) {
+        ui.success("New code minted; the old one no longer works.");
+      }
+      ui.note(
+        `${highlight(code)}\n\nTeammates run ${cmd(`hackspain team join ${code}`)}`,
+        "Join code"
+      );
     });
 
   team

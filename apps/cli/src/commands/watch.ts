@@ -1,11 +1,15 @@
+import { note } from "@clack/prompts";
 import type { Command } from "commander";
 import { api, openSession } from "../lib/api";
 import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
 import { requireOnboarded } from "../lib/me";
-import { uiFor } from "../lib/output";
+import { firstName, uiFor } from "../lib/output";
+import { c } from "../lib/style";
 import { acquireWatchLock, runWatch } from "../watcher";
+import { startScreen, summaryLines } from "../watcher/screen";
+import { createState } from "../watcher/state";
 
 type WatchFlags = {
   once?: boolean;
@@ -15,6 +19,7 @@ type WatchFlags = {
   upload: boolean;
   sinkUrl?: string;
   verbose?: boolean;
+  plain?: boolean;
 };
 
 function positiveNumber(flag: string, raw: string): number {
@@ -29,7 +34,7 @@ export function registerWatch(program: Command): void {
   program
     .command("watch")
     .description(
-      "Run in the background during the hackathon: reports AI-harness usage and shows organiser messages"
+      "Keep this open during the hackathon: live usage board and organiser messages"
     )
     .option("--once", "scan once, flush, and exit")
     .option("-i, --interval <seconds>", "seconds between scans", "30")
@@ -43,6 +48,7 @@ export function registerWatch(program: Command): void {
       "--sink-url <url>",
       "upload NDJSON batches here instead of the dashboard (config telemetry.url also works)"
     )
+    .option("--plain", "line-by-line output instead of the full-screen view")
     .option("--verbose", "log every scan, even empty ones")
     .action(async (flags: WatchFlags, command: Command) => {
       const ctx = contextFor(command);
@@ -54,8 +60,85 @@ export function registerWatch(program: Command): void {
 
       const session = await openSession(ctx, { requireAuth: true });
       const me = await requireOnboarded(session);
-      const team = await session.client.query(api.teams.mine, {});
+      const [team, submission] = await Promise.all([
+        session.client.query(api.teams.mine, {}),
+        session.client.query(api.submissions.mine, {}),
+      ]);
       const releaseLock = acquireWatchLock();
+      const uploadUrl = flags.upload
+        ? (flags.sinkUrl ??
+          readConfig().telemetry?.url ??
+          `${session.url}/api/cli/telemetry`)
+        : undefined;
+      const fullScreen =
+        !(ctx.json || flags.once || flags.plain) &&
+        Boolean(process.stdout.isTTY);
+
+      const options = {
+        once: Boolean(flags.once),
+        intervalMs,
+        since: Date.now() - backfillMs,
+        toast: flags.toast,
+        uploadUrl,
+        verbose: Boolean(flags.verbose),
+      };
+
+      if (fullScreen) {
+        const state = createState({
+          me: { name: firstName(me.name, me.email), email: me.email },
+          team: team
+            ? {
+                name: team.name,
+                isOwner: team.isOwner,
+                repoUrl: team.repoUrl,
+                members: team.members.length,
+              }
+            : undefined,
+          project: submission
+            ? {
+                name: submission.name,
+                status: submission.status,
+                tracks: submission.challenges.map((x) => x.label),
+                updatedAt: submission.updatedAt,
+              }
+            : undefined,
+          uploadEnabled: Boolean(uploadUrl),
+        });
+        const screen = startScreen(state, {
+          intervalMs,
+          onQuit: () => {
+            state.stopRequested = true;
+            state.wake?.();
+          },
+          onTogglePause: () => {
+            state.paused = !state.paused;
+            state.wake?.();
+          },
+        });
+        try {
+          await runWatch(options, {
+            session,
+            me,
+            teamId: team?._id,
+            state,
+            log: () => undefined,
+            say: () => undefined,
+            announce: () => process.stdout.write("\x07"),
+          });
+        } finally {
+          screen.stop();
+          releaseLock();
+        }
+        console.log();
+        ui.intro("watch");
+        for (const line of summaryLines(state)) {
+          ui.line(line);
+        }
+        ui.outro("Thanks for keeping it running. Run it again any time.");
+        process.exitCode = 0;
+        return;
+      }
+
       const say = (message: string) => {
         if (ctx.json) {
           console.log(
@@ -70,26 +153,40 @@ export function registerWatch(program: Command): void {
           process.stderr.write(`${message}\n`);
         }
       };
-      const uploadUrl = flags.upload
-        ? (flags.sinkUrl ??
-          readConfig().telemetry?.url ??
-          `${session.url}/api/cli/telemetry`)
-        : undefined;
+      const announce = (subject: string, body: string, at: number) => {
+        if (ctx.json) {
+          console.log(
+            JSON.stringify({ event: "notification", subject, body, at })
+          );
+          return;
+        }
+        process.stdout.write("\x07");
+        note(
+          body,
+          `📣 ${c.bold(subject)} ${c.dim(`· organisers · ${new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`)}`
+        );
+      };
       try {
         ui.intro(
-          `hackspain watch ${flags.once ? "(once)" : `every ${flags.interval}s`}`
+          flags.once
+            ? "watch · once"
+            : `watch ${c.dim(`· every ${flags.interval}s · Ctrl+C to stop`)}`
         );
-        const code = await runWatch(
-          {
-            once: Boolean(flags.once),
-            intervalMs,
-            since: Date.now() - backfillMs,
-            toast: flags.toast,
-            uploadUrl,
-            verbose: Boolean(flags.verbose),
-          },
-          { session, me, teamId: team?._id, log, say }
-        );
+        if (!flags.once) {
+          ui.line(
+            c.dim(
+              `Hi ${firstName(me.name, me.email)}. Leave this running: your AI usage feeds the live board${team ? ` for ${team.name}` : ""}, and organiser messages show up here.`
+            )
+          );
+        }
+        const code = await runWatch(options, {
+          session,
+          me,
+          teamId: team?._id,
+          log,
+          say,
+          announce,
+        });
         process.exitCode = code;
       } finally {
         releaseLock();
