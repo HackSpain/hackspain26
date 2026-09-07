@@ -8,6 +8,7 @@ import {
   writeFileAtomic,
 } from "../lib/config";
 import { CliError, EXIT } from "../lib/errors";
+import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
 import { VERSION } from "../version";
 import { type Batcher, createBatcher } from "./batcher";
@@ -337,6 +338,21 @@ export async function runWatch(
     }
   };
 
+  /** Latest feed posts for the board; nothing to do in line mode. */
+  const pollFeed = async (): Promise<void> => {
+    if (!state) {
+      return;
+    }
+    try {
+      state.feed = withImageUrls(
+        await session.client.query(api.feed.list, { limit: 15 }),
+        session.url
+      );
+    } catch (err) {
+      log(`feed: ${String(err)}`);
+    }
+  };
+
   let stopping = false;
   const stop = () => {
     stopping = true;
@@ -403,6 +419,7 @@ export async function runWatch(
         startedAt
       );
     await pollNotifications();
+    await pollFeed();
     let nextScan = Date.now() + interval();
     if (state) {
       state.nextScanAt = nextScan;
@@ -419,6 +436,7 @@ export async function runWatch(
             lastEventAt = Date.now();
           }
           await pollNotifications();
+          await pollFeed();
           nextScan = Date.now() + interval();
         }
         if (state) {

@@ -1,4 +1,5 @@
 import { WORDMARK_WIDTH, wordmarkRows } from "../lib/banner";
+import { postLines } from "../lib/feed-format";
 import { compactNumber, formatAgo, renderTable } from "../lib/output";
 import { c, colorEnabled, stripAnsi, width } from "../lib/style";
 import type { WatchState } from "./state";
@@ -248,33 +249,36 @@ function harnessesBox(
 }
 
 function recentBox(state: WatchState, w: number, h: number): string[] {
-  const rows = state.recent
-    .slice(0, Math.max(0, h - 2))
-    .map((r) => [
+  // Narrow boxes drop the harness and session columns so the model and
+  // token counts stay readable.
+  const compact = w < 80;
+  const rows = state.recent.slice(0, Math.max(0, h - 2)).map((r) => {
+    const cells = [
       c.dim(clockSeconds(r.at)),
-      HARNESS_NAMES[r.harness] ?? r.harness,
       r.model,
       compactNumber(r.input),
       compactNumber(r.output),
       compactNumber(r.cached),
-      c.dim(r.sessionId.slice(0, 8)),
-    ]);
+    ];
+    return compact
+      ? cells
+      : [
+          cells[0] ?? "",
+          HARNESS_NAMES[r.harness] ?? r.harness,
+          ...cells.slice(1),
+          c.dim(r.sessionId.slice(0, 8)),
+        ];
+  });
+  const headers = compact
+    ? ["Time", "Model", "In", "Out", "Cached"]
+    : ["Time", "Harness", "Model", "In", "Out", "Cached", "Session"];
   const lines =
     rows.length === 0
-      ? [
-          c.dim(
-            "Nothing reported yet. Use your AI tool and the next scan will list the requests here."
-          ),
-        ]
-      : renderTable(rows, [
-          "Time",
-          "Harness",
-          "Model",
-          "In",
-          "Out",
-          "Cached",
-          "Session",
-        ]).split("\n");
+      ? wrap(
+          "Nothing reported yet. Use your AI tool and the next scan will list the requests here.",
+          w - 4
+        ).map((l) => c.dim(l))
+      : renderTable(rows, headers).split("\n");
   return box(
     { title: "Recent requests", subtitle: "newest first", height: h },
     lines,
@@ -315,6 +319,50 @@ function organisersBox(
     {
       title: "📣 Organisers",
       subtitle: `${state.notifications.length} message${state.notifications.length === 1 ? "" : "s"}`,
+      accent: fresh ? GOLD : TEAL,
+      height: h,
+    },
+    lines,
+    w
+  );
+}
+
+function feedBox(
+  state: WatchState,
+  now: number,
+  w: number,
+  h: number
+): string[] {
+  const inner = w - 4;
+  const lines: string[] = [];
+  if (state.feed.length === 0) {
+    lines.push(c.dim("Quiet so far."));
+    lines.push(
+      ...wrap(
+        'Posts from everyone and pushes from every team repo land here. Try: hackspain post "we are alive"',
+        inner
+      ).map((l) => c.dim(l))
+    );
+  }
+  for (const post of state.feed) {
+    const [head, ...rest] = postLines(post, now);
+    const block = [
+      ...(head ? [fit(head, inner)] : []),
+      ...rest.flatMap((line) =>
+        wrap(line.trim(), inner - 3).map((l) => `   ${l}`)
+      ),
+    ];
+    // Whole posts only: a header with its text cut off reads as a bug.
+    if (lines.length > 0 && lines.length + block.length > h) {
+      break;
+    }
+    lines.push(...block);
+  }
+  const fresh = state.feed[0] && now - state.feed[0].createdAt < 60 * 1000;
+  return box(
+    {
+      title: "Feed",
+      subtitle: "everyone · newest first",
       accent: fresh ? GOLD : TEAL,
       height: h,
     },
@@ -434,37 +482,41 @@ export function frame(
       you = [];
       rest = available - explainer.length - harnesses.length;
     }
-    const feedH = Math.max(1, Math.min(8, rest - 2));
-    const recentH = rest - feedH - 2 - 2;
+    // Announcements get a few rows; the feed takes what is left.
+    const announceH = Math.max(1, Math.min(5, Math.floor((rest - 4) / 3)));
+    const feedH = Math.max(1, rest - announceH - 4);
     lines.push(...explainer, ...you, ...harnesses);
-    lines.push(...organisersBox(state, now, w, feedH));
-    if (recentH >= 4) {
-      lines.push(...recentBox(state, w, recentH));
-    }
+    lines.push(...organisersBox(state, now, w, announceH));
+    lines.push(...feedBox(state, now, w, feedH));
   } else {
-    // Wide: explainer across the top, then you + harnesses beside the feed,
-    // then recent requests across the bottom when there is room.
+    // Wide: explainer across the top; you + harnesses on the left beside
+    // announcements + recent requests; the feed across the bottom so links
+    // and posts get the full width.
     const explainer = explainerBox(state, w, available < 30);
-    const leftW = Math.max(48, Math.floor(w * 0.55));
+    const leftW = Math.max(58, Math.floor(w * 0.55));
     const rightW = w - leftW;
     const lower = available - explainer.length;
     const you = youBox(state, leftW);
-    const columnsH = Math.max(
-      you.length + harnessRows + 2,
-      lower >= 26 ? Math.floor(lower * 0.55) : lower
-    );
+    // Columns take just over half the rows; the feed gets the rest, unless
+    // that rest would be too short to show a single post.
+    const minColumnsH = you.length + harnessRows + 2;
+    let columnsH = Math.max(minColumnsH, Math.floor(lower * 0.55));
+    if (lower - columnsH - 2 < 4) {
+      columnsH = lower;
+    }
     const harnessH = Math.max(harnessRows, columnsH - you.length - 2);
     const left = [...you, ...harnessesBox(state, now, leftW, harnessH)];
-    const right = organisersBox(
-      state,
-      now,
-      rightW,
-      Math.max(1, left.length - 2)
-    );
+    const rightRows = left.length;
+    const announceH = Math.max(2, Math.min(6, Math.floor(rightRows / 3)));
+    const recentH = Math.max(1, rightRows - announceH - 4);
+    const right = [
+      ...organisersBox(state, now, rightW, announceH),
+      ...recentBox(state, rightW, recentH),
+    ];
     lines.push(...explainer, ...columns(left, leftW, right));
-    const recentH = lower - left.length - 2;
-    if (recentH >= 4) {
-      lines.push(...recentBox(state, w, recentH));
+    const feedH = lower - left.length - 2;
+    if (feedH >= 2) {
+      lines.push(...feedBox(state, now, w, feedH));
     }
   }
 

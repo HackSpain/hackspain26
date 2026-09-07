@@ -19,6 +19,7 @@ import { describeGate, fetchMe } from "../lib/me";
 import { firstName, formatWhen, uiFor } from "../lib/output";
 import { textOrFlag } from "../lib/prompts";
 import { c, highlight } from "../lib/style";
+import { completeProfile } from "./profile";
 
 const CODE_PATTERN = /^\d{8}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -123,6 +124,9 @@ export function registerAuth(program: Command): void {
           return;
         }
         ui.celebrate(`Welcome, ${highlight(firstName(me?.name, email))}!`);
+        if (me) {
+          await completeProfile(ctx, ui, session, me);
+        }
         if (gate && gate.state !== "ready" && gate.state !== "admin") {
           ui.warn(gate.message);
           if (gate.hint) {

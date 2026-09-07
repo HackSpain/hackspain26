@@ -5,10 +5,13 @@ import {
 } from "@convex-dev/auth/nextjs/server";
 
 // /api/cli/* authenticates with a bearer token, not the cookie session.
+// /api/files/* accepts either and does its own redirect, so image links from
+// the CLI work in a browser.
 const isPublicRoute = createRouteMatcher([
   "/login",
   "/api/login-check",
   "/api/cli(.*)",
+  "/api/files(.*)",
 ]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {

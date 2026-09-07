@@ -9,6 +9,7 @@ import {
 import { meValidator, signupPublicValidator } from "./lib/validators";
 import { defaultedAttendance } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";
+import { fail } from "./lib/errors";
 import { parseEventDetails } from "./lib/eventDetails";
 import { normalizeGithub, normalizeTwitter } from "./lib/normalize";
 import { urlOf, urlsFromRecord } from "./lib/urls";
@@ -24,10 +25,13 @@ export async function resolvePendingInvites(
   githubUsername: string | undefined,
   twitterHandle: string | undefined,
 ): Promise<void> {
-  const candidates: Array<{ type: "email" | "github" | "twitter"; value: string }> =
-    [];
+  const candidates: Array<{
+    type: "email" | "github" | "twitter";
+    value: string;
+  }> = [];
   if (email) candidates.push({ type: "email", value: email });
-  if (githubUsername) candidates.push({ type: "github", value: githubUsername });
+  if (githubUsername)
+    candidates.push({ type: "github", value: githubUsername });
   if (twitterHandle) candidates.push({ type: "twitter", value: twitterHandle });
 
   const matches: Array<Doc<"teamMembers">> = [];
@@ -35,7 +39,9 @@ export async function resolvePendingInvites(
     const rows = await ctx.db
       .query("teamMembers")
       .withIndex("by_identifier", (q) =>
-        q.eq("identifierType", candidate.type).eq("identifier", candidate.value),
+        q
+          .eq("identifierType", candidate.type)
+          .eq("identifier", candidate.value),
       )
       .collect();
     for (const row of rows) {
@@ -161,6 +167,19 @@ export const attachAfterLogin = authedMutation({
       signup?.twitterHandle ?? (xUrl ? normalizeTwitter(xUrl) : undefined),
     );
     return null;
+  },
+});
+
+export const setName = authedMutation({
+  args: { name: v.string() },
+  returns: v.string(),
+  handler: async (ctx, args) => {
+    const name = args.name.trim().replace(/\s+/g, " ");
+    if (name.length < 2 || name.length > 80) {
+      fail("VALIDATION", "El nombre debe tener entre 2 y 80 caracteres");
+    }
+    await ctx.db.patch(ctx.user._id, { name });
+    return name;
   },
 });
 

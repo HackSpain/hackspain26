@@ -1,8 +1,5 @@
 import { v } from "convex/values";
-import {
-  onboardedMutation,
-  onboardedQuery,
-} from "./lib/customFunctions";
+import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
 import {
   identifierTypeValidator,
   teamMemberStatusValidator,
@@ -63,7 +60,10 @@ export function normalizeTechStack(raw: string[]): string[] {
     const tech = entry.trim().toLowerCase();
     if (!tech) continue;
     if (tech.length > MAX_TECH_LENGTH) {
-      fail("VALIDATION", `"${entry.trim()}" supera ${MAX_TECH_LENGTH} caracteres`);
+      fail(
+        "VALIDATION",
+        `"${entry.trim()}" supera ${MAX_TECH_LENGTH} caracteres`,
+      );
     }
     seen.add(tech);
   }
@@ -143,7 +143,9 @@ async function resolveIdentifier(
         ? normalizeGithub(raw)
         : normalizeTwitter(raw);
   if (!identifier) {
-    throw new Error("Introduce un usuario de GitHub, un handle de X o un email válido");
+    throw new Error(
+      "Introduce un usuario de GitHub, un handle de X o un email válido",
+    );
   }
 
   let signup: Doc<"signups"> | null = null;
@@ -275,7 +277,9 @@ async function insertMember(
   const already = await ctx.db
     .query("teamMembers")
     .withIndex("by_identifier", (q) =>
-      q.eq("identifierType", identifierType).eq("identifier", resolved.identifier),
+      q
+        .eq("identifierType", identifierType)
+        .eq("identifier", resolved.identifier),
     )
     .collect();
   const onThisTeam = already.find((row) => row.teamId === team._id);
@@ -324,7 +328,8 @@ export const create = onboardedMutation({
   returns: v.id("teams"),
   handler: async (ctx, args) => {
     const name = args.name.trim();
-    if (name.length < 2) throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
+    if (name.length < 2)
+      throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
     const existing = await membershipForUser(ctx, ctx.user._id);
     if (existing) throw new Error("Ya perteneces a un equipo");
 
@@ -369,9 +374,11 @@ export const rename = onboardedMutation({
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
     if (!team) throw new Error("Equipo no encontrado");
-    if (team.ownerId !== ctx.user._id) throw new Error("Solo el dueño puede cambiar el nombre");
+    if (team.ownerId !== ctx.user._id)
+      throw new Error("Solo el dueño puede cambiar el nombre");
     const name = args.name.trim();
-    if (name.length < 2) throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
+    if (name.length < 2)
+      throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
     await ctx.db.patch(team._id, { name, updatedAt: Date.now() });
     return null;
   },
@@ -453,10 +460,15 @@ async function clearPendingInvites(
     type: "email" | "github" | "twitter";
     value: string | undefined;
   }> = [
-    { type: "email", value: user.email ? normalizeEmail(user.email) : undefined },
+    {
+      type: "email",
+      value: user.email ? normalizeEmail(user.email) : undefined,
+    },
     {
       type: "github",
-      value: user.githubUsername ? normalizeGithub(user.githubUsername) : undefined,
+      value: user.githubUsername
+        ? normalizeGithub(user.githubUsername)
+        : undefined,
     },
   ];
   for (const { type, value } of identifiers) {
@@ -542,14 +554,25 @@ export const setRepoUrl = onboardedMutation({
   handler: async (ctx, args) => {
     const team = await requireMemberTeam(ctx);
     if (args.url === null || args.url.trim() === "") {
-      await ctx.db.patch(team._id, { repoUrl: undefined, updatedAt: Date.now() });
+      await ctx.db.patch(team._id, {
+        repoUrl: undefined,
+        githubEtag: undefined,
+        updatedAt: Date.now(),
+      });
       return null;
     }
     const repoUrl = normalizeRepoUrl(args.url);
     if (!repoUrl) {
-      fail("VALIDATION", "Introduce una URL de repositorio de GitHub (https://github.com/org/repo)");
+      fail(
+        "VALIDATION",
+        "Introduce una URL de repositorio de GitHub (https://github.com/org/repo)",
+      );
     }
-    await ctx.db.patch(team._id, { repoUrl, updatedAt: Date.now() });
+    await ctx.db.patch(team._id, {
+      repoUrl,
+      githubEtag: repoUrl === team.repoUrl ? team.githubEtag : undefined,
+      updatedAt: Date.now(),
+    });
     return repoUrl;
   },
 });
@@ -624,7 +647,10 @@ export const dissolve = onboardedMutation({
       .withIndex("by_team", (q) => q.eq("teamId", team._id))
       .first();
     if (submission?.status === "submitted") {
-      fail("VALIDATION", "El equipo ya ha enviado un proyecto y no se puede disolver");
+      fail(
+        "VALIDATION",
+        "El equipo ya ha enviado un proyecto y no se puede disolver",
+      );
     }
     if (submission) {
       await ctx.db.delete(submission._id);
@@ -635,6 +661,17 @@ export const dissolve = onboardedMutation({
       .collect();
     for (const milestone of milestones) {
       await ctx.db.delete(milestone._id);
+    }
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_team", (q) => q.eq("teamId", team._id))
+      .collect();
+    for (const post of posts) {
+      if (post.kind === "github") {
+        await ctx.db.delete(post._id);
+      } else {
+        await ctx.db.patch(post._id, { teamId: undefined });
+      }
     }
     for (const member of members) {
       await ctx.db.delete(member._id);
