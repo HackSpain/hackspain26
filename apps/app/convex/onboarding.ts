@@ -21,7 +21,7 @@ function twilioEnv(): { config: TwilioConfig | null; partial: boolean } {
   const token = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_FROM_NUMBER;
   if (sid && token && from) {
-    return { config: { sid, token, from }, partial: false };
+    return { config: { from, sid, token }, partial: false };
   }
   return { config: null, partial: Boolean(sid || token || from) };
 }
@@ -32,7 +32,7 @@ function requireTwilio(): TwilioConfig {
     throw new Error(
       partial
         ? "Twilio is partially configured: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER together"
-        : "Twilio is not configured",
+        : "Twilio is not configured"
     );
   }
   return config;
@@ -40,6 +40,24 @@ function requireTwilio(): TwilioConfig {
 
 export const status = acceptedQuery({
   args: {},
+  handler: async (ctx) => {
+    const signup = await getSignupForUser(ctx, ctx.user);
+    return {
+      phone: ctx.user.phone,
+      phoneConfirmed: ctx.user.phoneConfirmed,
+      notificationConsent: ctx.user.notificationConsent,
+      attendanceStatus: defaultedAttendance(
+        ctx.user.attendanceStatus,
+        ctx.user.onboardingComplete || ctx.user.role === "admin"
+      ),
+      dietaryRestrictions:
+        ctx.user.dietaryRestrictions ?? signup?.dietaryRestrictions,
+      dietaryDetails: ctx.user.dietaryDetails ?? signup?.dietaryDetails,
+      travelOrigin: ctx.user.travelOrigin,
+      onboardingComplete: ctx.user.onboardingComplete,
+      smsConfigured: twilioEnv().config !== null,
+    };
+  },
   returns: v.object({
     phone: v.optional(v.string()),
     phoneConfirmed: v.boolean(),
@@ -51,42 +69,22 @@ export const status = acceptedQuery({
     onboardingComplete: v.boolean(),
     smsConfigured: v.boolean(),
   }),
-  handler: async (ctx) => {
-    const signup = await getSignupForUser(ctx, ctx.user);
-    return {
-      phone: ctx.user.phone,
-      phoneConfirmed: ctx.user.phoneConfirmed,
-      notificationConsent: ctx.user.notificationConsent,
-      attendanceStatus: defaultedAttendance(
-        ctx.user.attendanceStatus,
-        ctx.user.onboardingComplete || ctx.user.role === "admin",
-      ),
-      dietaryRestrictions:
-        ctx.user.dietaryRestrictions ?? signup?.dietaryRestrictions,
-      dietaryDetails: ctx.user.dietaryDetails ?? signup?.dietaryDetails,
-      travelOrigin: ctx.user.travelOrigin,
-      onboardingComplete: ctx.user.onboardingComplete,
-      smsConfigured: twilioEnv().config !== null,
-    };
-  },
 });
 
 export const requestPhoneCode = acceptedMutation({
   args: { phone: v.string() },
-  returns: v.object({
-    delivery: v.union(v.literal("sms"), v.literal("stub")),
-    debugCode: v.optional(v.string()),
-  }),
   handler: async (ctx, args) => {
     const phone = normalizePhone(args.phone);
     if (!phone) {
-      throw new Error("Introduce un teléfono válido en formato E.164, como +34600111222");
+      throw new Error(
+        "Introduce un teléfono válido en formato E.164, como +34600111222"
+      );
     }
 
     const twilio = twilioEnv();
     if (twilio.partial) {
       throw new Error(
-        "Twilio is partially configured: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER together",
+        "Twilio is partially configured: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER together"
       );
     }
     const stubAllowed = process.env.ALLOW_PHONE_STUB === "true";
@@ -123,11 +121,14 @@ export const requestPhoneCode = acceptedMutation({
     console.log(`[phone] Stub OTP for ${phone}: ${code}`);
     return { delivery: "stub" as const, debugCode: code };
   },
+  returns: v.object({
+    delivery: v.union(v.literal("sms"), v.literal("stub")),
+    debugCode: v.optional(v.string()),
+  }),
 });
 
 export const sendPhoneCode = internalAction({
-  args: { to: v.string(), code: v.string() },
-  returns: v.null(),
+  args: { code: v.string(), to: v.string() },
   handler: async (_ctx, args) => {
     const twilio = requireTwilio();
     const response = await fetch(
@@ -143,7 +144,7 @@ export const sendPhoneCode = internalAction({
           From: twilio.from,
           Body: `Your HackSpain confirmation code is ${args.code}. It expires in 10 minutes.`,
         }).toString(),
-      },
+      }
     );
     if (!response.ok) {
       const detail = await response.text();
@@ -151,23 +152,20 @@ export const sendPhoneCode = internalAction({
     }
     return null;
   },
+  returns: v.null(),
 });
 
 export const verifyFailureValidator = v.union(
   v.literal("no_challenge"),
   v.literal("expired"),
   v.literal("too_many_attempts"),
-  v.literal("incorrect"),
+  v.literal("incorrect")
 );
 
 // Failures are returned (not thrown) so the attempt counter and challenge
 // deletes commit — Convex rolls back all writes when a mutation throws.
 export const verifyPhoneCode = acceptedMutation({
   args: { code: v.string() },
-  returns: v.union(
-    v.object({ ok: v.literal(true) }),
-    v.object({ ok: v.literal(false), reason: verifyFailureValidator }),
-  ),
   handler: async (ctx, args) => {
     const challenge = await ctx.db
       .query("phoneChallenges")
@@ -186,7 +184,7 @@ export const verifyPhoneCode = acceptedMutation({
     }
 
     const expected = await sha256Hex(
-      `${ctx.user._id}:${challenge.phone}:${args.code.trim()}`,
+      `${ctx.user._id}:${challenge.phone}:${args.code.trim()}`
     );
     if (expected !== challenge.codeHash) {
       const attempts = challenge.attempts + 1;
@@ -206,15 +204,18 @@ export const verifyPhoneCode = acceptedMutation({
     await ctx.db.delete(challenge._id);
     return { ok: true as const };
   },
+  returns: v.union(
+    v.object({ ok: v.literal(true) }),
+    v.object({ ok: v.literal(false), reason: verifyFailureValidator })
+  ),
 });
 
 export const confirmDetails = acceptedMutation({
   args: {
-    travelOrigin: v.string(),
-    termsAccepted: v.boolean(),
     consent: v.boolean(),
+    termsAccepted: v.boolean(),
+    travelOrigin: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     if (!ctx.user.phoneConfirmed) {
       throw new Error("Confirma el teléfono primero");
@@ -247,4 +248,5 @@ export const confirmDetails = acceptedMutation({
     });
     return null;
   },
+  returns: v.null(),
 });

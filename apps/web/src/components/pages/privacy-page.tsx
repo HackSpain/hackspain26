@@ -16,13 +16,12 @@ const PRIVACY: {
   goodFaithBody: string;
   sections: PrivacySection[];
 } = {
-  pageTitle: "Política de privacidad",
-  updatedLine: "Última actualización: 29 de julio de 2026",
   disclaimer:
     "Esta información se ofrece con fines de transparencia y no sustituye asesoramiento jurídico. La **Asociación HackSpain** puede actualizar este documento; la fecha indicada arriba cambiará cuando lo hagamos.",
-  goodFaithTitle: "Buena fe",
   goodFaithBody:
     "La **Asociación HackSpain** se compromete a actuar en todo momento de **buena fe** hacia participantes, patrocinadores y colaboradores cuando tratamos datos personales y organizamos HackSpain. Todo lo recogido en esta política de privacidad está redactado y debe interpretarse y aplicarse de **buena fe**, con intención honesta, equidad y proporcionalidad, junto con el cumplimiento estricto de la ley.",
+  goodFaithTitle: "Buena fe",
+  pageTitle: "Política de privacidad",
   sections: [
     {
       id: "controller",
@@ -113,6 +112,7 @@ const PRIVACY: {
       ],
     },
   ],
+  updatedLine: "Última actualización: 29 de julio de 2026",
 };
 
 export function PrivacyPage() {

@@ -15,20 +15,22 @@ import type { ShortlistParticipant } from "../lib/shortlist-types";
 
 const password = shortlistPassword();
 const configured = password !== null;
-const expectedToken = configured ? await shortlistExpectedToken(password) : null;
+const expectedToken = configured
+  ? await shortlistExpectedToken(password)
+  : null;
 
 let loginError = false;
 
-if (configured && Astro.request.method === "POST") {
+if (configured && expectedToken !== null && Astro.request.method === "POST") {
   const form = await Astro.request.formData();
   const attempt = form.get("password");
   if (typeof attempt === "string" && attempt === password) {
-    Astro.cookies.set(SHORTLIST_COOKIE_NAME, expectedToken!, {
+    Astro.cookies.set(SHORTLIST_COOKIE_NAME, expectedToken, {
       httpOnly: true,
+      maxAge: 60 * 60 * 24 * 14,
+      path: "/",
       sameSite: "strict",
       secure: import.meta.env.PROD,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 14,
     });
     return Astro.redirect("/shortlist", 303);
   }
@@ -66,64 +68,62 @@ if (authorized) {
     <title>Shortlist · HackSpain internal</title>
   </head>
   <body>
-    {
-      authorized ? (
+    {authorized ? (
         <ShortlistPage
-          client:load
           initialLoadError={initialLoadError}
           initialParticipants={initialParticipants}
+          client:load
         />
       ) : (
         <div class="sl-gate">
           <div class="sl-gate-card">
             <h1>Shortlist</h1>
             <p>Internal applicant review. Enter the team password to continue.</p>
-            {!configured ? (
-              <p class="sl-gate-error">
-                SHORTLIST_PASSWORD is not configured on the server.
-              </p>
-            ) : (
+            {configured ? (
               <form method="post">
                 {loginError ? (
                   <p class="sl-gate-error">Wrong password.</p>
                 ) : null}
                 <input
-                  type="password"
-                  name="password"
-                  required
-                  autofocus
                   autocomplete="current-password"
+                  autofocus
+                  name="password"
                   placeholder="Password"
+                  required
+                  type="password"
                 />
                 <button type="submit">Enter</button>
               </form>
+            ) : (
+              <p class="sl-gate-error">
+                SHORTLIST_PASSWORD is not configured on the server.
+              </p>
             )}
           </div>
         </div>
-      )
-    }
+      )}
   </body>
 </html>
 
 <style>
   .sl-gate {
-    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 100dvh;
     padding: 1rem;
-    background: #f4ecd8;
     font-family: "DM Sans", system-ui, sans-serif;
     color: #1b2430;
+    background: #f4ecd8;
   }
 
   .sl-gate-card {
     width: 100%;
     max-width: 22rem;
+    padding: 1.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.9);
     border: 1px solid rgba(74, 44, 31, 0.1);
     border-radius: 0.75rem;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 1.75rem 1.5rem;
   }
 
   .sl-gate-card h1 {
@@ -141,12 +141,12 @@ if (authorized) {
   }
 
   .sl-gate-error {
-    margin-top: 1rem !important;
-    border-radius: 0.5rem;
-    background: rgba(196, 64, 48, 0.1);
     padding: 0.5rem 0.75rem;
+    margin-top: 1rem !important;
     font-weight: 600;
     color: #c44030 !important;
+    background: rgba(196, 64, 48, 0.1);
+    border-radius: 0.5rem;
   }
 
   .sl-gate-card form {
@@ -157,21 +157,21 @@ if (authorized) {
 
   .sl-gate-card input {
     width: 100%;
-    border: 1px solid rgba(74, 44, 31, 0.12);
-    border-radius: 0.5rem;
-    background: #fff;
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
+    background: #fff;
+    border: 1px solid rgba(74, 44, 31, 0.12);
+    border-radius: 0.5rem;
   }
 
   .sl-gate-card button {
-    border: 0;
-    border-radius: 0.5rem;
-    background: #1b2a4a;
-    color: #fff;
     padding: 0.5rem 0.75rem;
     font-size: 0.8125rem;
     font-weight: 600;
+    color: #fff;
     cursor: pointer;
+    background: #1b2a4a;
+    border: 0;
+    border-radius: 0.5rem;
   }
 </style>

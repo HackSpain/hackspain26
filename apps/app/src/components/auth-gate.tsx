@@ -14,9 +14,15 @@ function destination(me: {
   accepted: boolean;
   onboardingComplete: boolean;
 }): string | null {
-  if (!me.isRegistered) return "/unregistered";
-  if (!me.accepted) return "/pending";
-  if (!me.onboardingComplete) return "/onboarding";
+  if (!me.isRegistered) {
+    return "/unregistered";
+  }
+  if (!me.accepted) {
+    return "/pending";
+  }
+  if (!me.onboardingComplete) {
+    return "/onboarding";
+  }
   return null;
 }
 
@@ -28,17 +34,25 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const attachAfterLogin = useMutation(api.users.attachAfterLogin);
 
   useEffect(() => {
-    if (!isAuthenticated || !me) return;
+    if (!isAuthenticated || !me) {
+      return;
+    }
     void attachAfterLogin({});
   }, [attachAfterLogin, isAuthenticated, me]);
 
   useEffect(() => {
-    if (isLoading) return;
-    if (!isAuthenticated) {
-      if (pathname !== "/login") router.replace("/login");
+    if (isLoading) {
       return;
     }
-    if (!me) return;
+    if (!isAuthenticated) {
+      if (pathname !== "/login") {
+        router.replace("/login");
+      }
+      return;
+    }
+    if (!me) {
+      return;
+    }
 
     if (me.role === "admin") {
       if (pathname === "/login") {
@@ -87,15 +101,23 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (me && me.role !== "admin") {
-    if (pathname.startsWith("/admin")) return null;
+    if (pathname.startsWith("/admin")) {
+      return null;
+    }
     const next = destination(me);
-    if (next && pathname !== next) return null;
+    if (next && pathname !== next) {
+      return null;
+    }
   }
 
   if (me?.role === "admin") {
     const canConfirm = me.accepted && !me.onboardingComplete;
-    if (pathname === "/onboarding" && !canConfirm) return null;
-    if (pathname === "/pending" || pathname === "/unregistered") return null;
+    if (pathname === "/onboarding" && !canConfirm) {
+      return null;
+    }
+    if (pathname === "/pending" || pathname === "/unregistered") {
+      return null;
+    }
   }
 
   return <>{children}</>;

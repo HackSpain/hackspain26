@@ -54,7 +54,7 @@ export function registerHome(program: Command): void {
     ui.line(`Hey ${highlight(name)} 👋`);
 
     if (gate.state !== "ready" && gate.state !== "admin") {
-      ui.result({ loggedIn: true, gate });
+      ui.result({ gate, loggedIn: true });
       ui.warn(gate.message);
       if (gate.hint) {
         ui.line(c.dim(gate.hint));
@@ -73,7 +73,7 @@ export function registerHome(program: Command): void {
       "Loaded"
     );
 
-    ui.result({ loggedIn: true, gate, team, submission });
+    ui.result({ gate, loggedIn: true, submission, team });
     ui.kv([
       [
         "Team",

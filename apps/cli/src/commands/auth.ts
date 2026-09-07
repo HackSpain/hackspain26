@@ -120,7 +120,7 @@ export function registerAuth(program: Command): void {
         const gate = me ? describeGate(me) : null;
 
         if (ctx.json) {
-          ui.result({ email, url, gate });
+          ui.result({ email, gate, url });
           return;
         }
         ui.celebrate(`Welcome, ${highlight(firstName(me?.name, email))}!`);
@@ -169,7 +169,7 @@ export function registerAuth(program: Command): void {
         // Server-side sign-out is best effort, like the web app.
       }
       clearCredentials();
-      ui.result({ loggedOut: true, email: creds.email });
+      ui.result({ email: creds.email, loggedOut: true });
       ui.success(`Signed out ${creds.email}. See you soon.`);
     });
 
@@ -188,7 +188,7 @@ export function registerAuth(program: Command): void {
           ? `Stored session is for ${creds.appUrl}; current server is ${url}.`
           : "Run `hackspain auth login`.";
         if (ctx.json) {
-          ui.result({ loggedIn: false, url, urlSource: source, hint });
+          ui.result({ hint, loggedIn: false, url, urlSource: source });
           return;
         }
         ui.warn(`Not signed in to ${url} (${source}).\n${hint}`);
@@ -206,17 +206,17 @@ export function registerAuth(program: Command): void {
 
       if (ctx.json) {
         ui.result({
-          loggedIn: Boolean(me),
           email: refreshed.email,
-          url,
-          urlSource: source,
-          tokenExpiresAt: refreshed.tokenExpiresAt,
           gate,
+          loggedIn: Boolean(me),
           me: me && {
             name: me.name,
             role: me.role,
             githubUsername: me.githubUsername,
           },
+          tokenExpiresAt: refreshed.tokenExpiresAt,
+          url,
+          urlSource: source,
         });
         return;
       }

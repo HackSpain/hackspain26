@@ -11,7 +11,7 @@ export function emailOtpStubEnabled(): boolean {
 }
 
 export const remember = internalMutation({
-  args: { email: v.string(), code: v.string(), expiresAt: v.number() },
+  args: { code: v.string(), email: v.string(), expiresAt: v.number() },
   handler: async (ctx, args) => {
     const email = normalizeEmail(args.email);
     const existing = await ctx.db
@@ -19,22 +19,31 @@ export const remember = internalMutation({
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
     if (existing) {
-      await ctx.db.patch(existing._id, { code: args.code, expiresAt: args.expiresAt });
+      await ctx.db.patch(existing._id, {
+        code: args.code,
+        expiresAt: args.expiresAt,
+      });
       return;
     }
-    await ctx.db.insert("devOtpCodes", { email, code: args.code, expiresAt: args.expiresAt });
+    await ctx.db.insert("devOtpCodes", {
+      code: args.code,
+      email,
+      expiresAt: args.expiresAt,
+    });
   },
 });
 
 export const lookup = internalQuery({
   args: { email: v.string() },
-  returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query("devOtpCodes")
       .withIndex("by_email", (q) => q.eq("email", normalizeEmail(args.email)))
       .unique();
-    if (!row || row.expiresAt < Date.now()) return null;
+    if (!row || row.expiresAt < Date.now()) {
+      return null;
+    }
     return row.code;
   },
+  returns: v.union(v.string(), v.null()),
 });

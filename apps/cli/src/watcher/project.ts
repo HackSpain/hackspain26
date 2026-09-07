@@ -20,5 +20,5 @@ export function projectRef(
     .digest("hex")
     .slice(0, 16);
   const name = basename(normalized) || "root";
-  return gitBranch ? { dirHash, name, gitBranch } : { dirHash, name };
+  return gitBranch ? { dirHash, gitBranch, name } : { dirHash, name };
 }

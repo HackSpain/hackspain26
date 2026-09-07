@@ -33,6 +33,7 @@ The dashboard needs a Convex development deployment (`pnpm dev:convex` / `pnpm -
 | `pnpm build` / `pnpm build:app` | Production builds |
 | `pnpm preview` | Preview the landing build |
 | `pnpm check` | Astro + TypeScript checks |
+| `pnpm lint` / `pnpm fix` | Check or fix the monorepo with Oxlint and Ultracite |
 | `pnpm migrate:convex` | Import Neon signups/ambassadors into Convex |
 | `pnpm dev:cli -- <args>` / `pnpm test:cli` / `pnpm build:cli` | Run, test, or compile the `hackspain` CLI (participants install it with `curl -fsSL https://hackspain.com/install.sh \| sh`) |
 | `pnpm db:generate` / `pnpm db:migrate` / `pnpm db:push` | Landing Drizzle |

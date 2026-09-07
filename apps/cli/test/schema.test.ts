@@ -1,24 +1,24 @@
 import { describe, expect, test } from "bun:test";
+import type { TelemetryEvent } from "../src/watcher/schema";
 import {
   eventId,
   modelFamily,
   SCHEMA,
-  type TelemetryEvent,
   validateEvent,
 } from "../src/watcher/schema";
 
 export const validEvent: TelemetryEvent = {
-  schema: SCHEMA,
-  type: "usage",
   eventId: eventId("claude-code", "s1", "msg_1"),
-  occurredAt: "2026-09-19T10:00:00.000Z",
-  observedAt: "2026-09-19T10:00:05.000Z",
   harness: "claude-code",
-  sessionId: "s1",
+  identity: { clientVersion: "0.1.0", teamId: "t1", userId: "u1" },
+  model: { family: "claude", provider: "anthropic", raw: "claude-sonnet-5" },
+  observedAt: "2026-09-19T10:00:05.000Z",
+  occurredAt: "2026-09-19T10:00:00.000Z",
   project: { dirHash: "9f2c1a7b3e4d5c6a", name: "agentos" },
-  model: { raw: "claude-sonnet-5", family: "claude", provider: "anthropic" },
-  tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40 },
-  identity: { userId: "u1", teamId: "t1", clientVersion: "0.1.0" },
+  schema: SCHEMA,
+  sessionId: "s1",
+  tokens: { cacheRead: 30, cacheWrite: 40, input: 10, output: 20 },
+  type: "usage",
 };
 
 describe("validateEvent", () => {
@@ -40,7 +40,7 @@ describe("validateEvent", () => {
       })
     ).toContain("project.name must be a basename, not a path");
     expect(
-      validateEvent({ ...validEvent, model: { raw: "x", family: "llama" } })
+      validateEvent({ ...validEvent, model: { family: "llama", raw: "x" } })
     ).toContain("model needs raw and a known family");
     expect(validateEvent({ ...validEvent, identity: {} })).toContain(
       "identity needs userId and clientVersion"
@@ -48,7 +48,7 @@ describe("validateEvent", () => {
     expect(
       validateEvent({
         ...validEvent,
-        tokens: { input: -1, output: 0, cacheRead: 0, cacheWrite: 0 },
+        tokens: { cacheRead: 0, cacheWrite: 0, input: -1, output: 0 },
       })
     ).toContain("tokens.input must be a non-negative integer");
     expect(

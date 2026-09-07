@@ -2,7 +2,8 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { projectRef } from "../project";
-import { eventId, modelFamily, type RawEvent } from "../schema";
+import type { RawEvent } from "../schema";
+import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
@@ -56,7 +57,7 @@ export function normalizeClaudeCode(value: unknown): RawEvent | null {
   if (!isAssistantLine(value)) {
     return null;
   }
-  const model = value.message.model;
+  const { model } = value.message;
   if (!model || model === "<synthetic>") {
     return null;
   }
@@ -67,22 +68,22 @@ export function normalizeClaudeCode(value: unknown): RawEvent | null {
   }
   const reasoning = usage.output_tokens_details?.thinking_tokens;
   return {
-    type: "usage",
     eventId: eventId(CLAUDE_CODE, value.sessionId, value.message.id),
-    occurredAt: new Date(occurred).toISOString(),
     harness: CLAUDE_CODE,
     harnessVersion: value.version,
-    sessionId: value.sessionId,
+    model: { family: modelFamily(model), provider: "anthropic", raw: model },
+    native: value.requestId ? { requestId: value.requestId } : undefined,
+    occurredAt: new Date(occurred).toISOString(),
     project: projectRef(value.cwd, value.gitBranch),
-    model: { raw: model, family: modelFamily(model), provider: "anthropic" },
+    sessionId: value.sessionId,
     tokens: {
-      input: usage.input_tokens ?? 0,
-      output: usage.output_tokens ?? 0,
       cacheRead: usage.cache_read_input_tokens ?? 0,
       cacheWrite: usage.cache_creation_input_tokens ?? 0,
+      input: usage.input_tokens ?? 0,
+      output: usage.output_tokens ?? 0,
       ...(reasoning === undefined ? {} : { reasoning }),
     },
-    native: value.requestId ? { requestId: value.requestId } : undefined,
+    type: "usage",
   };
 }
 
@@ -114,6 +115,7 @@ function listTranscripts(root: string): string[] {
  * Yield events from every transcript, newest first, using byte-offset
  * cursors so restarts never re-read. Lines are deduped by event id within
  * the run; across runs the cursor guarantees each line is read once.
+ * @yields Parsed telemetry events in reverse chronological order.
  */
 export async function* collectClaudeCode(
   roots: string[],
@@ -121,21 +123,21 @@ export async function* collectClaudeCode(
 ): AsyncIterable<RawEvent> {
   for (const root of roots) {
     const files = listTranscripts(root)
-      .map((path) => ({ path, mtimeMs: statSync(path).mtimeMs }))
+      .map((path) => ({ mtimeMs: statSync(path).mtimeMs, path }))
       .filter(
         ({ mtimeMs }) =>
           mtimeMs >= ctx.since || ctx.cursors.get(root) !== undefined
       )
-      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+      .toSorted((a, b) => b.mtimeMs - a.mtimeMs);
     for (const { path } of files) {
       let result: ReturnType<typeof tailJsonl>;
       try {
         result = tailJsonl(path, ctx.cursors);
-      } catch (err) {
-        ctx.log(`claude-code: cannot read ${path}: ${String(err)}`);
+      } catch (error) {
+        ctx.log(`claude-code: cannot read ${path}: ${String(error)}`);
         continue;
       }
-      const seen = new Set(result.cursor.seenSessions ?? []);
+      const seen = new Set(result.cursor.seenSessions);
       const emitted = new Set<string>();
       for (const line of result.lines) {
         const event = normalizeClaudeCode(parseJsonLine(line));
@@ -149,13 +151,13 @@ export async function* collectClaudeCode(
         if (!seen.has(event.sessionId)) {
           seen.add(event.sessionId);
           yield {
-            type: "session.start",
             eventId: eventId(CLAUDE_CODE, event.sessionId, "start"),
-            occurredAt: event.occurredAt,
             harness: CLAUDE_CODE,
             harnessVersion: event.harnessVersion,
-            sessionId: event.sessionId,
+            occurredAt: event.occurredAt,
             project: event.project,
+            sessionId: event.sessionId,
+            type: "session.start",
           };
         }
         yield event;
@@ -167,10 +169,10 @@ export async function* collectClaudeCode(
 }
 
 export const claudeCodeCollector: Collector = {
-  id: CLAUDE_CODE,
+  collect: (ctx) => collectClaudeCode([claudeConfigDir()], ctx),
   discover: () => {
     const root = claudeConfigDir();
     return Promise.resolve(existsSync(join(root, "projects")) ? [root] : []);
   },
-  collect: (ctx) => collectClaudeCode([claudeConfigDir()], ctx),
+  id: CLAUDE_CODE,
 };

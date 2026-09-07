@@ -9,11 +9,11 @@ export function vp(
   artboard: Artboard = ARTBOARD_DESKTOP
 ): React.CSSProperties {
   return {
-    position: "absolute",
+    height: `${(h / artboard.h) * 100}%`,
     left: `${(x / artboard.w) * 100}%`,
+    position: "absolute",
     top: `${(y / artboard.h) * 100}%`,
     width: `${(w / artboard.w) * 100}%`,
-    height: `${(h / artboard.h) * 100}%`,
   };
 }
 

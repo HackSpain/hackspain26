@@ -8,19 +8,10 @@ import {
 } from "@sentry/astro";
 import { initBotId } from "botid/client/core";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  type ComponentPropsWithRef,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-import {
-  Controller,
-  type SubmitHandler,
-  useForm,
-  useWatch,
-} from "react-hook-form";
+import type { ComponentPropsWithRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { SubmitHandler } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { HACKSPAIN_SOCIAL_URLS } from "../../data/landing-meta";
 import {
   areSignupsClosed,
@@ -31,17 +22,19 @@ import {
   hasValidSignupAccessKey,
   signupLateAccessKeyFromSearch,
 } from "../../lib/signup-late-access";
+import type {
+  DietaryRestrictionId,
+  HeardFromSourceId,
+  OccupationStatusId,
+} from "../../lib/signup-validation";
 import {
   cleanProfilePasteText,
   DIETARY_RESTRICTION_OPTIONS,
-  type DietaryRestrictionId,
   HEARD_FROM_OPTIONS,
   HEARD_FROM_SOURCE_IDS,
-  type HeardFromSourceId,
   normalizeSocialUrl,
   OCCUPATION_STATUS_IDS,
   OCCUPATION_STATUS_OPTIONS,
-  type OccupationStatusId,
   parseSignupBodyClient,
 } from "../../lib/signup-validation";
 import { FormField } from "../form/form-field";
@@ -167,25 +160,25 @@ const NON_PERSISTED_DRAFT_FIELDS = new Set<string>([
 ]);
 
 const EMPTY_FIELDS: StoredFields = {
-  fullName: "",
-  email: "",
-  xUrl: "",
-  linkedinUrl: "",
-  githubUrl: "",
-  webUrl: "",
   achievements: "",
-  freeTime: "",
-  dietaryRestrictions: [],
-  dietaryDetails: "",
+  ambassadorMotivation: "",
   dietaryDataConsent: false,
+  dietaryDetails: "",
+  dietaryRestrictions: [],
+  email: "",
+  employer: "",
+  freeTime: "",
+  fullName: "",
+  githubUrl: "",
+  heardFromOther: "",
+  heardFromSources: [],
   isUnderThirty: false,
+  linkedinUrl: "",
   occupationStatuses: [],
   studyInstitution: "",
-  employer: "",
   wantsAmbassador: false,
-  ambassadorMotivation: "",
-  heardFromSources: [],
-  heardFromOther: "",
+  webUrl: "",
+  xUrl: "",
 };
 
 function readStoredFields(): StoredFields {
@@ -220,25 +213,25 @@ function readStoredFields(): StoredFields {
     const heardFromOther =
       typeof o.heardFromOther === "string" ? o.heardFromOther : "";
     return {
-      fullName: s("fullName"),
-      email: s("email"),
-      xUrl: s("xUrl"),
-      linkedinUrl: s("linkedinUrl"),
-      githubUrl: s("githubUrl"),
-      webUrl: s("webUrl"),
       achievements: s("achievements"),
-      freeTime: s("freeTime"),
-      dietaryRestrictions: [],
-      dietaryDetails: "",
+      ambassadorMotivation: s("ambassadorMotivation"),
       dietaryDataConsent: false,
+      dietaryDetails: "",
+      dietaryRestrictions: [],
+      email: s("email"),
+      employer: s("employer"),
+      freeTime: s("freeTime"),
+      fullName: s("fullName"),
+      githubUrl: s("githubUrl"),
+      heardFromOther,
+      heardFromSources,
       isUnderThirty: false,
+      linkedinUrl: s("linkedinUrl"),
       occupationStatuses,
       studyInstitution: s("studyInstitution"),
-      employer: s("employer"),
       wantsAmbassador,
-      ambassadorMotivation: s("ambassadorMotivation"),
-      heardFromSources,
-      heardFromOther,
+      webUrl: s("webUrl"),
+      xUrl: s("xUrl"),
     };
   } catch {
     return { ...EMPTY_FIELDS };
@@ -296,84 +289,84 @@ const cellBase = "border-b-[3px] border-hs-ink bg-hs-paper p-4";
 const cellLeftSm = `${cellBase} sm:border-r-[3px]`;
 
 const t = {
-  title: "Apúntate al hackathon",
-  subtitle:
-    "Cuéntanos quién eres y qué te motiva a participar. Como las plazas son limitadas, revisaremos cada solicitud y te confirmaremos por correo si has sido seleccionado/a.",
-  backHome: "← Inicio",
-  fullName: "Nombre completo",
-  email: "Email",
-  socialsTitle: "Redes y enlaces",
-  socialsRequiredHint:
-    "Añade al menos un enlace (X, LinkedIn, GitHub o tu web).",
-  x: "X (Twitter)",
-  linkedin: "LinkedIn",
-  github: "GitHub",
-  web: "Web",
-  socialXPlaceholder: "usuario, @usuario o pega un enlace",
-  socialLinkedinPlaceholder: "usuario, company/acme o pega un enlace",
-  socialGithubPlaceholder: "usuario o usuario/repo — o pega un enlace",
   achievements: "Logros e hitos",
   achievementsHint:
     "Lo que te enorgullece — hackathones, estudios, deporte, voluntariado, arte, trabajo… técnico o no.",
-  freeTime: "Fuera del cole / curro",
-  freeTimeHint:
-    "Hobbies, clubes, asociaciones, side projects, cómo desconectas — lo que te represente.",
-  dietaryRestrictions: "Restricciones alimentarias",
-  dietaryRestrictionsHint: "Puedes marcar varias opciones.",
+  alreadyApplied:
+    "Ya tenemos una solicitud con este correo. No necesitas volver a enviarla; te contactaremos por email cuando haya novedades.",
+  ambassadorCheckboxAfter: "",
+  ambassadorCheckboxBefore: "Quiero participar como ",
+  ambassadorCheckboxLink: "embajador/a",
+  ambassadorWhyHint:
+    "Unas frases sobre qué te mueve — comunidad, tech, tu campus, llegar a gente nueva…",
+  ambassadorWhyLabel: "¿Por qué quieres ser embajador/a?",
+  applicationReceived:
+    "¡Gracias! Hemos recibido tu solicitud. Espera nuestra respuesta por correo; te escribiremos en cuanto podamos.",
+  backHome: "← Inicio",
+  dietaryDataConsent:
+    "Si has indicado una restricción o alergia, consiento expresamente que HackSpain trate estos datos únicamente para organizar comidas seguras y atender mis necesidades durante el evento.",
   dietaryDetails: "Detalles de alergias o restricciones",
   dietaryDetailsHint:
     "Cuéntanos cualquier detalle que debamos conocer para organizar las comidas.",
-  dietaryDataConsent:
-    "Si has indicado una restricción o alergia, consiento expresamente que HackSpain trate estos datos únicamente para organizar comidas seguras y atender mis necesidades durante el evento.",
-  occupationStatus: "¿Estudias / trabajas?",
-  studyInstitution: "Universidad o centro",
+  dietaryRestrictions: "Restricciones alimentarias",
+  dietaryRestrictionsHint: "Puedes marcar varias opciones.",
+  email: "Email",
   employer: "Empresa u organización",
-  heardFrom: "¿Cómo nos has conocido?",
-  heardFromOtherPlaceholder: "Cuéntanos cómo nos encontraste…",
-  submit: "Enviar solicitud",
-  submitting: "Enviando…",
-  applicationReceived:
-    "¡Gracias! Hemos recibido tu solicitud. Espera nuestra respuesta por correo; te escribiremos en cuanto podamos.",
-  alreadyApplied:
-    "Ya tenemos una solicitud con este correo. No necesitas volver a enviarla; te contactaremos por email cuando haya novedades.",
-  signupsClosedSubtitle:
-    "El plazo para enviar solicitudes ha terminado. Síguenos en redes para no perderte lo que viene.",
-  signupsClosed:
-    "Las inscripciones para HackSpain 2026 están cerradas. Gracias por el interés — síguenos en redes para enterarte de la próxima edición.",
+  errorAccessDenied:
+    "No hemos podido verificar la solicitud. Recarga la página e inténtalo de nuevo, o usa un navegador normal con JavaScript activado.",
+  errorDietaryConsent:
+    "Debes consentir expresamente el tratamiento de los datos alimentarios que has indicado.",
+  errorEmployer: "Indica tu empresa u organización.",
+  errorFormOutdated:
+    "No hemos podido recibir tu solicitud. Tus datos siguen guardados en este navegador; recarga la página y vuelve a intentarlo en unos minutos.",
+  errorFullName: "Indica tu nombre completo.",
+  errorGeneric:
+    "No hemos podido recibir tu solicitud. Tus datos siguen guardados en este navegador; inténtalo de nuevo en unos minutos.",
+  errorInvalidEmail: "Introduce un correo electrónico válido.",
+  errorInvalidSocialUrl:
+    "Uno o más enlaces no son válidos para ese campo (revisa X, LinkedIn, GitHub o tu web).",
+  errorInvitation:
+    "El enlace personal no es válido o ya no está disponible. Puedes completar el formulario manualmente.",
+  errorSocialRequired: "Añade al menos un enlace a perfil o web.",
+  errorStudyInstitution: "Indica tu universidad o centro de estudios.",
+  errorUnderThirty: "Debes confirmar que eres menor de 30 años.",
   followSocialsHint:
     "Síguenos en redes para enterarte de fechas, novedades y todo lo que viene en HackSpain 2026.",
   followSocialsLabel: "También en redes",
-  errorGeneric:
-    "No hemos podido recibir tu solicitud. Tus datos siguen guardados en este navegador; inténtalo de nuevo en unos minutos.",
-  errorFormOutdated:
-    "No hemos podido recibir tu solicitud. Tus datos siguen guardados en este navegador; recarga la página y vuelve a intentarlo en unos minutos.",
-  errorSocialRequired: "Añade al menos un enlace a perfil o web.",
-  errorInvalidSocialUrl:
-    "Uno o más enlaces no son válidos para ese campo (revisa X, LinkedIn, GitHub o tu web).",
-  errorInvalidEmail: "Introduce un correo electrónico válido.",
-  errorAccessDenied:
-    "No hemos podido verificar la solicitud. Recarga la página e inténtalo de nuevo, o usa un navegador normal con JavaScript activado.",
-  errorInvitation:
-    "El enlace personal no es válido o ya no está disponible. Puedes completar el formulario manualmente.",
-  prefillLoaded:
-    "Hemos completado los datos de tu pre-inscripción. Revisa la información y termina la solicitud.",
-  ambassadorCheckboxBefore: "Quiero participar como ",
-  ambassadorCheckboxLink: "embajador/a",
-  ambassadorCheckboxAfter: "",
-  ambassadorWhyLabel: "¿Por qué quieres ser embajador/a?",
-  ambassadorWhyHint:
-    "Unas frases sobre qué te mueve — comunidad, tech, tu campus, llegar a gente nueva…",
-  errorFullName: "Indica tu nombre completo.",
-  errorStudyInstitution: "Indica tu universidad o centro de estudios.",
-  errorEmployer: "Indica tu empresa u organización.",
-  errorDietaryConsent:
-    "Debes consentir expresamente el tratamiento de los datos alimentarios que has indicado.",
-  underThirtyConfirmation: "Confirmo que soy menor de 30 años.",
-  errorUnderThirty: "Debes confirmar que eres menor de 30 años.",
-  legalSubmitNoticeBefore: "Al enviar este formulario aceptas nuestra ",
+  freeTime: "Fuera del cole / curro",
+  freeTimeHint:
+    "Hobbies, clubes, asociaciones, side projects, cómo desconectas — lo que te represente.",
+  fullName: "Nombre completo",
+  github: "GitHub",
+  heardFrom: "¿Cómo nos has conocido?",
+  heardFromOtherPlaceholder: "Cuéntanos cómo nos encontraste…",
   legalPrivacyLinkLabel: "política de privacidad",
   legalSubmitNoticeAfter:
     ", incluida la comunicación de tus datos a patrocinadores oficiales de HackSpain según se indica allí.",
+  legalSubmitNoticeBefore: "Al enviar este formulario aceptas nuestra ",
+  linkedin: "LinkedIn",
+  occupationStatus: "¿Estudias / trabajas?",
+  prefillLoaded:
+    "Hemos completado los datos de tu pre-inscripción. Revisa la información y termina la solicitud.",
+  signupsClosed:
+    "Las inscripciones para HackSpain 2026 están cerradas. Gracias por el interés — síguenos en redes para enterarte de la próxima edición.",
+  signupsClosedSubtitle:
+    "El plazo para enviar solicitudes ha terminado. Síguenos en redes para no perderte lo que viene.",
+  socialGithubPlaceholder: "usuario o usuario/repo — o pega un enlace",
+  socialLinkedinPlaceholder: "usuario, company/acme o pega un enlace",
+  socialXPlaceholder: "usuario, @usuario o pega un enlace",
+  socialsRequiredHint:
+    "Añade al menos un enlace (X, LinkedIn, GitHub o tu web).",
+  socialsTitle: "Redes y enlaces",
+  studyInstitution: "Universidad o centro",
+  submit: "Enviar solicitud",
+  submitting: "Enviando…",
+  subtitle:
+    "Cuéntanos quién eres y qué te motiva a participar. Como las plazas son limitadas, revisaremos cada solicitud y te confirmaremos por correo si has sido seleccionado/a.",
+  title: "Apúntate al hackathon",
+  underThirtyConfirmation: "Confirmo que soy menor de 30 años.",
+  web: "Web",
+  x: "X (Twitter)",
 } as const;
 
 function ambassadorQueryEnabled(): boolean {
@@ -478,9 +471,9 @@ export function SignupPage() {
       setPrefillStatus("loading");
       try {
         const response = await fetch("/api/signup-prefill", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: normalizedEmail }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
           signal: controller.signal,
         });
         const responseBody = (await response.json().catch(() => ({}))) as {
@@ -531,9 +524,9 @@ export function SignupPage() {
       setPrefillStatus("loading");
       try {
         const response = await fetch("/api/signup-prefill", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
           signal: controller.signal,
         });
         const responseBody = (await response.json().catch(() => ({}))) as {
@@ -604,7 +597,7 @@ export function SignupPage() {
       return;
     }
     initBotId({
-      protect: [{ path: "/api/signup", method: "POST" }],
+      protect: [{ method: "POST", path: "/api/signup" }],
     });
   }, []);
 
@@ -649,15 +642,15 @@ export function SignupPage() {
 
     addBreadcrumb({
       category: "ui",
-      message: "signup: submit",
       level: "info",
+      message: "signup: submit",
     });
 
     if (data.heardFromSources.length === 0) {
       addBreadcrumb({
         category: "signup",
-        message: "no heard from selected",
         level: "info",
+        message: "no heard from selected",
       });
       pulseAttention("heard");
       return;
@@ -677,9 +670,9 @@ export function SignupPage() {
     if (!parsed.ok) {
       addBreadcrumb({
         category: "signup",
-        message: "client validation",
         data: { code: parsed.code },
         level: "info",
+        message: "client validation",
       });
       if (parsed.code === "generic") {
         captureMessage("Signup: client validation failed (generic)", "warning");
@@ -691,7 +684,7 @@ export function SignupPage() {
       if (parsed.code === "heard_from_other") {
         pulseAttention("heard");
         requestAnimationFrame(() => {
-          document.getElementById("signup-heard-from-other")?.focus();
+          document.querySelector("#signup-heard-from-other")?.focus();
         });
         return;
       }
@@ -755,10 +748,10 @@ export function SignupPage() {
       if (resJson.error === "signups_closed") {
         addBreadcrumb({
           category: "http",
-          type: "http",
-          data: { status: res.status, error: resJson.error },
+          data: { error: resJson.error, status: res.status },
           level: "info",
           message: "signup rejected after the deadline (expected)",
+          type: "http",
         });
         setStatus("closed");
         return;
@@ -766,10 +759,10 @@ export function SignupPage() {
       if (isDuplicateEmail) {
         addBreadcrumb({
           category: "http",
-          type: "http",
-          data: { status: res.status, error: resJson.error },
+          data: { error: resJson.error, status: res.status },
           level: "info",
           message: "signup duplicate email (expected)",
+          type: "http",
         });
         clearStoredFields();
         setAppliedFlag();
@@ -778,9 +771,9 @@ export function SignupPage() {
       }
       addBreadcrumb({
         category: "http",
-        type: "http",
-        data: { status: res.status, error: resJson.error },
+        data: { error: resJson.error, status: res.status },
         level: "error",
+        type: "http",
       });
       withScope((scope) => {
         scope.setTag("flow", "signup");
@@ -790,9 +783,9 @@ export function SignupPage() {
           scope.setTag("api_error", resJson.error);
         }
         scope.setContext("form", {
-          wantsAmbassador: data.wantsAmbassador,
           heardFrom: data.heardFromSources,
           occupationStatuses: data.occupationStatuses,
+          wantsAmbassador: data.wantsAmbassador,
         });
         captureMessage(
           `Signup: API rejected ${res.status}${resJson.error ? ` (${resJson.error})` : ""}`,
@@ -825,7 +818,7 @@ export function SignupPage() {
         setStatus("error");
         pulseAttention("heard");
         requestAnimationFrame(() => {
-          document.getElementById("signup-heard-from-other")?.focus();
+          document.querySelector("#signup-heard-from-other")?.focus();
         });
         return;
       } else if (resJson.error === "heard_from_required") {
@@ -840,18 +833,18 @@ export function SignupPage() {
         setErrorMessage(t.errorGeneric);
       }
       setStatus("error");
-    } catch (err) {
-      if (err instanceof Error) {
+    } catch (error) {
+      if (error instanceof Error) {
         withScope((scope) => {
           scope.setTag("flow", "signup");
           scope.setTag("source", "client");
-          captureException(err);
+          captureException(error);
         });
       } else {
         addBreadcrumb({
           category: "signup",
           message: "submit: caught non-Error (ignored for issues)",
-          data: { kind: Object.prototype.toString.call(err) },
+          data: { kind: Object.prototype.toString.call(error) },
           level: "warning",
         });
       }
@@ -1083,8 +1076,8 @@ export function SignupPage() {
                         );
                         if (norm) {
                           setValue("webUrl", norm, {
-                            shouldValidate: true,
                             shouldTouch: true,
+                            shouldValidate: true,
                           });
                         }
                       }}
@@ -1101,9 +1094,9 @@ export function SignupPage() {
                         }
                         const norm = normalizeSocialUrl(line, "web");
                         setValue("webUrl", norm || line, {
-                          shouldValidate: true,
-                          shouldTouch: true,
                           shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
                         });
                       }}
                     />
@@ -1267,9 +1260,9 @@ export function SignupPage() {
                 <AnimatePresence initial={false}>
                   {occupationStatuses.includes("student") ? (
                     <motion.div
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      initial={{ height: 0, opacity: 0 }}
                       key="signup-study-institution"
                       transition={{ duration: 0.24 }}
                     >
@@ -1289,9 +1282,9 @@ export function SignupPage() {
                   ) : null}
                   {occupationStatuses.includes("working") ? (
                     <motion.div
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      initial={{ height: 0, opacity: 0 }}
                       key="signup-employer"
                       transition={{ duration: 0.24 }}
                     >
@@ -1429,10 +1422,10 @@ export function SignupPage() {
                 <AnimatePresence initial={false}>
                   {wantsAmbassador ? (
                     <motion.div
-                      animate={{ opacity: 1, height: "auto" }}
+                      animate={{ height: "auto", opacity: 1 }}
                       className="overflow-hidden border-hs-ink border-b-[3px]"
-                      exit={{ opacity: 0, height: 0 }}
-                      initial={{ opacity: 0, height: 0 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      initial={{ height: 0, opacity: 0 }}
                       key="signup-ambassador-fields"
                       ref={ambassadorSectionRef}
                       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}

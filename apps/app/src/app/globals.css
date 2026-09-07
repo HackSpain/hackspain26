@@ -3,9 +3,11 @@
 @import "shadcn/tailwind.css";
 
 @theme inline {
-  --font-sans: var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-bungee: var(--font-bungee-next), "Bungee", ui-sans-serif, system-ui, sans-serif;
+  --font-bungee:
+    var(--font-bungee-next), "Bungee", ui-sans-serif, system-ui, sans-serif;
 
   --color-hs-paper: #f4ecd8;
   --color-hs-sand: #e8dcc4;

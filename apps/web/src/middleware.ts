@@ -31,7 +31,7 @@ function isLandingDocumentPath(pathname: string): boolean {
 }
 
 function shouldServeMarkdownVariant(accept: string | null): boolean {
-  if (accept == null || accept === "") {
+  if (accept === null || accept === undefined || accept === "") {
     return false;
   }
   return accept.toLowerCase().includes("text/markdown");
@@ -65,10 +65,10 @@ function mergeVary(existing: string | null, token: string): string {
 const LLMS_TXT_DISCOVERY_LINK = '</llms.txt>; rel="llms-txt"';
 
 const MARKDOWN_NEGOTIATION_HEADERS: Record<string, string> = {
-  "Content-Type": "text/markdown; charset=utf-8",
   "Cache-Control": "public, max-age=3600",
-  "X-Robots-Tag": "noindex, nofollow",
+  "Content-Type": "text/markdown; charset=utf-8",
   Vary: "Accept",
+  "X-Robots-Tag": "noindex, nofollow",
 };
 
 function withLlmsDiscoveryHeaders(
@@ -88,15 +88,15 @@ function withLlmsDiscoveryHeaders(
     headers.set("Vary", mergeVary(headers.get("Vary"), "Accept"));
   }
   return new Response(response.body, {
+    headers,
     status: response.status,
     statusText: response.statusText,
-    headers,
   });
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { request } = context;
-  const method = request.method;
+  const { method } = request;
   const path = new URL(request.url).pathname;
 
   if (method !== "GET" && method !== "HEAD") {

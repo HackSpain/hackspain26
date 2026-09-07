@@ -36,7 +36,7 @@ function DropdownMenuContent({
         sideOffset={sideOffset}
         className={cn(
           "z-50 min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto border-[3px] border-hs-ink bg-hs-paper p-1 text-hs-ink motion-safe:duration-200 motion-safe:data-closed:duration-150 motion-safe:ease-[var(--ease-out)] data-open:animate-in data-open:fade-in-0 motion-safe:data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 motion-safe:data-closed:zoom-out-95",
-          className,
+          className
         )}
         {...props}
       />
@@ -79,7 +79,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       className={cn(
         "relative flex min-h-11 w-full cursor-default items-center gap-1.5 px-3 py-2 text-sm outline-hidden select-none focus:bg-hs-sand focus:text-hs-ink data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
+        className
       )}
       {...props}
     />

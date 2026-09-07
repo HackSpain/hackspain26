@@ -1,5 +1,6 @@
 import { Email } from "@convex-dev/auth/providers/Email";
-import { generateRandomString, type RandomReader } from "@oslojs/crypto/random";
+import { generateRandomString } from "@oslojs/crypto/random";
+import type { RandomReader } from "@oslojs/crypto/random";
 import { Resend as ResendAPI } from "resend";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
@@ -25,24 +26,25 @@ type VerificationRequest = {
 // EmailConfig type only declares one. Optional keeps this assignable.
 async function sendVerificationRequest(
   { identifier: email, provider, token, expires }: VerificationRequest,
-  ctx?: ActionCtx,
+  ctx?: ActionCtx
 ): Promise<void> {
   if (!provider.apiKey) {
     console.log(`[auth] Email OTP for ${email}: ${token}`);
     if (emailOtpStubEnabled()) {
-      if (!ctx)
+      if (!ctx) {
         throw new Error("Action ctx missing in sendVerificationRequest");
+      }
       await ctx.runMutation(internal.devOtp.remember, {
-        email,
         code: token,
+        email,
         expiresAt: expires.getTime(),
       });
       console.log(
-        `[auth] ALLOW_EMAIL_OTP_STUB is on. ${STUB_CODE} also works.`,
+        `[auth] ALLOW_EMAIL_OTP_STUB is on. ${STUB_CODE} also works.`
       );
     } else {
       console.log(
-        "[auth] AUTH_RESEND_KEY is not set. The code was logged instead of emailed.",
+        "[auth] AUTH_RESEND_KEY is not set. The code was logged instead of emailed."
       );
     }
     return;
@@ -52,9 +54,9 @@ async function sendVerificationRequest(
   const from = process.env.AUTH_EMAIL ?? "HackSpain <onboarding@resend.dev>";
   const { error } = await resend.emails.send({
     from,
-    to: [email],
     subject: "Your HackSpain sign-in code",
     text: `Your HackSpain dashboard code is ${token}. It expires in 15 minutes.`,
+    to: [email],
   });
   if (error) {
     throw new Error(JSON.stringify(error));
@@ -62,11 +64,11 @@ async function sendVerificationRequest(
 }
 
 export const ResendOTP = Email({
-  id: "resend-otp",
   apiKey: process.env.AUTH_RESEND_KEY,
-  maxAge: 60 * 15,
-  async generateVerificationToken() {
+  generateVerificationToken() {
     return randomDigits(8);
   },
+  id: "resend-otp",
+  maxAge: 60 * 15,
   sendVerificationRequest,
 });

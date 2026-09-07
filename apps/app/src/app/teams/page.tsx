@@ -4,10 +4,23 @@ import { useMutation, useQuery } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
 import { api } from "@convex/_generated/api";
-import { Field, FormError, LoadingText, Page, errorMessage } from "@/components/page";
+import {
+  Field,
+  FormError,
+  LoadingText,
+  Page,
+  errorMessage,
+} from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Frame } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Frame,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -29,13 +42,13 @@ import {
   identifierPlaceholder,
   identifierTypeLabel,
   teamMemberStatusLabel,
-  type IdentifierType,
 } from "@/lib/utils";
+import type { IdentifierType } from "@/lib/utils";
 
 const IDENTIFIER_OPTIONS = [
-  { value: "github", label: "GitHub" },
-  { value: "twitter", label: "X / Twitter" },
-  { value: "email", label: "Email" },
+  { label: "GitHub", value: "github" },
+  { label: "X / Twitter", value: "twitter" },
+  { label: "Email", value: "email" },
 ] as const;
 
 type MemberDraft = {
@@ -48,7 +61,11 @@ let memberDraftKey = 0;
 
 function newMemberDraft(): MemberDraft {
   memberDraftKey += 1;
-  return { key: String(memberDraftKey), identifierType: "github", identifier: "" };
+  return {
+    identifier: "",
+    identifierType: "github",
+    key: String(memberDraftKey),
+  };
 }
 
 function MemberIdentifierInputs({
@@ -106,7 +123,7 @@ function CreateTeamForm({ onCreated }: { onCreated: () => void }) {
 
   function updateMemberRow(key: string, patch: Partial<MemberDraft>) {
     setMemberRows((rows) =>
-      rows.map((row) => (row.key === key ? { ...row, ...patch } : row)),
+      rows.map((row) => (row.key === key ? { ...row, ...patch } : row))
     );
   }
 
@@ -114,16 +131,16 @@ function CreateTeamForm({ onCreated }: { onCreated: () => void }) {
     setError(null);
     const members = memberRows
       .map((row) => ({
-        identifierType: row.identifierType,
         identifier: row.identifier.trim(),
+        identifierType: row.identifierType,
       }))
       .filter((row) => row.identifier.length > 0);
     setPending(true);
     try {
-      await create({ name, members });
+      await create({ members, name });
       onCreated();
-    } catch (err: unknown) {
-      setError(errorMessage(err, "No se ha podido crear"));
+    } catch (caughtError: unknown) {
+      setError(errorMessage(caughtError, "No se ha podido crear"));
     } finally {
       setPending(false);
     }
@@ -194,7 +211,7 @@ function CreateTeamForm({ onCreated }: { onCreated: () => void }) {
                     aria-label={`Quitar miembro ${index + 1}`}
                     onClick={() =>
                       setMemberRows((rows) =>
-                        rows.filter((item) => item.key !== row.key),
+                        rows.filter((item) => item.key !== row.key)
                       )
                     }
                   >
@@ -236,42 +253,26 @@ function TeamsPageContent() {
   const [createOpen, setCreateOpen] = useState(() => search.get("new") === "1");
   const [name, setName] = useState("");
   const [identifier, setIdentifier] = useState("");
-  const [identifierType, setIdentifierType] = useState<IdentifierType>("github");
+  const [identifierType, setIdentifierType] =
+    useState<IdentifierType>("github");
   const [error, setError] = useState<string | null>(null);
 
-  if (team === undefined) return <LoadingText />;
+  if (team === undefined) {
+    return <LoadingText />;
+  }
 
   function setCreateDialog(open: boolean) {
     setCreateOpen(open);
-    if (!open && search.has("new")) router.replace("/teams", { scroll: false });
+    if (!open && search.has("new")) {
+      router.replace("/teams", { scroll: false });
+    }
   }
 
   return (
     <Page title="Equipo">
       <FormError message={error} />
 
-      {!team ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Todavía no tienes equipo</CardTitle>
-            <CardDescription>
-              Crea uno y añade a tu gente por GitHub, X o email. También puedes
-              participar en solitario.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Dialog open={createOpen} onOpenChange={setCreateDialog}>
-              <Button
-                className="w-full sm:w-auto"
-                onClick={() => setCreateDialog(true)}
-              >
-                Crear equipo
-              </Button>
-              <CreateTeamForm onCreated={() => setCreateDialog(false)} />
-            </Dialog>
-          </CardContent>
-        </Card>
-      ) : (
+      {team ? (
         <Card>
           <CardHeader>
             <CardTitle>{team.name}</CardTitle>
@@ -309,7 +310,8 @@ function TeamsPageContent() {
                       {member.name ?? member.identifier}
                     </p>
                     <p className="text-xs break-all text-hs-brown">
-                      {identifierTypeLabel(member.identifierType)}: {member.identifier}
+                      {identifierTypeLabel(member.identifierType)}:{" "}
+                      {member.identifier}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -350,8 +352,10 @@ function TeamsPageContent() {
                       identifier,
                     })
                       .then(() => setIdentifier(""))
-                      .catch((err: unknown) =>
-                        setError(errorMessage(err, "No se ha podido añadir")),
+                      .catch((caughtError: unknown) =>
+                        setError(
+                          errorMessage(caughtError, "No se ha podido añadir")
+                        )
                       );
                   }}
                 >
@@ -366,14 +370,40 @@ function TeamsPageContent() {
                 className="w-full sm:w-auto"
                 onClick={() => {
                   setError(null);
-                  void leave({}).catch((err: unknown) =>
-                    setError(errorMessage(err, "No has podido salir del equipo")),
+                  void leave({}).catch((caughtError: unknown) =>
+                    setError(
+                      errorMessage(
+                        caughtError,
+                        "No has podido salir del equipo"
+                      )
+                    )
                   );
                 }}
               >
                 Salir del equipo
               </Button>
             ) : null}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Todavía no tienes equipo</CardTitle>
+            <CardDescription>
+              Crea uno y añade a tu gente por GitHub, X o email. También puedes
+              participar en solitario.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Dialog open={createOpen} onOpenChange={setCreateDialog}>
+              <Button
+                className="w-full sm:w-auto"
+                onClick={() => setCreateDialog(true)}
+              >
+                Crear equipo
+              </Button>
+              <CreateTeamForm onCreated={() => setCreateDialog(false)} />
+            </Dialog>
           </CardContent>
         </Card>
       )}

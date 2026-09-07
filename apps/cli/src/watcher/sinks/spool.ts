@@ -36,7 +36,7 @@ export function enforceCap(dir: string, cap = SPOOL_CAP_BYTES): void {
       const path = join(dir, name);
       return { path, size: statSync(path).size };
     })
-    .sort((a, b) => a.path.localeCompare(b.path));
+    .toSorted((a, b) => a.path.localeCompare(b.path));
   let total = files.reduce((sum, f) => sum + f.size, 0);
   // Never delete the newest file: it is the one being written.
   for (const file of files.slice(0, -1)) {
@@ -79,7 +79,7 @@ export function* readSpool(dir = spoolDir()): Iterable<TelemetryEvent> {
   try {
     names = readdirSync(dir)
       .filter((name) => name.endsWith(".ndjson"))
-      .sort();
+      .toSorted();
   } catch {
     return;
   }

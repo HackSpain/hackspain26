@@ -1,11 +1,5 @@
-import {
-  type ChangeEvent,
-  type DragEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import type { ChangeEvent, DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const MAX_PHOTO_BYTES = 12 * 1024 * 1024;
 
@@ -20,7 +14,7 @@ interface DroppedPhoto {
 }
 
 function isImageDrag(event: DragEvent<HTMLElement>): boolean {
-  return Array.from(event.dataTransfer.items).some(
+  return [...event.dataTransfer.items].some(
     (item) => item.kind === "file" && item.type.startsWith("image/")
   );
 }
@@ -57,11 +51,15 @@ export function useDroppedPhoto(): DroppedPhoto {
       objectUrl.current = url;
 
       const image = new Image();
-      image.onload = () => {
-        setPhoto(image);
-        releaseUrl();
-      };
-      image.onerror = releaseUrl;
+      image.addEventListener(
+        "load",
+        () => {
+          setPhoto(image);
+          releaseUrl();
+        },
+        { once: true }
+      );
+      image.addEventListener("error", releaseUrl, { once: true });
       image.src = url;
     },
     [releaseUrl]
@@ -80,7 +78,7 @@ export function useDroppedPhoto(): DroppedPhoto {
   const onDrop = useCallback(
     (event: DragEvent<HTMLElement>) => {
       setDragDepth(0);
-      const file = Array.from(event.dataTransfer.files).find((candidate) =>
+      const file = [...event.dataTransfer.files].find((candidate) =>
         candidate.type.startsWith("image/")
       );
       if (!file) {

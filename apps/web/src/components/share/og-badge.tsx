@@ -21,8 +21,8 @@ const HEADLINE_LINES = ["VOY A", "HACKSPAIN", "2026"] as const;
  * ever pushing the portrait out of shape.
  */
 const NAME_TYPE_STEPS = [
-  { maxCharacters: 14, fontSize: 27 },
-  { maxCharacters: 20, fontSize: 22 },
+  { fontSize: 27, maxCharacters: 14 },
+  { fontSize: 22, maxCharacters: 20 },
 ] as const;
 const NAME_FONT_SIZE_FLOOR = 18;
 

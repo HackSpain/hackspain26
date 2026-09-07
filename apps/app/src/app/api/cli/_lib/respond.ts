@@ -40,17 +40,23 @@ export function ok<T>(value: T, status = 200): NextResponse {
 }
 
 export function fail(message: string, status: number): NextResponse {
-  const body: CliErrorBody = { ok: false, error: { kind: "error", message } };
+  const body: CliErrorBody = { error: { kind: "error", message }, ok: false };
   return NextResponse.json(body, { status });
 }
 
 export function fromError(err: unknown): NextResponse {
   if (err instanceof ConvexError) {
-    const body: CliErrorBody = { ok: false, error: { kind: "convex", data: err.data } };
+    const body: CliErrorBody = {
+      error: { data: err.data, kind: "convex" },
+      ok: false,
+    };
     return NextResponse.json(body, { status: 400 });
   }
-  const message = err instanceof Error ? serverMessage(err.message) : String(err);
-  const status = UNAUTHENTICATED_NEEDLES.some((needle) => message.includes(needle))
+  const message =
+    err instanceof Error ? serverMessage(err.message) : String(err);
+  const status = UNAUTHENTICATED_NEEDLES.some((needle) =>
+    message.includes(needle)
+  )
     ? 401
     : 500;
   return fail(message, status);
@@ -62,10 +68,14 @@ export function bearerToken(request: Request): string | null {
   return match?.[1] ?? null;
 }
 
-export async function readJson(request: Request): Promise<Record<string, unknown> | null> {
+export async function readJson(
+  request: Request
+): Promise<Record<string, unknown> | null> {
   try {
     const body: unknown = await request.json();
-    return typeof body === "object" && body !== null ? (body as Record<string, unknown>) : null;
+    return typeof body === "object" && body !== null
+      ? (body as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }

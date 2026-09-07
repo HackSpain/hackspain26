@@ -8,7 +8,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="card"
       className={cn(
         "flex flex-col gap-4 border-[3px] border-hs-ink bg-hs-paper py-4 text-sm text-hs-ink",
-        className,
+        className
       )}
       {...props}
     />
@@ -47,7 +47,11 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="card-content" className={cn("px-4", className)} {...props} />
+    <div
+      data-slot="card-content"
+      className={cn("px-4", className)}
+      {...props}
+    />
   );
 }
 
@@ -63,18 +67,11 @@ function Frame({
         "border-[3px] p-3 text-sm",
         tone === "ink" && "border-hs-ink bg-hs-paper",
         tone === "navy" && "border-hs-navy bg-hs-slate/25",
-        className,
+        className
       )}
       {...props}
     />
   );
 }
 
-export {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  Frame,
-};
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, Frame };

@@ -5,7 +5,11 @@ import {
   ambassadorFieldsValidator,
   signupFieldsValidator,
 } from "./lib/validators";
-import { normalizeEmail, normalizeGithub, normalizeTwitter } from "./lib/normalize";
+import {
+  normalizeEmail,
+  normalizeGithub,
+  normalizeTwitter,
+} from "./lib/normalize";
 import { formatDietaryRestrictions } from "./lib/dietary";
 import { urlOf, urlsFromRecord } from "./lib/urls";
 import type { Id } from "./_generated/dataModel";
@@ -15,13 +19,15 @@ async function attachSignupToUser(
   email: string,
   signupId: Id<"signups">,
   fullName: string,
-  diet: { dietaryRestrictions?: string; dietaryDetails?: string },
+  diet: { dietaryRestrictions?: string; dietaryDetails?: string }
 ): Promise<void> {
   const user = await ctx.db
     .query("users")
     .withIndex("email", (q) => q.eq("email", email))
     .unique();
-  if (!user) return;
+  if (!user) {
+    return;
+  }
   const patch: {
     signupId?: Id<"signups">;
     name?: string;
@@ -58,10 +64,6 @@ export const importSignups = mutation({
     secret: v.string(),
     signups: v.array(signupFieldsValidator),
   },
-  returns: v.object({
-    inserted: v.number(),
-    updated: v.number(),
-  }),
   handler: async (ctx, args) => {
     assertMigrationSecret(args.secret);
     let inserted = 0;
@@ -92,8 +94,12 @@ export const importSignups = mutation({
         dietaryRestrictions?: string;
         dietaryDetails?: string;
       } = {};
-      if (raw.achievements) optionalFields.achievements = raw.achievements;
-      if (raw.freeTime) optionalFields.freeTime = raw.freeTime;
+      if (raw.achievements) {
+        optionalFields.achievements = raw.achievements;
+      }
+      if (raw.freeTime) {
+        optionalFields.freeTime = raw.freeTime;
+      }
       if (raw.ambassadorMotivation) {
         optionalFields.ambassadorMotivation = raw.ambassadorMotivation;
       }
@@ -102,10 +108,12 @@ export const importSignups = mutation({
       }
       if (raw.dietaryRestrictionIds !== undefined) {
         optionalFields.dietaryRestrictions = formatDietaryRestrictions(
-          raw.dietaryRestrictionIds,
+          raw.dietaryRestrictionIds
         );
       }
-      if (raw.dietaryDetails) optionalFields.dietaryDetails = raw.dietaryDetails;
+      if (raw.dietaryDetails) {
+        optionalFields.dietaryDetails = raw.dietaryDetails;
+      }
       const fields = {
         email,
         fullName: raw.fullName,
@@ -141,17 +149,17 @@ export const importSignups = mutation({
     }
     return { inserted, updated };
   },
-});
-
-export const importAmbassadors = mutation({
-  args: {
-    secret: v.string(),
-    applications: v.array(ambassadorFieldsValidator),
-  },
   returns: v.object({
     inserted: v.number(),
     updated: v.number(),
   }),
+});
+
+export const importAmbassadors = mutation({
+  args: {
+    applications: v.array(ambassadorFieldsValidator),
+    secret: v.string(),
+  },
   handler: async (ctx, args) => {
     assertMigrationSecret(args.secret);
     let inserted = 0;
@@ -183,14 +191,14 @@ export const importAmbassadors = mutation({
     }
     return { inserted, updated };
   },
+  returns: v.object({
+    inserted: v.number(),
+    updated: v.number(),
+  }),
 });
 
 export const rewriteLegacyUrls = mutation({
   args: { secret: v.string() },
-  returns: v.object({
-    signupsRewritten: v.number(),
-    ambassadorsRewritten: v.number(),
-  }),
   handler: async (ctx, args) => {
     assertMigrationSecret(args.secret);
     let signupsRewritten = 0;
@@ -210,7 +218,9 @@ export const rewriteLegacyUrls = mutation({
         leftoverFields.linkedinUrl !== undefined ||
         leftoverFields.webUrl !== undefined ||
         leftoverFields.urls === undefined;
-      if (!leftover) continue;
+      if (!leftover) {
+        continue;
+      }
       await ctx.db.replace(signup._id, {
         email: signup.email,
         fullName: signup.fullName,
@@ -231,7 +241,9 @@ export const rewriteLegacyUrls = mutation({
       signupsRewritten += 1;
     }
 
-    for (const application of await ctx.db.query("ambassadorApplications").collect()) {
+    for (const application of await ctx.db
+      .query("ambassadorApplications")
+      .collect()) {
       const leftoverFields = application as typeof application & {
         githubUrl?: string;
         xUrl?: string;
@@ -245,7 +257,9 @@ export const rewriteLegacyUrls = mutation({
         leftoverFields.linkedinUrl !== undefined ||
         leftoverFields.webUrl !== undefined ||
         leftoverFields.urls === undefined;
-      if (!leftover) continue;
+      if (!leftover) {
+        continue;
+      }
       await ctx.db.replace(application._id, {
         email: application.email,
         fullName: application.fullName,
@@ -262,4 +276,8 @@ export const rewriteLegacyUrls = mutation({
 
     return { signupsRewritten, ambassadorsRewritten };
   },
+  returns: v.object({
+    signupsRewritten: v.number(),
+    ambassadorsRewritten: v.number(),
+  }),
 });

@@ -32,17 +32,7 @@ export function createBatcher(
   let dropped = 0;
 
   return {
-    push: (event) => {
-      for (const sink of sinks) {
-        const queue = pending.get(sink.name) ?? [];
-        queue.push(event);
-        if (queue.length > BUFFER_CAP) {
-          queue.splice(0, queue.length - BUFFER_CAP);
-          dropped++;
-        }
-        pending.set(sink.name, queue);
-      }
-    },
+    dropped: () => dropped,
     flush: async () => {
       let allOk = true;
       for (const sink of sinks) {
@@ -60,7 +50,7 @@ export function createBatcher(
             await sink.flushPending?.();
             backoff.delete(sink.name);
             notBefore.delete(sink.name);
-          } catch (err) {
+          } catch (error) {
             const wait = Math.min(
               BACKOFF_MAX_MS,
               (backoff.get(sink.name) ?? BACKOFF_MIN_MS / 2) * 2
@@ -68,7 +58,7 @@ export function createBatcher(
             backoff.set(sink.name, wait);
             notBefore.set(sink.name, now() + wait);
             log(
-              `${sink.name}: ${String(err)} (retry in ${Math.round(wait / 1000)}s, ${durablePending} queued)`
+              `${sink.name}: ${String(error)} (retry in ${Math.round(wait / 1000)}s, ${durablePending} queued)`
             );
             allOk = false;
           }
@@ -81,7 +71,7 @@ export function createBatcher(
             queue.splice(0, batch.length);
             backoff.delete(sink.name);
             notBefore.delete(sink.name);
-          } catch (err) {
+          } catch (error) {
             const wait = Math.min(
               BACKOFF_MAX_MS,
               (backoff.get(sink.name) ?? BACKOFF_MIN_MS / 2) * 2
@@ -89,7 +79,7 @@ export function createBatcher(
             backoff.set(sink.name, wait);
             notBefore.set(sink.name, now() + wait);
             log(
-              `${sink.name}: ${String(err)} (retry in ${Math.round(wait / 1000)}s, ${queue.length} queued)`
+              `${sink.name}: ${String(error)} (retry in ${Math.round(wait / 1000)}s, ${queue.length} queued)`
             );
             allOk = false;
             break;
@@ -98,6 +88,17 @@ export function createBatcher(
       }
       return allOk;
     },
+    push: (event) => {
+      for (const sink of sinks) {
+        const queue = pending.get(sink.name) ?? [];
+        queue.push(event);
+        if (queue.length > BUFFER_CAP) {
+          queue.splice(0, queue.length - BUFFER_CAP);
+          dropped++;
+        }
+        pending.set(sink.name, queue);
+      }
+    },
     size: () =>
       Math.max(
         ...sinks.map((sink) =>
@@ -105,6 +106,5 @@ export function createBatcher(
         ),
         0
       ),
-    dropped: () => dropped,
   };
 }

@@ -20,12 +20,12 @@ function urlOf(
 
 export function projectArgsFrom(submission: Submission | null): ProjectArgs {
   return {
-    name: submission?.name ?? "",
-    description: submission?.description ?? "",
-    repoUrl: urlOf(submission?.urls, "repo"),
-    demoUrl: urlOf(submission?.urls, "demo"),
     challengeIds: submission?.challengeIds ?? [],
+    demoUrl: urlOf(submission?.urls, "demo"),
+    description: submission?.description ?? "",
+    name: submission?.name ?? "",
     perkIds: submission?.perkIds ?? [],
+    repoUrl: urlOf(submission?.urls, "repo"),
   };
 }
 
@@ -81,5 +81,5 @@ export function planTracks(
   });
   // Keep catalogue order so output is stable.
   const next = tracks.filter((t) => set.has(t._id)).map((t) => t._id);
-  return { next, added, removed, unknown };
+  return { added, next, removed, unknown };
 }

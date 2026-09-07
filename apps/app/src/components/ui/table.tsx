@@ -23,7 +23,10 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("bg-hs-sand [&_tr]:border-b-[3px] [&_tr]:border-hs-ink", className)}
+      className={cn(
+        "bg-hs-sand [&_tr]:border-b-[3px] [&_tr]:border-hs-ink",
+        className
+      )}
       {...props}
     />
   );
@@ -45,7 +48,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
       data-slot="table-row"
       className={cn(
         "border-b border-hs-ink/20 data-[state=selected]:bg-hs-sand",
-        className,
+        className
       )}
       {...props}
     />
@@ -58,7 +61,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
       data-slot="table-head"
       className={cn(
         "h-11 px-3 text-left align-middle font-bungee text-xs uppercase text-hs-ink whitespace-nowrap",
-        className,
+        className
       )}
       {...props}
     />
@@ -75,11 +78,4 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   );
 }
 
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-};
+export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell };

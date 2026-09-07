@@ -47,10 +47,16 @@ export default function AdminPerksPage() {
         <CardContent className="grid gap-3">
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="Empresa">
-              <Input value={company} onChange={(event) => setCompany(event.target.value)} />
+              <Input
+                value={company}
+                onChange={(event) => setCompany(event.target.value)}
+              />
             </Field>
             <Field label="Título">
-              <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
             </Field>
             <Field label="Valor">
               <Input
@@ -117,9 +123,7 @@ export default function AdminPerksPage() {
         {perks?.map((perk) => (
           <Card key={perk._id}>
             <CardHeader>
-              <CardTitle>
-                {perkName(perk.company, perk.title)}
-              </CardTitle>
+              <CardTitle>{perkName(perk.company, perk.title)}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p>{perk.description}</p>
@@ -136,7 +140,9 @@ export default function AdminPerksPage() {
               <Button
                 variant="outline"
                 className="w-full sm:w-auto"
-                onClick={() => void update({ perkId: perk._id, active: !perk.active })}
+                onClick={() =>
+                  void update({ perkId: perk._id, active: !perk.active })
+                }
               >
                 {perk.active ? "Desactivar" : "Activar"}
               </Button>
@@ -163,7 +169,7 @@ export default function AdminPerksPage() {
                         setExtraCodes((current) => ({
                           ...current,
                           [perk._id]: "",
-                        })),
+                        }))
                       )
                     }
                   >

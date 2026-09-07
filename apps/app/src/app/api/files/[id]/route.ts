@@ -13,7 +13,7 @@ import { bearerToken } from "../../cli/_lib/respond";
  */
 export async function GET(
   request: Request,
-  context: { params: Promise<{ id: string }> },
+  context: { params: Promise<{ id: string }> }
 ) {
   const token = bearerToken(request) ?? (await convexAuthNextjsToken());
   if (!token) {
@@ -25,7 +25,7 @@ export async function GET(
     url = await fetchQuery(
       api.feed.imageUrl,
       { imageId: id as Id<"_storage"> },
-      { token },
+      { token }
     );
   } catch {
     return new NextResponse("Not found", { status: 404 });

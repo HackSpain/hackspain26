@@ -14,14 +14,14 @@
 //     `paper` and flattened onto the same colour, so it merges into the panel.
 
 const PALETTE = {
-  paper: "#f4ecd8",
-  sand: "#e8dcc4",
-  gold: "#eab619",
-  red: "#cc291f",
   brown: "#4a2c1f",
-  teal: "#35858a",
-  navy: "#1e3958",
+  gold: "#eab619",
   ink: "#2a170f",
+  navy: "#1e3958",
+  paper: "#f4ecd8",
+  red: "#cc291f",
+  sand: "#e8dcc4",
+  teal: "#35858a",
 } as const;
 
 const SANS = "'DM Sans','Helvetica Neue',Helvetica,Arial,sans-serif";
@@ -57,12 +57,12 @@ interface NextStep {
 
 const NEXT_STEPS: readonly NextStep[] = [
   {
-    title: "Únete al grupo de WhatsApp",
     body: "Al confirmar verás el enlace en pantalla. Entra en cuanto puedas: <strong>toda la comunicación del evento pasa por ahí</strong> — horarios, cambios de última hora, equipos y avisos. Si no estás en el grupo, te lo vas a perder.",
+    title: "Únete al grupo de WhatsApp",
   },
   {
-    title: "Comparte tu acreditación",
     body: "En la misma pantalla te espera tu acreditación. Publícala en <strong>LinkedIn o X</strong>: cuanta más gente la vea, más cracks se animan a venir — y eso hace mejor el hackathon para todos.",
+    title: "Comparte tu acreditación",
   },
 ];
 

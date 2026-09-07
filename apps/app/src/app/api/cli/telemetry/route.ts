@@ -36,7 +36,7 @@ function rejection(
     typeof value.eventId === "string" &&
     value.eventId.length <= 512
   ) {
-    return { line, eventId: value.eventId, reason };
+    return { eventId: value.eventId, line, reason };
   }
   return { line, reason };
 }
@@ -68,8 +68,8 @@ export async function POST(request: Request) {
       fetchQuery(api.users.me, {}, { token }),
       fetchQuery(api.teams.mineId, {}, { token }),
     ]);
-  } catch (err) {
-    return fromError(err);
+  } catch (error) {
+    return fromError(error);
   }
   const [me, teamId] = authContext;
   if (!me) {
@@ -87,7 +87,10 @@ export async function POST(request: Request) {
     .map((line, index) => ({ line, number: index + 1 }))
     .filter(({ line }) => line.trim());
   if (lines.length > TELEMETRY_BATCH_MAX) {
-    return fail(`A batch can contain at most ${TELEMETRY_BATCH_MAX} events`, 413);
+    return fail(
+      `A batch can contain at most ${TELEMETRY_BATCH_MAX} events`,
+      413
+    );
   }
 
   const accepted: NonNullable<ReturnType<typeof parseTelemetryEvent>>[] = [];
@@ -125,7 +128,7 @@ export async function POST(request: Request) {
       batchSize: accepted.length,
       kind: error instanceof Error ? error.name : "unknown",
       ...(error instanceof RawTreeError
-        ? { status: error.status, code: error.error, hint: error.hint }
+        ? { code: error.error, hint: error.hint, status: error.status }
         : {}),
     });
     const status = error instanceof RawTreeConfigurationError ? 503 : 502;

@@ -35,7 +35,7 @@ export function graphCoordinate(value: number): number {
 export function buildNetwork(participants: DirectoryParticipant[]): Network {
   const people = [
     ...new Map(participants.map((person) => [person.id, person])).values(),
-  ].sort((a, b) => a.id.localeCompare(b.id));
+  ].toSorted((a, b) => a.id.localeCompare(b.id));
   const edges: NetworkEdge[] = [];
   for (let i = 0; i < people.length; i++) {
     for (let j = i + 1; j < people.length; j++) {
@@ -44,7 +44,7 @@ export function buildNetwork(participants: DirectoryParticipant[]): Network {
         const values = affinities
           .filter((item) => item.kind === kind)
           .map((item) => item.value);
-        if (values.length)
+        if (values.length) {
           edges.push({
             id: JSON.stringify([people[i].id, people[j].id, kind]),
             source: people[i].id,
@@ -52,10 +52,11 @@ export function buildNetwork(participants: DirectoryParticipant[]): Network {
             kind,
             values,
           });
+        }
       }
     }
   }
-  return { participants: people, edges };
+  return { edges, participants: people };
 }
 
 export function networkSprings(network: Network): Spring[] {
@@ -63,51 +64,58 @@ export function networkSprings(network: Network): Spring[] {
   for (const edge of network.edges) {
     const key = JSON.stringify([edge.source, edge.target]);
     const existing = pairs.get(key);
-    if (existing) existing.team ||= edge.kind === "team";
-    else
+    if (existing) {
+      existing.team ||= edge.kind === "team";
+    } else {
       pairs.set(key, {
         source: edge.source,
         target: edge.target,
         team: edge.kind === "team",
       });
+    }
   }
   return [...pairs.values()];
 }
 
 function seed(value: string) {
-  let hash = 2166136261;
-  for (const char of value)
-    hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
-  return (hash >>> 0) / 4294967296;
+  let hash = 2_166_136_261;
+  for (const char of value) {
+    // oxlint-disable-next-line no-bitwise, unicorn/prefer-code-point -- FNV-1a hashes UTF-16 code units intentionally.
+    hash = Math.imul(hash ^ char.charCodeAt(0), 16_777_619);
+  }
+  // oxlint-disable-next-line no-bitwise -- unsigned coercion is part of FNV-1a normalization.
+  return (hash >>> 0) / 4_294_967_296;
 }
 
 /** A deterministic force layout: no random server/client positions or fixed central person. */
 export function initialPoints(network: Network): GraphPoint[] {
   const teams = [
     ...new Set(
-      network.participants.flatMap((p) => (p.team ? [p.team.id] : [])),
+      network.participants.flatMap((p) => (p.team ? [p.team.id] : []))
     ),
-  ].sort();
+  ].toSorted();
   const points = network.participants.map((person) => {
     const group = person.team ? teams.indexOf(person.team.id) : -1;
     const angle = group >= 0 ? group * 2.399963 : seed(person.id) * Math.PI * 2;
     const radius = group >= 0 ? 250 : 420;
     return {
       id: person.id,
-      x: Math.cos(angle) * radius + (seed(person.id + "x") - 0.5) * 180,
-      y: Math.sin(angle) * radius + (seed(person.id + "y") - 0.5) * 180,
       vx: 0,
       vy: 0,
+      x: Math.cos(angle) * radius + (seed(person.id + "x") - 0.5) * 180,
+      y: Math.sin(angle) * radius + (seed(person.id + "y") - 0.5) * 180,
     };
   });
   const springs = networkSprings(network);
-  for (let i = 0; i < 220; i++) tickForces(points, springs, 0.7);
+  for (let i = 0; i < 220; i++) {
+    tickForces(points, springs, 0.7);
+  }
   // Orient the natural layout along the wide canvas, without changing its relationships.
   const meanX = points.reduce((sum, p) => sum + p.x, 0) / (points.length || 1);
   const meanY = points.reduce((sum, p) => sum + p.y, 0) / (points.length || 1);
   let xx = 0,
-    yy = 0,
-    xy = 0;
+    xy = 0,
+    yy = 0;
   for (const point of points) {
     xx += (point.x - meanX) ** 2;
     yy += (point.y - meanY) ** 2;
@@ -130,12 +138,14 @@ export function tickForces(
   points: GraphPoint[],
   springs: Spring[],
   heat: number,
-  pinnedId?: string,
+  pinnedId?: string
 ) {
   const byId = new Map(points.map((point) => [point.id, point]));
   const teammates = new Map<string, Set<string>>();
   for (const spring of springs) {
-    if (!spring.team) continue;
+    if (!spring.team) {
+      continue;
+    }
     for (const [source, target] of [
       [spring.source, spring.target],
       [spring.target, spring.source],
@@ -166,7 +176,9 @@ export function tickForces(
   for (const spring of springs) {
     const a = byId.get(spring.source),
       b = byId.get(spring.target);
-    if (!a || !b) continue;
+    if (!a || !b) {
+      continue;
+    }
     const dx = b.x - a.x,
       dy = b.y - a.y;
     const distance = Math.max(1, Math.hypot(dx, dy));

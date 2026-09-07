@@ -2,9 +2,9 @@ import { z } from "zod";
 import { DIETARY_RESTRICTION_IDS } from "./signup-validation";
 
 const MENTOR_SPONSOR_MAX = {
-  name: 200,
   email: 320,
   longText: 8000,
+  name: 200,
 } as const;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -73,14 +73,6 @@ function requiredName(message: string) {
 
 const mentorSponsorBodySchema = z
   .object({
-    firstName: requiredName("first_name_required"),
-    lastName: requiredName("last_name_required"),
-    email: z
-      .string()
-      .max(MENTOR_SPONSOR_MAX.email)
-      .transform((s) => s.trim().toLowerCase())
-      .refine((s) => EMAIL_RE.test(s), { message: "invalid_email" }),
-    company: requiredName("company_required"),
     attendanceSlots: z.preprocess(
       (value) => (Array.isArray(value) ? value : []),
       z
@@ -89,13 +81,8 @@ const mentorSponsorBodySchema = z
         .max(ATTENDANCE_SLOT_IDS.length)
         .transform((values) => [...new Set(values)])
     ),
-    dietaryRestrictions: z.preprocess(
-      (value) => (Array.isArray(value) ? value : []),
-      z
-        .array(z.enum(DIETARY_RESTRICTION_IDS))
-        .max(DIETARY_RESTRICTION_IDS.length)
-        .transform((values) => [...new Set(values)])
-    ),
+    company: requiredName("company_required"),
+    dietaryDataConsent: z.boolean().optional().default(false),
     dietaryDetails: z.preprocess(
       (value) => (typeof value === "string" ? value : ""),
       z
@@ -103,7 +90,20 @@ const mentorSponsorBodySchema = z
         .max(MENTOR_SPONSOR_MAX.longText)
         .transform((value) => value.trim())
     ),
-    dietaryDataConsent: z.boolean().optional().default(false),
+    dietaryRestrictions: z.preprocess(
+      (value) => (Array.isArray(value) ? value : []),
+      z
+        .array(z.enum(DIETARY_RESTRICTION_IDS))
+        .max(DIETARY_RESTRICTION_IDS.length)
+        .transform((values) => [...new Set(values)])
+    ),
+    email: z
+      .string()
+      .max(MENTOR_SPONSOR_MAX.email)
+      .transform((s) => s.trim().toLowerCase())
+      .refine((s) => EMAIL_RE.test(s), { message: "invalid_email" }),
+    firstName: requiredName("first_name_required"),
+    lastName: requiredName("last_name_required"),
     notes: z.preprocess(
       (value) => (typeof value === "string" ? value : ""),
       z
@@ -142,11 +142,11 @@ export function parseMentorSponsorBody(
   | { ok: false; error: string; status: number } {
   const r = mentorSponsorBodySchema.safeParse(body);
   if (r.success) {
-    return { ok: true, data: r.data };
+    return { data: r.data, ok: true };
   }
   const msg = r.error.issues[0]?.message ?? "validation_error";
   if (KNOWN_ERRORS.has(msg)) {
-    return { ok: false, error: msg, status: 400 };
+    return { error: msg, ok: false, status: 400 };
   }
-  return { ok: false, error: "invalid_request", status: 400 };
+  return { error: "invalid_request", ok: false, status: 400 };
 }

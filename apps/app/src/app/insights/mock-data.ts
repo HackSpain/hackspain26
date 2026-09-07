@@ -1,54 +1,54 @@
 export const HARNESSES = [
   {
-    id: "claude-code",
-    name: "Claude Code",
-    mark: "CC",
     color: "#d96b2a",
+    id: "claude-code",
+    mark: "CC",
     models: [0, 100, 0, 0],
+    name: "Claude Code",
   },
   {
-    id: "codex",
-    name: "Codex",
-    mark: ">_",
     color: "#35858a",
+    id: "codex",
+    mark: ">_",
     models: [100, 0, 0, 0],
+    name: "Codex",
   },
   {
-    id: "cursor",
-    name: "Cursor",
-    mark: "Cu",
     color: "#1e3958",
+    id: "cursor",
+    mark: "Cu",
     models: [42, 43, 12, 3],
+    name: "Cursor",
   },
   {
-    id: "opencode",
-    name: "OpenCode",
-    mark: "OC",
     color: "#8b6b9f",
+    id: "opencode",
+    mark: "OC",
     models: [28, 38, 19, 15],
+    name: "OpenCode",
   },
   {
-    id: "cline",
-    name: "Cline",
-    mark: "Cl",
     color: "#a67516",
+    id: "cline",
+    mark: "Cl",
     models: [21, 52, 18, 9],
+    name: "Cline",
   },
   {
-    id: "copilot",
-    name: "Copilot",
-    mark: "Co",
     color: "#677558",
+    id: "copilot",
+    mark: "Co",
     models: [57, 34, 6, 3],
+    name: "Copilot",
   },
 ] as const;
 
 export const MODELS = ["GPT", "Claude", "Gemini", "Otros"] as const;
 export const TRACKS = ["Agents", "DevTools", "Impacto"] as const;
 export const PERIODS = [
-  { id: "event", label: "Todo el evento", buckets: 24 },
-  { id: "6h", label: "Últimas 6 horas", buckets: 12 },
-  { id: "1h", label: "Última hora", buckets: 2 },
+  { buckets: 24, id: "event", label: "Todo el evento" },
+  { buckets: 12, id: "6h", label: "Últimas 6 horas" },
+  { buckets: 2, id: "1h", label: "Última hora" },
 ] as const;
 
 export type Period = (typeof PERIODS)[number]["id"];
@@ -70,147 +70,147 @@ export interface Team {
 
 export const TEAMS: Team[] = [
   {
-    id: "tortilla",
-    name: "Tortilla Overflow",
-    project: "AgentOS",
+    color: "#d96b2a",
     description:
       "Un espacio de trabajo donde agentes y personas construyen juntos.",
-    track: "Agents",
+    id: "tortilla",
     members: 4,
+    name: "Tortilla Overflow",
     primary: "claude-code",
+    project: "AgentOS",
     secondary: "codex",
-    color: "#d96b2a",
+    track: "Agents",
   },
   {
-    id: "siesta",
-    name: "Siesta.sh",
-    project: "Deploy & chill",
+    color: "#35858a",
     description:
       "Del primer commit a una demo desplegada, sin salir del terminal.",
-    track: "DevTools",
+    id: "siesta",
     members: 3,
+    name: "Siesta.sh",
     primary: "codex",
+    project: "Deploy & chill",
     secondary: "cursor",
-    color: "#35858a",
+    track: "DevTools",
   },
   {
-    id: "paella",
-    name: "Paella Intelligence",
-    project: "Barrio",
+    color: "#1e3958",
     description:
       "Agentes que conectan iniciativas locales con las personas que las necesitan.",
-    track: "Impacto",
+    id: "paella",
     members: 4,
+    name: "Paella Intelligence",
     primary: "cursor",
+    project: "Barrio",
     secondary: "claude-code",
-    color: "#1e3958",
+    track: "Impacto",
   },
   {
-    id: "gitana",
-    name: "Git Happens",
-    project: "Reviewmate",
+    color: "#8b6b9f",
     description:
       "Revisiones de código que explican el contexto y proponen el siguiente paso.",
-    track: "DevTools",
+    id: "gitana",
     members: 4,
+    name: "Git Happens",
     primary: "claude-code",
+    project: "Reviewmate",
     secondary: "opencode",
-    color: "#8b6b9f",
+    track: "DevTools",
   },
   {
-    id: "context",
-    name: "Context Cowboys",
-    project: "Memory Lane",
+    color: "#a67516",
     description:
       "Memoria compartida para equipos de agentes que trabajan en tareas largas.",
-    track: "Agents",
+    id: "context",
     members: 3,
+    name: "Context Cowboys",
     primary: "opencode",
+    project: "Memory Lane",
     secondary: "codex",
-    color: "#a67516",
+    track: "Agents",
   },
   {
-    id: "churros",
-    name: "Churros & Code",
-    project: "Aula abierta",
-    description: "Un tutor que adapta sus explicaciones a cada estudiante.",
-    track: "Impacto",
-    members: 4,
-    primary: "cursor",
-    secondary: "cline",
     color: "#677558",
+    description: "Un tutor que adapta sus explicaciones a cada estudiante.",
+    id: "churros",
+    members: 4,
+    name: "Churros & Code",
+    primary: "cursor",
+    project: "Aula abierta",
+    secondary: "cline",
+    track: "Impacto",
   },
   {
-    id: "localhost",
-    name: "Localhost Heroes",
-    project: "Local First",
+    color: "#35858a",
     description:
       "Herramientas de desarrollo que siguen funcionando sin conexión.",
-    track: "DevTools",
+    id: "localhost",
     members: 3,
+    name: "Localhost Heroes",
     primary: "codex",
+    project: "Local First",
     secondary: "copilot",
-    color: "#35858a",
+    track: "DevTools",
   },
   {
-    id: "prompt",
-    name: "Prompt Fiction",
-    project: "Scene",
+    color: "#d96b2a",
     description:
       "Un estudio creativo para convertir una idea en una historia interactiva.",
-    track: "Agents",
+    id: "prompt",
     members: 4,
+    name: "Prompt Fiction",
     primary: "claude-code",
+    project: "Scene",
     secondary: "cursor",
-    color: "#d96b2a",
+    track: "Agents",
   },
   {
-    id: "cache",
-    name: "Caché con leche",
-    project: "Green Route",
+    color: "#a67516",
     description:
       "Rutas compartidas para reducir los desplazamientos de una comunidad.",
-    track: "Impacto",
+    id: "cache",
     members: 3,
+    name: "Caché con leche",
     primary: "cline",
+    project: "Green Route",
     secondary: "opencode",
-    color: "#a67516",
+    track: "Impacto",
   },
   {
-    id: "merge",
-    name: "Merge y punto",
-    project: "Shipyard",
+    color: "#677558",
     description:
       "Un copiloto para mantener las entregas de equipos pequeños en movimiento.",
-    track: "DevTools",
+    id: "merge",
     members: 4,
+    name: "Merge y punto",
     primary: "copilot",
+    project: "Shipyard",
     secondary: "codex",
-    color: "#677558",
+    track: "DevTools",
   },
   {
-    id: "neural",
-    name: "Neural Nomads",
-    project: "Compass",
+    color: "#8b6b9f",
     description:
       "Agentes que investigan y preparan decisiones con fuentes trazables.",
-    track: "Agents",
+    id: "neural",
     members: 3,
+    name: "Neural Nomads",
     primary: "opencode",
+    project: "Compass",
     secondary: "claude-code",
-    color: "#8b6b9f",
+    track: "Agents",
   },
   {
-    id: "404",
-    name: "404 Sleep Not Found",
-    project: "Cuida",
+    color: "#1e3958",
     description:
       "Una ayuda cotidiana para coordinar las tareas de cuidado en familia.",
-    track: "Impacto",
+    id: "404",
     members: 4,
+    name: "404 Sleep Not Found",
     primary: "cursor",
+    project: "Cuida",
     secondary: "copilot",
-    color: "#1e3958",
+    track: "Impacto",
   },
 ];
 
@@ -229,7 +229,12 @@ export interface Sample {
 const BASE_SAMPLES: Sample[] = TEAMS.flatMap((team, teamIndex) =>
   Array.from({ length: 24 }, (_, bucket) =>
     [team.primary, team.secondary].map((harness, toolIndex) => {
-      const phaseIndex = bucket < 4 ? 0 : bucket < 18 ? 1 : 2;
+      let phaseIndex = 2;
+      if (bucket < 4) {
+        phaseIndex = 0;
+      } else if (bucket < 18) {
+        phaseIndex = 1;
+      }
       const rhythms = [
         [0.65, 1.05, 1.8],
         [1.25, 1, 0.55],
@@ -247,34 +252,36 @@ const BASE_SAMPLES: Sample[] = TEAMS.flatMap((team, teamIndex) =>
           (4 + ((teamIndex * 5 + bucket * 3) % 15)) *
             share *
             wave *
-            (0.75 + teamIndex / 22),
-        ),
+            (0.75 + teamIndex / 22)
+        )
       );
       return {
-        teamId: team.id,
-        harness,
         bucket,
-        tokens,
+        cachedTokens: Math.round(tokens * (0.28 + (teamIndex % 5) * 0.09)),
         commits,
+        harness,
         pullRequests: Math.floor(commits / (3 + (teamIndex % 3))),
         sessions: Math.max(1, Math.round((5 + (bucket % 6)) * share * wave)),
-        cachedTokens: Math.round(tokens * (0.28 + (teamIndex % 5) * 0.09)),
+        teamId: team.id,
+        tokens,
       };
-    }),
-  ).flat(),
+    })
+  ).flat()
 );
 
 export function getSamples(tick: number): Sample[] {
   return BASE_SAMPLES.map((sample, index) => {
-    if (sample.bucket !== 23) return sample;
+    if (sample.bucket !== 23) {
+      return sample;
+    }
     const updates = Math.floor((tick + (index % 12)) / 12);
-    const tokens = updates * (1_200 + (index % 7) * 400);
+    const tokens = updates * (1200 + (index % 7) * 400);
     return {
       ...sample,
-      tokens: sample.tokens + tokens,
       cachedTokens: sample.cachedTokens + Math.round(tokens * 0.4),
       commits: sample.commits + updates,
       sessions: sample.sessions + updates,
+      tokens: sample.tokens + tokens,
     };
   });
 }
@@ -282,16 +289,16 @@ export function getSamples(tick: number): Sample[] {
 export function filterSamples(
   samples: Sample[],
   period: Period,
-  track: string,
+  track: string
 ): Sample[] {
   const buckets = PERIODS.find((item) => item.id === period)?.buckets ?? 24;
   const ids = new Set(
     TEAMS.filter((team) => track === "all" || team.track === track).map(
-      (team) => team.id,
-    ),
+      (team) => team.id
+    )
   );
   return samples.filter(
-    (sample) => sample.bucket >= 24 - buckets && ids.has(sample.teamId),
+    (sample) => sample.bucket >= 24 - buckets && ids.has(sample.teamId)
   );
 }
 
@@ -305,11 +312,11 @@ export interface Totals {
 
 export function sumSamples(samples: Sample[]): Totals {
   const totals: Totals = {
-    tokens: 0,
+    cachedTokens: 0,
     commits: 0,
     pullRequests: 0,
     sessions: 0,
-    cachedTokens: 0,
+    tokens: 0,
   };
   for (const sample of samples) {
     totals.tokens += sample.tokens;
@@ -323,7 +330,7 @@ export function sumSamples(samples: Sample[]): Totals {
 
 export function teamRows(samples: Sample[]) {
   return TEAMS.filter((team) =>
-    samples.some((sample) => sample.teamId === team.id),
+    samples.some((sample) => sample.teamId === team.id)
   ).map((team) => ({
     ...team,
     ...sumSamples(samples.filter((sample) => sample.teamId === team.id)),
@@ -348,10 +355,12 @@ export function timeLabel(bucket: number): string {
 }
 
 export function compact(value: number): string {
-  if (value >= 1_000_000)
+  if (value >= 1_000_000) {
     return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(value / 1_000_000)} M`;
-  if (value >= 1_000)
-    return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(value / 1_000)} k`;
+  }
+  if (value >= 1000) {
+    return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(value / 1000)} k`;
+  }
   return String(value);
 }
 export function number(value: number): string {

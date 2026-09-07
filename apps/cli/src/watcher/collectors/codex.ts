@@ -2,7 +2,8 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { projectRef } from "../project";
-import { eventId, modelFamily, type RawEvent } from "../schema";
+import type { RawEvent } from "../schema";
+import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
@@ -66,21 +67,21 @@ function sessionIdFromFilename(path: string): string {
 }
 
 export function initialCodexState(path: string): CodexState {
-  return { sessionId: sessionIdFromFilename(path), lineIndex: 0 };
+  return { lineIndex: 0, sessionId: sessionIdFromFilename(path) };
 }
 
 function delta(total: Usage, previous: Usage | undefined): Usage {
   const sub = (a?: number, b?: number) => Math.max(0, (a ?? 0) - (b ?? 0));
   return {
-    input_tokens: sub(total.input_tokens, previous?.input_tokens),
-    cached_input_tokens: sub(
-      total.cached_input_tokens,
-      previous?.cached_input_tokens
-    ),
     cache_write_input_tokens: sub(
       total.cache_write_input_tokens,
       previous?.cache_write_input_tokens
     ),
+    cached_input_tokens: sub(
+      total.cached_input_tokens,
+      previous?.cached_input_tokens
+    ),
+    input_tokens: sub(total.input_tokens, previous?.input_tokens),
     output_tokens: sub(total.output_tokens, previous?.output_tokens),
     reasoning_output_tokens: sub(
       total.reasoning_output_tokens,
@@ -123,7 +124,7 @@ export function normalizeCodex(
   if (line.type !== "event_msg" || payload.type !== "token_count") {
     return null;
   }
-  const info = payload.info;
+  const { info } = payload;
   if (!info) {
     return null;
   }
@@ -150,27 +151,27 @@ export function normalizeCodex(
   }
   const model = state.model ?? "unknown";
   return {
-    type: "usage",
     eventId: eventId(CODEX, state.sessionId, state.lineIndex),
-    occurredAt: new Date(occurred).toISOString(),
     harness: CODEX,
     harnessVersion: state.cliVersion,
-    sessionId: state.sessionId,
-    project: projectRef(state.cwd, state.gitBranch),
     model: {
-      raw: model,
       family: modelFamily(model),
       provider: state.provider ?? "openai",
+      raw: model,
     },
+    occurredAt: new Date(occurred).toISOString(),
+    project: projectRef(state.cwd, state.gitBranch),
+    sessionId: state.sessionId,
     tokens: {
-      input,
-      output,
       cacheRead: cached,
       cacheWrite,
+      input,
+      output,
       ...(usage.reasoning_output_tokens === undefined
         ? {}
         : { reasoning: usage.reasoning_output_tokens }),
     },
+    type: "usage",
   };
 }
 
@@ -205,24 +206,24 @@ export async function* collectCodex(
       }
     }
     const recent = files
-      .map((path) => ({ path, mtimeMs: statSync(path).mtimeMs }))
+      .map((path) => ({ mtimeMs: statSync(path).mtimeMs, path }))
       .filter(
         ({ path, mtimeMs }) => mtimeMs >= ctx.since || ctx.cursors.get(path)
       )
-      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+      .toSorted((a, b) => b.mtimeMs - a.mtimeMs);
     for (const { path } of recent) {
       let result: ReturnType<typeof tailJsonl>;
       try {
         result = tailJsonl(path, ctx.cursors);
-      } catch (err) {
-        ctx.log(`codex: cannot read ${path}: ${String(err)}`);
+      } catch (error) {
+        ctx.log(`codex: cannot read ${path}: ${String(error)}`);
         continue;
       }
       const state: CodexState =
         typeof result.cursor.mark === "string"
           ? (JSON.parse(result.cursor.mark) as CodexState)
           : initialCodexState(path);
-      const announced = new Set(result.cursor.seenSessions ?? []);
+      const announced = new Set(result.cursor.seenSessions);
       for (const line of result.lines) {
         const event = normalizeCodex(parseJsonLine(line), state);
         if (!event || Date.parse(event.occurredAt) < ctx.since) {
@@ -231,21 +232,21 @@ export async function* collectCodex(
         if (!announced.has(event.sessionId)) {
           announced.add(event.sessionId);
           yield {
-            type: "session.start",
             eventId: eventId(CODEX, event.sessionId, "start"),
-            occurredAt: event.occurredAt,
             harness: CODEX,
             harnessVersion: event.harnessVersion,
-            sessionId: event.sessionId,
+            occurredAt: event.occurredAt,
             project: event.project,
+            sessionId: event.sessionId,
+            type: "session.start",
           };
         }
         yield event;
       }
       ctx.cursors.set(path, {
         ...result.cursor,
-        seenSessions: [...announced],
         mark: JSON.stringify(state),
+        seenSessions: [...announced],
       });
     }
     await Promise.resolve();
@@ -253,10 +254,10 @@ export async function* collectCodex(
 }
 
 export const codexCollector: Collector = {
-  id: CODEX,
+  collect: (ctx) => collectCodex([codexHome()], ctx),
   discover: () =>
     Promise.resolve(
       existsSync(join(codexHome(), "sessions")) ? [codexHome()] : []
     ),
-  collect: (ctx) => collectCodex([codexHome()], ctx),
+  id: CODEX,
 };

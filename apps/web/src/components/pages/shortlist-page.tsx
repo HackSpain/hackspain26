@@ -1,13 +1,5 @@
-import {
-  type ChangeEvent,
-  type KeyboardEvent,
-  type MouseEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import type { ChangeEvent, KeyboardEvent, MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ShortlistDecision,
   ShortlistImportResponse,
@@ -326,14 +318,18 @@ const CandidateRow = ({
           compact
           decision={participant.aiRecommendation}
           disabled
-          onChange={() => undefined}
+          onChange={() => {
+            /* empty */
+          }}
         />
       </div>
       <div className="candidate-score" data-label="AI score">
         <ScoreControls
           compact
           disabled
-          onChange={() => undefined}
+          onChange={() => {
+            /* empty */
+          }}
           score={participant.aiScore}
         />
       </div>
@@ -790,7 +786,9 @@ const ShortlistPage = ({
         }
       }
     };
-    load().catch(() => undefined);
+    load().catch(() => {
+      /* empty */
+    });
     return () => {
       isActive = false;
     };
@@ -822,7 +820,7 @@ const ShortlistPage = ({
       );
     });
 
-    return filtered.sort((left, right) => {
+    return filtered.toSorted((left, right) => {
       if (sort === "aiScore") {
         return (right.aiScore ?? 0) - (left.aiScore ?? 0);
       }
@@ -933,7 +931,9 @@ const ShortlistPage = ({
       decision: ShortlistDecision | null
     ): void => {
       updateParticipant(participant.id, { decision });
-      saveReview(participant.id, { decision }).catch(() => undefined);
+      saveReview(participant.id, { decision }).catch(() => {
+        /* empty */
+      });
     },
     [saveReview, updateParticipant]
   );
@@ -941,7 +941,9 @@ const ShortlistPage = ({
   const changeScore = useCallback(
     (participant: ShortlistParticipant, score: number | null): void => {
       updateParticipant(participant.id, { score });
-      saveReview(participant.id, { score }).catch(() => undefined);
+      saveReview(participant.id, { score }).catch(() => {
+        /* empty */
+      });
     },
     [saveReview, updateParticipant]
   );
@@ -958,7 +960,9 @@ const ShortlistPage = ({
     }
     const timer = setTimeout(() => {
       noteTimersRef.current.delete(participant.id);
-      saveReview(participant.id, { notes }).catch(() => undefined);
+      saveReview(participant.id, { notes }).catch(() => {
+        /* empty */
+      });
     }, 600);
     noteTimersRef.current.set(participant.id, timer);
   };
@@ -970,14 +974,14 @@ const ShortlistPage = ({
     }
     clearTimeout(existingTimer);
     noteTimersRef.current.delete(participant.id);
-    saveReview(participant.id, { notes: participant.notes }).catch(
-      () => undefined
-    );
+    saveReview(participant.id, { notes: participant.notes }).catch(() => {
+      /* empty */
+    });
   };
 
   useEffect(() => {
     const handleShortcut = (event: globalThis.KeyboardEvent): void => {
-      const target = event.target;
+      const { target } = event;
       const isTyping =
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
@@ -1159,7 +1163,9 @@ const ShortlistPage = ({
           onExportCsv={handleExportCsv}
           onExportJson={handleExportJson}
           onFileChange={(event) =>
-            handleFileChange(event).catch(() => undefined)
+            handleFileChange(event).catch(() => {
+              /* empty */
+            })
           }
           onImportClick={() => fileInputRef.current?.click()}
           onLinkOnlyChange={setLinkOnly}

@@ -4,16 +4,16 @@ import { formatMember, parseMember } from "../src/lib/members";
 describe("parseMember", () => {
   test("explicit types", () => {
     expect(parseMember("github:octocat")).toEqual({
-      identifierType: "github",
       identifier: "octocat",
+      identifierType: "github",
     });
     expect(parseMember("EMAIL: a@b.c ")).toEqual({
-      identifierType: "email",
       identifier: "a@b.c",
+      identifierType: "email",
     });
     expect(parseMember("twitter:@h")).toEqual({
-      identifierType: "twitter",
       identifier: "@h",
+      identifierType: "twitter",
     });
   });
 
@@ -30,10 +30,10 @@ describe("parseMember", () => {
   });
 
   test("formats back", () => {
-    expect(formatMember({ identifierType: "github", identifier: "o" })).toBe(
+    expect(formatMember({ identifier: "o", identifierType: "github" })).toBe(
       "github:o"
     );
-    expect(formatMember({ identifierType: "email", identifier: "a@b.c" })).toBe(
+    expect(formatMember({ identifier: "a@b.c", identifierType: "email" })).toBe(
       "a@b.c"
     );
   });

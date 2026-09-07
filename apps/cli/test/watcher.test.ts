@@ -29,7 +29,7 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "hackspain-watcher-"));
 });
 afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { force: true, recursive: true });
 });
 
 function event(
@@ -78,7 +78,7 @@ describe("http sink", () => {
       url: string | URL | Request,
       init?: RequestInit
     ) => {
-      calls.push({ url: String(url), init: init ?? {} });
+      calls.push({ init: init ?? {}, url: String(url) });
       return new Response(null, {
         status: calls.length === 1 ? 200 : 503,
         statusText: "x",
@@ -152,7 +152,7 @@ describe("http sink", () => {
               accepted: 1,
               rejected: 1,
               rejections: [
-                { line: 2, eventId: event(2).eventId, reason: "invalid_event" },
+                { eventId: event(2).eventId, line: 2, reason: "invalid_event" },
               ],
               stored: true,
             },
@@ -160,9 +160,9 @@ describe("http sink", () => {
           { status: 202 }
         )) as unknown as typeof fetch,
       {
+        onRejected: (message) => messages.push(message),
         pendingPath: join(dir, "pending.json"),
         rejectionsPath,
-        onRejected: (message) => messages.push(message),
       }
     );
 
@@ -180,13 +180,13 @@ describe("batcher", () => {
     const batcher = createBatcher(
       [
         {
-          name: "durable",
-          write: async () => {},
           flushPending: async () => {
             flushes++;
             durable = 0;
           },
+          name: "durable",
           pending: () => durable,
+          write: async () => {},
         },
       ],
       () => {}
@@ -241,8 +241,6 @@ describe("scanOnce", () => {
       ...rest
     }) => rest)(validEvent);
     const good: Collector = {
-      id: "claude-code",
-      discover: async () => ["/x"],
       async *collect() {
         yield raw;
         yield { ...raw, eventId: "dup" };
@@ -252,41 +250,43 @@ describe("scanOnce", () => {
           project: { dirHash: "h", name: "/abs/path" },
         };
       },
+      discover: async () => ["/x"],
+      id: "claude-code",
     };
     const broken: Collector = {
-      id: "codex",
-      discover: async () => ["/y"],
       async *collect() {
         yield { ...raw, eventId: "codex:1" };
         throw new Error("boom");
       },
+      discover: async () => ["/y"],
+      id: "codex",
     };
     const pushed: TelemetryEvent[] = [];
     const logs: string[] = [];
     const batcher = {
-      push: (e: TelemetryEvent) => pushed.push(e),
-      flush: async () => true,
-      size: () => pushed.length,
       dropped: () => 0,
+      flush: async () => true,
+      push: (e: TelemetryEvent) => pushed.push(e),
+      size: () => pushed.length,
     };
     const recent = new Set(["dup"]);
     const result = await scanOnce(
       [good, broken],
       {
-        cursors: { get: () => undefined, set: () => {}, save: () => {} },
-        since: 0,
+        cursors: { get: () => undefined, save: () => {}, set: () => {} },
         log: (m) => logs.push(m),
+        since: 0,
       },
       batcher,
-      { userId: "u", clientVersion: "t" },
+      { clientVersion: "t", userId: "u" },
       recent
     );
     expect(result).toEqual({
+      byHarness: { "claude-code": 1, codex: 1 },
       events: 2,
       skipped: 2,
-      byHarness: { "claude-code": 1, codex: 1 },
     });
-    expect(pushed[0]?.identity).toEqual({ userId: "u", clientVersion: "t" });
+    expect(pushed[0]?.identity).toEqual({ clientVersion: "t", userId: "u" });
     expect(pushed[0]?.schema).toBe("hackspain.telemetry.v1");
     expect(logs.some((l) => l.includes("dropped bad"))).toBe(true);
     expect(logs.some((l) => l.includes("collector failed"))).toBe(true);
@@ -299,18 +299,18 @@ describe("telemetry stats", () => {
       event(1),
       event(2, {
         harness: "codex",
-        model: { raw: "gpt-5", family: "gpt" },
+        model: { family: "gpt", raw: "gpt-5" },
         sessionId: "s2",
       }),
       stamp(
         {
-          type: "session.start",
           eventId: "x",
-          occurredAt: "2026-09-19T09:00:00.000Z",
           harness: "codex",
+          occurredAt: "2026-09-19T09:00:00.000Z",
           sessionId: "s3",
+          type: "session.start",
         },
-        { userId: "u", clientVersion: "t" }
+        { clientVersion: "t", userId: "u" }
       ),
     ];
     const s = summarize(events);

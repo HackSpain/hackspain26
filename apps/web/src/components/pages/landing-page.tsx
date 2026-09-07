@@ -120,7 +120,6 @@ export function LandingPage({ initialSection = 0 }: Props) {
     if (section === MENTORS_SECTION_INDEX) {
       return MENTOR_SPONSORS;
     }
-    return;
   }, [section]);
   const partners = usePartnerRotation(PARTNER_CELL_COUNT, pinnedSponsors);
 
@@ -140,8 +139,8 @@ export function LandingPage({ initialSection = 0 }: Props) {
     () =>
       reducedMotion
         ? {
-            enter: { opacity: 0 },
             center: { opacity: 1 },
+            enter: { opacity: 0 },
             exit: { opacity: 0 },
           }
         : slideVariants,
@@ -313,7 +312,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
             key={`${ill.id}-${section}`}
             transition={
               reducedMotion
-                ? { type: "tween", duration: 0.2, delay: ill.delay * 0.2 }
+                ? { delay: ill.delay * 0.2, duration: 0.2, type: "tween" }
                 : { ...SPRING, delay: ill.delay }
             }
             variants={variants}
@@ -364,7 +363,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
                 }
                 transition={
                   reducedMotion
-                    ? { type: "tween", duration: 0.2, delay: cell.delay * 0.3 }
+                    ? { delay: cell.delay * 0.3, duration: 0.2, type: "tween" }
                     : { ...SPRING, delay: cell.delay }
                 }
                 variants={variants}

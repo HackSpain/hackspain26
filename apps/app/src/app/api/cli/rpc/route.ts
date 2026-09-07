@@ -13,7 +13,8 @@ export async function POST(request: Request) {
   }
   const body = await readJson(request);
   const name = typeof body?.name === "string" ? body.name : null;
-  const args = typeof body?.args === "object" && body?.args !== null ? body.args : {};
+  const args =
+    typeof body?.args === "object" && body?.args !== null ? body.args : {};
   if (!name) {
     return fail("Body must be { name, args }", 400);
   }
@@ -24,16 +25,20 @@ export async function POST(request: Request) {
   try {
     const options = { token };
     switch (exposed.kind) {
-      case "query":
+      case "query": {
         return ok(await fetchQuery(exposed.ref, args, options));
-      case "mutation":
+      }
+      case "mutation": {
         return ok(await fetchMutation(exposed.ref, args, options));
-      case "action":
+      }
+      case "action": {
         return ok(await fetchAction(exposed.ref, args, options));
-      default:
+      }
+      default: {
         return fail("Unsupported function kind", 500);
+      }
     }
-  } catch (err) {
-    return fromError(err);
+  } catch (error) {
+    return fromError(error);
   }
 }

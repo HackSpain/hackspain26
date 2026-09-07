@@ -45,8 +45,8 @@ if (dsn) {
     enableLogs: true,
     // Define how likely traces are sampled. Adjust this value in production,
     // or use tracesSampler for greater control.
-    tracesSampleRate: 1.0,
+    tracesSampleRate: 1,
     replaysSessionSampleRate: 0,
-    replaysOnErrorSampleRate: isDev ? 0 : 1.0,
+    replaysOnErrorSampleRate: isDev ? 0 : 1,
   });
 }

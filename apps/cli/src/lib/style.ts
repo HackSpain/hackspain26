@@ -8,23 +8,23 @@ export const colorEnabled: boolean =
   process.env.TERM !== "dumb" &&
   (Boolean(process.env.FORCE_COLOR) || Boolean(process.stdout.isTTY));
 
-function wrap(open: string, close = "\x1b[39m") {
+function wrap(open: string, close = "\x1B[39m") {
   return (text: string): string =>
     colorEnabled ? `${open}${text}${close}` : text;
 }
 
-const rgb = (r: number, g: number, b: number) => `\x1b[38;2;${r};${g};${b}m`;
+const rgb = (r: number, g: number, b: number) => `\x1B[38;2;${r};${g};${b}m`;
 
 export const c = {
+  bold: wrap("\x1b[1m", "\x1b[22m"),
+  dim: wrap("\x1b[2m", "\x1b[22m"),
   gold: wrap(rgb(234, 182, 25)),
+  green: wrap("\x1b[32m"),
+  italic: wrap("\x1b[3m", "\x1b[23m"),
+  navy: wrap(rgb(143, 184, 209)),
   orange: wrap(rgb(217, 107, 42)),
   red: wrap(rgb(204, 41, 31)),
   teal: wrap(rgb(53, 133, 138)),
-  navy: wrap(rgb(143, 184, 209)),
-  green: wrap("\x1b[32m"),
-  dim: wrap("\x1b[2m", "\x1b[22m"),
-  bold: wrap("\x1b[1m", "\x1b[22m"),
-  italic: wrap("\x1b[3m", "\x1b[23m"),
 };
 
 /** `hackspain team join ABCD1234` → styled command for copy/paste. */
@@ -40,7 +40,7 @@ export const BRAND = `${c.gold("⚡")} ${c.bold("hackspain")}`;
 
 export function stripAnsi(text: string): string {
   // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escapes are control chars by definition
-  return text.replace(/\x1b\[[0-9;]*m/g, "");
+  return text.replaceAll(/\x1B\[[0-9;]*m/g, "");
 }
 
 const WIDE = /\p{Extended_Pictographic}/u;

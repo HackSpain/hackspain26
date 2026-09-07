@@ -3,7 +3,8 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { AuthScreen, Field, FormError, FormNotice } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,24 +24,31 @@ type Step = "email" | "code";
 type Direction = 1 | -1;
 
 const stepVariants = {
-  initial: (direction: Direction) => ({ x: direction * SLIDE_PX, opacity: 0 }),
-  active: { x: 0, opacity: 1 },
+  active: { opacity: 1, x: 0 },
   exit: (direction: Direction) => ({ x: -direction * SLIDE_PX, opacity: 0 }),
+  initial: (direction: Direction) => ({ x: direction * SLIDE_PX, opacity: 0 }),
 };
 
 const reducedStepVariants = {
-  initial: { opacity: 0 },
   active: { opacity: 1 },
   exit: { opacity: 0 },
+  initial: { opacity: 0 },
 };
 
-function useMeasuredHeight(): [(node: HTMLElement | null) => void, number | null] {
+function useMeasuredHeight(): [
+  (node: HTMLElement | null) => void,
+  number | null,
+] {
   const [node, setNode] = useState<HTMLElement | null>(null);
   const [height, setHeight] = useState<number | null>(null);
   useEffect(() => {
-    if (!node) return;
+    if (!node) {
+      return;
+    }
     const observer = new ResizeObserver(([entry]) => {
-      if (entry) setHeight(entry.contentRect.height);
+      if (entry) {
+        setHeight(entry.contentRect.height);
+      }
     });
     observer.observe(node);
     return () => observer.disconnect();
@@ -48,7 +56,13 @@ function useMeasuredHeight(): [(node: HTMLElement | null) => void, number | null
   return [setNode, height];
 }
 
-function TextLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+function TextLink({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -88,7 +102,9 @@ export default function LoginPage() {
     setPending(true);
     try {
       const check = await fetch("/api/login-check", { method: "POST" });
-      if (!check.ok) throw new Error("login-check failed");
+      if (!check.ok) {
+        throw new Error("login-check failed");
+      }
       await signIn("resend-otp", { email: normalizedEmail });
       return true;
     } catch {
@@ -101,21 +117,27 @@ export default function LoginPage() {
 
   async function sendCode(event: React.FormEvent) {
     event.preventDefault();
-    if (await requestCode()) goTo("code");
+    if (await requestCode()) {
+      goTo("code");
+    }
   }
 
   async function resendCode() {
     setCode("");
-    if (await requestCode()) setNotice("Código nuevo enviado.");
+    if (await requestCode()) {
+      setNotice("Código nuevo enviado.");
+    }
   }
 
   async function verifyCode(value: string) {
-    if (value.length !== CODE_LENGTH || pending) return;
+    if (value.length !== CODE_LENGTH || pending) {
+      return;
+    }
     setError(null);
     setNotice(null);
     setPending(true);
     try {
-      await signIn("resend-otp", { email: normalizedEmail, code: value });
+      await signIn("resend-otp", { code: value, email: normalizedEmail });
     } catch {
       setError("Ese código no es válido.");
       setCode("");
@@ -138,11 +160,17 @@ export default function LoginPage() {
         <motion.div
           animate={bodyHeight === null ? undefined : { height: bodyHeight }}
           transition={
-            reducedMotion ? { duration: 0 } : { type: "spring", duration: 0.4, bounce: 0 }
+            reducedMotion
+              ? { duration: 0 }
+              : { bounce: 0, duration: 0.4, type: "spring" }
           }
         >
           <div ref={bodyRef}>
-            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+            <AnimatePresence
+              mode="popLayout"
+              initial={false}
+              custom={direction}
+            >
               <motion.div
                 key={step}
                 custom={direction}
@@ -155,23 +183,35 @@ export default function LoginPage() {
                 <CardContent className="space-y-4">
                   {step === "email" ? (
                     <p className="text-sm text-hs-brown">
-                      Usa el email con el que te apuntaste. Te enviamos un código.
+                      Usa el email con el que te apuntaste. Te enviamos un
+                      código.
                     </p>
                   ) : (
                     <div className="space-y-1 text-sm text-hs-brown">
                       <p>
-                        Código enviado a <span className="break-all text-hs-ink">{normalizedEmail}</span>.
+                        Código enviado a{" "}
+                        <span className="break-all text-hs-ink">
+                          {normalizedEmail}
+                        </span>
+                        .
                       </p>
                       <p className="flex gap-4">
-                        <TextLink onClick={() => goTo("email")}>Cambiar email</TextLink>
-                        <TextLink onClick={() => void resendCode()}>Reenviar</TextLink>
+                        <TextLink onClick={() => goTo("email")}>
+                          Cambiar email
+                        </TextLink>
+                        <TextLink onClick={() => void resendCode()}>
+                          Reenviar
+                        </TextLink>
                       </p>
                     </div>
                   )}
                   <FormError message={error} />
                   <FormNotice message={notice} />
                   {step === "email" ? (
-                    <form onSubmit={(event) => void sendCode(event)} className="space-y-4">
+                    <form
+                      onSubmit={(event) => void sendCode(event)}
+                      className="space-y-4"
+                    >
                       <Field label="Email" htmlFor="email">
                         <Input
                           id="email"
@@ -183,7 +223,11 @@ export default function LoginPage() {
                           onChange={(event) => setEmail(event.target.value)}
                         />
                       </Field>
-                      <Button type="submit" className="w-full" disabled={pending}>
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={pending}
+                      >
                         {pending ? "Enviando…" : "Enviarme un código"}
                       </Button>
                     </form>
@@ -206,7 +250,9 @@ export default function LoginPage() {
                           disabled={pending}
                           onChange={(value) => {
                             setCode(value);
-                            if (error) setError(null);
+                            if (error) {
+                              setError(null);
+                            }
                           }}
                           onComplete={(value) => void verifyCode(value)}
                           containerClassName="w-full"

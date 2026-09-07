@@ -3,8 +3,10 @@ import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { CliError, usageError } from "../lib/errors";
 import { formatMember, parseMember } from "../lib/members";
-import { formatWhen, type Ui, uiFor } from "../lib/output";
-import { openParticipant, type Team } from "../lib/participant";
+import type { Ui } from "../lib/output";
+import { formatWhen, uiFor } from "../lib/output";
+import type { Team } from "../lib/participant";
+import { openParticipant } from "../lib/participant";
 import { confirmOrFlag, pickOne } from "../lib/prompts";
 import { c, cmd, highlight } from "../lib/style";
 
@@ -132,7 +134,7 @@ export function registerTeam(program: Command): void {
         const mine = await ui.spin(
           `Creating ${name}…`,
           async () => {
-            await session.client.mutation(api.teams.create, { name, members });
+            await session.client.mutation(api.teams.create, { members, name });
             return await session.client.query(api.teams.mine, {});
           },
           "Team created"
@@ -199,8 +201,8 @@ export function registerTeam(program: Command): void {
       }
       const ok = await confirmOrFlag(ctx, opts.yes, {
         flag: "--yes",
-        message: `Leave ${mine.name}?`,
         initialValue: false,
+        message: `Leave ${mine.name}?`,
       });
       if (!ok) {
         ui.info("Kept your membership.");
@@ -344,18 +346,18 @@ export function registerTeam(program: Command): void {
           memberId = matches[0]?._id;
         }
         const chosen = await pickOne(ctx, memberId, {
-          flag: "<member>",
-          message: "Transfer ownership to",
           choices: candidates.map((m) => ({
             value: m._id as string,
             label: label(m),
           })),
+          flag: "<member>",
+          message: "Transfer ownership to",
         });
         const target = candidates.find((m) => m._id === chosen);
         const ok = await confirmOrFlag(ctx, opts.yes, {
           flag: "--yes",
-          message: `Make ${target ? label(target) : chosen} the owner of ${mine.name}? You stay as a member.`,
           initialValue: false,
+          message: `Make ${target ? label(target) : chosen} the owner of ${mine.name}? You stay as a member.`,
         });
         if (!ok) {
           ui.info("Ownership unchanged.");
@@ -403,8 +405,8 @@ export function registerTeam(program: Command): void {
       }
       const ok = await confirmOrFlag(ctx, opts.yes, {
         flag: "--yes",
-        message: `Delete ${mine.name}? Its draft project, milestones and pending invites go with it.`,
         initialValue: false,
+        message: `Delete ${mine.name}? Its draft project, milestones and pending invites go with it.`,
       });
       if (!ok) {
         ui.info("Kept the team.");

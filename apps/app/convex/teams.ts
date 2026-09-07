@@ -28,12 +28,12 @@ function randomJoinCode(): string {
   crypto.getRandomValues(bytes);
   return Array.from(
     bytes,
-    (b) => JOIN_CODE_ALPHABET[b % JOIN_CODE_ALPHABET.length],
+    (b) => JOIN_CODE_ALPHABET[b % JOIN_CODE_ALPHABET.length]
   ).join("");
 }
 
 export function normalizeJoinCode(raw: string): string {
-  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return raw.toUpperCase().replaceAll(/[^A-Z0-9]/g, "");
 }
 
 async function uniqueJoinCode(ctx: MutationCtx): Promise<string> {
@@ -43,14 +43,18 @@ async function uniqueJoinCode(ctx: MutationCtx): Promise<string> {
       .query("teams")
       .withIndex("by_join_code", (q) => q.eq("joinCode", code))
       .first();
-    if (!taken) return code;
+    if (!taken) {
+      return code;
+    }
   }
   throw new Error("No se pudo generar un código de equipo");
 }
 
 export function normalizeRepoUrl(raw: string): string | null {
   const match = GITHUB_REPO_PATTERN.exec(raw.trim());
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   return `https://github.com/${match[1]}/${match[2]}`;
 }
 
@@ -58,11 +62,13 @@ export function normalizeTechStack(raw: string[]): string[] {
   const seen = new Set<string>();
   for (const entry of raw) {
     const tech = entry.trim().toLowerCase();
-    if (!tech) continue;
+    if (!tech) {
+      continue;
+    }
     if (tech.length > MAX_TECH_LENGTH) {
       fail(
         "VALIDATION",
-        `"${entry.trim()}" supera ${MAX_TECH_LENGTH} caracteres`,
+        `"${entry.trim()}" supera ${MAX_TECH_LENGTH} caracteres`
       );
     }
     seen.add(tech);
@@ -75,76 +81,78 @@ export function normalizeTechStack(raw: string[]): string[] {
 
 const memberReturn = v.object({
   _id: v.id("teamMembers"),
-  identifierType: identifierTypeValidator,
+  email: v.optional(v.string()),
   identifier: v.string(),
+  identifierType: identifierTypeValidator,
+  name: v.optional(v.string()),
   status: teamMemberStatusValidator,
   userId: v.optional(v.id("users")),
-  name: v.optional(v.string()),
-  email: v.optional(v.string()),
 });
 
 const teamReturn = v.object({
   _id: v.id("teams"),
+  createdAt: v.number(),
+  isOwner: v.boolean(),
+  joinCode: v.optional(v.string()),
+  members: v.array(memberReturn),
   name: v.string(),
   ownerId: v.id("users"),
-  isOwner: v.boolean(),
-  createdAt: v.number(),
-  joinCode: v.optional(v.string()),
   repoUrl: v.optional(v.string()),
   techStack: v.array(v.string()),
-  members: v.array(memberReturn),
 });
 
 const teamSummaryReturn = v.object({
   _id: v.id("teams"),
-  name: v.string(),
   isMine: v.boolean(),
   memberCount: v.number(),
+  name: v.string(),
   pendingCount: v.number(),
   repoUrl: v.optional(v.string()),
+  submissionStatus: v.optional(
+    v.union(v.literal("draft"), v.literal("submitted"))
+  ),
   techStack: v.array(v.string()),
   tracks: v.array(v.object({ slug: v.string(), label: v.string() })),
-  submissionStatus: v.optional(
-    v.union(v.literal("draft"), v.literal("submitted")),
-  ),
 });
 
 async function hydrateMember(
   ctx: QueryCtx | MutationCtx,
-  member: Doc<"teamMembers">,
+  member: Doc<"teamMembers">
 ) {
   const user = member.userId ? await ctx.db.get(member.userId) : null;
   const signup = member.signupId ? await ctx.db.get(member.signupId) : null;
   return {
     _id: member._id,
-    identifierType: member.identifierType,
+    email: user?.email ?? signup?.email,
     identifier: member.identifier,
+    identifierType: member.identifierType,
+    name: user?.name ?? signup?.fullName,
     status: member.status,
     userId: member.userId,
-    name: user?.name ?? signup?.fullName,
-    email: user?.email ?? signup?.email,
   };
 }
 
 async function resolveIdentifier(
   ctx: MutationCtx,
   identifierType: "email" | "github" | "twitter",
-  raw: string,
+  raw: string
 ): Promise<{
   identifier: string;
   userId?: Id<"users">;
   signupId?: Id<"signups">;
   status: "member" | "pending";
 }> {
-  const identifier =
-    identifierType === "email"
-      ? normalizeEmail(raw)
-      : identifierType === "github"
-        ? normalizeGithub(raw)
-        : normalizeTwitter(raw);
+  let identifier: string;
+  if (identifierType === "email") {
+    identifier = normalizeEmail(raw);
+  } else if (identifierType === "github") {
+    identifier = normalizeGithub(raw);
+  } else {
+    identifier = normalizeTwitter(raw);
+  }
   if (!identifier) {
     throw new Error(
-      "Introduce un usuario de GitHub, un handle de X o un email válido",
+      "Introduce un usuario de GitHub, un handle de X o un email válido"
     );
   }
 
@@ -187,15 +195,14 @@ async function resolveIdentifier(
 
   return {
     identifier,
-    userId: user?._id,
     signupId: signup?._id,
     status: user ? "member" : "pending",
+    userId: user?._id,
   };
 }
 
 export const mine = onboardedQuery({
   args: {},
-  returns: v.union(teamReturn, v.null()),
   handler: async (ctx) => {
     const membership = await membershipForUser(ctx, ctx.user._id);
     const team = membership
@@ -204,7 +211,9 @@ export const mine = onboardedQuery({
           .query("teams")
           .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
           .unique();
-    if (!team) return null;
+    if (!team) {
+      return null;
+    }
     const members = await ctx.db
       .query("teamMembers")
       .withIndex("by_team", (q) => q.eq("teamId", team._id))
@@ -222,26 +231,28 @@ export const mine = onboardedQuery({
       members: await Promise.all(members.map((m) => hydrateMember(ctx, m))),
     };
   },
+  returns: v.union(teamReturn, v.null()),
 });
 
 /** Cheap server-side identity lookup for telemetry and similar ingestion paths. */
 export const mineId = onboardedQuery({
   args: {},
-  returns: v.union(v.id("teams"), v.null()),
   handler: async (ctx) => {
     const membership = await membershipForUser(ctx, ctx.user._id);
-    if (membership) return membership.teamId;
+    if (membership) {
+      return membership.teamId;
+    }
     const owned = await ctx.db
       .query("teams")
       .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
       .unique();
     return owned?._id ?? null;
   },
+  returns: v.union(v.id("teams"), v.null()),
 });
 
 export const list = onboardedQuery({
   args: {},
-  returns: v.array(teamSummaryReturn),
   handler: async (ctx) => {
     const membership = await membershipForUser(ctx, ctx.user._id);
     const teams = await ctx.db.query("teams").collect();
@@ -258,7 +269,9 @@ export const list = onboardedQuery({
       const tracks = [];
       for (const trackId of submission?.challengeIds ?? []) {
         const track = await ctx.db.get(trackId);
-        if (track) tracks.push({ slug: track.slug, label: track.label });
+        if (track) {
+          tracks.push({ slug: track.slug, label: track.label });
+        }
       }
       result.push({
         _id: team._id,
@@ -272,13 +285,14 @@ export const list = onboardedQuery({
         submissionStatus: submission?.status,
       });
     }
-    return result.sort((a, b) => a.name.localeCompare(b.name, "es"));
+    return result.toSorted((a, b) => a.name.localeCompare(b.name, "es"));
   },
+  returns: v.array(teamSummaryReturn),
 });
 
 const memberInputValidator = v.object({
-  identifierType: identifierTypeValidator,
   identifier: v.string(),
+  identifierType: identifierTypeValidator,
 });
 
 async function insertMember(
@@ -286,7 +300,7 @@ async function insertMember(
   team: Doc<"teams">,
   addedBy: Id<"users">,
   identifierType: "email" | "github" | "twitter",
-  identifier: string,
+  identifier: string
 ): Promise<Id<"teamMembers">> {
   const resolved = await resolveIdentifier(ctx, identifierType, identifier);
   const already = await ctx.db
@@ -294,19 +308,23 @@ async function insertMember(
     .withIndex("by_identifier", (q) =>
       q
         .eq("identifierType", identifierType)
-        .eq("identifier", resolved.identifier),
+        .eq("identifier", resolved.identifier)
     )
     .collect();
   const onThisTeam = already.find((row) => row.teamId === team._id);
-  if (onThisTeam) throw new Error("Esa persona ya está en este equipo");
+  if (onThisTeam) {
+    throw new Error("Esa persona ya está en este equipo");
+  }
   if (already.some((row) => row.teamId !== team._id)) {
     throw new Error(
-      "Esa persona ya tiene invitación o membresía en otro equipo",
+      "Esa persona ya tiene invitación o membresía en otro equipo"
     );
   }
   if (resolved.userId) {
     const other = await membershipForUser(ctx, resolved.userId);
-    if (other) throw new Error("Esa persona ya pertenece a otro equipo");
+    if (other) {
+      throw new Error("Esa persona ya pertenece a otro equipo");
+    }
   }
   if (resolved.signupId) {
     const bySignup = await ctx.db
@@ -318,35 +336,37 @@ async function insertMember(
     }
     if (bySignup.length > 0) {
       throw new Error(
-        "Esa persona ya tiene invitación o membresía en otro equipo",
+        "Esa persona ya tiene invitación o membresía en otro equipo"
       );
     }
   }
 
   return await ctx.db.insert("teamMembers", {
-    teamId: team._id,
-    userId: resolved.userId,
-    signupId: resolved.signupId,
-    identifierType,
-    identifier: resolved.identifier,
-    status: resolved.status,
     addedBy,
     createdAt: Date.now(),
+    identifier: resolved.identifier,
+    identifierType,
+    signupId: resolved.signupId,
+    status: resolved.status,
+    teamId: team._id,
+    userId: resolved.userId,
   });
 }
 
 export const create = onboardedMutation({
   args: {
-    name: v.string(),
     members: v.optional(v.array(memberInputValidator)),
+    name: v.string(),
   },
-  returns: v.id("teams"),
   handler: async (ctx, args) => {
     const name = args.name.trim();
-    if (name.length < 2)
+    if (name.length < 2) {
       throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
+    }
     const existing = await membershipForUser(ctx, ctx.user._id);
-    if (existing) throw new Error("Ya perteneces a un equipo");
+    if (existing) {
+      throw new Error("Ya perteneces a un equipo");
+    }
 
     const now = Date.now();
     const teamId = await ctx.db.insert("teams", {
@@ -368,47 +388,57 @@ export const create = onboardedMutation({
     });
 
     const team = await ctx.db.get(teamId);
-    if (!team) throw new Error("Equipo no encontrado");
+    if (!team) {
+      throw new Error("Equipo no encontrado");
+    }
     for (const member of args.members ?? []) {
-      if (!member.identifier.trim()) continue;
+      if (!member.identifier.trim()) {
+        continue;
+      }
       await insertMember(
         ctx,
         team,
         ctx.user._id,
         member.identifierType,
-        member.identifier,
+        member.identifier
       );
     }
     return teamId;
   },
+  returns: v.id("teams"),
 });
 
 export const rename = onboardedMutation({
-  args: { teamId: v.id("teams"), name: v.string() },
-  returns: v.null(),
+  args: { name: v.string(), teamId: v.id("teams") },
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
-    if (!team) throw new Error("Equipo no encontrado");
-    if (team.ownerId !== ctx.user._id)
+    if (!team) {
+      throw new Error("Equipo no encontrado");
+    }
+    if (team.ownerId !== ctx.user._id) {
       throw new Error("Solo el dueño puede cambiar el nombre");
+    }
     const name = args.name.trim();
-    if (name.length < 2)
+    if (name.length < 2) {
       throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
+    }
     await ctx.db.patch(team._id, { name, updatedAt: Date.now() });
     return null;
   },
+  returns: v.null(),
 });
 
 export const addMember = onboardedMutation({
   args: {
-    teamId: v.id("teams"),
-    identifierType: identifierTypeValidator,
     identifier: v.string(),
+    identifierType: identifierTypeValidator,
+    teamId: v.id("teams"),
   },
-  returns: v.id("teamMembers"),
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
-    if (!team) throw new Error("Equipo no encontrado");
+    if (!team) {
+      throw new Error("Equipo no encontrado");
+    }
     if (team.ownerId !== ctx.user._id) {
       throw new Error("Solo el dueño puede añadir miembros");
     }
@@ -417,17 +447,19 @@ export const addMember = onboardedMutation({
       team,
       ctx.user._id,
       args.identifierType,
-      args.identifier,
+      args.identifier
     );
   },
+  returns: v.id("teamMembers"),
 });
 
 export const leave = onboardedMutation({
   args: {},
-  returns: v.null(),
   handler: async (ctx) => {
     const membership = await membershipForUser(ctx, ctx.user._id);
-    if (!membership) throw new Error("No estás en un equipo");
+    if (!membership) {
+      throw new Error("No estás en un equipo");
+    }
     const team = await ctx.db.get(membership.teamId);
     if (team && team.ownerId === ctx.user._id) {
       throw new Error("El dueño no puede salir del equipo");
@@ -435,16 +467,20 @@ export const leave = onboardedMutation({
     await ctx.db.delete(membership._id);
     return null;
   },
+  returns: v.null(),
 });
 
 export const removeMember = onboardedMutation({
   args: { memberId: v.id("teamMembers") },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const member = await ctx.db.get(args.memberId);
-    if (!member) throw new Error("Miembro no encontrado");
+    if (!member) {
+      throw new Error("Miembro no encontrado");
+    }
     const team = await ctx.db.get(member.teamId);
-    if (!team) throw new Error("Equipo no encontrado");
+    if (!team) {
+      throw new Error("Equipo no encontrado");
+    }
     if (team.ownerId !== ctx.user._id) {
       throw new Error("Solo el dueño puede quitar miembros");
     }
@@ -454,27 +490,32 @@ export const removeMember = onboardedMutation({
     await ctx.db.delete(member._id);
     return null;
   },
+  returns: v.null(),
 });
 
 async function requireMemberTeam(
-  ctx: MutationCtx & { user: Doc<"users"> },
+  ctx: MutationCtx & { user: Doc<"users"> }
 ): Promise<Doc<"teams">> {
   const membership = await membershipForUser(ctx, ctx.user._id);
-  if (!membership) fail("NO_TEAM", "No estás en un equipo");
+  if (!membership) {
+    fail("NO_TEAM", "No estás en un equipo");
+  }
   const team = await ctx.db.get(membership.teamId);
-  if (!team) fail("NOT_FOUND", "Equipo no encontrado");
+  if (!team) {
+    fail("NOT_FOUND", "Equipo no encontrado");
+  }
   return team;
 }
 
 async function clearPendingInvites(
   ctx: MutationCtx,
-  user: Doc<"users">,
+  user: Doc<"users">
 ): Promise<void> {
   const rows: Doc<"teamMembers">[] = [];
-  const identifiers: Array<{
+  const identifiers: {
     type: "email" | "github" | "twitter";
     value: string | undefined;
-  }> = [
+  }[] = [
     {
       type: "email",
       value: user.email ? normalizeEmail(user.email) : undefined,
@@ -487,14 +528,16 @@ async function clearPendingInvites(
     },
   ];
   for (const { type, value } of identifiers) {
-    if (!value) continue;
+    if (!value) {
+      continue;
+    }
     rows.push(
       ...(await ctx.db
         .query("teamMembers")
         .withIndex("by_identifier", (q) =>
-          q.eq("identifierType", type).eq("identifier", value),
+          q.eq("identifierType", type).eq("identifier", value)
         )
-        .collect()),
+        .collect())
     );
   }
   if (user.signupId) {
@@ -502,12 +545,14 @@ async function clearPendingInvites(
       ...(await ctx.db
         .query("teamMembers")
         .withIndex("by_signup", (q) => q.eq("signupId", user.signupId))
-        .collect()),
+        .collect())
     );
   }
   const seen = new Set<string>();
   for (const row of rows) {
-    if (seen.has(row._id) || row.status !== "pending") continue;
+    if (seen.has(row._id) || row.status !== "pending") {
+      continue;
+    }
     seen.add(row._id);
     await ctx.db.delete(row._id);
   }
@@ -515,7 +560,6 @@ async function clearPendingInvites(
 
 export const join = onboardedMutation({
   args: { code: v.string() },
-  returns: v.id("teams"),
   handler: async (ctx, args) => {
     const code = normalizeJoinCode(args.code);
     if (code.length !== JOIN_CODE_LENGTH) {
@@ -525,11 +569,15 @@ export const join = onboardedMutation({
       .query("teams")
       .withIndex("by_join_code", (q) => q.eq("joinCode", code))
       .unique();
-    if (!team) fail("BAD_CODE", "No hay ningún equipo con ese código");
+    if (!team) {
+      fail("BAD_CODE", "No hay ningún equipo con ese código");
+    }
 
     const existing = await membershipForUser(ctx, ctx.user._id);
     if (existing) {
-      if (existing.teamId === team._id) return team._id;
+      if (existing.teamId === team._id) {
+        return team._id;
+      }
       fail("ALREADY_IN_TEAM", "Ya perteneces a otro equipo");
     }
 
@@ -547,11 +595,11 @@ export const join = onboardedMutation({
     await ctx.db.patch(team._id, { updatedAt: Date.now() });
     return team._id;
   },
+  returns: v.id("teams"),
 });
 
 export const regenerateCode = onboardedMutation({
   args: {},
-  returns: v.string(),
   handler: async (ctx) => {
     const team = await requireMemberTeam(ctx);
     if (team.ownerId !== ctx.user._id) {
@@ -561,11 +609,11 @@ export const regenerateCode = onboardedMutation({
     await ctx.db.patch(team._id, { joinCode, updatedAt: Date.now() });
     return joinCode;
   },
+  returns: v.string(),
 });
 
 export const setRepoUrl = onboardedMutation({
   args: { url: v.union(v.string(), v.null()) },
-  returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
     const team = await requireMemberTeam(ctx);
     if (args.url === null || args.url.trim() === "") {
@@ -580,7 +628,7 @@ export const setRepoUrl = onboardedMutation({
     if (!repoUrl) {
       fail(
         "VALIDATION",
-        "Introduce una URL de repositorio de GitHub (https://github.com/org/repo)",
+        "Introduce una URL de repositorio de GitHub (https://github.com/org/repo)"
       );
     }
     await ctx.db.patch(team._id, {
@@ -590,22 +638,22 @@ export const setRepoUrl = onboardedMutation({
     });
     return repoUrl;
   },
+  returns: v.union(v.string(), v.null()),
 });
 
 export const setTechStack = onboardedMutation({
   args: { stack: v.array(v.string()) },
-  returns: v.array(v.string()),
   handler: async (ctx, args) => {
     const team = await requireMemberTeam(ctx);
     const techStack = normalizeTechStack(args.stack);
     await ctx.db.patch(team._id, { techStack, updatedAt: Date.now() });
     return techStack;
   },
+  returns: v.array(v.string()),
 });
 
 export const transferOwnership = onboardedMutation({
   args: { memberId: v.id("teamMembers") },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const team = await requireMemberTeam(ctx);
     if (team.ownerId !== ctx.user._id) {
@@ -618,7 +666,7 @@ export const transferOwnership = onboardedMutation({
     if (member.status !== "member" || !member.userId) {
       fail(
         "VALIDATION",
-        "Solo se puede transferir a alguien que ya haya entrado en el equipo",
+        "Solo se puede transferir a alguien que ya haya entrado en el equipo"
       );
     }
     if (member.userId === ctx.user._id) {
@@ -630,6 +678,7 @@ export const transferOwnership = onboardedMutation({
     });
     return null;
   },
+  returns: v.null(),
 });
 
 /**
@@ -638,7 +687,6 @@ export const transferOwnership = onboardedMutation({
  */
 export const dissolve = onboardedMutation({
   args: {},
-  returns: v.null(),
   handler: async (ctx) => {
     const team = await requireMemberTeam(ctx);
     if (team.ownerId !== ctx.user._id) {
@@ -649,12 +697,12 @@ export const dissolve = onboardedMutation({
       .withIndex("by_team", (q) => q.eq("teamId", team._id))
       .collect();
     const others = members.filter(
-      (m) => m.status === "member" && m.userId !== ctx.user._id,
+      (m) => m.status === "member" && m.userId !== ctx.user._id
     );
     if (others.length > 0) {
       fail(
         "VALIDATION",
-        "El equipo aún tiene miembros: transfiere la propiedad o quítalos antes",
+        "El equipo aún tiene miembros: transfiere la propiedad o quítalos antes"
       );
     }
     const submission = await ctx.db
@@ -664,7 +712,7 @@ export const dissolve = onboardedMutation({
     if (submission?.status === "submitted") {
       fail(
         "VALIDATION",
-        "El equipo ya ha enviado un proyecto y no se puede disolver",
+        "El equipo ya ha enviado un proyecto y no se puede disolver"
       );
     }
     if (submission) {
@@ -694,20 +742,23 @@ export const dissolve = onboardedMutation({
     await ctx.db.delete(team._id);
     return null;
   },
+  returns: v.null(),
 });
 
 // One-off for teams created before join codes existed. Run from the dashboard.
 export const backfillJoinCodes = internalMutation({
   args: {},
-  returns: v.number(),
   handler: async (ctx) => {
     const teams = await ctx.db.query("teams").collect();
     let updated = 0;
     for (const team of teams) {
-      if (team.joinCode) continue;
+      if (team.joinCode) {
+        continue;
+      }
       await ctx.db.patch(team._id, { joinCode: await uniqueJoinCode(ctx) });
       updated++;
     }
     return updated;
   },
+  returns: v.number(),
 });

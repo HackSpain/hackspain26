@@ -36,7 +36,7 @@ function linkifyPlain(segment: string, keyBase: string): ReactNode[] {
         className={linkClass}
         href={href}
         key={`${keyBase}-a-${ki++}`}
-        {...(isEmail ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+        {...(isEmail ? {} : { rel: "noopener noreferrer", target: "_blank" })}
       >
         {token}
       </a>

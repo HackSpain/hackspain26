@@ -16,20 +16,24 @@ export function useImageFromSrc(src: string | null): HTMLImageElement | null {
 
     let cancelled = false;
     const element = new Image();
-    element.onload = () => {
+    const handleLoad = () => {
       if (!cancelled) {
         setImage(element);
       }
     };
-    element.onerror = () => {
+    const handleError = () => {
       if (!cancelled) {
         setImage(null);
       }
     };
+    element.addEventListener("load", handleLoad);
+    element.addEventListener("error", handleError);
     element.src = src;
 
     return () => {
       cancelled = true;
+      element.removeEventListener("load", handleLoad);
+      element.removeEventListener("error", handleError);
     };
   }, [src]);
 

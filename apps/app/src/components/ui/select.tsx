@@ -32,7 +32,7 @@ function SelectTrigger({
       data-size={size}
       className={cn(
         "flex w-full min-w-0 items-center justify-between gap-2 border-[3px] border-hs-ink bg-hs-paper px-3 text-base text-hs-ink outline-none select-none touch-manipulation motion-safe:transition-[border-color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] focus-visible:border-hs-navy disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-hs-ink/40 data-[size=default]:h-11 data-[size=sm]:h-10 motion-safe:active:not-disabled:scale-[0.97] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
+        className
       )}
       {...props}
     >
@@ -58,7 +58,7 @@ function SelectContent({
         data-align-trigger={position === "item-aligned"}
         className={cn(
           "relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto border-[3px] border-hs-ink bg-hs-paper text-hs-ink motion-safe:duration-200 motion-safe:data-closed:duration-150 motion-safe:ease-[var(--ease-out)] data-[align-trigger=true]:animate-none data-open:animate-in data-open:fade-in-0 motion-safe:data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 motion-safe:data-closed:zoom-out-95",
-          className,
+          className
         )}
         position={position}
         align={align}
@@ -68,7 +68,7 @@ function SelectContent({
         <SelectPrimitive.Viewport
           data-position={position}
           className={cn(
-            "p-1 data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)",
+            "p-1 data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)"
           )}
         >
           {children}
@@ -89,7 +89,7 @@ function SelectItem({
       data-slot="select-item"
       className={cn(
         "relative flex min-h-11 w-full cursor-default items-center gap-1.5 py-2 pr-8 pl-2 text-sm outline-hidden select-none focus:bg-hs-sand focus:text-hs-ink data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
+        className
       )}
       {...props}
     >
@@ -112,7 +112,7 @@ function SelectScrollUpButton({
       data-slot="select-scroll-up-button"
       className={cn(
         "z-10 flex cursor-default items-center justify-center bg-hs-paper py-1 [&_svg:not([class*='size-'])]:size-4",
-        className,
+        className
       )}
       {...props}
     >
@@ -130,7 +130,7 @@ function SelectScrollDownButton({
       data-slot="select-scroll-down-button"
       className={cn(
         "z-10 flex cursor-default items-center justify-center bg-hs-paper py-1 [&_svg:not([class*='size-'])]:size-4",
-        className,
+        className
       )}
       {...props}
     >
@@ -139,10 +139,4 @@ function SelectScrollDownButton({
   );
 }
 
-export {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-};
+export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue };

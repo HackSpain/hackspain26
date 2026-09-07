@@ -19,32 +19,32 @@ const NOW = Date.UTC(2026, 8, 19, 12, 0, 0);
 
 function sampleState() {
   const state = createState({
-    me: { name: "Domènec", email: "d@example.com" },
-    team: {
-      name: "Quijote Labs",
-      isOwner: true,
-      repoUrl: "https://github.com/HackSpain/hackspain26",
-      members: 3,
-    },
+    me: { email: "d@example.com", name: "Domènec" },
     project: {
       name: "AgentOS",
       status: "draft",
       tracks: ["Maisa"],
       updatedAt: NOW,
     },
+    team: {
+      isOwner: true,
+      members: 3,
+      name: "Quijote Labs",
+      repoUrl: "https://github.com/HackSpain/hackspain26",
+    },
     uploadEnabled: true,
   });
   state.startedAt = NOW - 5 * 60 * 1000;
   state.harnesses = [
-    { id: "claude-code", found: true, requests: 0, tokens: 0 },
-    { id: "codex", found: false, requests: 0, tokens: 0 },
+    { found: true, id: "claude-code", requests: 0, tokens: 0 },
+    { found: false, id: "codex", requests: 0, tokens: 0 },
   ];
   for (let i = 0; i < 6; i++) {
     recordEvent(state, {
       ...validEvent,
       eventId: `e${i}`,
-      sessionId: i < 3 ? "s1" : "s2",
       occurredAt: new Date(NOW - i * BUCKET_MS).toISOString(),
+      sessionId: i < 3 ? "s1" : "s2",
     });
   }
   recordNotification(
@@ -58,23 +58,23 @@ function sampleState() {
   state.feed = [
     {
       _id: "f1",
-      kind: "post",
-      text: "Demo works on the big screen",
-      createdAt: NOW - 90_000,
       author: { name: "Ana" },
+      createdAt: NOW - 90_000,
+      kind: "post",
       teamName: "Quijote Labs",
+      text: "Demo works on the big screen",
     },
     {
       _id: "f2",
-      kind: "github",
-      text: "ana pushed 2 commits to main: wire the feed",
       createdAt: NOW - 200_000,
-      teamName: "Quijote Labs",
       github: {
-        repo: "quijote/agentos",
         event: "push",
+        repo: "quijote/agentos",
         url: "https://github.com/quijote/agentos/commit/1",
       },
+      kind: "github",
+      teamName: "Quijote Labs",
+      text: "ana pushed 2 commits to main: wire the feed",
     },
   ];
   return state;
@@ -107,7 +107,7 @@ describe("frame", () => {
       frame(sampleState(), { columns: 120, rows: 40 }, { now: NOW }).join("\n")
     );
     expect(text).toContain("Keep this open");
-    expect(text.replace(/[│\s]+/g, " ")).toContain("never prompts or code");
+    expect(text.replaceAll(/[│\s]+/g, " ")).toContain("never prompts or code");
     expect(text).toContain("Domènec");
     expect(text).toContain("Quijote Labs");
     expect(text).toContain("Claude Code");
@@ -157,7 +157,7 @@ describe("frame", () => {
 describe("primitives", () => {
   test("box lines are exactly the requested width and height", () => {
     const lines = box(
-      { title: "Title", subtitle: "sub", height: 3 },
+      { height: 3, subtitle: "sub", title: "Title" },
       ["short", "a much longer line that will need to be cut down to size"],
       30
     );
@@ -181,14 +181,14 @@ describe("primitives", () => {
 
   test("fit truncates visible width and drops colour when cutting", () => {
     expect(fit("hello", 10)).toBe("hello");
-    expect(fit("\x1b[1mhello world\x1b[22m", 6)).toBe("hello…");
+    expect(fit("\x1B[1mhello world\x1B[22m", 6)).toBe("hello…");
   });
 
   test("diffFrame reports only changed rows and asks for a repaint on resize", () => {
     expect(diffFrame(undefined, ["a", "b"])).toBeUndefined();
     expect(diffFrame(["a", "b"], ["a", "b", "c"])).toBeUndefined();
     expect(diffFrame(["a", "b", "c"], ["a", "B", "c"])).toEqual([
-      { row: 1, line: "B" },
+      { line: "B", row: 1 },
     ]);
     expect(diffFrame(["a", "b"], ["a", "b"])).toEqual([]);
   });

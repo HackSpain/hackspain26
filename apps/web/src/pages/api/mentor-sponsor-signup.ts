@@ -15,8 +15,8 @@ export const prerender = false;
 function safeSentry(report: () => void): void {
   try {
     report();
-  } catch (e) {
-    console.error("[mentor-sponsor-signup] Sentry reporting failed:", e);
+  } catch (error) {
+    console.error("[mentor-sponsor-signup] Sentry reporting failed:", error);
   }
 }
 
@@ -28,7 +28,11 @@ function emptyToNull(s: string): string | null {
 function isPostgresUniqueViolation(e: unknown): boolean {
   const seen = new Set<unknown>();
   let cur: unknown = e;
-  for (let depth = 0; depth < 14 && cur != null; depth++) {
+  for (
+    let depth = 0;
+    depth < 14 && cur !== null && cur !== undefined;
+    depth++
+  ) {
     if (seen.has(cur)) {
       break;
     }
@@ -41,13 +45,13 @@ function isPostgresUniqueViolation(e: unknown): boolean {
     ) {
       return true;
     }
-    if (cur instanceof Error && cur.cause != null) {
+    if (cur instanceof Error && cur.cause !== null && cur.cause !== undefined) {
       cur = cur.cause;
       continue;
     }
     if (typeof cur === "object" && cur !== null && "cause" in cur) {
       const next = (cur as { cause: unknown }).cause;
-      if (next == null) {
+      if (next === null || next === undefined) {
         break;
       }
       cur = next;
@@ -78,15 +82,15 @@ export const POST: APIRoute = async ({ request }) => {
         });
         return Response.json({ error: "access_denied" }, { status: 403 });
       }
-    } catch (e) {
+    } catch (error) {
       safeSentry(() => {
         withScope((scope) => {
           scope.setTag("api", "mentor-sponsor-signup");
           scope.setTag("outcome", "botid_check_failed");
-          captureException(e);
+          captureException(error);
         });
       });
-      console.error("BotID check failed:", e);
+      console.error("BotID check failed:", error);
     }
   }
 
@@ -178,23 +182,23 @@ export const POST: APIRoute = async ({ request }) => {
     try {
       // `role` is deliberately not set here: it is assigned by hand in the DB.
       await db.insert(mentorSponsorSignups).values({
-        id: signupId,
-        firstName,
-        lastName,
-        email,
-        company,
         attendanceSlots,
-        dietaryRestrictions,
-        dietaryDetails: emptyToNull(dietaryDetails),
+        company,
         dietaryConsentAt:
           hasDietaryData && dietaryDataConsent ? new Date() : null,
+        dietaryDetails: emptyToNull(dietaryDetails),
+        dietaryRestrictions,
+        email,
+        firstName,
+        id: signupId,
+        lastName,
         notes: emptyToNull(notes),
       });
-    } catch (e: unknown) {
-      if (isPostgresUniqueViolation(e)) {
+    } catch (error: unknown) {
+      if (isPostgresUniqueViolation(error)) {
         return Response.json({ error: "duplicate_email" }, { status: 409 });
       }
-      throw e;
+      throw error;
     }
   } catch {
     console.error("[mentor-sponsor-signup] Failed to save signup");

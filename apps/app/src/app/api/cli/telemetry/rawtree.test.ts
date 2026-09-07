@@ -1,29 +1,26 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-  parseTelemetryEvent,
-  storeTelemetryEvents,
-  type TelemetryEvent,
-} from "./rawtree";
+import { parseTelemetryEvent, storeTelemetryEvents } from "./rawtree";
+import type { TelemetryEvent } from "./rawtree";
 
 const originalEnvironment = {
   apiKey: process.env.RAWTREE_API_KEY,
-  database: process.env.RAWTREE_DATABASE,
   baseUrl: process.env.RAWTREE_BASE_URL,
+  database: process.env.RAWTREE_DATABASE,
   table: process.env.RAWTREE_TELEMETRY_TABLE,
 };
 
 const event: TelemetryEvent = {
-  schema: "hackspain.telemetry.v1",
-  type: "usage",
   eventId: "codex:session-1:42",
-  occurredAt: "2026-09-07T12:00:00.000Z",
-  observedAt: "2026-09-07T12:00:01.000Z",
   harness: "codex",
-  sessionId: "session-1",
+  identity: { clientVersion: "0.1.0", teamId: "team-1", userId: "user-1" },
+  model: { family: "gpt", provider: "openai", raw: "gpt-5" },
+  observedAt: "2026-09-07T12:00:01.000Z",
+  occurredAt: "2026-09-07T12:00:00.000Z",
   project: { dirHash: "9f2c1a7b3e4d5c6a", name: "agentos" },
-  model: { raw: "gpt-5", family: "gpt", provider: "openai" },
-  tokens: { input: 2, output: 3, cacheRead: 4, cacheWrite: 5 },
-  identity: { userId: "user-1", teamId: "team-1", clientVersion: "0.1.0" },
+  schema: "hackspain.telemetry.v1",
+  sessionId: "session-1",
+  tokens: { cacheRead: 4, cacheWrite: 5, input: 2, output: 3 },
+  type: "usage",
 };
 
 function restore(name: string, value: string | undefined): void {
@@ -44,17 +41,15 @@ afterEach(() => {
 describe("RawTree telemetry", () => {
   test("accepts only canonical events belonging to the authenticated user", () => {
     expect(
-      parseTelemetryEvent(event, { userId: "user-1", teamId: "team-1" })
+      parseTelemetryEvent(event, { teamId: "team-1", userId: "user-1" })
     ).toEqual(event);
     expect(
       parseTelemetryEvent(event, {
-        userId: "user-1",
         teamId: "current-team",
+        userId: "user-1",
       })?.identity.teamId
     ).toBe("current-team");
-    expect(
-      parseTelemetryEvent(event, { userId: "another-user" })
-    ).toBeNull();
+    expect(parseTelemetryEvent(event, { userId: "another-user" })).toBeNull();
     expect(
       parseTelemetryEvent(
         { ...event, project: { ...event.project, name: "/Users/alice/code" } },
@@ -77,7 +72,7 @@ describe("RawTree telemetry", () => {
 
     let request: { input: RequestInfo | URL; init?: RequestInit } | undefined;
     const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      request = { input, init };
+      request = { init, input };
       return Response.json({ inserted: 1 });
     }) as typeof fetch;
 
@@ -105,7 +100,9 @@ describe("RawTree telemetry", () => {
     const fetchImpl = (async () =>
       Response.json({ inserted: 0 })) as unknown as typeof fetch;
 
-    await expect(storeTelemetryEvents([event], fetchImpl)).resolves.toBeUndefined();
+    await expect(
+      storeTelemetryEvents([event], fetchImpl)
+    ).resolves.toBeUndefined();
   });
 
   test("uses a stable token and order, and rejects a partial insert", async () => {
@@ -114,7 +111,7 @@ describe("RawTree telemetry", () => {
     const second = { ...event, eventId: "codex:session-1:43" };
     const requests: { url: string; body: string }[] = [];
     const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      requests.push({ url: String(input), body: String(init?.body) });
+      requests.push({ body: String(init?.body), url: String(input) });
       return Response.json({ inserted: requests.length === 3 ? 1 : 2 });
     }) as typeof fetch;
 
@@ -127,8 +124,8 @@ describe("RawTree telemetry", () => {
     );
     expect(requests[0]?.body).toBe(requests[1]?.body);
 
-    await expect(storeTelemetryEvents([event, second], fetchImpl)).rejects.toThrow(
-      "RawTree inserted 1 of 2 telemetry events"
-    );
+    await expect(
+      storeTelemetryEvents([event, second], fetchImpl)
+    ).rejects.toThrow("RawTree inserted 1 of 2 telemetry events");
   });
 });

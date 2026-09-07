@@ -1,12 +1,12 @@
 const DIETARY_LABELS: Record<string, string> = {
-  vegetarian: "Vegetariana",
-  vegan: "Vegana",
+  allergies: "Alergias",
   gluten_free: "Sin gluten",
-  lactose_free: "Sin lactosa",
   halal: "Halal",
   kosher: "Kosher",
-  allergies: "Alergias",
+  lactose_free: "Sin lactosa",
   other: "Otra",
+  vegan: "Vegana",
+  vegetarian: "Vegetariana",
 };
 
 export function formatDietaryRestrictions(ids: string[] | undefined): string {

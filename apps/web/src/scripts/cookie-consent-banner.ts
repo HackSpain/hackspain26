@@ -3,8 +3,8 @@ import { trackPageviewAfterConsent } from "../lib/consent-analytics";
 
 /** Cookie banner + consent-driven Vercel Analytics pageview (bundled as ES module — no broken `/lib/...` URLs). */
 export function initCookieConsentBanner(): void {
-  const banner = document.getElementById("hs-cookie-banner");
-  const acceptBtn = document.getElementById("hs-cookie-accept");
+  const banner = document.querySelector("#hs-cookie-banner");
+  const acceptBtn = document.querySelector("#hs-cookie-accept");
 
   function readConsent(): string | null {
     try {

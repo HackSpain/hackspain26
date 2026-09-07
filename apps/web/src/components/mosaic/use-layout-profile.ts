@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
-import { COMPACT_MEDIA_QUERY, type LayoutProfile } from "./artboard";
+import type { LayoutProfile } from "./artboard";
+import { COMPACT_MEDIA_QUERY } from "./artboard";
 
 function getSnapshot(): LayoutProfile {
   return window.matchMedia(COMPACT_MEDIA_QUERY).matches ? "compact" : "desktop";

@@ -2,7 +2,8 @@ import type { Command } from "commander";
 import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { uiFor } from "../lib/output";
-import { openParticipant, type PerkEntry } from "../lib/participant";
+import type { PerkEntry } from "../lib/participant";
+import { openParticipant } from "../lib/participant";
 import { c } from "../lib/style";
 
 function perkStatus(

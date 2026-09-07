@@ -19,11 +19,17 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 function timeAgo(at: number, now = Date.now()): string {
   const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
   const seconds = Math.round((at - now) / 1000);
-  if (Math.abs(seconds) < 60) return "ahora mismo";
+  if (Math.abs(seconds) < 60) {
+    return "ahora mismo";
+  }
   const minutes = Math.round(seconds / 60);
-  if (Math.abs(minutes) < 60) return rtf.format(minutes, "minute");
+  if (Math.abs(minutes) < 60) {
+    return rtf.format(minutes, "minute");
+  }
   const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) return rtf.format(hours, "hour");
+  if (Math.abs(hours) < 24) {
+    return rtf.format(hours, "hour");
+  }
   return new Date(at).toLocaleString("es-ES", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -56,22 +62,26 @@ function Composer() {
       if (file) {
         const uploadUrl = await generateUploadUrl();
         const response = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": file.type },
           body: file,
+          headers: { "Content-Type": file.type },
+          method: "POST",
         });
-        if (!response.ok) throw new Error("No se pudo subir la imagen");
+        if (!response.ok) {
+          throw new Error("No se pudo subir la imagen");
+        }
         imageId = ((await response.json()) as { storageId: string }).storageId;
       }
       await post({
-        text,
         imageId: imageId as Parameters<typeof post>[0]["imageId"],
+        text,
       });
       setText("");
       setFile(null);
-      if (fileInput.current) fileInput.current.value = "";
-    } catch (err) {
-      setError(errorMessage(err, "No se pudo publicar"));
+      if (fileInput.current) {
+        fileInput.current.value = "";
+      }
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No se pudo publicar"));
     } finally {
       setBusy(false);
     }
@@ -106,7 +116,9 @@ function Composer() {
                 className="text-xs text-hs-brown underline"
                 onClick={() => {
                   setFile(null);
-                  if (fileInput.current) fileInput.current.value = "";
+                  if (fileInput.current) {
+                    fileInput.current.value = "";
+                  }
                 }}
               >
                 quitar

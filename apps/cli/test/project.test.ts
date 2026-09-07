@@ -8,30 +8,30 @@ const id = (s: string) => s as Id;
 const tracks: Track[] = [
   {
     _id: id("t1"),
-    slug: "maisa",
-    label: "Maisa",
-    body: "",
-    note: "",
-    sortOrder: 1,
     active: true,
+    body: "",
+    label: "Maisa",
+    note: "",
+    slug: "maisa",
+    sortOrder: 1,
   },
   {
     _id: id("t2"),
-    slug: "embat",
-    label: "Embat",
-    body: "",
-    note: "",
-    sortOrder: 2,
     active: true,
+    body: "",
+    label: "Embat",
+    note: "",
+    slug: "embat",
+    sortOrder: 2,
   },
   {
     _id: id("t3"),
-    slug: "theker",
-    label: "THEKER",
-    body: "",
-    note: "",
-    sortOrder: 3,
     active: true,
+    body: "",
+    label: "THEKER",
+    note: "",
+    slug: "theker",
+    sortOrder: 3,
   },
 ];
 
@@ -53,8 +53,8 @@ describe("planTracks", () => {
 
   test("move swaps one for another", () => {
     const plan = planTracks([id("t1")], tracks, {
-      remove: ["maisa"],
       add: ["embat"],
+      remove: ["maisa"],
     });
     expect(plan.next).toEqual([id("t2")]);
   });
@@ -69,31 +69,31 @@ describe("planTracks", () => {
 describe("projectArgsFrom", () => {
   test("empty draft when nothing exists", () => {
     expect(projectArgsFrom(null)).toEqual({
-      name: "",
-      description: "",
-      repoUrl: undefined,
-      demoUrl: undefined,
       challengeIds: [],
+      demoUrl: undefined,
+      description: "",
+      name: "",
       perkIds: [],
+      repoUrl: undefined,
     });
   });
 
   test("lifts repo/demo out of the url entries", () => {
     const submission = {
-      name: "AgentOS",
+      challengeIds: [id("t1")],
       description: "d",
+      name: "AgentOS",
+      perkIds: [],
       urls: [
         { kind: "repo", url: "https://github.com/a/b" },
         { kind: "demo", url: "https://demo" },
       ],
-      challengeIds: [id("t1")],
-      perkIds: [],
     } as unknown as Submission;
     expect(projectArgsFrom(submission)).toMatchObject({
+      challengeIds: [id("t1")],
+      demoUrl: "https://demo",
       name: "AgentOS",
       repoUrl: "https://github.com/a/b",
-      demoUrl: "https://demo",
-      challengeIds: [id("t1")],
     });
   });
 });

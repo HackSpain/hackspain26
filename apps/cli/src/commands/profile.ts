@@ -1,9 +1,12 @@
 import type { Command } from "commander";
-import { api, type Session } from "../lib/api";
-import { type CliContext, contextFor } from "../lib/context";
+import type { Session } from "../lib/api";
+import { api } from "../lib/api";
+import type { CliContext } from "../lib/context";
+import { contextFor } from "../lib/context";
 import { CliError, usageError } from "../lib/errors";
 import type { Me } from "../lib/me";
-import { type Ui, uiFor } from "../lib/output";
+import type { Ui } from "../lib/output";
+import { uiFor } from "../lib/output";
 import { openParticipant } from "../lib/participant";
 import { confirmOrFlag, textOrFlag } from "../lib/prompts";
 import { c, cmd, highlight } from "../lib/style";
@@ -19,10 +22,10 @@ const PHONE_CODE = /^\d{4,8}$/;
 const PHONE_NOISE = /[\s()-]/g;
 
 const PHONE_FAILURES: Record<string, string> = {
-  no_challenge: "No code was requested. Run `hackspain profile phone` again.",
   expired: "That code has expired. Request a new one.",
-  too_many_attempts: "Too many attempts. Request a new code.",
   incorrect: "That code is not right.",
+  no_challenge: "No code was requested. Run `hackspain profile phone` again.",
+  too_many_attempts: "Too many attempts. Request a new code.",
 };
 
 function phoneLabel(me: Me): string {
@@ -112,28 +115,28 @@ async function editProfile(opts: EditOptions, command: Command): Promise<void> {
   ui.intro("profile · edit");
   const name = await textOrFlag(ctx, opts.name, {
     flag: "--name",
-    message: "Your name, as it should appear on badges and the board",
     initialValue: me.name ?? "",
+    message: "Your name, as it should appear on badges and the board",
     validate: validateName,
   });
   const dietaryRestrictions = await textOrFlag(ctx, opts.diet, {
     flag: "--diet",
+    initialValue: me.dietaryRestrictions ?? "",
     message: "Dietary restrictions (write None if you have none)",
     placeholder: "None, vegetarian, vegan, allergies…",
-    initialValue: me.dietaryRestrictions ?? "",
     validate: (v) => (v.trim() ? undefined : "Say None if there are none."),
   });
   const dietaryDetails = await textOrFlag(ctx, opts.dietDetails, {
     flag: "--diet-details",
-    message: "Anything else about your diet? (optional)",
     initialValue: me.dietaryDetails ?? "",
+    message: "Anything else about your diet? (optional)",
     optional: true,
   });
   const travelOrigin = await textOrFlag(ctx, opts.from, {
     flag: "--from",
+    initialValue: me.travelOrigin ?? "",
     message: "Where are you travelling from?",
     placeholder: "City or region",
-    initialValue: me.travelOrigin ?? "",
     validate: (v) => (v.trim() ? undefined : "We need a city or region."),
   });
   await ui.spin(
@@ -143,17 +146,17 @@ async function editProfile(opts: EditOptions, command: Command): Promise<void> {
         await session.client.mutation(api.users.setName, { name });
       }
       await session.client.mutation(api.users.updateEventDetails, {
-        dietaryRestrictions: dietaryRestrictions.trim(),
         dietaryDetails: dietaryDetails.trim() || undefined,
+        dietaryRestrictions: dietaryRestrictions.trim(),
         travelOrigin: travelOrigin.trim(),
       });
     },
     "Saved"
   );
   ui.result({
-    name: name.trim(),
-    dietaryRestrictions: dietaryRestrictions.trim(),
     dietaryDetails: dietaryDetails.trim() || undefined,
+    dietaryRestrictions: dietaryRestrictions.trim(),
+    name: name.trim(),
     travelOrigin: travelOrigin.trim(),
   });
   ui.success("Profile updated. Organisers see it straight away.");
@@ -197,9 +200,9 @@ export async function runPhoneConfirmation(
   const phone = (
     await textOrFlag(ctx, number, {
       flag: "<number>",
+      initialValue: me.phone ?? "",
       message: "Your mobile number, international format",
       placeholder: "+34 600 111 222",
-      initialValue: me.phone ?? "",
       validate: (v) =>
         E164.test(v.replace(PHONE_NOISE, ""))
           ? undefined
@@ -274,8 +277,8 @@ async function linkGithub(
     }
     const ok = await confirmOrFlag(ctx, opts.yes, {
       flag: "--yes",
-      message: `Unlink ${me.githubUsername ?? "your GitHub account"}?`,
       initialValue: false,
+      message: `Unlink ${me.githubUsername ?? "your GitHub account"}?`,
     });
     if (!ok) {
       ui.info("Kept it linked.");
@@ -315,8 +318,8 @@ export async function startGithubLink(
     async () => {
       try {
         return await session.client.mutation(api.github.startLink, {});
-      } catch (err) {
-        if (String(err).includes("no está configurada")) {
+      } catch (error) {
+        if (String(error).includes("no está configurada")) {
           throw new CliError(
             "GitHub linking is not configured on this server.",
             {
@@ -325,7 +328,7 @@ export async function startGithubLink(
             }
           );
         }
-        throw err;
+        throw error;
       }
     },
     "Ready"
@@ -395,25 +398,18 @@ export async function completeProfile(
   if (askPhone) {
     const wants = await confirmOrFlag(ctx, undefined, {
       flag: "--phone",
+      initialValue: true,
       message:
         "Confirm your mobile now? Organisers use it to reach you at the venue.",
-      initialValue: true,
     });
     if (wants) {
       try {
-        const phone = await runPhoneConfirmation(
-          ctx,
-          ui,
-          session,
-          current,
-          undefined,
-          undefined
-        );
+        const phone = await runPhoneConfirmation(ctx, ui, session, current);
         current = { ...current, phone, phoneConfirmed: true };
         ui.success(`${phone} confirmed.`);
-      } catch (err) {
+      } catch (error) {
         ui.warn(
-          `${err instanceof Error ? err.message : String(err)} Try again later with ${cmd("hackspain profile phone")}.`
+          `${error instanceof Error ? error.message : String(error)} Try again later with ${cmd("hackspain profile phone")}.`
         );
       }
     }

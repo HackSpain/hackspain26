@@ -30,7 +30,9 @@ export function signupIsAccepted(signup: Doc<"signups"> | null): boolean {
 
 export async function requireAccepted(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
-  if (user.role === "admin") return user;
+  if (user.role === "admin") {
+    return user;
+  }
   const signup = await getSignupForUser(ctx, user);
   if (!signup) {
     throw new Error("No hay inscripción a la hackathon con este email");
@@ -43,7 +45,9 @@ export async function requireAccepted(ctx: Ctx): Promise<Doc<"users">> {
 
 export async function requireOnboarded(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
-  if (user.role === "admin") return user;
+  if (user.role === "admin") {
+    return user;
+  }
   const signup = await getSignupForUser(ctx, user);
   if (!signup) {
     throw new Error("No hay inscripción a la hackathon con este email");
@@ -59,19 +63,23 @@ export async function requireOnboarded(ctx: Ctx): Promise<Doc<"users">> {
 
 export async function getSignupForUser(
   ctx: Ctx,
-  user: Doc<"users">,
+  user: Doc<"users">
 ): Promise<Doc<"signups"> | null> {
   if (user.signupId) {
     const byId = await ctx.db.get(user.signupId);
-    if (byId) return byId;
+    if (byId) {
+      return byId;
+    }
   }
-  if (!user.email) return null;
+  if (!user.email) {
+    return null;
+  }
   return await findSignupByEmail(ctx, user.email);
 }
 
 export async function findSignupByEmail(
   ctx: Ctx,
-  email: string,
+  email: string
 ): Promise<Doc<"signups"> | null> {
   return await ctx.db
     .query("signups")
@@ -81,7 +89,7 @@ export async function findSignupByEmail(
 
 export async function findUserByEmail(
   ctx: Ctx,
-  email: string,
+  email: string
 ): Promise<Doc<"users"> | null> {
   return await ctx.db
     .query("users")

@@ -26,39 +26,48 @@ export interface Connection {
 export function normalize(value: string): string {
   return value
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replaceAll(/[\u0300-\u036F]/g, "")
     .trim()
-    .replace(/\s+/g, " ")
+    .replaceAll(/\s+/g, " ")
     .toLowerCase();
 }
 
 export function valuesFor(
   participant: DirectoryParticipant,
-  kind: AffinityKind,
+  kind: AffinityKind
 ): string[] {
   switch (kind) {
-    case "company":
+    case "company": {
       return participant.company ? [participant.company] : [];
-    case "degree":
+    }
+    case "degree": {
       return participant.degree ? [participant.degree] : [];
-    case "team":
+    }
+    case "team": {
       return participant.team ? [participant.team.name] : [];
-    case "university":
+    }
+    case "university": {
       return participant.university ? [participant.university] : [];
-    case "city":
+    }
+    case "city": {
       return participant.city ? [participant.city] : [];
-    case "skills":
+    }
+    case "skills": {
       return participant.skills;
-    case "interests":
+    }
+    case "interests": {
       return participant.interests ?? [];
+    }
   }
 }
 
 export function sharedAffinities(
   a: DirectoryParticipant,
-  b: DirectoryParticipant,
+  b: DirectoryParticipant
 ): Affinity[] {
-  if (a.id === b.id) return [];
+  if (a.id === b.id) {
+    return [];
+  }
   return AFFINITY_KINDS.flatMap<Affinity>((kind) => {
     if (kind === "team") {
       return a.team?.id && a.team.id === b.team?.id
@@ -70,7 +79,9 @@ export function sharedAffinities(
     return valuesFor(a, kind)
       .filter((value) => {
         const key = normalize(value);
-        if (!key || seen.has(key) || !other.has(key)) return false;
+        if (!key || seen.has(key) || !other.has(key)) {
+          return false;
+        }
         seen.add(key);
         return true;
       })
@@ -82,13 +93,13 @@ export function connectionsFor(
   anchor: DirectoryParticipant,
   participants: DirectoryParticipant[],
   filter: AffinityFilter = "all",
-  query = "",
+  query = ""
 ): Connection[] {
   const search = normalize(query);
   return participants
     .flatMap((participant) => {
       const affinities = sharedAffinities(anchor, participant).filter(
-        (item) => filter === "all" || item.kind === filter,
+        (item) => filter === "all" || item.kind === filter
       );
       const searchable = normalize(
         [
@@ -98,26 +109,27 @@ export function connectionsFor(
           participant.university ?? "",
           ...participant.skills,
           ...(participant.interests ?? []),
-        ].join(" "),
+        ].join(" ")
       );
-      if (!affinities.length || (search && !searchable.includes(search)))
+      if (!affinities.length || (search && !searchable.includes(search))) {
         return [];
+      }
       return [
         {
-          participant,
           affinities,
           categories: new Set(affinities.map((item) => item.kind)).size,
+          participant,
         },
       ];
     })
-    .sort(
+    .toSorted(
       (a, b) =>
         b.categories - a.categories ||
         b.affinities.length - a.affinities.length ||
         a.participant.displayName.localeCompare(
           b.participant.displayName,
-          "es",
+          "es"
         ) ||
-        a.participant.id.localeCompare(b.participant.id),
+        a.participant.id.localeCompare(b.participant.id)
     );
 }

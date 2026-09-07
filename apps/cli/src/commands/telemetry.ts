@@ -17,13 +17,13 @@ type Totals = {
 
 function empty(): Totals {
   return {
-    events: 0,
-    sessions: new Set(),
-    input: 0,
-    output: 0,
     cacheRead: 0,
     cacheWrite: 0,
     costUsd: 0,
+    events: 0,
+    input: 0,
+    output: 0,
+    sessions: new Set(),
   };
 }
 
@@ -70,7 +70,7 @@ export function summarize(events: Iterable<TelemetryEvent>): {
       last = event.occurredAt;
     }
   }
-  return { all, byHarness, byFamily, first, last };
+  return { all, byFamily, byHarness, first, last };
 }
 
 function row(name: string, t: Totals): string[] {
@@ -99,16 +99,16 @@ export function registerTelemetry(program: Command): void {
       const summary = summarize(readSpool());
       const serial = (t: Totals) => ({ ...t, sessions: t.sessions.size });
       ui.result({
-        spool: spoolDir(),
-        first: summary.first ?? null,
-        last: summary.last ?? null,
         all: serial(summary.all),
-        byHarness: Object.fromEntries(
-          [...summary.byHarness].map(([k, v]) => [k, serial(v)])
-        ),
         byFamily: Object.fromEntries(
           [...summary.byFamily].map(([k, v]) => [k, serial(v)])
         ),
+        byHarness: Object.fromEntries(
+          [...summary.byHarness].map(([k, v]) => [k, serial(v)])
+        ),
+        first: summary.first ?? null,
+        last: summary.last ?? null,
+        spool: spoolDir(),
       });
       ui.intro("telemetry");
       if (summary.all.events === 0 && summary.all.sessions.size === 0) {

@@ -6,7 +6,7 @@ export type MemberInput = {
   identifier: string;
 };
 
-const TYPES: IdentifierType[] = ["email", "github", "twitter"];
+const TYPES: IdentifierType[] = new Set(["email", "github", "twitter"]);
 
 /**
  * Parse `github:octocat`, `email:a@b.c`, `twitter:@handle`. A bare value with
@@ -22,7 +22,7 @@ export function parseMember(raw: string): MemberInput {
   if (colon > 0) {
     const type = value.slice(0, colon).toLowerCase();
     const identifier = value.slice(colon + 1).trim();
-    if (!TYPES.includes(type as IdentifierType)) {
+    if (!TYPES.has(type as IdentifierType)) {
       throw usageError(
         `Unknown member type "${type}" in "${raw}".`,
         "Use github:<login>, email:<address> or twitter:<handle>."
@@ -31,15 +31,15 @@ export function parseMember(raw: string): MemberInput {
     if (!identifier) {
       throw usageError(`Missing identifier after "${type}:".`);
     }
-    return { identifierType: type as IdentifierType, identifier };
+    return { identifier, identifierType: type as IdentifierType };
   }
   if (value.startsWith("@")) {
-    return { identifierType: "twitter", identifier: value };
+    return { identifier: value, identifierType: "twitter" };
   }
   if (value.includes("@")) {
-    return { identifierType: "email", identifier: value };
+    return { identifier: value, identifierType: "email" };
   }
-  return { identifierType: "github", identifier: value };
+  return { identifier: value, identifierType: "github" };
 }
 
 export function formatMember(member: {
@@ -47,11 +47,14 @@ export function formatMember(member: {
   identifier: string;
 }): string {
   switch (member.identifierType) {
-    case "github":
+    case "github": {
       return `github:${member.identifier}`;
-    case "twitter":
+    }
+    case "twitter": {
       return `x:${member.identifier}`;
-    default:
+    }
+    default: {
       return member.identifier;
+    }
   }
 }

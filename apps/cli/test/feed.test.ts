@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { FeedItem } from "../src/lib/feed-format";
 import {
-  type FeedItem,
   imageContentType,
   postLines,
   withImageUrls,
@@ -13,12 +13,12 @@ describe("feed formatting", () => {
   test("a person's post shows who, team, text and image link", () => {
     const post: FeedItem = {
       _id: "p1",
-      kind: "post",
-      text: "Demo works!\nSecond line",
-      createdAt: NOW - 120_000,
       author: { name: "Ana" },
-      teamName: "Quijote Labs",
+      createdAt: NOW - 120_000,
       imageUrl: "https://files.example/abc",
+      kind: "post",
+      teamName: "Quijote Labs",
+      text: "Demo works!\nSecond line",
     };
     const lines = postLines(post, NOW).map(stripAnsi);
     expect(lines[0]).toBe("Ana · Quijote Labs · 2 min ago");
@@ -30,15 +30,15 @@ describe("feed formatting", () => {
   test("a GitHub event shows the team, repo and link", () => {
     const post: FeedItem = {
       _id: "p2",
-      kind: "github",
-      text: "ana pushed 3 commits to main: fix auth",
       createdAt: NOW - 30_000,
-      teamName: "Quijote Labs",
       github: {
-        repo: "quijote/agentos",
         event: "push",
+        repo: "quijote/agentos",
         url: "https://github.com/quijote/agentos/commit/abc",
       },
+      kind: "github",
+      teamName: "Quijote Labs",
+      text: "ana pushed 3 commits to main: fix auth",
     };
     const lines = postLines(post, NOW).map(stripAnsi);
     expect(lines[0]).toBe("⑂ Quijote Labs · quijote/agentos · just now");

@@ -13,16 +13,16 @@ import {
 } from "../theme/assets";
 
 const SVG_MAP = {
-  windmill: windmillSvg,
-  sun: sunSvg,
-  horse: horseSvg,
-  quixote: quixoteSvg,
-  compass: compassSvg,
-  community: communitySvg,
-  spark: sparkSvg,
   code: codeSvg,
-  trophy: trophySvg,
+  community: communitySvg,
+  compass: compassSvg,
+  horse: horseSvg,
   medal: medalSvg,
+  quixote: quixoteSvg,
+  spark: sparkSvg,
+  sun: sunSvg,
+  trophy: trophySvg,
+  windmill: windmillSvg,
 } as const;
 
 type IllArt = keyof typeof SVG_MAP;
@@ -54,34 +54,34 @@ const SCHEDULE: (IllArt | null)[][] = [
 function slot4Geometry(
   _art: IllArt | null
 ): Pick<IllDef, "x" | "y" | "w" | "h" | "clip"> {
-  return { x: 160, y: -20, w: 360, h: 220 };
+  return { h: 220, w: 360, x: 160, y: -20 };
 }
 
 function slot5Geometry(
   art: IllArt | null
 ): Pick<IllDef, "x" | "y" | "w" | "h" | "clip"> {
   if (art === "code") {
-    return { x: 540, y: 180, w: 160, h: 160 };
+    return { h: 160, w: 160, x: 540, y: 180 };
   }
-  return { x: 160, y: 180, w: 160, h: 160 };
+  return { h: 160, w: 160, x: 160, y: 180 };
 }
 
 function slot4GeometryCompact(
   art: IllArt | null
 ): Pick<IllDef, "x" | "y" | "w" | "h" | "clip"> {
   if (art === "spark" || art === "medal") {
-    return { x: 940, y: 620, w: 520, h: 320 };
+    return { h: 320, w: 520, x: 940, y: 620 };
   }
-  return { x: -20, y: 620, w: 520, h: 320 };
+  return { h: 320, w: 520, x: -20, y: 620 };
 }
 
 function slot5GeometryCompact(
   art: IllArt | null
 ): Pick<IllDef, "x" | "y" | "w" | "h" | "clip"> {
   if (art === "code") {
-    return { x: 940, y: 960, w: 520, h: 300 };
+    return { h: 300, w: 520, x: 940, y: 960 };
   }
-  return { x: -20, y: 960, w: 520, h: 300 };
+  return { h: 300, w: 520, x: -20, y: 960 };
 }
 
 function boxFor(slotIndex: number, art: IllArt | null): string {
@@ -257,17 +257,17 @@ export function illustrationsForSection(
     const fill = i === 5 && art === "code" ? ("none" as const) : undefined;
 
     return {
-      id,
-      x,
-      y,
-      w,
-      h,
-      clip,
-      svg,
       box: boxFor(i, art),
-      img: imgFor(i, art),
+      clip,
       delay: delayFor(i, art),
       fill,
+      h,
+      id,
+      img: imgFor(i, art),
+      svg,
+      w,
+      x,
+      y,
     };
   });
 }

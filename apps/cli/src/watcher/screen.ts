@@ -17,11 +17,11 @@ const MIN_WIDTH = 40;
 
 const HARNESS_NAMES: Record<string, string> = {
   "claude-code": "Claude Code",
-  codex: "Codex",
-  opencode: "OpenCode",
   cline: "Cline",
-  cursor: "Cursor",
+  codex: "Codex",
   copilot: "Copilot",
+  cursor: "Cursor",
+  opencode: "OpenCode",
 };
 
 type Rgb = readonly [number, number, number];
@@ -33,7 +33,7 @@ function rgb(color: Rgb, text: string): string {
   if (!colorEnabled) {
     return text;
   }
-  return `\x1b[38;2;${color[0]};${color[1]};${color[2]}m${text}\x1b[39m`;
+  return `\x1B[38;2;${color[0]};${color[1]};${color[2]}m${text}\x1B[39m`;
 }
 
 function mix(a: Rgb, b: Rgb, t: number): Rgb {
@@ -178,7 +178,7 @@ function youBox(state: WatchState, w: number): string[] {
     ? `${state.project.name || c.dim("(untitled draft)")} ${c.dim(`· ${state.project.status}${state.project.tracks.length ? ` · ${state.project.tracks.join(", ")}` : " · no track yet"}`)}`
     : c.dim("no project yet · hackspain submit --draft");
   return box(
-    { title: state.me.name, height: 3 },
+    { height: 3, title: state.me.name },
     [
       `${c.dim("team   ")} ${team}`,
       `${c.dim("project")} ${project}`,
@@ -242,7 +242,7 @@ function harnessesBox(
   ]).split("\n");
   const breakdown = `${c.dim("tokens:")} ${compactNumber(t.input)} ${c.dim("in")} · ${compactNumber(t.output)} ${c.dim("out")} · ${compactNumber(t.cached)} ${c.dim("cached")}`;
   return box(
-    { title: "Harnesses", subtitle: "what is being reported", height: h },
+    { height: h, subtitle: "what is being reported", title: "Harnesses" },
     [...table, "", breakdown],
     w
   );
@@ -280,7 +280,7 @@ function recentBox(state: WatchState, w: number, h: number): string[] {
         ).map((l) => c.dim(l))
       : renderTable(rows, headers).split("\n");
   return box(
-    { title: "Recent requests", subtitle: "newest first", height: h },
+    { height: h, subtitle: "newest first", title: "Recent requests" },
     lines,
     w
   );
@@ -317,10 +317,10 @@ function organisersBox(
     state.notifications[0] && now - state.notifications[0].at < 60 * 1000;
   return box(
     {
-      title: "📣 Organisers",
-      subtitle: `${state.notifications.length} message${state.notifications.length === 1 ? "" : "s"}`,
       accent: fresh ? GOLD : TEAL,
       height: h,
+      subtitle: `${state.notifications.length} message${state.notifications.length === 1 ? "" : "s"}`,
+      title: "📣 Organisers",
     },
     lines,
     w
@@ -361,10 +361,10 @@ function feedBox(
   const fresh = state.feed[0] && now - state.feed[0].createdAt < 60 * 1000;
   return box(
     {
-      title: "Feed",
-      subtitle: "everyone · newest first",
       accent: fresh ? GOLD : TEAL,
       height: h,
+      subtitle: "everyone · newest first",
+      title: "Feed",
     },
     lines,
     w
@@ -538,11 +538,11 @@ export function diffFrame(
     return;
   }
   const changes: { row: number; line: string }[] = [];
-  next.forEach((line, row) => {
+  for (const [row, line] of next.entries()) {
     if (line !== previous[row]) {
-      changes.push({ row, line });
+      changes.push({ line, row });
     }
-  });
+  }
   return changes;
 }
 
@@ -563,32 +563,32 @@ export function startScreen(
   const draw = (force = false) => {
     ticks++;
     const lines = frame(state, size(), {
-      tick: ticks,
       intervalMs: handlers.intervalMs,
+      tick: ticks,
     });
     const changes = force ? undefined : diffFrame(previous, lines);
     if (changes === undefined) {
-      out.write(`\x1b[H${lines.map((l) => `${l}\x1b[K`).join("\n")}\x1b[J`);
+      out.write(`\x1B[H${lines.map((l) => `${l}\x1B[K`).join("\n")}\x1B[J`);
     } else if (changes.length > 0) {
       out.write(
         changes
-          .map(({ row, line }) => `\x1b[${row + 1};1H${line}\x1b[K`)
+          .map(({ row, line }) => `\x1B[${row + 1};1H${line}\x1B[K`)
           .join("")
       );
     }
     previous = lines;
   };
 
-  out.write("\x1b[?1049h\x1b[?25l\x1b[2J");
+  out.write("\x1B[?1049h\x1B[?25l\x1B[2J");
   const timer = setInterval(() => draw(), 1000);
   const onResize = () => draw(true);
   out.on("resize", onResize);
 
-  const stdin = process.stdin;
+  const { stdin } = process;
   const rawSupported = Boolean(stdin.isTTY);
   const onKey = (data: Buffer) => {
     const key = data.toString();
-    if (key === "q" || key === "\x03" || key === "\x04") {
+    if (key === "q" || key === "\u0003" || key === "\u0004") {
       handlers.onQuit();
     } else if (key === "p") {
       handlers.onTogglePause();
@@ -612,7 +612,7 @@ export function startScreen(
         stdin.setRawMode(false);
         stdin.pause();
       }
-      out.write("\x1b[?25h\x1b[?1049l");
+      out.write("\x1B[?25h\x1B[?1049l");
     },
   };
 }

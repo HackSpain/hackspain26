@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Credentials } from "../src/lib/auth-store";
 import {
-  type Credentials,
   clearCredentials,
   credentialsFromTokens,
   credentialsPath,
@@ -30,13 +30,13 @@ function jwtExpiringAt(epochSeconds: number): string {
 
 function creds(overrides: Partial<Credentials> = {}): Credentials {
   return {
-    version: 1,
     appUrl: URL,
     email: "a@b.c",
-    token: "t1",
     refreshToken: "r1",
+    token: "t1",
     tokenExpiresAt: Date.now() + 60 * 60 * 1000,
     updatedAt: Date.now() - 60 * 1000,
+    version: 1,
     ...overrides,
   };
 }
@@ -51,7 +51,7 @@ beforeEach(() => {
 
 afterEach(() => {
   process.env.XDG_CONFIG_HOME = previousXdg;
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { force: true, recursive: true });
 });
 
 describe("credential file", () => {
@@ -75,7 +75,7 @@ describe("credential file", () => {
     expect(decodeJwtExpiry(jwtExpiringAt(exp))).toBe(exp * 1000);
     expect(decodeJwtExpiry("not-a-jwt")).toBeNull();
     const c = credentialsFromTokens(
-      { token: jwtExpiringAt(exp), refreshToken: "r" },
+      { refreshToken: "r", token: jwtExpiringAt(exp) },
       URL,
       "x@y.z"
     );
@@ -113,7 +113,7 @@ describe("currentToken", () => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const token = await currentToken(URL, async (refreshToken) => {
       expect(refreshToken).toBe("r1");
-      return { token: jwtExpiringAt(exp), refreshToken: "r2" };
+      return { refreshToken: "r2", token: jwtExpiringAt(exp) };
     });
     expect(token).toBe(jwtExpiringAt(exp));
     const stored = readCredentials();
@@ -131,7 +131,7 @@ describe("currentToken", () => {
       if (refreshToken !== "r1") {
         return null; // reuse would be a logout
       }
-      return { token: jwtExpiringAt(exp), refreshToken: "r2" };
+      return { refreshToken: "r2", token: jwtExpiringAt(exp) };
     };
     const [a, b] = await Promise.all([
       currentToken(URL, refresh),
@@ -162,7 +162,7 @@ describe("currentToken", () => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const token = await currentToken(
       URL,
-      async () => ({ token: jwtExpiringAt(exp), refreshToken: "r2" }),
+      async () => ({ refreshToken: "r2", token: jwtExpiringAt(exp) }),
       { force: true }
     );
     expect(token).toBe(jwtExpiringAt(exp));

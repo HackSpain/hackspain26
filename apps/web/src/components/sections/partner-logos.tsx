@@ -344,14 +344,14 @@ export function PartnerLogoGrid({ pinned }: { pinned?: Partner[] }) {
             initial={{ opacity: 0 }}
             role="img"
             style={{
-              maskImage: `url(${p.src})`,
-              maskPosition: "center",
-              maskRepeat: "no-repeat",
-              maskSize: "contain",
               WebkitMaskImage: `url(${p.src})`,
               WebkitMaskPosition: "center",
               WebkitMaskRepeat: "no-repeat",
               WebkitMaskSize: "contain",
+              maskImage: `url(${p.src})`,
+              maskPosition: "center",
+              maskRepeat: "no-repeat",
+              maskSize: "contain",
             }}
             transition={{ duration: 0.3 }}
           />
@@ -375,14 +375,14 @@ export function PartnerLogoReel() {
       key={p.src}
       role="img"
       style={{
-        maskImage: `url(${p.src})`,
-        maskPosition: "center",
-        maskRepeat: "no-repeat",
-        maskSize: "contain",
         WebkitMaskImage: `url(${p.src})`,
         WebkitMaskPosition: "center",
         WebkitMaskRepeat: "no-repeat",
         WebkitMaskSize: "contain",
+        maskImage: `url(${p.src})`,
+        maskPosition: "center",
+        maskRepeat: "no-repeat",
+        maskSize: "contain",
       }}
     />
   ));
@@ -420,16 +420,16 @@ export function PartnerLogoCell({
           key={partner.src}
           role="img"
           style={{
-            maskImage: `url(${partner.src})`,
-            maskPosition: "center",
-            maskRepeat: "no-repeat",
-            maskSize: "contain",
             WebkitMaskImage: `url(${partner.src})`,
             WebkitMaskPosition: "center",
             WebkitMaskRepeat: "no-repeat",
             WebkitMaskSize: "contain",
+            maskImage: `url(${partner.src})`,
+            maskPosition: "center",
+            maskRepeat: "no-repeat",
+            maskSize: "contain",
           }}
-          transition={{ duration: 0.3, delay }}
+          transition={{ delay, duration: 0.3 }}
         />
       </AnimatePresence>
     </P>

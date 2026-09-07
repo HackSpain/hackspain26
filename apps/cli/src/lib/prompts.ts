@@ -1,9 +1,9 @@
+import type { Option } from "@clack/prompts";
 import {
   cancel,
   confirm,
   isCancel,
   multiselect,
-  type Option,
   password,
   select,
   text,
@@ -62,11 +62,10 @@ export async function textOrFlag(
   const prompt = options.secret ? password : text;
   const value = guard(
     await prompt({
+      initialValue: options.initialValue,
       message: options.message,
       placeholder: options.placeholder,
-      initialValue: options.initialValue,
-      validate: (input) => {
-        const current = input ?? "";
+      validate: (current = "") => {
         if (options.optional && !current.trim()) {
           return;
         }
@@ -89,8 +88,8 @@ export async function confirmOrFlag(
   requireInteractive(ctx, options.flag);
   return guard(
     await confirm({
-      message: options.message,
       initialValue: options.initialValue ?? true,
+      message: options.message,
     })
   );
 }
@@ -139,9 +138,9 @@ export async function pickMany<T extends string>(
   }
   return guard(
     await multiselect<T>({
+      initialValues: options.initial,
       message: options.message,
       options: options.choices,
-      initialValues: options.initial,
       required: options.required ?? false,
     })
   );

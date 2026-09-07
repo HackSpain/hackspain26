@@ -33,8 +33,8 @@ import { notificationStatusLabel } from "@/lib/utils";
 type Audience = "all" | "accepted" | "attending" | "user";
 
 const AUDIENCE_LABEL: Record<Audience, string> = {
-  all: "Quien ha dado consentimiento",
   accepted: "Hackers aceptados",
+  all: "Quien ha dado consentimiento",
   attending: "Hackers que asisten",
   user: "Un usuario",
 };
@@ -58,24 +58,29 @@ export default function AdminNotificationsPage() {
   async function submit() {
     setError(null);
     setNotice(null);
-    if (count === undefined || count === 0) return;
+    if (count === undefined || count === 0) {
+      return;
+    }
+    // oxlint-disable-next-line no-alert -- bulk sends require an explicit confirmation.
     const ok = window.confirm(
-      `¿Enviar «${subject.trim()}» a ${count} destinatario${count === 1 ? "" : "s"}?`,
+      `¿Enviar «${subject.trim()}» a ${count} destinatario${count === 1 ? "" : "s"}?`
     );
-    if (!ok) return;
+    if (!ok) {
+      return;
+    }
     setPending(true);
     try {
       await send({
-        subject,
-        body,
         audience,
+        body,
         recipientEmail: audience === "user" ? recipientEmail : undefined,
+        subject,
       });
       setNotice(`En cola para ${count} destinatario${count === 1 ? "" : "s"}.`);
       setSubject("");
       setBody("");
-    } catch (err) {
-      setError(errorMessage(err, "No se ha podido enviar el aviso"));
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No se ha podido enviar el aviso"));
     } finally {
       setPending(false);
     }

@@ -21,16 +21,10 @@ import {
 } from "recharts";
 import { HARNESSES, compact, number, sumSamples } from "./mock-data";
 import type { Sample, TeamRow } from "./mock-data";
-import {
-  concurrencyRows,
-  elapsed,
-  eventTime,
-  MILESTONES,
-  money,
-  PHASES,
-} from "./event-data";
+import type { concurrencyRows } from "./event-data";
+import { elapsed, eventTime, MILESTONES, money, PHASES } from "./event-data";
 
-const TICK = { fontSize: 11, fill: "#4a2c1f" };
+const TICK = { fill: "#4a2c1f", fontSize: 11 };
 const TOOLTIP = {
   background: "#f4ecd8",
   border: "1px solid #1e395826",
@@ -48,8 +42,8 @@ function PhaseStrip() {
           key={phase.id}
           className="border-b-2 py-2 text-center"
           style={{
-            width: `${(phase.end - phase.start) / 7.2}%`,
             borderColor: phase.color,
+            width: `${(phase.end - phase.start) / 7.2}%`,
           }}
         >
           {phase.name}
@@ -77,7 +71,7 @@ export function ConsumptionChart({
           harness.id,
           sumSamples(rows.filter((sample) => sample.harness === harness.id))
             .tokens * 2,
-        ]),
+        ])
       ),
     };
   });
@@ -90,7 +84,7 @@ export function ConsumptionChart({
     };
   });
   const harnesses = HARNESSES.filter((harness) =>
-    samples.some((sample) => sample.harness === harness.id),
+    samples.some((sample) => sample.harness === harness.id)
   );
   return (
     <div>
@@ -122,7 +116,7 @@ export function ConsumptionChart({
         <ResponsiveContainer width="100%" height={290} minWidth={0}>
           <ComposedChart
             data={rows}
-            margin={{ top: 20, right: 20, bottom: 12, left: -8 }}
+            margin={{ bottom: 12, left: -8, right: 20, top: 20 }}
             accessibilityLayer
             aria-label={
               view === "harnesses"
@@ -272,8 +266,8 @@ export function ConcurrencyChart({
         0,
         ...rows
           .slice(bucket * 30, (bucket + 1) * 30)
-          .map((row) => row.counts[team.id] ?? 0),
-      ),
+          .map((row) => row.counts[team.id] ?? 0)
+      )
     ),
   }));
   const cellMax = Math.max(1, ...matrix.flatMap((row) => row.values));
@@ -287,7 +281,7 @@ export function ConcurrencyChart({
         <ResponsiveContainer width="100%" height={260} minWidth={0}>
           <LineChart
             data={rows}
-            margin={{ top: 20, right: 20, bottom: 12, left: -8 }}
+            margin={{ bottom: 12, left: -8, right: 20, top: 20 }}
             accessibilityLayer
             aria-label="Agentes simultáneos en cada minuto del evento"
           >
@@ -394,9 +388,9 @@ export function ConcurrencyChart({
 }
 
 const MILESTONE_KEYS = [
-  { key: "firstCommit", label: "Primer commit", color: "#35858a" },
-  { key: "firstBuild", label: "Primer build correcto", color: "#1e3958" },
-  { key: "firstDemo", label: "Primera demo desplegada", color: "#d96b2a" },
+  { color: "#35858a", key: "firstCommit", label: "Primer commit" },
+  { color: "#1e3958", key: "firstBuild", label: "Primer build correcto" },
+  { color: "#d96b2a", key: "firstDemo", label: "Primera demo desplegada" },
 ] as const;
 
 export function MilestoneChart({
@@ -409,7 +403,7 @@ export function MilestoneChart({
   const rows = MILESTONES.flatMap((milestone) => {
     const team = teams.find((item) => item.id === milestone.teamId);
     return team ? [{ ...milestone, team }] : [];
-  }).sort((a, b) => (a.firstDemo ?? Infinity) - (b.firstDemo ?? Infinity));
+  }).toSorted((a, b) => (a.firstDemo ?? Infinity) - (b.firstDemo ?? Infinity));
   return (
     <div>
       <div className="mb-5 flex flex-wrap gap-x-5 gap-y-2 text-xs">
@@ -459,9 +453,9 @@ export function MilestoneChart({
                 <span
                   className="absolute top-3 h-2 rounded-full"
                   style={{
+                    backgroundColor: `${row.team.color}28`,
                     left: `${row.firstCommit / 7.2}%`,
                     width: `${((row.firstDemo ?? row.firstBuild) - row.firstCommit) / 7.2}%`,
-                    backgroundColor: `${row.team.color}28`,
                   }}
                 />
                 {MILESTONE_KEYS.map((item) => {
@@ -516,6 +510,7 @@ export function CostChart({
         <button
           key={team.id}
           type="button"
+          aria-label={`Ver detalle de costes de ${team.name}`}
           onClick={() => onSelect(team)}
           className="block w-full rounded-lg p-2 text-left hover:bg-hs-sand/40"
         >
@@ -533,8 +528,8 @@ export function CostChart({
             <span
               className="absolute inset-y-0 left-0 rounded-full"
               style={{
-                width: `${(cost / max) * 100}%`,
                 backgroundColor: team.color,
+                width: `${(cost / max) * 100}%`,
               }}
             />
             <span

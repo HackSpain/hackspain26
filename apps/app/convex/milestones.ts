@@ -9,31 +9,35 @@ const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 
 const milestoneReturn = v.object({
   _id: v.id("milestones"),
-  teamId: v.id("teams"),
-  teamName: v.string(),
-  kind: milestoneKindValidator,
-  label: v.optional(v.string()),
   at: v.number(),
   byEmail: v.optional(v.string()),
+  kind: milestoneKindValidator,
+  label: v.optional(v.string()),
+  teamId: v.id("teams"),
+  teamName: v.string(),
 });
 
 export const add = onboardedMutation({
   args: {
+    at: v.optional(v.number()),
     kind: milestoneKindValidator,
     label: v.optional(v.string()),
-    at: v.optional(v.number()),
   },
-  returns: v.id("milestones"),
   handler: async (ctx, args) => {
     const membership = await membershipForUser(ctx, ctx.user._id);
-    if (!membership) fail("NO_TEAM", "Necesitas un equipo para registrar hitos");
+    if (!membership) {
+      fail("NO_TEAM", "Necesitas un equipo para registrar hitos");
+    }
 
     const label = args.label?.trim();
     if (args.kind === "custom" && !label) {
       fail("VALIDATION", "Un hito personalizado necesita una descripción");
     }
     if (label && label.length > MAX_LABEL_LENGTH) {
-      fail("VALIDATION", `La descripción no puede superar ${MAX_LABEL_LENGTH} caracteres`);
+      fail(
+        "VALIDATION",
+        `La descripción no puede superar ${MAX_LABEL_LENGTH} caracteres`
+      );
     }
 
     const now = Date.now();
@@ -61,22 +65,26 @@ export const add = onboardedMutation({
       createdAt: now,
     });
   },
+  returns: v.id("milestones"),
 });
 
 export const mine = onboardedQuery({
   args: {},
-  returns: v.array(milestoneReturn),
   handler: async (ctx) => {
     const membership = await membershipForUser(ctx, ctx.user._id);
-    if (!membership) return [];
+    if (!membership) {
+      return [];
+    }
     const team = await ctx.db.get(membership.teamId);
-    if (!team) return [];
+    if (!team) {
+      return [];
+    }
     const rows = await ctx.db
       .query("milestones")
       .withIndex("by_team", (q) => q.eq("teamId", team._id))
       .collect();
     const result = [];
-    for (const row of rows.sort((a, b) => a.at - b.at)) {
+    for (const row of rows.toSorted((a, b) => a.at - b.at)) {
       const user = await ctx.db.get(row.userId);
       result.push({
         _id: row._id,
@@ -90,11 +98,11 @@ export const mine = onboardedQuery({
     }
     return result;
   },
+  returns: v.array(milestoneReturn),
 });
 
 export const list = onboardedQuery({
   args: {},
-  returns: v.array(milestoneReturn),
   handler: async (ctx) => {
     const rows = await ctx.db.query("milestones").withIndex("by_at").collect();
     const teamNames = new Map<string, string>();
@@ -119,4 +127,5 @@ export const list = onboardedQuery({
     }
     return result;
   },
+  returns: v.array(milestoneReturn),
 });

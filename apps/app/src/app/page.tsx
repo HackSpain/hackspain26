@@ -7,7 +7,13 @@ import { api } from "@convex/_generated/api";
 import { LoadingText, Page, SocialMeta } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { perkName } from "@/lib/utils";
 
 function HubCard({
@@ -37,7 +43,7 @@ export default function HomePage() {
   const ready = Boolean(
     me &&
       (me.role === "admin" ||
-        (me.accepted === true && me.onboardingComplete === true)),
+        (me.accepted === true && me.onboardingComplete === true))
   );
   const signup = useQuery(api.users.mySignup, ready ? {} : "skip");
   const team = useQuery(api.teams.mine, ready ? {} : "skip");
@@ -45,7 +51,9 @@ export default function HomePage() {
   const project = useQuery(api.submissions.mine, ready ? {} : "skip");
   const trackSettings = useQuery(api.tracks.settings, ready ? {} : "skip");
 
-  if (!me) return <LoadingText />;
+  if (!me) {
+    return <LoadingText />;
+  }
 
   const cancelled = me.attendanceStatus === "cancelled";
   const claimed = catalog?.filter((row) => row.claim) ?? [];
@@ -99,13 +107,13 @@ export default function HomePage() {
               Crea uno y añade gente por GitHub, X o email.
             </p>
           )}
-          {team !== undefined ? (
+          {team === undefined ? null : (
             <Button asChild variant="teal" className="w-full sm:w-auto">
               <Link href="/teams">
                 {team ? "Gestionar equipo" : "Crear equipo"}
               </Link>
             </Button>
-          ) : null}
+          )}
         </HubCard>
 
         <HubCard
@@ -180,7 +188,7 @@ export default function HomePage() {
               Un proyecto. Entra en tantos retos como quieras.
             </p>
           ) : null}
-          {project !== undefined ? (
+          {project === undefined ? null : (
             <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href="/tracks">
                 {project?.status === "submitted"
@@ -190,7 +198,7 @@ export default function HomePage() {
                     : "Empezar proyecto"}
               </Link>
             </Button>
-          ) : null}
+          )}
         </HubCard>
 
         {signup ? (

@@ -1,16 +1,16 @@
 function esc(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 export function buildSitemapUrlsetXml(
   pageUrls: string[],
   _siteOrigin: string
 ): string {
-  const urls = [...pageUrls].sort((a, b) =>
+  const urls = [...pageUrls].toSorted((a, b) =>
     a.localeCompare(b, "es", { numeric: true })
   );
   const lines: string[] = [

@@ -3,9 +3,9 @@ export interface Artboard {
   w: number;
 }
 
-export const ARTBOARD_DESKTOP: Artboard = { w: 1440, h: 900 };
+export const ARTBOARD_DESKTOP: Artboard = { h: 900, w: 1440 };
 
-const ARTBOARD_COMPACT: Artboard = { w: 1440, h: 2320 };
+const ARTBOARD_COMPACT: Artboard = { h: 2320, w: 1440 };
 
 export type LayoutProfile = "desktop" | "compact";
 

@@ -9,30 +9,39 @@ function firstPathSegment(pathname: string): string {
 function handleFromUrl(
   input: string,
   looksLikeHost: (value: string) => boolean,
-  fromHost?: (host: string, pathname: string) => string | null,
+  fromHost?: (host: string, pathname: string) => string | null
 ): string {
   const trimmed = input.trim();
-  if (!trimmed) return "";
-  const withProtocol =
-    /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) || trimmed.startsWith("//")
-      ? trimmed.startsWith("//")
-        ? `https:${trimmed}`
-        : trimmed
-      : looksLikeHost(trimmed)
-        ? `https://${trimmed.replace(/^\/+/, "")}`
-        : "";
+  if (!trimmed) {
+    return "";
+  }
+  let withProtocol = "";
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+    withProtocol = trimmed;
+  } else if (trimmed.startsWith("//")) {
+    withProtocol = `https:${trimmed}`;
+  } else if (looksLikeHost(trimmed)) {
+    withProtocol = `https://${trimmed.replace(/^\/+/, "")}`;
+  }
   if (withProtocol) {
     try {
       const url = new URL(withProtocol);
       const host = url.hostname.toLowerCase().replace(/^www\./, "");
       const fromCustom = fromHost?.(host, url.pathname);
-      if (fromCustom !== undefined && fromCustom !== null) return fromCustom;
+      if (fromCustom !== undefined && fromCustom !== null) {
+        return fromCustom;
+      }
       return firstPathSegment(url.pathname);
     } catch {
       return "";
     }
   }
-  return trimmed.replace(/^@/, "").split(/[/?#\s]/)[0]?.toLowerCase() ?? "";
+  return (
+    trimmed
+      .replace(/^@/, "")
+      .split(/[/?#\s]/)[0]
+      ?.toLowerCase() ?? ""
+  );
 }
 
 export function normalizeGithub(input: string): string {
@@ -47,21 +56,26 @@ export function normalizeGithub(input: string): string {
         return host.slice(0, -".github.io".length).toLowerCase();
       }
       return "";
-    },
+    }
   );
 }
 
 export function normalizeTwitter(input: string): string {
-  return handleFromUrl(input, (value) =>
-    value.includes("x.com") || value.includes("twitter.com"),
+  return handleFromUrl(
+    input,
+    (value) => value.includes("x.com") || value.includes("twitter.com")
   );
 }
 
 export function normalizePhone(input: string): string | null {
   const trimmed = input.trim();
-  if (!trimmed) return null;
-  const digits = trimmed.replace(/\D/g, "");
-  if (digits.length < 8 || digits.length > 15) return null;
+  if (!trimmed) {
+    return null;
+  }
+  const digits = trimmed.replaceAll(/\D/g, "");
+  if (digits.length < 8 || digits.length > 15) {
+    return null;
+  }
   return `+${digits}`;
 }
 
@@ -71,14 +85,14 @@ export function adminEmailAllowlist(): Set<string> {
     raw
       .split(",")
       .map((value) => normalizeEmail(value))
-      .filter((value) => value.length > 0),
+      .filter((value) => value.length > 0)
   );
 }
 
 export async function sha256Hex(value: string): Promise<string> {
   const data = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
+  return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }

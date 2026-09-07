@@ -8,7 +8,9 @@ const STATE_TTL_MS = 10 * 60 * 1000;
 
 export function githubRedirectUri(): string {
   const site = process.env.CONVEX_SITE_URL;
-  if (!site) throw new Error("CONVEX_SITE_URL no está configurada");
+  if (!site) {
+    throw new Error("CONVEX_SITE_URL no está configurada");
+  }
   return `${site.replace(/\/$/, "")}/github/callback`;
 }
 
@@ -20,7 +22,6 @@ function randomState(): string {
 
 export const startLink = authedMutation({
   args: {},
-  returns: v.object({ url: v.string() }),
   handler: async (ctx) => {
     const clientId = process.env.GITHUB_CLIENT_ID;
     if (!clientId) {
@@ -46,11 +47,11 @@ export const startLink = authedMutation({
     url.searchParams.set("state", state);
     return { url: url.toString() };
   },
+  returns: v.object({ url: v.string() }),
 });
 
 export const unlink = authedMutation({
   args: {},
-  returns: v.null(),
   handler: async (ctx) => {
     await ctx.db.patch(ctx.user._id, {
       githubId: undefined,
@@ -59,34 +60,40 @@ export const unlink = authedMutation({
     });
     return null;
   },
+  returns: v.null(),
 });
 
 export const consumeState = internalMutation({
   args: { state: v.string() },
-  returns: v.union(v.id("users"), v.null()),
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query("githubLinkStates")
       .withIndex("by_state", (q) => q.eq("state", args.state))
       .unique();
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     await ctx.db.delete(row._id);
-    if (row.expiresAt < Date.now()) return null;
+    if (row.expiresAt < Date.now()) {
+      return null;
+    }
     return row.userId;
   },
+  returns: v.union(v.id("users"), v.null()),
 });
 
 export const linkAccount = internalMutation({
   args: {
-    userId: v.id("users"),
+    avatarUrl: v.optional(v.string()),
     githubId: v.string(),
     login: v.string(),
-    avatarUrl: v.optional(v.string()),
+    userId: v.id("users"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("Usuario no encontrado");
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
     const taken = await ctx.db
       .query("users")
       .withIndex("by_github_id", (q) => q.eq("githubId", args.githubId))
@@ -117,8 +124,9 @@ export const linkAccount = internalMutation({
       user.email,
       signup?._id ?? user.signupId,
       login,
-      signup?.twitterHandle,
+      signup?.twitterHandle
     );
     return null;
   },
+  returns: v.null(),
 });

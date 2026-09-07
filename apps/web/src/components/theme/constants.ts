@@ -3,11 +3,11 @@ import { HS_PALETTE } from "./palette";
 export const INK = HS_PALETTE.ink;
 export const NUM_SECTIONS = 6;
 
-export const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
+export const SPRING = { damping: 30, stiffness: 300, type: "spring" as const };
 
 export const slideVariants = {
+  center: { opacity: 1, y: "0%" },
   enter: (dir: number) => ({ y: dir > 0 ? "100%" : "-100%", opacity: 0 }),
-  center: { y: "0%", opacity: 1 },
   exit: (dir: number) => ({ y: dir > 0 ? "-100%" : "100%", opacity: 0 }),
 };
 

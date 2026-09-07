@@ -16,6 +16,8 @@
     "build:app": "pnpm --filter app build",
     "preview": "pnpm --filter web preview",
     "check": "pnpm --filter web check",
+    "lint": "oxlint -c oxlint.config.mjs oxlint.config.mjs && pnpm --filter app lint && pnpm --filter web lint && pnpm --filter cli lint",
+    "fix": "oxlint -c oxlint.config.mjs --fix oxlint.config.mjs && pnpm --filter app fix && pnpm --filter web fix && pnpm --filter cli fix",
     "og:generate": "pnpm --filter web og:generate",
     "assets:quiver": "pnpm --filter web assets:quiver",
     "assets:quiver:tiles": "pnpm --filter web assets:quiver:tiles",
@@ -30,6 +32,8 @@
     "test:cli": "pnpm --filter cli test"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "oxlint": "1.81.0",
+    "ultracite": "7.6.2"
   }
 }

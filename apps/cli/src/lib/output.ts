@@ -41,9 +41,9 @@ export function renderTable(rows: string[][], header?: string[]): string {
   }
   const widths: number[] = [];
   for (const row of all) {
-    row.forEach((cell, i) => {
+    for (const [i, cell] of row.entries()) {
       widths[i] = Math.max(widths[i] ?? 0, width(cell));
-    });
+    }
   }
   const render = (row: string[]) =>
     row
@@ -88,24 +88,26 @@ export function uiFor(ctx: CliContext): Ui {
     }
   };
   return {
-    json: ctx.json,
-    intro: (title) =>
-      quiet ? err(title) : intro(`${BRAND} ${c.dim("·")} ${title}`),
-    outro: (message) => (quiet ? err(message) : outro(message)),
-    info: (message) => (quiet ? err(message) : log.info(message)),
-    success: (message) => (quiet ? err(message) : log.success(message)),
     celebrate: (message) =>
       quiet ? err(message) : log.success(`${message} 🎉`),
-    warn: (message) => (quiet ? err(message) : log.warn(message)),
-    step: (message) => (quiet ? err(message) : log.step(message)),
-    line: out,
+    info: (message) => (quiet ? err(message) : log.info(message)),
+    intro: (title) =>
+      quiet ? err(title) : intro(`${BRAND} ${c.dim("·")} ${title}`),
+    json: ctx.json,
     kv: (rows) => out(renderKv(rows)),
-    table: (rows, header) => out(renderTable(rows, header)),
-    note: (body, title) => (quiet ? err(body) : note(body, title)),
+    line: out,
     next: (steps) =>
       quiet
         ? err(steps.map(([command]) => command).join("\n"))
         : note(renderNext(steps), "Next"),
+    note: (body, title) => (quiet ? err(body) : note(body, title)),
+    outro: (message) => (quiet ? err(message) : outro(message)),
+    result: (data) => {
+      if (!quiet) {
+        return;
+      }
+      console.log(JSON.stringify({ ok: true, data }));
+    },
     spin: async (label, fn, done) => {
       if (quiet || !process.stderr.isTTY) {
         return await fn();
@@ -121,12 +123,10 @@ export function uiFor(ctx: CliContext): Ui {
         throw error;
       }
     },
-    result: (data) => {
-      if (!quiet) {
-        return;
-      }
-      console.log(JSON.stringify({ ok: true, data }));
-    },
+    step: (message) => (quiet ? err(message) : log.step(message)),
+    success: (message) => (quiet ? err(message) : log.success(message)),
+    table: (rows, header) => out(renderTable(rows, header)),
+    warn: (message) => (quiet ? err(message) : log.warn(message)),
   };
 }
 
@@ -140,8 +140,8 @@ export function printJsonError(explained: {
 
 export function compactNumber(value: number): string {
   return new Intl.NumberFormat("en", {
-    notation: "compact",
     maximumFractionDigits: 1,
+    notation: "compact",
   }).format(value);
 }
 

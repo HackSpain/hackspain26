@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { RawTree, type JsonObject } from "@rawtree/sdk";
+import { RawTree } from "@rawtree/sdk";
+import type { JsonObject } from "@rawtree/sdk";
 
 const DEFAULT_TELEMETRY_TABLE = "hackspain_telemetry";
 
@@ -49,7 +50,12 @@ export type TelemetryEvent = {
   native?: Record<string, unknown>;
 };
 
-export class RawTreeConfigurationError extends Error {}
+export class RawTreeConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RawTreeConfigurationError";
+  }
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -122,8 +128,8 @@ function parseModel(
     return null;
   }
   return {
-    raw,
     family: family as ModelFamily,
+    raw,
     ...(provider ? { provider } : {}),
   };
 }
@@ -169,10 +175,10 @@ function parseTokens(
     return null;
   }
   return {
-    input,
-    output,
     cacheRead,
     cacheWrite,
+    input,
+    output,
     ...(reasoning === undefined ? {} : { reasoning }),
   };
 }
@@ -188,15 +194,18 @@ export function parseTelemetryEvent(
   const project = parseProject(value.project);
   const model = parseModel(value.model);
   const tokens = parseTokens(value.tokens);
-  const identity = value.identity;
+  const { identity } = value;
   const harness = HARNESSES.includes(value.harness as Harness)
     ? (value.harness as Harness)
     : null;
-  const native = harness
-    ? parseNative(value.native, harness)
-    : value.native === undefined
-      ? undefined
-      : null;
+  let native: ReturnType<typeof parseNative> | null | undefined;
+  if (harness) {
+    native = parseNative(value.native, harness);
+  } else if (value.native === undefined) {
+    native = undefined;
+  } else {
+    native = null;
+  }
 
   if (
     value.schema !== "hackspain.telemetry.v1" ||
@@ -247,16 +256,18 @@ export function parseTelemetryEvent(
 }
 
 function toJsonObject(event: TelemetryEvent): JsonObject {
-  return JSON.parse(JSON.stringify(event)) as JsonObject;
+  return structuredClone(event) as JsonObject;
 }
 
 function sortedUniqueEvents(events: TelemetryEvent[]): TelemetryEvent[] {
-  const sorted = [...events].sort((left, right) =>
+  const sorted = [...events].toSorted((left, right) =>
     left.eventId.localeCompare(right.eventId)
   );
   for (let index = 1; index < sorted.length; index++) {
     if (sorted[index - 1]?.eventId === sorted[index]?.eventId) {
-      throw new Error(`Duplicate telemetry event id: ${sorted[index]?.eventId}`);
+      throw new Error(
+        `Duplicate telemetry event id: ${sorted[index]?.eventId}`
+      );
     }
   }
   return sorted;
@@ -266,7 +277,7 @@ function deduplicatingFetch(
   fetchImpl: typeof fetch,
   token: string
 ): typeof fetch {
-  return (async (input, init) => {
+  return ((input, init) => {
     const inputUrl = input instanceof Request ? input.url : String(input);
     const url = new URL(inputUrl);
     url.searchParams.set("deduplicate_insert", "enable");
@@ -291,8 +302,7 @@ export async function storeTelemetryEvents(
     );
   }
 
-  const table =
-    process.env.RAWTREE_TELEMETRY_TABLE ?? DEFAULT_TELEMETRY_TABLE;
+  const table = process.env.RAWTREE_TELEMETRY_TABLE ?? DEFAULT_TELEMETRY_TABLE;
   const orderedEvents = sortedUniqueEvents(events);
   const token = createHash("sha256")
     .update("hackspain.telemetry.insert.v1\0")
@@ -317,9 +327,9 @@ export async function storeTelemetryEvents(
     userAgent: "hackspain-dashboard/1.0",
   });
   const result = await rawtree.insert({
+    signal: AbortSignal.timeout(10_000),
     table,
     values: orderedEvents.map(toJsonObject),
-    signal: AbortSignal.timeout(10_000),
   });
   if (result.inserted !== 0 && result.inserted !== orderedEvents.length) {
     throw new Error(

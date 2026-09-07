@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { MENTORS, type Mentor } from "../../data/mentors";
+import type { Mentor } from "../../data/mentors";
+import { MENTORS } from "../../data/mentors";
 import { useOverlayLock } from "../overlay/overlay-lock";
 
 const TITLE_ID = "mentors-overlay-title";
@@ -8,14 +9,14 @@ const TITLE_ID = "mentors-overlay-title";
 /** Logos are silhouettes; mask + bg tints them to the ink brand color. */
 function logoMaskStyle(src: string): React.CSSProperties {
   return {
-    maskImage: `url(${src})`,
-    maskPosition: "left center",
-    maskRepeat: "no-repeat",
-    maskSize: "contain",
     WebkitMaskImage: `url(${src})`,
     WebkitMaskPosition: "left center",
     WebkitMaskRepeat: "no-repeat",
     WebkitMaskSize: "contain",
+    maskImage: `url(${src})`,
+    maskPosition: "left center",
+    maskRepeat: "no-repeat",
+    maskSize: "contain",
   };
 }
 

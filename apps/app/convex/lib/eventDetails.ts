@@ -17,8 +17,8 @@ export function parseEventDetails(args: {
   }
   const dietaryDetails = args.dietaryDetails?.trim();
   return {
+    dietaryDetails: dietaryDetails || undefined,
     dietaryRestrictions,
-    dietaryDetails: dietaryDetails ? dietaryDetails : undefined,
     travelOrigin,
   };
 }

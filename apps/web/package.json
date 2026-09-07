@@ -15,8 +15,8 @@
     "db:push": "drizzle-kit push",
     "astro": "astro",
     "check": "astro check",
-    "lint": "ultracite check",
-    "fix": "ultracite fix",
+    "lint": "oxlint -c oxlint.config.mjs . && ultracite check",
+    "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix",
     "knip": "DATABASE_URL=postgresql://localhost/knip knip"
   },
   "dependencies": {
@@ -55,7 +55,6 @@
     "drizzle-kit": "^0.31.10",
     "knip": "^6.14.2",
     "postcss": "^8.5.8",
-    "typescript": "^6.0.3",
-    "ultracite": "7.6.2"
+    "typescript": "^6.0.3"
   }
 }

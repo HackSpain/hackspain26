@@ -498,8 +498,10 @@ export function buildSections(
           <p className={`${LBL} text-white/60`}>Compute gratis para todos</p>
         </P>
       ),
+      r1c: <P bg="bg-hs-paper" />,
       r3a: <P bg="bg-hs-paper" />,
       r3b: <P bg="bg-hs-paper" />,
+      r4b: <P bg="bg-hs-paper" />,
       r4c: (
         <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-8">
           <p className={`${BD} text-center text-hs-ink`}>
@@ -509,8 +511,6 @@ export function buildSections(
           <TracksInfoModal />
         </P>
       ),
-      r4b: <P bg="bg-hs-paper" />,
-      r1c: <P bg="bg-hs-paper" />,
       ...bottomRow(2),
     },
     {
@@ -527,8 +527,10 @@ export function buildSections(
           </p>
         </P>
       ),
+      r1c: <P bg="bg-hs-paper" />,
       r3a: <P bg="bg-hs-paper" />,
       r3b: <P bg="bg-hs-paper" />,
+      r4b: <P bg="bg-hs-paper" />,
       r4c: (
         <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-8">
           <p className={`${BD} text-center text-hs-ink`}>
@@ -538,8 +540,6 @@ export function buildSections(
           <JudgesInfoModal />
         </P>
       ),
-      r4b: <P bg="bg-hs-paper" />,
-      r1c: <P bg="bg-hs-paper" />,
       ...bottomRow(3),
     },
     {
@@ -553,8 +553,10 @@ export function buildSections(
           </h2>
         </P>
       ),
+      r1c: <P bg="bg-hs-paper" />,
       r3a: <P bg="bg-hs-paper" />,
       r3b: <P bg="bg-hs-paper" />,
+      r4b: <P bg="bg-hs-paper" />,
       r4c: (
         <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-8">
           <p className={`${BD} text-center text-hs-ink`}>
@@ -565,8 +567,6 @@ export function buildSections(
           <MentorsInfoModal />
         </P>
       ),
-      r4b: <P bg="bg-hs-paper" />,
-      r1c: <P bg="bg-hs-paper" />,
       ...bottomRow(4),
     },
     {

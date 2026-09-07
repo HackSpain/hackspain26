@@ -75,8 +75,8 @@ export function registerWatch(program: Command): void {
         Boolean(process.stdout.isTTY);
 
       const options = {
-        once: Boolean(flags.once),
         intervalMs,
+        once: Boolean(flags.once),
         since: Date.now() - backfillMs,
         toast: flags.toast,
         uploadUrl,
@@ -85,21 +85,21 @@ export function registerWatch(program: Command): void {
 
       if (fullScreen) {
         const state = createState({
-          me: { name: firstName(me.name, me.email), email: me.email },
-          team: team
-            ? {
-                name: team.name,
-                isOwner: team.isOwner,
-                repoUrl: team.repoUrl,
-                members: team.members.length,
-              }
-            : undefined,
+          me: { email: me.email, name: firstName(me.name, me.email) },
           project: submission
             ? {
                 name: submission.name,
                 status: submission.status,
                 tracks: submission.challenges.map((x) => x.label),
                 updatedAt: submission.updatedAt,
+              }
+            : undefined,
+          team: team
+            ? {
+                name: team.name,
+                isOwner: team.isOwner,
+                repoUrl: team.repoUrl,
+                members: team.members.length,
               }
             : undefined,
           uploadEnabled: Boolean(uploadUrl),
@@ -117,13 +117,13 @@ export function registerWatch(program: Command): void {
         });
         try {
           await runWatch(options, {
-            session,
-            me,
-            teamId: team?._id,
-            state,
-            log: () => undefined,
-            say: () => undefined,
             announce: () => process.stdout.write("\x07"),
+            log: () => undefined,
+            me,
+            say: () => undefined,
+            session,
+            state,
+            teamId: team?._id,
           });
         } finally {
           screen.stop();
@@ -142,7 +142,7 @@ export function registerWatch(program: Command): void {
       const say = (message: string) => {
         if (ctx.json) {
           console.log(
-            JSON.stringify({ event: "log", message, at: Date.now() })
+            JSON.stringify({ at: Date.now(), event: "log", message })
           );
         } else {
           console.log(message);
@@ -156,11 +156,11 @@ export function registerWatch(program: Command): void {
       const announce = (subject: string, body: string, at: number) => {
         if (ctx.json) {
           console.log(
-            JSON.stringify({ event: "notification", subject, body, at })
+            JSON.stringify({ at, body, event: "notification", subject })
           );
           return;
         }
-        process.stdout.write("\x07");
+        process.stdout.write("\u0007");
         note(
           body,
           `📣 ${c.bold(subject)} ${c.dim(`· organisers · ${new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`)}`
@@ -180,12 +180,12 @@ export function registerWatch(program: Command): void {
           );
         }
         const code = await runWatch(options, {
-          session,
-          me,
-          teamId: team?._id,
-          log,
-          say,
           announce,
+          log,
+          me,
+          say,
+          session,
+          teamId: team?._id,
         });
         process.exitCode = code;
       } finally {

@@ -59,7 +59,7 @@ function normalizeUvs(
   width: number,
   height: number
 ): void {
-  const uv = geometry.attributes.uv;
+  const { uv } = geometry.attributes;
   for (let i = 0; i < uv.count; i++) {
     uv.setXY(
       i,
@@ -81,8 +81,8 @@ function normalizeUvs(
  * ExtrudeGeometry is non-indexed — no UV is shared with another triangle.
  */
 function mirrorBackFaceUvs(geometry: ExtrudeGeometry): void {
-  const position = geometry.attributes.position;
-  const uv = geometry.attributes.uv;
+  const { position } = geometry.attributes;
+  const { uv } = geometry.attributes;
 
   for (let triangle = 0; triangle < position.count / 3; triangle++) {
     const first = triangle * 3;
@@ -104,7 +104,7 @@ function mirrorBackFaceUvs(geometry: ExtrudeGeometry): void {
  * so each side of the card can carry its own material.
  */
 function assignFaceGroups(geometry: ExtrudeGeometry): void {
-  const position = geometry.attributes.position;
+  const { position } = geometry.attributes;
   geometry.clearGroups();
 
   let runStart = 0;
@@ -134,7 +134,7 @@ function assignFaceGroups(geometry: ExtrudeGeometry): void {
 
 /** Z component of the triangle normal — positive faces the viewer. */
 function triangleFacing(geometry: ExtrudeGeometry, first: number): number {
-  const position = geometry.attributes.position;
+  const { position } = geometry.attributes;
   const ax = position.getX(first);
   const ay = position.getY(first);
   const bx = position.getX(first + 1);
