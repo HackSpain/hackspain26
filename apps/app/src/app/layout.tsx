@@ -37,6 +37,7 @@ export default async function RootLayout({
     <ConvexAuthNextjsServerProvider>
       <html
         lang="es"
+        data-scroll-behavior="smooth"
         className={`${dmSans.variable} ${bungee.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col bg-hs-paper text-hs-ink">

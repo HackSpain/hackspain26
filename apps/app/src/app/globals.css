@@ -76,6 +76,7 @@
     @apply border-border outline-ring/50;
   }
   html {
+    scroll-behavior: smooth;
     @apply font-sans;
   }
   body {
@@ -166,6 +167,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .hs-enter,
   .hs-stagger > * {
     animation: hs-enter-fade 180ms ease both;

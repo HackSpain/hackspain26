@@ -109,6 +109,16 @@ export default function HomePage() {
         </HubCard>
 
         <HubCard
+          title="Participantes"
+          description="Conoce el directorio de la comunidad."
+        >
+          <p className="text-sm text-hs-brown">Demo con perfiles ficticios.</p>
+          <Button asChild variant="teal" className="w-full sm:w-auto">
+            <Link href="/participantes">Ver participantes</Link>
+          </Button>
+        </HubCard>
+
+        <HubCard
           title="Perks"
           description={
             catalog === undefined
