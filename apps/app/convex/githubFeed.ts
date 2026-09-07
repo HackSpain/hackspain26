@@ -71,7 +71,7 @@ export const unseen = internalQuery({
 
 /**
  * Organiser tool: drop every GitHub post for a repo, e.g. after a team
- * pointed at the wrong repository. `bunx convex run githubFeed:purgeRepo '{"repo":"org/name"}'`
+ * pointed at the wrong repository. `pnpm --filter app exec convex run githubFeed:purgeRepo '{"repo":"org/name"}'`
  */
 export const purgeRepo = internalMutation({
   args: { repo: v.string() },

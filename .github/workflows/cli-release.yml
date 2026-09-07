@@ -19,14 +19,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.1.1"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: pnpm
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.1"
-      - run: bun install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - name: Test
         run: |
-          bun run --filter cli typecheck
-          bun run --filter cli test
+          pnpm --filter cli typecheck
+          pnpm --filter cli test
       - name: Resolve version
         id: version
         run: |
@@ -39,7 +46,7 @@ jobs:
         env:
           HACKSPAIN_VERSION: ${{ steps.version.outputs.value }}
           HACKSPAIN_APP_URL_DEFAULT: ${{ vars.HACKSPAIN_APP_URL }}
-        run: bun run --filter cli build:bin
+        run: pnpm --filter cli build:bin
       - name: Smoke the linux binary
         run: |
           ./apps/cli/dist/hackspain-linux-x64 --version | grep -F "${{ steps.version.outputs.value }}"

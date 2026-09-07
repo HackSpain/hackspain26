@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end smoke against a dev deployment with the OTP stub enabled.
-#   HACKSPAIN_APP_URL=http://localhost:3000 \   (default; needs `bun dev:app` running)
+#   HACKSPAIN_APP_URL=http://localhost:3000 \   (default; needs `pnpm dev:app` running)
 #   HACKSPAIN_SMOKE_EMAIL=<accepted or admin email> scripts/smoke.sh [path/to/hackspain]
 # Uses an isolated config dir so it never touches your real session.
 set -euo pipefail

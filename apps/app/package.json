@@ -14,8 +14,8 @@
     "dev:convex": "convex dev",
     "convex:dev": "convex dev",
     "convex:codegen": "convex codegen",
-    "vercel-build": "convex deploy --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'bun run build'",
-    "migrate": "bun scripts/migrate-from-postgres.ts"
+    "vercel-build": "convex deploy --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'pnpm run build'",
+    "migrate": "tsx scripts/migrate-from-postgres.ts"
   },
   "dependencies": {
     "@auth/core": "0.37.0",
@@ -49,6 +49,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

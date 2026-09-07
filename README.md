@@ -6,57 +6,57 @@ Monorepo for [HackSpain](https://hackspain.com) (Hack Spain 2026, Madrid).
 | --- | --- | --- |
 | `apps/web` | Astro 6, React islands, Tailwind v4, Neon/Drizzle | [localhost:4321](http://localhost:4321) |
 | `apps/app` | Next.js, Convex, Convex Auth, shadcn | [localhost:3000](http://localhost:3000) |
-| `apps/cli` | Bun, Commander, clack; `hackspain` binary for participants | `bun dev:cli -- --help` |
+| `apps/cli` | Bun, Commander, clack; `hackspain` binary for participants | `pnpm dev:cli -- --help` |
 
-Package manager is Bun. Node.js ≥ 22.12.
+Package manager is pnpm 11. The CLI still requires Bun to run its tests and compile standalone binaries. Node.js ≥ 22.12.
 
 ## Setup
 
 ```sh
-bun install
+pnpm install
 cp apps/web/.env.example apps/web/.env
 cp apps/app/.env.example apps/app/.env.local
 ```
 
 Landing static pages run without a database. Signup and ambassador APIs need `DATABASE_URL` (Neon PostgreSQL). Optional `DISCORD_WEBHOOK_URL` notifies Discord on new submissions. `SHORTLIST_PASSWORD` gates the internal `/shortlist` review page; without it the page renders no data.
 
-The dashboard needs a Convex development deployment (`bun dev:convex` / `npx convex dev`). Do not use `npx convex deploy` unless you are shipping production. Dashboard env lives in `apps/app/.env.example`.
+The dashboard needs a Convex development deployment (`pnpm dev:convex` / `pnpm --filter app exec convex dev`). Do not use `pnpm --filter app exec convex deploy` unless you are shipping production. Dashboard env lives in `apps/app/.env.example`.
 
 ## Commands
 
 | Command | Description |
 | :------ | :---------- |
-| `bun dev` / `bun dev:web` | Landing only |
-| `bun dev:app` | Dashboard Next.js server |
-| `bun dev:convex` | Convex functions + codegen (development only) |
-| `bun dev:all` | Landing + dashboard + Convex in one terminal |
-| `bun build` / `bun build:app` | Production builds |
-| `bun preview` | Preview the landing build |
-| `bun check` | Astro + TypeScript checks |
-| `bun migrate:convex` | Import Neon signups/ambassadors into Convex |
-| `bun dev:cli -- <args>` / `bun test:cli` / `bun build:cli` | Run, test, or compile the `hackspain` CLI (participants install it with `curl -fsSL https://hackspain.com/install.sh \| sh`) |
-| `bun db:generate` / `bun db:migrate` / `bun db:push` | Landing Drizzle |
+| `pnpm dev` / `pnpm dev:web` | Landing only |
+| `pnpm dev:app` | Dashboard Next.js server |
+| `pnpm dev:convex` | Convex functions + codegen (development only) |
+| `pnpm dev:all` | Landing + dashboard + Convex in one terminal |
+| `pnpm build` / `pnpm build:app` | Production builds |
+| `pnpm preview` | Preview the landing build |
+| `pnpm check` | Astro + TypeScript checks |
+| `pnpm migrate:convex` | Import Neon signups/ambassadors into Convex |
+| `pnpm dev:cli -- <args>` / `pnpm test:cli` / `pnpm build:cli` | Run, test, or compile the `hackspain` CLI (participants install it with `curl -fsSL https://hackspain.com/install.sh \| sh`) |
+| `pnpm db:generate` / `pnpm db:migrate` / `pnpm db:push` | Landing Drizzle |
 
 ## Convex auth and admin
 
-1. From the repo root, run `bun dev:convex`. From `apps/app`, run `bun run dev:convex`. Create or select a **dev** project. Leave it running.
+1. From the repo root, run `pnpm dev:convex`. From `apps/app`, run `pnpm convex:dev`. Create or select a **dev** project. Leave it running.
 2. Set Convex env (in another terminal, still from `apps/app`):
 
 ```sh
-npx convex env set SITE_URL http://localhost:3000
-npx convex env set ADMIN_EMAILS you@example.com
-npx convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
+pnpm exec convex env set SITE_URL http://localhost:3000
+pnpm exec convex env set ADMIN_EMAILS you@example.com
+pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
 # optional email delivery; without this, OTPs print in Convex logs
-npx convex env set AUTH_RESEND_KEY re_...
-npx convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
+pnpm exec convex env set AUTH_RESEND_KEY re_...
+pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
 # dev only: allow the phone-verification stub (no Twilio). Never set in production.
-npx convex env set ALLOW_PHONE_STUB true
+pnpm exec convex env set ALLOW_PHONE_STUB true
 # dev only: 00000000 also works as the email sign-in code (ignored if AUTH_RESEND_KEY is set).
-npx convex env set ALLOW_EMAIL_OTP_STUB true
+pnpm exec convex env set ALLOW_EMAIL_OTP_STUB true
 # GitHub account linking (optional). Create a GitHub OAuth App whose callback URL is
 # <your deployment>.convex.site/github/callback, then:
-npx convex env set GITHUB_CLIENT_ID Iv1...
-npx convex env set GITHUB_CLIENT_SECRET ...
+pnpm exec convex env set GITHUB_CLIENT_ID Iv1...
+pnpm exec convex env set GITHUB_CLIENT_SECRET ...
 ```
 
 3. Copy the printed `CONVEX_URL` into `apps/app/.env.local` as `NEXT_PUBLIC_CONVEX_URL`.
@@ -64,7 +64,7 @@ npx convex env set GITHUB_CLIENT_SECRET ...
 
 ```sh
 cd apps/app
-npx @convex-dev/auth
+pnpm dlx @convex-dev/auth
 ```
 
 5. Sign in at `/login` with an email that exists in Convex `signups`. An organizer must mark that signup **accepted** in `/admin` before the person can confirm details.
@@ -75,7 +75,7 @@ Accepted hackers confirm phone (E.164 + code), dietary restrictions, travel orig
 
 ## Migrating Neon to Convex
 
-`bun migrate:convex` from the repo root. Idempotent on email. Safe to re-run. Do not run it unless you mean to import.
+`pnpm migrate:convex` from the repo root. Idempotent on email. Safe to re-run. Do not run it unless you mean to import.
 
 It loads `DATABASE_URL` from `apps/web/.env`, and `NEXT_PUBLIC_CONVEX_URL` plus `MIGRATION_SECRET` from `apps/app/.env.local`. Shell exports win if already set. `MIGRATION_SECRET` must match the Convex deployment env.
 
@@ -96,28 +96,28 @@ Two Vercel projects, both linked to this repo. Set **Root Directory** before the
 
 | Project | Root Directory | Domain | Build |
 | --- | --- | --- | --- |
-| Landing (existing) | `apps/web` | hackspain.com | `bun run build` (in `apps/web/vercel.json`) |
-| Dashboard (new) | `apps/app` | e.g. app.hackspain.com | `bun run vercel-build` — deploys Convex, then Next.js |
+| Landing (existing) | `apps/web` | hackspain.com | `pnpm run build` |
+| Dashboard (new) | `apps/app` | e.g. app.hackspain.com | `pnpm run vercel-build` — deploys Convex, then Next.js |
 
-Vercel reads `bun.lock` from the repo root (`installCommand` is `cd ../.. && bun install`). A change that only touches the other app is skipped (`scripts/vercel-ignore.sh`).
+Vercel reads `pnpm-lock.yaml` and `pnpm-workspace.yaml` from the repo root (`installCommand` is `cd ../.. && pnpm install --frozen-lockfile`). A change that only touches the other app is skipped (`scripts/vercel-ignore.sh`).
 
 ### Convex on merge
 
-`apps/app` build runs `convex deploy --cmd 'bun run build'`. That needs `CONVEX_DEPLOY_KEY` in Vercel, not a local `npx convex deploy`.
+`apps/app` build runs `convex deploy --cmd 'pnpm run build'`. That needs `CONVEX_DEPLOY_KEY` in Vercel, not a local `pnpm exec convex deploy`.
 
 1. Convex dashboard → project → create a **production** deployment if you do not have one.
 2. Production deployment → Settings → Deploy Keys → **Generate Production Deploy Key** (`deployment:deploy`).
 3. Vercel dashboard project → Environment Variables:
    - `CONVEX_DEPLOY_KEY` = production key. Environment: **Production** only.
    - Optional: a **Preview** deploy key (project Settings → Generate Preview Deploy Key) as `CONVEX_DEPLOY_KEY` for Preview only. That gives each PR its own Convex backend.
-4. On the Convex **production** deployment (`npx convex env set` from `apps/app` after `npx convex deploy` once, or the dashboard Env vars UI):
+4. On the Convex **production** deployment (`pnpm exec convex env set` from `apps/app` after `pnpm exec convex deploy` once, or the dashboard Env vars UI):
 
 ```sh
-npx convex env set SITE_URL https://app.hackspain.com
-npx convex env set ADMIN_EMAILS you@example.com
-npx convex env set AUTH_RESEND_KEY re_...
-npx convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
-npx convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
+pnpm exec convex env set SITE_URL https://app.hackspain.com
+pnpm exec convex env set ADMIN_EMAILS you@example.com
+pnpm exec convex env set AUTH_RESEND_KEY re_...
+pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
+pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
 ```
 
 Do **not** set `ALLOW_PHONE_STUB` or `ALLOW_EMAIL_OTP_STUB` on production. Do **not** put `.env` / `.env.local` in git.
