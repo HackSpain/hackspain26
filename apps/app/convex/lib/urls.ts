@@ -6,7 +6,8 @@ export const urlKindValidator = v.union(
   v.literal("github"),
   v.literal("web"),
   v.literal("repo"),
-  v.literal("demo")
+  v.literal("demo"),
+  v.literal("video")
 );
 
 export const urlEntryValidator = v.object({
@@ -16,7 +17,14 @@ export const urlEntryValidator = v.object({
 
 export const urlsValidator = v.array(urlEntryValidator);
 
-export type UrlKind = "x" | "linkedin" | "github" | "web" | "repo" | "demo";
+export type UrlKind =
+  | "x"
+  | "linkedin"
+  | "github"
+  | "web"
+  | "repo"
+  | "demo"
+  | "video";
 
 export type UrlEntry = { kind: UrlKind; url: string };
 

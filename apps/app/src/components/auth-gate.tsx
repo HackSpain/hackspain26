@@ -4,19 +4,26 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import type { Role } from "@convex/lib/validators";
 import { api } from "@convex/_generated/api";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 
 function destination(me: {
-  role: "user" | "admin";
+  role: Role;
   isRegistered: boolean;
   accepted: boolean;
   onboardingComplete: boolean;
 }): string | null {
-  if (!me.isRegistered) return "/unregistered";
-  if (!me.accepted) return "/pending";
-  if (!me.onboardingComplete) return "/onboarding";
+  if (!me.isRegistered) {
+    return "/unregistered";
+  }
+  if (!me.accepted) {
+    return "/pending";
+  }
+  if (!me.onboardingComplete) {
+    return "/onboarding";
+  }
   return null;
 }
 
@@ -65,21 +72,31 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const attachAfterLogin = useMutation(api.users.attachAfterLogin);
 
   useEffect(() => {
-    if (!isAuthenticated || !me) return;
+    if (!isAuthenticated || !me) {
+      return;
+    }
     void attachAfterLogin({});
   }, [attachAfterLogin, isAuthenticated, me]);
 
   useEffect(() => {
-    if (pathname === "/tv") return;
-    if (isLoading) return;
+    if (pathname === "/tv") {
+      return;
+    }
+    if (isLoading) {
+      return;
+    }
     if (!isAuthenticated) {
       if (pathname !== "/login") {
-        if (pathname === CLI_AUTH_PATH) stashReturnTo();
+        if (pathname === CLI_AUTH_PATH) {
+          stashReturnTo();
+        }
         router.replace("/login");
       }
       return;
     }
-    if (!me) return;
+    if (!me) {
+      return;
+    }
 
     if (pathname === "/login") {
       const returnTo = peekReturnTo();
@@ -105,6 +122,44 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace("/");
       }
       if (pathname === "/pending" || pathname === "/unregistered") {
+        router.replace("/");
+      }
+      return;
+    }
+
+    if (me.role === "judge") {
+      if (pathname.startsWith("/admin")) {
+        router.replace("/");
+        return;
+      }
+      if (pathname === "/judging" || pathname.startsWith("/judging")) {
+        return;
+      }
+      if (pathname === "/login") {
+        const next = destination(me);
+        router.replace(next ?? "/");
+        return;
+      }
+      const next = destination(me);
+      if (next && pathname !== next) {
+        if (
+          next === "/pending" ||
+          next === "/unregistered" ||
+          next === "/onboarding"
+        ) {
+          router.replace("/judging");
+          return;
+        }
+        router.replace(next);
+        return;
+      }
+      if (
+        !next &&
+        (pathname === "/onboarding" ||
+          pathname === "/unregistered" ||
+          pathname === "/pending" ||
+          pathname === "/login")
+      ) {
         router.replace("/");
       }
       return;
@@ -147,15 +202,37 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (me && me.role !== "admin" && pathname !== CLI_AUTH_PATH) {
-    if (pathname.startsWith("/admin")) return null;
-    const next = destination(me);
-    if (next && pathname !== next) return null;
+    if (pathname.startsWith("/admin")) {
+      return null;
+    }
+    const judgingAllowed =
+      me.role === "judge" && pathname.startsWith("/judging");
+    if (!judgingAllowed) {
+      const next = destination(me);
+      if (
+        me.role === "judge" &&
+        next &&
+        (next === "/pending" ||
+          next === "/unregistered" ||
+          next === "/onboarding")
+      ) {
+        if (pathname !== "/judging") {
+          return null;
+        }
+      } else if (next && pathname !== next) {
+        return null;
+      }
+    }
   }
 
   if (me?.role === "admin") {
     const canConfirm = me.accepted && !me.onboardingComplete;
-    if (pathname === "/onboarding" && !canConfirm) return null;
-    if (pathname === "/pending" || pathname === "/unregistered") return null;
+    if (pathname === "/onboarding" && !canConfirm) {
+      return null;
+    }
+    if (pathname === "/pending" || pathname === "/unregistered") {
+      return null;
+    }
   }
 
   return <>{children}</>;

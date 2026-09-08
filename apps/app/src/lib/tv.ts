@@ -25,6 +25,94 @@ export type TvSponsorTier = "gold" | "silver" | "community";
 export type TvTickerSpeed = "slow" | "normal" | "fast";
 export type TvFeedMode = "latest" | "rotate";
 export type TvFeedSource = "all" | "participants" | "github";
+export const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
+export type TvFontSize = (typeof TV_FONT_SIZES)[number];
+export type TvFontWeight = "normal" | "medium" | "semibold" | "bold";
+
+export const TV_FONT_SIZE_OPTIONS: readonly {
+  value: TvFontSize;
+  label: string;
+}[] = [
+  { value: 0.85, label: "Pequeño" },
+  { value: 1.1, label: "Normal" },
+  { value: 1.5, label: "Grande" },
+  { value: 2, label: "Enorme" },
+  { value: 2.75, label: "Titular" },
+];
+
+export const TV_FONT_WEIGHT_OPTIONS: readonly {
+  value: TvFontWeight;
+  label: string;
+}[] = [
+  { value: "normal", label: "Regular" },
+  { value: "medium", label: "Medium" },
+  { value: "semibold", label: "Semibold" },
+  { value: "bold", label: "Bold" },
+];
+
+const TV_FONT_SIZE_CLASS: Record<TvFontSize, string> = {
+  0.85: "text-[clamp(0.7rem,1.6cqw,1.2rem)]",
+  1.1: "text-[clamp(0.85rem,2.2cqw,1.75rem)]",
+  1.5: "text-[clamp(0.9rem,2.6cqw,2rem)]",
+  2: "text-[clamp(1rem,3.2cqw,3rem)]",
+  2.75: "text-[clamp(1.1rem,4cqw,4.5rem)]",
+};
+
+const TV_KIND_SIZE_CLASS: Partial<Record<TvWidgetKind, string>> = {
+  banner: "text-[clamp(1.1rem,4cqw,4.5rem)]",
+  ticker: "text-[clamp(0.9rem,2.6cqw,2rem)]",
+  clock: "text-[clamp(1.4rem,6cqw,5rem)]",
+  message: "text-[clamp(0.85rem,2.2cqw,1.75rem)]",
+};
+
+const TV_FONT_WEIGHT_CLASS: Record<TvFontWeight, string> = {
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
+};
+
+export function isTvFontSize(value: number): value is TvFontSize {
+  return (TV_FONT_SIZES as readonly number[]).includes(value);
+}
+
+export function isTvFontWeight(value: string): value is TvFontWeight {
+  return (
+    value === "normal" ||
+    value === "medium" ||
+    value === "semibold" ||
+    value === "bold"
+  );
+}
+
+export function defaultTvFontSize(kind: TvWidgetKind): TvFontSize {
+  if (kind === "banner" || kind === "clock") {
+    return 2.75;
+  }
+  if (kind === "ticker") {
+    return 1.5;
+  }
+  return 1.1;
+}
+
+export function defaultTvFontWeight(): TvFontWeight {
+  return "normal";
+}
+
+export function tvHasBackground(background?: boolean): boolean {
+  return background !== false;
+}
+
+export function tvFontSizeClass(kind: TvWidgetKind, fontSize?: number): string {
+  if (fontSize !== undefined && isTvFontSize(fontSize)) {
+    return TV_FONT_SIZE_CLASS[fontSize];
+  }
+  return TV_KIND_SIZE_CLASS[kind] ?? TV_FONT_SIZE_CLASS[1.1];
+}
+
+export function tvFontWeightClass(fontWeight?: TvFontWeight): string | undefined {
+  return fontWeight ? TV_FONT_WEIGHT_CLASS[fontWeight] : undefined;
+}
 
 export type TvSponsor = {
   name: string;
@@ -32,6 +120,40 @@ export type TvSponsor = {
   href: string;
   tier: TvSponsorTier;
 };
+
+export function sponsorSiteOrigin(href: string): string | null {
+  const raw = href.trim();
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    if (!parsed.hostname) {
+      return null;
+    }
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+export function sponsorLogoSources(sponsor: {
+  logoUrl?: string;
+  href?: string;
+}): string[] {
+  const custom = sponsor.logoUrl?.trim();
+  if (custom) {
+    return [custom];
+  }
+  const origin = sponsorSiteOrigin(sponsor.href ?? "");
+  if (!origin) {
+    return [];
+  }
+  return [`${origin}/logo.svg`, `${origin}/favicon.ico`];
+}
 
 export type TvWidget = {
   _id: string;
@@ -46,6 +168,9 @@ export type TvWidget = {
   tickerSpeed?: TvTickerSpeed;
   feedMode?: TvFeedMode;
   feedSource?: TvFeedSource;
+  fontSize?: number;
+  fontWeight?: TvFontWeight;
+  background?: boolean;
 };
 
 export const TV_TEXT_KINDS = new Set<TvWidgetKind>([
@@ -162,3 +287,33 @@ export const TICKER_DURATION: Record<TvTickerSpeed, string> = {
   normal: "24s",
   fast: "12s",
 };
+
+export const TV_MIN_SIZE = 8;
+export const TV_SNAP = 1;
+
+export function clampTv(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, value));
+}
+
+export function snapTv(value: number) {
+  return Math.round(value / TV_SNAP) * TV_SNAP;
+}
+
+export function layoutTvBox(input: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}) {
+  const w = clampTv(input.w, TV_MIN_SIZE, 100);
+  const h = clampTv(input.h, TV_MIN_SIZE, 100);
+  return {
+    x: clampTv(input.x, 0, 100 - w),
+    y: clampTv(input.y, 0, 100 - h),
+    w,
+    h,
+  };
+}

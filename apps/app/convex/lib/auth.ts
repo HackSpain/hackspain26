@@ -1,8 +1,30 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import type { Role } from "./validators";
 
 type Ctx = QueryCtx | MutationCtx;
+
+export function isAdmin(user: Pick<Doc<"users">, "role">): boolean {
+  return user.role === "admin";
+}
+
+export function isJudge(user: Pick<Doc<"users">, "role">): boolean {
+  return user.role === "judge" || user.role === "admin";
+}
+
+export function resolvedLoginRole(
+  existing: Role | undefined,
+  allowlisted: boolean
+): Role {
+  if (allowlisted || existing === "admin") {
+    return "admin";
+  }
+  if (existing === "judge") {
+    return "judge";
+  }
+  return "user";
+}
 
 export async function getCurrentUser(ctx: Ctx): Promise<Doc<"users">> {
   const userId = await getAuthUserId(ctx);
@@ -18,8 +40,16 @@ export async function getCurrentUser(ctx: Ctx): Promise<Doc<"users">> {
 
 export async function requireAdmin(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
-  if (user.role !== "admin") {
+  if (!isAdmin(user)) {
     throw new Error("Se necesita acceso de admin");
+  }
+  return user;
+}
+
+export async function requireJudge(ctx: Ctx): Promise<Doc<"users">> {
+  const user = await getCurrentUser(ctx);
+  if (!isJudge(user)) {
+    throw new Error("Se necesita acceso de juez");
   }
   return user;
 }

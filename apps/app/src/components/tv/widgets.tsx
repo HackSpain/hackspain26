@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { TvWidget } from "@/lib/tv";
+import type { TvFontWeight, TvWidget } from "@/lib/tv";
+import { tvFontSizeClass, tvFontWeightClass, tvHasBackground } from "@/lib/tv";
+import { cn } from "@/lib/utils";
 import {
   InsightsActivityBox,
   InsightsEvolutionBox,
@@ -34,24 +36,61 @@ function useClock() {
   return now;
 }
 
-function BannerWidget({ text }: { text: string }) {
+function BannerWidget({
+  text,
+  fontSize,
+  fontWeight,
+  background,
+}: {
+  text: string;
+  fontSize?: number;
+  fontWeight?: TvFontWeight;
+  background?: boolean;
+}) {
   return (
-    <div className="flex h-full items-center justify-center bg-hs-ink px-4 text-center">
-      <p className="font-bungee text-[clamp(1.1rem,4cqw,4.5rem)] leading-tight text-balance text-hs-gold uppercase">
+    <div
+      className={cn(
+        "flex h-full items-center justify-center px-4 text-center",
+        tvHasBackground(background) && "bg-hs-ink",
+      )}
+    >
+      <p
+        className={cn(
+          "font-bungee leading-tight text-balance text-hs-gold uppercase",
+          tvFontSizeClass("banner", fontSize),
+          tvFontWeightClass(fontWeight),
+        )}
+      >
         {text}
       </p>
     </div>
   );
 }
 
-function TickerWidget({ text }: { text: string }) {
+function TickerWidget({
+  text,
+  fontSize,
+  fontWeight,
+  background,
+}: {
+  text: string;
+  fontSize?: number;
+  fontWeight?: TvFontWeight;
+  background?: boolean;
+}) {
+  const fill = tvHasBackground(background);
   const parts = text
     .split("·")
     .map((part) => part.trim())
     .filter(Boolean);
   const items = parts.length > 0 ? parts : [text];
   return (
-    <div className="flex h-full items-center overflow-hidden bg-hs-gold">
+    <div
+      className={cn(
+        "flex h-full items-center overflow-hidden",
+        fill && "bg-hs-gold",
+      )}
+    >
       <div
         className="tv-ticker flex w-max"
         style={{ animationDuration: `${Math.max(18, items.length * 8)}s` }}
@@ -60,7 +99,12 @@ function TickerWidget({ text }: { text: string }) {
           <p
             key={copy}
             aria-hidden={copy === 1}
-            className="flex shrink-0 whitespace-nowrap font-bungee text-[clamp(0.9rem,2.6cqw,2rem)] text-hs-ink uppercase"
+            className={cn(
+              "flex shrink-0 whitespace-nowrap font-bungee uppercase",
+              fill ? "text-hs-ink" : "text-hs-gold",
+              tvFontSizeClass("ticker", fontSize),
+              tvFontWeightClass(fontWeight),
+            )}
           >
             {items.map((item, index) => (
               <span key={index} className="px-8">
@@ -74,12 +118,15 @@ function TickerWidget({ text }: { text: string }) {
   );
 }
 
-function ClockWidget() {
+function ClockWidget({ fontSize }: { fontSize?: number }) {
   const now = useClock();
   return (
     <div className="flex h-full items-center justify-center bg-hs-ink px-3">
       <p
-        className="font-bungee text-[clamp(1.4rem,6cqw,5rem)] tabular-nums text-hs-paper"
+        className={cn(
+          "font-bungee tabular-nums text-hs-paper",
+          tvFontSizeClass("clock", fontSize),
+        )}
         aria-label="Hora actual"
       >
         {now
@@ -93,10 +140,32 @@ function ClockWidget() {
   );
 }
 
-function MessageWidget({ text }: { text: string }) {
+function MessageWidget({
+  text,
+  fontSize,
+  fontWeight,
+  background,
+}: {
+  text: string;
+  fontSize?: number;
+  fontWeight?: TvFontWeight;
+  background?: boolean;
+}) {
   return (
-    <div className="flex h-full flex-col justify-center border-[3px] border-hs-gold/40 bg-hs-paper/5 p-4">
-      <p className="whitespace-pre-wrap break-words text-[clamp(0.85rem,2.2cqw,1.75rem)] leading-snug text-pretty text-hs-paper">
+    <div
+      className={cn(
+        "flex h-full flex-col justify-center p-4",
+        tvHasBackground(background) &&
+          "border-[3px] border-hs-gold/40 bg-hs-paper/5",
+      )}
+    >
+      <p
+        className={cn(
+          "whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper",
+          tvFontSizeClass("message", fontSize),
+          tvFontWeightClass(fontWeight),
+        )}
+      >
         {text}
       </p>
     </div>
@@ -112,13 +181,34 @@ export function TvWidgetView({
 }) {
   switch (widget.kind) {
     case "banner":
-      return <BannerWidget text={widget.text} />;
+      return (
+        <BannerWidget
+          text={widget.text}
+          fontSize={widget.fontSize}
+          fontWeight={widget.fontWeight}
+          background={widget.background}
+        />
+      );
     case "ticker":
-      return <TickerWidget text={widget.text} />;
+      return (
+        <TickerWidget
+          text={widget.text}
+          fontSize={widget.fontSize}
+          fontWeight={widget.fontWeight}
+          background={widget.background}
+        />
+      );
     case "clock":
-      return <ClockWidget />;
+      return <ClockWidget fontSize={widget.fontSize} />;
     case "message":
-      return <MessageWidget text={widget.text} />;
+      return (
+        <MessageWidget
+          text={widget.text}
+          fontSize={widget.fontSize}
+          fontWeight={widget.fontWeight}
+          background={widget.background}
+        />
+      );
     case "insightsStats":
       return <InsightsStatsBox />;
     case "insightsActivity":

@@ -9,8 +9,11 @@ import {
   normalizeGithub,
   normalizeTwitter,
 } from "./lib/normalize";
+import { canonicalRepoUrl } from "./lib/github";
+import { MAX_TECH_LENGTH, MAX_TECH_STACK } from "./lib/stack";
 import { membershipForUser } from "./lib/team";
 import { fail } from "./lib/errors";
+import { scheduleStackScan, teamRepoList } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -18,10 +21,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 // No 0/O/1/I so codes survive being read aloud or handwritten.
 const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const JOIN_CODE_LENGTH = 8;
-const MAX_TECH_STACK = 12;
-const MAX_TECH_LENGTH = 32;
-const GITHUB_REPO_PATTERN =
-  /^(?:https?:\/\/)?(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/;
+const MAX_REPOS = 5;
 
 function randomJoinCode(): string {
   const bytes = new Uint8Array(JOIN_CODE_LENGTH);
@@ -51,11 +51,24 @@ async function uniqueJoinCode(ctx: MutationCtx): Promise<string> {
 }
 
 export function normalizeRepoUrl(raw: string): string | null {
-  const match = GITHUB_REPO_PATTERN.exec(raw.trim());
-  if (!match) {
-    return null;
+  return canonicalRepoUrl(raw);
+}
+
+function normalizeRepoUrls(raw: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const entry of raw) {
+    const url = normalizeRepoUrl(entry);
+    if (!url || seen.has(url)) {
+      continue;
+    }
+    seen.add(url);
+    out.push(url);
   }
-  return `https://github.com/${match[1]}/${match[2]}`;
+  if (out.length > MAX_REPOS) {
+    fail("VALIDATION", `Máximo ${MAX_REPOS} repositorios`);
+  }
+  return out;
 }
 
 export function normalizeTechStack(raw: string[]): string[] {
@@ -98,6 +111,7 @@ const teamReturn = v.object({
   name: v.string(),
   ownerId: v.id("users"),
   repoUrl: v.optional(v.string()),
+  repoUrls: v.array(v.string()),
   techStack: v.array(v.string()),
 });
 
@@ -108,6 +122,7 @@ const teamSummaryReturn = v.object({
   name: v.string(),
   pendingCount: v.number(),
   repoUrl: v.optional(v.string()),
+  repoUrls: v.array(v.string()),
   submissionStatus: v.optional(
     v.union(v.literal("draft"), v.literal("submitted"))
   ),
@@ -227,6 +242,7 @@ export const mine = onboardedQuery({
       createdAt: team.createdAt,
       joinCode: isOwner ? team.joinCode : undefined,
       repoUrl: team.repoUrl,
+      repoUrls: teamRepoList(team),
       techStack: team.techStack ?? [],
       members: await Promise.all(members.map((m) => hydrateMember(ctx, m))),
     };
@@ -280,6 +296,7 @@ export const list = onboardedQuery({
         memberCount: members.filter((m) => m.status === "member").length,
         pendingCount: members.filter((m) => m.status === "pending").length,
         repoUrl: team.repoUrl,
+        repoUrls: teamRepoList(team),
         techStack: team.techStack ?? [],
         tracks,
         submissionStatus: submission?.status,
@@ -612,14 +629,44 @@ export const regenerateCode = onboardedMutation({
   returns: v.string(),
 });
 
+async function writeTeamRepos(
+  ctx: MutationCtx & { user: Doc<"users"> },
+  team: Doc<"teams">,
+  urls: string[]
+): Promise<string[]> {
+  const primary = urls[0];
+  if (!primary) {
+    return [];
+  }
+  const changed =
+    primary !== team.repoUrl ||
+    JSON.stringify(teamRepoList(team)) !== JSON.stringify(urls);
+  await ctx.db.patch(team._id, {
+    githubEtag: changed ? undefined : team.githubEtag,
+    repoUrl: primary,
+    repoUrls: urls,
+    updatedAt: Date.now(),
+  });
+  if (changed && urls.length > 0) {
+    await scheduleStackScan(ctx, {
+      force: true,
+      repoUrls: urls,
+      teamId: team._id,
+      userId: ctx.user._id,
+    });
+  }
+  return urls;
+}
+
 export const setRepoUrl = onboardedMutation({
   args: { url: v.union(v.string(), v.null()) },
   handler: async (ctx, args) => {
     const team = await requireMemberTeam(ctx);
     if (args.url === null || args.url.trim() === "") {
       await ctx.db.patch(team._id, {
-        repoUrl: undefined,
         githubEtag: undefined,
+        repoUrl: undefined,
+        repoUrls: undefined,
         updatedAt: Date.now(),
       });
       return null;
@@ -631,14 +678,35 @@ export const setRepoUrl = onboardedMutation({
         "Introduce una URL de repositorio de GitHub (https://github.com/org/repo)"
       );
     }
-    await ctx.db.patch(team._id, {
-      repoUrl,
-      githubEtag: repoUrl === team.repoUrl ? team.githubEtag : undefined,
-      updatedAt: Date.now(),
-    });
+    await writeTeamRepos(ctx, team, [repoUrl]);
     return repoUrl;
   },
   returns: v.union(v.string(), v.null()),
+});
+
+export const setRepoUrls = onboardedMutation({
+  args: { urls: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const team = await requireMemberTeam(ctx);
+    const urls = normalizeRepoUrls(args.urls);
+    if (args.urls.length > 0 && urls.length === 0) {
+      fail(
+        "VALIDATION",
+        "Introduce URLs de GitHub o slugs org/repo"
+      );
+    }
+    if (urls.length === 0) {
+      await ctx.db.patch(team._id, {
+        githubEtag: undefined,
+        repoUrl: undefined,
+        repoUrls: undefined,
+        updatedAt: Date.now(),
+      });
+      return [];
+    }
+    return await writeTeamRepos(ctx, team, urls);
+  },
+  returns: v.array(v.string()),
 });
 
 export const setTechStack = onboardedMutation({
@@ -646,7 +714,11 @@ export const setTechStack = onboardedMutation({
   handler: async (ctx, args) => {
     const team = await requireMemberTeam(ctx);
     const techStack = normalizeTechStack(args.stack);
-    await ctx.db.patch(team._id, { techStack, updatedAt: Date.now() });
+    await ctx.db.patch(team._id, {
+      techStack,
+      techStackAt: Date.now(),
+      updatedAt: Date.now(),
+    });
     return techStack;
   },
   returns: v.array(v.string()),

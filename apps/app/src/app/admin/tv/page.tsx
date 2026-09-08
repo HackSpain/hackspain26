@@ -10,8 +10,8 @@ export default function AdminTvPage() {
       title="Pantalla principal"
       description={
         <>
-          Edita la pantalla del venue. Doble clic para escribir; guarda un
-          estado y ponlo en vivo para{" "}
+          Arrastra las cajas, edita en el panel y guarda un estado. Ponlo en
+          vivo para{" "}
           <a
             href="/tv"
             target="_blank"

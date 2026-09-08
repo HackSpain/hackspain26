@@ -20,6 +20,10 @@ const mutation = (ref: FunctionReference<"mutation">): Exposed => ({
   kind: "mutation",
   ref,
 });
+const action = (ref: FunctionReference<"action">): Exposed => ({
+  kind: "action",
+  ref,
+});
 
 export const CLI_FUNCTIONS: Record<string, Exposed> = {
   // auth / profile
@@ -41,6 +45,7 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "teams:leave": mutation(api.teams.leave),
   "teams:regenerateCode": mutation(api.teams.regenerateCode),
   "teams:setRepoUrl": mutation(api.teams.setRepoUrl),
+  "teams:setRepoUrls": mutation(api.teams.setRepoUrls),
   "teams:setTechStack": mutation(api.teams.setTechStack),
   "teams:transferOwnership": mutation(api.teams.transferOwnership),
   "teams:dissolve": mutation(api.teams.dissolve),
@@ -66,4 +71,6 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "feed:list": query(api.feed.list),
   "feed:post": mutation(api.feed.post),
   "feed:remove": mutation(api.feed.remove),
+
+  "stackDetect:mine": action(api.stackDetect.mine),
 };

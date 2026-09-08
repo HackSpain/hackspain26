@@ -125,7 +125,15 @@ export default function TeamsPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <MetaRow label="Repositorio">
-                {team.repoUrl ? (
+                {team.repoUrls.length > 0 ? (
+                  <span className="flex flex-col gap-1">
+                    {team.repoUrls.map((url) => (
+                      <MetaLink key={url} href={url}>
+                        {url}
+                      </MetaLink>
+                    ))}
+                  </span>
+                ) : team.repoUrl ? (
                   <MetaLink href={team.repoUrl}>{team.repoUrl}</MetaLink>
                 ) : (
                   <>
@@ -145,8 +153,10 @@ export default function TeamsPage() {
                   </span>
                 ) : (
                   <>
-                    Sin declarar. Usa{" "}
-                    <code className="font-mono text-xs">hackspain stack set …</code>
+                    Se detecta al vincular el repo con{" "}
+                    <code className="font-mono text-xs">
+                      hackspain team repo
+                    </code>
                   </>
                 )}
               </MetaRow>

@@ -15,7 +15,7 @@ export function HomeFeed() {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 w-full max-w-full flex-col overflow-hidden">
-      <Card className="flex h-full min-h-0 min-w-0 w-full max-w-full flex-col gap-2 overflow-hidden lg:h-[calc(100%-0.5rem)]">
+      <Card className="flex h-full min-h-0 min-w-0 w-full max-w-full flex-col gap-2 overflow-hidden">
         <CardHeader className="flex shrink-0 flex-row items-baseline justify-between gap-3">
           <CardTitle>
             <h2 className="text-base leading-snug">Feed</h2>
@@ -34,7 +34,7 @@ export function HomeFeed() {
           )}
         >
           {empty ? (
-            <p className="shrink-0 text-pretty text-sm text-hs-brown">
+            <p className="shrink-0 text-pretty text-sm font-medium text-hs-brown">
               {FEED_EMPTY_COPY}
             </p>
           ) : null}

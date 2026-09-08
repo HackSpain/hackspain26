@@ -16,6 +16,7 @@ import {
   cn,
   displayedAttendance,
   perkName,
+  roleLabel,
   submissionStatusLabel,
 } from "@/lib/utils";
 import { urlDisplay, urlLabel } from "@/lib/urls";
@@ -74,6 +75,7 @@ export function ParticipantDetail({
   );
   const signup = detail.signup;
   const user = detail.user;
+  const staffRole = roleLabel(user?.role);
 
   return (
     <>
@@ -90,6 +92,9 @@ export function ParticipantDetail({
               </Badge>
               {attendance ? (
                 <Badge className="whitespace-nowrap">{attendanceLabel(attendance)}</Badge>
+              ) : null}
+              {staffRole ? (
+                <Badge className="whitespace-nowrap">{staffRole}</Badge>
               ) : null}
             </CardTitle>
           </CardHeader>
@@ -134,6 +139,11 @@ export function ParticipantDetail({
             )}
             {user ? (
               <>
+                {user.role === "admin" ? (
+                  <p className="text-sm text-hs-brown">
+                    Los admins ya tienen acceso de juez.
+                  </p>
+                ) : null}
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <Button
                     variant="outline"
@@ -149,6 +159,24 @@ export function ParticipantDetail({
                   >
                     Quitar admin
                   </Button>
+                  {user.role === "admin" ? null : (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() => void setRole({ userId: user._id, role: "judge" })}
+                      >
+                        Hacer juez
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() => void setRole({ userId: user._id, role: "user" })}
+                      >
+                        Quitar juez
+                      </Button>
+                    </>
+                  )}
                   <Button
                     className="w-full sm:w-auto"
                     onClick={() =>
