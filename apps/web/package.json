@@ -23,6 +23,7 @@
     "@astrojs/react": "^5.0.1",
     "@astrojs/vercel": "^10.0.2",
     "@neondatabase/serverless": "^1.0.2",
+    "@rawtree/sdk": "^0.2.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.7.0",
     "@react-three/rapier": "^2.2.0",
