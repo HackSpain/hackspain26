@@ -6,6 +6,7 @@ import {
   milestoneKindValidator,
   perkAnswerValidator,
   perkInputValidator,
+  roleValidator,
 } from "./lib/validators";
 
 const authTablesWithoutUsers = Object.fromEntries(
@@ -190,10 +191,15 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     submittedAt: v.optional(v.number()),
+    generalGroup: v.optional(v.number()),
+    techStack: v.optional(v.array(v.string())),
+    techStackAt: v.optional(v.number()),
+    techStackSource: v.optional(v.literal("repo")),
   })
     .index("by_team", ["teamId"])
     .index("by_user", ["submittedBy"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_status_and_general_group", ["status", "generalGroup"]),
 
   teamMembers: defineTable({
     teamId: v.id("teams"),
@@ -219,7 +225,10 @@ export default defineSchema({
     ownerId: v.id("users"),
     joinCode: v.optional(v.string()),
     repoUrl: v.optional(v.string()),
+    repoUrls: v.optional(v.array(v.string())),
     techStack: v.optional(v.array(v.string())),
+    techStackAt: v.optional(v.number()),
+    techStackSource: v.optional(v.literal("repo")),
     // GitHub feed polling: ETag for conditional requests, last poll time.
     githubEtag: v.optional(v.string()),
     githubPolledAt: v.optional(v.number()),
@@ -248,7 +257,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
-    role: v.union(v.literal("user"), v.literal("admin")),
+    role: roleValidator,
     signupId: v.optional(v.id("signups")),
     phoneConfirmed: v.boolean(),
     notificationConsent: v.boolean(),
@@ -267,6 +276,8 @@ export default defineSchema({
     githubId: v.optional(v.string()),
     githubUsername: v.optional(v.string()),
     githubLinkedAt: v.optional(v.number()),
+    /** User OAuth token from github.startLink. Never return from public queries. */
+    githubAccessToken: v.optional(v.string()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"])
@@ -355,6 +366,16 @@ export default defineSchema({
         v.literal("github")
       )
     ),
+    fontSize: v.optional(v.number()),
+    fontWeight: v.optional(
+      v.union(
+        v.literal("normal"),
+        v.literal("medium"),
+        v.literal("semibold"),
+        v.literal("bold")
+      )
+    ),
+    background: v.optional(v.boolean()),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -416,10 +437,54 @@ export default defineSchema({
             v.literal("github")
           )
         ),
+        fontSize: v.optional(v.number()),
+        fontWeight: v.optional(
+          v.union(
+            v.literal("normal"),
+            v.literal("medium"),
+            v.literal("semibold"),
+            v.literal("bold")
+          )
+        ),
+        background: v.optional(v.boolean()),
       })
     ),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_live", ["isLive"]),
+
+  judgingSettings: defineTable({
+    key: v.string(),
+    generalGroupCount: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  judgingScores: defineTable({
+    submissionId: v.id("submissions"),
+    judgeId: v.id("users"),
+    contextKind: v.union(v.literal("general"), v.literal("track")),
+    contextKey: v.string(),
+    score: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_submission_context", ["submissionId", "contextKind", "contextKey"])
+    .index("by_judge_context", ["judgeId", "contextKind", "contextKey"])
+    .index("by_judge_submission", ["judgeId", "submissionId"])
+    .index("by_context", ["contextKind", "contextKey"]),
+
+  judgingAssignments: defineTable({
+    userId: v.id("users"),
+    contextKind: v.optional(v.union(v.literal("general"), v.literal("track"))),
+    contextKey: v.optional(v.string()),
+    /** Legacy general-group field. Prefer contextKind + contextKey. */
+    group: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_context", ["contextKind", "contextKey"])
+    .index("by_user_and_context", ["userId", "contextKind", "contextKey"])
+    .index("by_group", ["group"])
+    .index("by_user_and_group", ["userId", "group"]),
 });

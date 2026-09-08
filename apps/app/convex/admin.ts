@@ -29,6 +29,33 @@ async function teamForUser(
   return { name: team.name, status: membership.status };
 }
 
+async function teamsByUserId(ctx: QueryCtx) {
+  const [members, teams] = await Promise.all([
+    ctx.db.query("teamMembers").collect(),
+    ctx.db.query("teams").collect(),
+  ]);
+  const teamsById = new Map(teams.map((team) => [team._id, team]));
+  const byUser = new Map<string, { name: string; status: string }>();
+  for (const member of members) {
+    if (!member.userId) {
+      continue;
+    }
+    const existing = byUser.get(member.userId);
+    if (existing?.status === "member") {
+      continue;
+    }
+    if (existing && member.status !== "member") {
+      continue;
+    }
+    const team = teamsById.get(member.teamId);
+    if (!team) {
+      continue;
+    }
+    byUser.set(member.userId, { name: team.name, status: member.status });
+  }
+  return byUser;
+}
+
 const participantSummary = v.object({
   accepted: v.boolean(),
   attendanceStatus: v.optional(attendanceValidator),
@@ -48,6 +75,9 @@ const participantSummary = v.object({
   wantsAmbassador: v.optional(v.boolean()),
 });
 
+const DEFAULT_PAGE_SIZE = 40;
+const MAX_PAGE_SIZE = 100;
+
 export const listParticipants = adminQuery({
   args: {
     accepted: v.optional(v.boolean()),
@@ -55,10 +85,13 @@ export const listParticipants = adminQuery({
     hasAccount: v.optional(v.boolean()),
     role: v.optional(roleValidator),
     search: v.optional(v.string()),
+    page: v.optional(v.number()),
+    pageSize: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const signups = await ctx.db.query("signups").collect();
     const users = await ctx.db.query("users").collect();
+    const teamMap = await teamsByUserId(ctx);
     const usersBySignup = new Map(
       users
         .filter((user) => user.signupId !== undefined)
@@ -80,7 +113,7 @@ export const listParticipants = adminQuery({
         seenUserIds.add(user._id);
       }
 
-      const team = user ? await teamForUser(ctx, user._id) : null;
+      const team = user ? teamMap.get(user._id) : undefined;
 
       rows.push({
         signupId: signup._id,
@@ -106,6 +139,7 @@ export const listParticipants = adminQuery({
       if (seenUserIds.has(user._id)) {
         continue;
       }
+      const team = teamMap.get(user._id);
       rows.push({
         userId: user._id,
         email: user.email ?? "unknown",
@@ -119,12 +153,13 @@ export const listParticipants = adminQuery({
         onboardingComplete: user.onboardingComplete,
         isRegistered: false,
         hasAccount: true,
+        teamName: team?.name,
         createdAt: user._creationTime,
       });
     }
 
     const needle = args.search?.trim().toLowerCase() ?? "";
-    return rows
+    const filtered = rows
       .filter((row) => {
         if (args.attendance === "attending") {
           if (
@@ -162,8 +197,29 @@ export const listParticipants = adminQuery({
         );
       })
       .toSorted((a, b) => b.createdAt - a.createdAt);
+
+    const pageSize = Math.min(
+      MAX_PAGE_SIZE,
+      Math.max(1, Math.floor(args.pageSize ?? DEFAULT_PAGE_SIZE))
+    );
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(lastPage, Math.max(1, Math.floor(args.page ?? 1)));
+    const start = (page - 1) * pageSize;
+
+    return {
+      items: filtered.slice(start, start + pageSize),
+      total,
+      page,
+      pageSize,
+    };
   },
-  returns: v.array(participantSummary),
+  returns: v.object({
+    items: v.array(participantSummary),
+    total: v.number(),
+    page: v.number(),
+    pageSize: v.number(),
+  }),
 });
 
 export const getParticipant = adminQuery({

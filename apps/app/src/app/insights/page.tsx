@@ -22,7 +22,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Panel } from "./panel";
-import { EventInsights, TechnologyStacks } from "./event-insights";
+import { EventInsights, LiveTechnologyStacks } from "./event-insights";
 import {
   Dialog,
   DialogContent,
@@ -874,7 +874,7 @@ export function InsightsView({
             </div>
             <div className="min-w-0 space-y-5">
               <HarnessUsage rows={tools} onExplore={exploreHarness} />
-              <TechnologyStacks teams={teams} />
+              <LiveTechnologyStacks />
             </div>
           </div>
         </Tabs.Content>

@@ -110,10 +110,11 @@ http.route({
 
     try {
       await ctx.runMutation(internal.github.linkAccount, {
-        userId,
+        accessToken: token,
+        avatarUrl: profile.avatarUrl,
         githubId: profile.id,
         login: profile.login,
-        avatarUrl: profile.avatarUrl,
+        userId,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "";

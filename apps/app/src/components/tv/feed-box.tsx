@@ -181,7 +181,7 @@ export function FeedEditor({
   mode?: TvFeedMode;
   source?: TvFeedSource;
   onSave: (next: { feedMode: TvFeedMode; feedSource: TvFeedSource }) => void;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   const [nextMode, setNextMode] = useState<TvFeedMode>(mode ?? "latest");
   const [nextSource, setNextSource] = useState<TvFeedSource>(
@@ -190,7 +190,7 @@ export function FeedEditor({
 
   return (
     <div
-      className="absolute inset-2 z-30 overflow-auto border-[3px] border-hs-ink bg-hs-paper p-3 text-hs-ink"
+      className="text-hs-ink"
       onPointerDown={(event) => event.stopPropagation()}
     >
       <p className="font-bungee text-sm">Feed</p>
@@ -232,9 +232,11 @@ export function FeedEditor({
         >
           Guardar
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={onClose}>
-          Cerrar
-        </Button>
+        {onClose ? (
+          <Button type="button" size="sm" variant="outline" onClick={onClose}>
+            Cerrar
+          </Button>
+        ) : null}
       </div>
     </div>
   );

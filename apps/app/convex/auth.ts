@@ -7,7 +7,7 @@ import { action, type ActionCtx } from "./_generated/server";
 import { ResendOTP } from "./ResendOTP";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
 import { adminEmailAllowlist, normalizeEmail } from "./lib/normalize";
-import { findSignupByEmail, findUserByEmail } from "./lib/auth";
+import { findSignupByEmail, findUserByEmail, resolvedLoginRole } from "./lib/auth";
 
 // Redeems an approved CLI device code (convex/cliAuth.ts) for a session.
 // Only /api/cli/auth/device/poll calls this, with the code plus the secret
@@ -47,7 +47,8 @@ export const {
       const email = rawEmail ? normalizeEmail(rawEmail) : undefined;
       const allowlist = adminEmailAllowlist();
       const signup = email ? await findSignupByEmail(ctx, email) : null;
-      const role = email && allowlist.has(email) ? "admin" : "user";
+      const allowlisted = Boolean(email && allowlist.has(email));
+      const role = resolvedLoginRole(undefined, allowlisted);
 
       if (args.existingUserId) {
         const existing = await ctx.db.get(args.existingUserId);
@@ -61,7 +62,7 @@ export const {
           dietaryRestrictions:
             existing.dietaryRestrictions ?? signup?.dietaryRestrictions,
           dietaryDetails: existing.dietaryDetails ?? signup?.dietaryDetails,
-          role: existing.role === "admin" ? "admin" : role,
+          role: resolvedLoginRole(existing.role, allowlisted),
           emailVerificationTime:
             args.profile.emailVerified || args.type === "email"
               ? Date.now()
@@ -79,7 +80,7 @@ export const {
             dietaryRestrictions:
               byEmail.dietaryRestrictions ?? signup?.dietaryRestrictions,
             dietaryDetails: byEmail.dietaryDetails ?? signup?.dietaryDetails,
-            role: byEmail.role === "admin" ? "admin" : role,
+            role: resolvedLoginRole(byEmail.role, allowlisted),
             emailVerificationTime: Date.now(),
           });
           return byEmail._id;

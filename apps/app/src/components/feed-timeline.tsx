@@ -119,7 +119,11 @@ export function FeedTimeline({
   if (posts === undefined) return <LoadingText />;
   if (posts.length === 0) {
     if (empty === "none") return null;
-    return <p className="text-pretty text-sm text-hs-brown">{FEED_EMPTY_COPY}</p>;
+    return (
+      <p className="text-pretty text-sm font-medium text-hs-brown">
+        {FEED_EMPTY_COPY}
+      </p>
+    );
   }
 
   return (

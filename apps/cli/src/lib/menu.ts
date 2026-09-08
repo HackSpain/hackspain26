@@ -102,22 +102,17 @@ function buildTeamMenu(team: MenuTeam): MenuItem[] {
     {
       value: "team-repo",
       label: team.hasRepo ? "Change the repo" : "Set the repo",
-      hint: "pushes and PRs land on the feed",
+      hint: "we detect the stack from it",
       argv: ["team", "repo"],
       input: {
-        message: "GitHub repository URL",
-        placeholder: "https://github.com/org/repo",
+        message: "GitHub repo URL or org/name (comma-separate several)",
+        placeholder: "org/repo",
       },
     },
     {
       value: "team-stack",
-      label: "Declare the stack",
-      argv: ["stack", "set"],
-      input: {
-        message: "Technologies, separated by spaces",
-        placeholder: "nextjs convex claude-code",
-        split: true,
-      },
+      label: "Detect the stack",
+      argv: ["stack", "detect"],
     },
     { value: "team-list", label: "Browse all teams", argv: ["team", "list"] },
   ];

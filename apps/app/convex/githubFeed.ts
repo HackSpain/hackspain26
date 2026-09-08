@@ -5,6 +5,7 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
+import { githubAuthHeader, githubHeaders, repoSlug } from "./lib/github";
 
 /**
  * Pulls public GitHub activity for every team repo into the feed.
@@ -135,13 +136,7 @@ export const recordEvents = internalMutation({
   returns: v.number(),
 });
 
-export function repoSlug(repoUrl: string | undefined): string | null {
-  if (!repoUrl) {
-    return null;
-  }
-  const match = /github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(repoUrl);
-  return match ? `${match[1]}/${match[2]}` : null;
-}
+export { repoSlug } from "./lib/github";
 
 type GitHubEvent = {
   id: string;
@@ -245,14 +240,8 @@ export function describeEvent(
   }
 }
 
-function githubHeaders(etag?: string): Record<string, string> {
-  return {
-    accept: "application/vnd.github+json",
-    "user-agent": "hackspain-feed",
-    "x-github-api-version": "2022-11-28",
-    ...(etag ? { "if-none-match": etag } : {}),
-    ...authHeader(),
-  };
+function feedHeaders(etag?: string): Record<string, string> {
+  return githubHeaders({ etag, userAgent: "hackspain-feed" });
 }
 
 /**
@@ -269,7 +258,7 @@ export async function enrichPullRequest(
   }
   try {
     const response = await fetchImpl(described.detailUrl, {
-      headers: githubHeaders(),
+      headers: feedHeaders(),
     });
     if (!response.ok) {
       return described;
@@ -294,19 +283,6 @@ export async function enrichPullRequest(
   }
 }
 
-function authHeader(): Record<string, string> {
-  const token = process.env.GITHUB_TOKEN;
-  if (token) {
-    return { authorization: `Bearer ${token}` };
-  }
-  const id = process.env.GITHUB_CLIENT_ID;
-  const secret = process.env.GITHUB_CLIENT_SECRET;
-  if (id && secret) {
-    return { authorization: `Basic ${btoa(`${id}:${secret}`)}` };
-  }
-  return {};
-}
-
 export const pollRepos = internalAction({
   args: {},
   handler: async (ctx) => {
@@ -316,7 +292,7 @@ export const pollRepos = internalAction({
     for (const { teamId, repo, etag } of repos) {
       const response = await fetch(
         `https://api.github.com/repos/${repo}/events?per_page=${EVENTS_PER_REPO}`,
-        { headers: githubHeaders(etag) }
+        { headers: feedHeaders(etag) }
       );
       polled++;
       if (response.status === 304) {
@@ -329,7 +305,7 @@ export const pollRepos = internalAction({
           ? new Date(Number(reset) * 1000).toISOString()
           : "?";
         console.warn(
-          `github feed: ${response.status} while polling ${repo} (remaining ${remaining}, resets ${resetAt}, ${authHeader().authorization ? "authenticated" : "unauthenticated"}); stopping this run`
+          `github feed: ${response.status} while polling ${repo} (remaining ${remaining}, resets ${resetAt}, ${githubAuthHeader().authorization ? "authenticated" : "unauthenticated"}); stopping this run`
         );
         break;
       }

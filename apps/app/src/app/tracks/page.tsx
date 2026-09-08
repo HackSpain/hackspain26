@@ -32,6 +32,7 @@ type SubmissionRow = {
   challengeIds: Id<"tracks">[];
   perkIds: Id<"perks">[];
   status: "draft" | "submitted";
+  techStack: string[];
 };
 
 type CatalogRow = {
@@ -85,6 +86,7 @@ function TracksReady({
   const [description, setDescription] = useState(mine?.description ?? "");
   const [repoUrl, setRepoUrl] = useState(urlOf(mine?.urls, "repo") ?? "");
   const [demoUrl, setDemoUrl] = useState(urlOf(mine?.urls, "demo") ?? "");
+  const [videoUrl, setVideoUrl] = useState(urlOf(mine?.urls, "video") ?? "");
   const [challengeIds, setChallengeIds] = useState<Id<"tracks">[]>(
     mine?.challengeIds ?? [],
   );
@@ -113,6 +115,7 @@ function TracksReady({
     description,
     repoUrl: repoUrl || undefined,
     demoUrl: demoUrl || undefined,
+    videoUrl: videoUrl || undefined,
     challengeIds,
     perkIds,
   };
@@ -194,6 +197,30 @@ function TracksReady({
               />
             </Field>
           </div>
+          {mine?.techStack.length ? (
+            <div className="space-y-2">
+              <p className="font-bungee text-xs">Stack detectado</p>
+              <div className="flex flex-wrap gap-2">
+                {mine.techStack.map((tag) => (
+                  <Badge key={tag}>{tag}</Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <Field
+            label="Vídeo del proyecto"
+            htmlFor="video-url"
+            hint="YouTube, Loom o un MP4. Lo verán los jueces."
+          >
+            <Input
+              id="video-url"
+              value={videoUrl}
+              disabled={locked}
+              placeholder="https://youtube.com/… o https://….mp4"
+              onChange={(event) => setVideoUrl(event.target.value)}
+            />
+          </Field>
 
           <div className="space-y-2">
             <p className="font-bungee text-xs">Retos</p>

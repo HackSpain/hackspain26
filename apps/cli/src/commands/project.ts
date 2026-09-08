@@ -10,7 +10,7 @@ import { c, highlight } from "../lib/style";
 
 export function renderSubmission(ui: Ui, submission: Submission): void {
   ui.result(submission);
-  const urlOf = (kind: "repo" | "demo") =>
+  const urlOf = (kind: "repo" | "demo" | "video") =>
     submission.urls.find((u) => u.kind === kind)?.url ?? c.dim("–");
   const status =
     submission.status === "submitted"
@@ -29,6 +29,7 @@ export function renderSubmission(ui: Ui, submission: Submission): void {
     ],
     ["Repo", urlOf("repo")],
     ["Demo", urlOf("demo")],
+    ["Video", urlOf("video")],
     [
       "Perks",
       submission.perks.map((p) => `${p.company}: ${p.title}`).join("; ") ||

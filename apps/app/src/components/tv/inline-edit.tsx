@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { TV_PALETTE, type TvWidgetKind } from "@/lib/tv";
+import {
+  TV_PALETTE,
+  tvFontSizeClass,
+  tvFontWeightClass,
+  tvHasBackground,
+} from "@/lib/tv";
+import type { TvFontWeight, TvWidgetKind } from "@/lib/tv";
 import { cn } from "@/lib/utils";
 
 const EDITABLE: readonly TvWidgetKind[] = ["banner", "ticker", "message"];
@@ -20,12 +26,18 @@ function editLabel(kind: TvWidgetKind) {
 export function TvInlineEditor({
   kind,
   value,
+  fontSize,
+  fontWeight,
+  background,
   onChange,
   onCommit,
   onCancel,
 }: {
   kind: "banner" | "ticker" | "message";
   value: string;
+  fontSize?: number;
+  fontWeight?: TvFontWeight;
+  background?: boolean;
   onChange: (value: string) => void;
   onCommit: () => void;
   onCancel: () => void;
@@ -48,15 +60,20 @@ export function TvInlineEditor({
   }
 
   const multiline = kind === "message";
+  const fill = tvHasBackground(background);
 
   return (
     <div
       className={cn(
         "flex h-full min-h-0",
-        kind === "banner" && "items-center bg-hs-ink px-4",
-        kind === "ticker" && "items-center bg-hs-gold px-4",
+        kind === "banner" && "items-center px-4",
+        kind === "banner" && fill && "bg-hs-ink",
+        kind === "ticker" && "items-center px-4",
+        kind === "ticker" && fill && "bg-hs-gold",
+        kind === "message" && "items-center p-4",
         kind === "message" &&
-          "items-center border-[3px] border-hs-gold/40 bg-hs-paper/5 p-4",
+          fill &&
+          "border-[3px] border-hs-gold/40 bg-hs-paper/5",
       )}
     >
       <textarea
@@ -83,12 +100,14 @@ export function TvInlineEditor({
         className={cn(
           "h-full w-full resize-none border-0 bg-transparent p-0 outline-none",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-ink",
+          tvFontSizeClass(kind, fontSize),
+          tvFontWeightClass(fontWeight),
           kind === "banner" &&
-            "text-center font-bungee text-[clamp(1.1rem,4cqw,4.5rem)] leading-tight text-balance text-hs-gold uppercase",
-          kind === "ticker" &&
-            "font-bungee text-[clamp(0.9rem,2.6cqw,2rem)] text-hs-ink uppercase",
+            "text-center font-bungee leading-tight text-balance text-hs-gold uppercase",
+          kind === "ticker" && "font-bungee uppercase",
+          kind === "ticker" && (fill ? "text-hs-ink" : "text-hs-gold"),
           kind === "message" &&
-            "whitespace-pre-wrap break-words text-[clamp(0.85rem,2.2cqw,1.75rem)] leading-snug text-pretty text-hs-paper",
+            "whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper",
         )}
       />
     </div>

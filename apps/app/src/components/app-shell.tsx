@@ -27,6 +27,7 @@ const ADMIN_NAV = [
   { href: "/admin/tracks", label: "Retos" },
   { href: "/admin/notifications", label: "Avisos" },
   { href: "/admin/tv", label: "TV" },
+  { href: "/judging", label: "Jueces" },
 ] as const;
 
 function adminNavActive(pathname: string, href: string) {
@@ -40,14 +41,17 @@ function AccountMenu({
   pathname,
   name,
   isAdmin,
+  isJudge,
 }: {
   pathname: string;
   name?: string;
   isAdmin: boolean;
+  isJudge: boolean;
 }) {
   const { signOut } = useAuthActions();
   const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
   const adminActive = pathname.startsWith("/admin");
+  const judgingActive = pathname === "/judging" || pathname.startsWith("/judging/");
 
   return (
     <DropdownMenu>
@@ -65,7 +69,7 @@ function AccountMenu({
       <DropdownMenuContent align="end">
         {name ? (
           <>
-            <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
+            <DropdownMenuLabel className="truncate font-semibold">{name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
         ) : null}
@@ -80,6 +84,19 @@ function AccountMenu({
             Perfil
           </Link>
         </DropdownMenuItem>
+        {isJudge ? (
+          <DropdownMenuItem asChild>
+            <Link
+              href="/judging"
+              className={cn(
+                "font-bungee uppercase",
+                judgingActive && "bg-hs-gold text-hs-ink",
+              )}
+            >
+              Juzgar
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         {isAdmin ? (
           <DropdownMenuItem asChild>
             <Link
@@ -94,7 +111,7 @@ function AccountMenu({
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem
-          className="font-bungee uppercase"
+          className="font-bungee uppercase text-hs-red focus:text-hs-red"
           onSelect={() => void signOut()}
         >
           Salir
@@ -150,6 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = me?.role === "admin";
+  const isJudge = me?.role === "judge" || me?.role === "admin";
   const displayName = me?.name ?? me?.email;
   const askGithub =
     me !== undefined &&
@@ -158,8 +176,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     !pathname.startsWith("/admin") &&
     (isAdmin || (me.accepted && me.onboardingComplete));
 
+  const isHome = pathname === "/";
+
   return (
-    <div className="min-h-screen bg-hs-paper">
+    <div
+      className={cn(
+        "min-h-screen bg-hs-paper",
+        isHome && "flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden",
+      )}
+    >
       <AppHeader
         pathname={pathname}
         accountMenu={
@@ -167,17 +192,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             pathname={pathname}
             name={displayName ?? undefined}
             isAdmin={isAdmin}
+            isJudge={isJudge}
           />
         }
       />
-      {isAdmin && pathname.startsWith("/admin") ? (
+      {isAdmin && (pathname.startsWith("/admin") || pathname.startsWith("/judging")) ? (
         <AdminStrip pathname={pathname} />
       ) : null}
       {askGithub ? <GithubLinkBanner /> : null}
-      <main className={cn(
-        "mx-auto py-6 sm:py-8",
-        pathname === "/participantes" ? "w-full" : "max-w-6xl px-4",
-      )}>
+      <main
+        className={cn(
+          "mx-auto",
+          isHome
+            ? "flex w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:py-5 lg:min-h-0"
+            : pathname === "/participantes"
+              ? "w-full py-6 sm:py-8"
+              : "max-w-6xl px-4 py-6 sm:py-8",
+        )}
+      >
         <Suspense fallback={null}>
           <GithubLinkResult />
         </Suspense>

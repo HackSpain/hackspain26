@@ -212,6 +212,26 @@ export const tvFeedSourceValidator = v.union(
   v.literal("github"),
 );
 
+export const tvFontWeightValidator = v.union(
+  v.literal("normal"),
+  v.literal("medium"),
+  v.literal("semibold"),
+  v.literal("bold"),
+);
+
+const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
+
+function parseFontSize(value: number | undefined): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const match = TV_FONT_SIZES.find((size) => Math.abs(size - value) < 0.001);
+  if (!match) {
+    throw new Error("Tamaño de fuente no válido");
+  }
+  return match;
+}
+
 const widgetReturn = v.object({
   _id: v.string(),
   kind: tvWidgetKindValidator,
@@ -225,6 +245,9 @@ const widgetReturn = v.object({
   tickerSpeed: v.optional(tvTickerSpeedValidator),
   feedMode: v.optional(tvFeedModeValidator),
   feedSource: v.optional(tvFeedSourceValidator),
+  fontSize: v.optional(v.number()),
+  fontWeight: v.optional(tvFontWeightValidator),
+  background: v.optional(v.boolean()),
 });
 
 type WidgetKind = Doc<"tvWidgets">["kind"];
@@ -232,6 +255,12 @@ type WidgetKind = Doc<"tvWidgets">["kind"];
 const MIN_SIZE = 8;
 
 const TEXT_KINDS = new Set<WidgetKind>(["banner", "ticker", "message"]);
+const FONT_SIZE_KINDS = new Set<WidgetKind>([
+  "banner",
+  "ticker",
+  "clock",
+  "message",
+]);
 
 const DEFAULT_SPONSORS = [
   {
@@ -325,6 +354,9 @@ function toPublicWidget(row: Doc<"tvWidgets">) {
     tickerSpeed: row.tickerSpeed,
     feedMode: row.feedMode,
     feedSource: row.feedSource,
+    fontSize: row.fontSize,
+    fontWeight: row.fontWeight,
+    background: row.background,
   };
 }
 
@@ -341,6 +373,9 @@ function snapshotOf(row: Doc<"tvWidgets">) {
     tickerSpeed: row.tickerSpeed,
     feedMode: row.feedMode,
     feedSource: row.feedSource,
+    fontSize: row.fontSize,
+    fontWeight: row.fontWeight,
+    background: row.background,
   };
 }
 
@@ -553,6 +588,9 @@ export const adminUpdateWidget = adminMutation({
     tickerSpeed: v.optional(tvTickerSpeedValidator),
     feedMode: v.optional(tvFeedModeValidator),
     feedSource: v.optional(tvFeedSourceValidator),
+    fontSize: v.optional(v.number()),
+    fontWeight: v.optional(tvFontWeightValidator),
+    background: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -574,6 +612,20 @@ export const adminUpdateWidget = adminMutation({
         text = trimmed;
       }
     }
+    let fontSize = widget.fontSize;
+    let fontWeight = widget.fontWeight;
+    let background = widget.background;
+    if (FONT_SIZE_KINDS.has(widget.kind) && args.fontSize !== undefined) {
+      fontSize = parseFontSize(args.fontSize);
+    }
+    if (TEXT_KINDS.has(widget.kind)) {
+      if (args.fontWeight !== undefined) {
+        fontWeight = args.fontWeight;
+      }
+      if (args.background !== undefined) {
+        background = args.background;
+      }
+    }
     await ctx.db.patch(widget._id, {
       ...box,
       text,
@@ -582,6 +634,9 @@ export const adminUpdateWidget = adminMutation({
       tickerSpeed: args.tickerSpeed ?? widget.tickerSpeed,
       feedMode: args.feedMode ?? widget.feedMode,
       feedSource: args.feedSource ?? widget.feedSource,
+      fontSize,
+      fontWeight,
+      background,
       updatedAt: Date.now(),
     });
     return null;
@@ -800,6 +855,9 @@ export const adminLoadLayout = adminMutation({
         tickerSpeed: widget.tickerSpeed,
         feedMode: widget.feedMode,
         feedSource: widget.feedSource,
+        fontSize: widget.fontSize,
+        fontWeight: widget.fontWeight,
+        background: widget.background,
         createdBy: ctx.user._id,
         createdAt: now,
         updatedAt: now,
@@ -814,6 +872,9 @@ export const adminLoadLayout = adminMutation({
         tickerSpeed: widget.tickerSpeed,
         feedMode: widget.feedMode,
         feedSource: widget.feedSource,
+        fontSize: widget.fontSize,
+        fontWeight: widget.fontWeight,
+        background: widget.background,
       });
     }
     return created.sort(

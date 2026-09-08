@@ -28,22 +28,29 @@ function HubCard({
   children: ReactNode;
 }) {
   return (
-    <Card className={cn("h-full", className)}>
+    <Card className={cn("flex h-full gap-2 py-3", className)}>
       <CardHeader
         className={
           headerRow
-            ? "flex flex-row flex-wrap items-baseline justify-start gap-2"
+            ? "flex flex-row flex-wrap items-baseline justify-between gap-2"
             : undefined
         }
       >
-        <CardTitle>{title}</CardTitle>
-        <CardDescription className="font-bungee leading-snug">
+        <CardTitle className={headerRow ? "shrink-0" : undefined}>
+          {title}
+        </CardTitle>
+        <CardDescription
+          className={cn(
+            "font-bungee font-medium leading-snug",
+            headerRow && "min-w-0 text-right",
+          )}
+        >
           {description}
         </CardDescription>
       </CardHeader>
       <CardContent
         className={cn(
-          "mt-auto flex flex-1 flex-col gap-3 [&>:last-child]:mt-auto",
+          "mt-auto flex flex-1 flex-col gap-2 font-medium [&>:last-child]:mt-auto",
           contentClassName,
         )}
       >
@@ -79,22 +86,23 @@ export default function HomePage() {
 
   return (
     <Page
-      className="lg:flex lg:h-[calc(100dvh-8.5rem)] lg:max-h-[calc(100dvh-8.5rem)] lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0 lg:overflow-hidden"
+      compact
+      className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden"
       title={
         <h1 className="font-bungee text-2xl leading-tight text-balance break-words sm:text-3xl">
           Hola, {me.name ?? "hacker"}
         </h1>
       }
     >
-      <div className="grid min-h-0 min-w-0 gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:items-stretch lg:overflow-hidden">
+      <div className="grid min-w-0 gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-2">
         <section
           aria-label="Feed"
-          className="flex min-h-0 min-w-0 w-full max-w-full flex-col overflow-hidden lg:h-full"
+          className="flex min-h-0 min-w-0 w-full max-w-full flex-col lg:h-full lg:overflow-hidden"
         >
           <HomeFeed />
         </section>
 
-        <div className="hs-stagger grid min-h-0 min-w-0 max-w-full gap-4 overflow-x-hidden sm:grid-cols-2 lg:h-full lg:max-h-full lg:content-start lg:overflow-y-auto lg:overscroll-contain">
+        <div className="hs-stagger grid min-w-0 max-w-full gap-3 sm:grid-cols-2 lg:h-full lg:min-h-0 lg:auto-rows-[minmax(min-content,1fr)]">
           <HubCard
             title="Asistencia"
             description={
@@ -142,6 +150,21 @@ export default function HomePage() {
               </TeamCliDialog>
             )}
           </HubCard>
+
+          {me.role === "judge" || me.role === "admin" ? (
+            <HubCard
+              title="Juzgar"
+              description="Puntúa proyectos por grupo general o por reto."
+            >
+              <p className="text-sm leading-snug text-hs-brown">
+                Panel del jurado. Los grupos generales ven una cohorte; cada reto
+                ve todos sus envíos.
+              </p>
+              <Button asChild variant="teal" className="w-full sm:w-auto">
+                <Link href="/judging">Abrir panel</Link>
+              </Button>
+            </HubCard>
+          ) : null}
 
           <HubCard
             title="Participantes"
@@ -194,8 +217,6 @@ export default function HomePage() {
                     : "El envío aún no está abierto"
             }
             headerRow
-            className="gap-6"
-            contentClassName="gap-6"
           >
             {project ? (
               <>
@@ -229,19 +250,19 @@ export default function HomePage() {
               </Button>
             ) : null}
           </HubCard>
-
-          {signup ? (
-            <Card className="sm:col-span-2">
-              <CardHeader>
-                <CardTitle>Tu solicitud</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
-                <SocialMeta email={signup.email} urls={signup.urls} />
-              </CardContent>
-            </Card>
-          ) : null}
         </div>
       </div>
+
+      {signup ? (
+        <Card className="shrink-0 gap-2 py-3">
+          <CardHeader>
+            <CardTitle>Tu solicitud</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <SocialMeta email={signup.email} urls={signup.urls} />
+          </CardContent>
+        </Card>
+      ) : null}
     </Page>
   );
 }

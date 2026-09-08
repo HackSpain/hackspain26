@@ -1,6 +1,12 @@
 "use client";
 
-import { TICKER_DURATION, type TvSponsor, type TvTickerSpeed } from "@/lib/tv";
+import { useState } from "react";
+import {
+  TICKER_DURATION,
+  sponsorLogoSources,
+  type TvSponsor,
+  type TvTickerSpeed,
+} from "@/lib/tv";
 import { cn } from "@/lib/utils";
 import { usePageVisible, usePrefersReducedMotion } from "./motion";
 
@@ -9,6 +15,40 @@ const TIER_LABEL: Record<TvSponsor["tier"], string> = {
   silver: "Silver",
   community: "Community",
 };
+
+function SponsorLogo({
+  sources,
+  name,
+  editor,
+}: {
+  sources: string[];
+  name: string;
+  editor?: boolean;
+}) {
+  const [failed, setFailed] = useState(0);
+  const src = sources[failed];
+  if (!src) {
+    return <span className="font-bungee text-sm uppercase">{name}</span>;
+  }
+  return (
+    <>
+      {/* External sponsor URLs; next/image would need a remote pattern per host. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        referrerPolicy="no-referrer"
+        className={cn(
+          "h-8 w-auto max-w-24 object-contain outline outline-1 -outline-offset-1 outline-black/10",
+          editor &&
+            "grayscale motion-safe:transition-[filter] motion-safe:duration-150 group-hover:grayscale-0",
+        )}
+        onError={() => setFailed((count) => count + 1)}
+      />
+      <span className="text-xs font-semibold">{name}</span>
+    </>
+  );
+}
 
 function SponsorMark({
   sponsor,
@@ -19,25 +59,12 @@ function SponsorMark({
 }) {
   return (
     <span className="flex items-center gap-2">
-      {sponsor.logoUrl ? (
-        // External sponsor URLs; next/image would need a remote pattern per host.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={sponsor.logoUrl}
-          alt=""
-          referrerPolicy="no-referrer"
-          className={cn(
-            "h-8 w-auto max-w-24 object-contain outline outline-1 -outline-offset-1 outline-black/10",
-            editor &&
-              "grayscale motion-safe:transition-[filter] motion-safe:duration-150 group-hover:grayscale-0",
-          )}
-        />
-      ) : (
-        <span className="font-bungee text-sm uppercase">{sponsor.name}</span>
-      )}
-      {sponsor.logoUrl ? (
-        <span className="text-xs font-semibold">{sponsor.name}</span>
-      ) : null}
+      <SponsorLogo
+        key={`${sponsor.logoUrl}|${sponsor.href}`}
+        sources={sponsorLogoSources(sponsor)}
+        name={sponsor.name}
+        editor={editor}
+      />
     </span>
   );
 }
