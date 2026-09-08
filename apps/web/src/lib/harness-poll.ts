@@ -1,35 +1,30 @@
 export const HARNESS_OPTIONS = [
   {
-    colorClass: "bg-hs-orange",
     id: "claude-code",
-    mark: "CC",
+    logoSrc: "/harnesses/claude.svg",
     name: "Claude Code",
   },
-  { colorClass: "bg-hs-teal", id: "codex", mark: ">_", name: "Codex" },
-  { colorClass: "bg-hs-navy", id: "cursor", mark: "CU", name: "Cursor" },
+  { id: "codex", logoSrc: "/harnesses/openai.svg", name: "Codex" },
+  { id: "cursor", logoSrc: "/harnesses/cursor.svg", name: "Cursor" },
   {
-    colorClass: "bg-hs-gold",
     id: "copilot",
-    mark: "GH",
+    logoSrc: "/harnesses/github-copilot.svg",
     name: "GitHub Copilot",
   },
   {
-    colorClass: "bg-hs-slate",
     id: "opencode",
-    mark: "OC",
+    logoSrc: "/harnesses/opencode.svg",
     name: "OpenCode",
   },
-  { colorClass: "bg-hs-red", id: "cline", mark: "CL", name: "Cline" },
+  { id: "cline", logoSrc: "/harnesses/cline.svg", name: "Cline" },
   {
-    colorClass: "bg-hs-brown text-hs-paper",
     id: "gemini-cli",
-    mark: "G",
+    logoSrc: "/harnesses/google-gemini.svg",
     name: "Gemini CLI",
   },
   {
-    colorClass: "bg-hs-sand",
     id: "windsurf",
-    mark: "WS",
+    logoSrc: "/harnesses/windsurf.svg",
     name: "Windsurf",
   },
 ] as const;

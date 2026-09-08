@@ -131,11 +131,8 @@ export function HarnessPollPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
       <header className="mb-8">
-        <p className="mb-3 font-black font-sans text-hs-orange text-xs uppercase tracking-[0.16em]">
-          Encuesta rápida · menos de 1 minuto
-        </p>
         <h1 className="text-balance font-bungee text-3xl text-hs-ink leading-[1.08] sm:text-5xl">
-          ¿Qué harness crees que usarás?
+          ¿Qué harnesses piensas utilizar?
         </h1>
         <p className="mt-5 max-w-2xl text-pretty font-bold text-base text-hs-brown leading-relaxed sm:text-lg">
           No tienen por qué ser los que finalmente uses en el evento: marca los
@@ -165,9 +162,15 @@ export function HarnessPollPage() {
                   />
                   <span
                     aria-hidden="true"
-                    className={`grid size-10 shrink-0 place-items-center border-[3px] border-hs-ink font-black font-mono text-hs-ink text-xs ${option.colorClass}`}
+                    className="grid size-10 shrink-0 place-items-center border-[3px] border-hs-ink bg-white/45"
                   >
-                    {option.mark}
+                    <img
+                      alt=""
+                      className="size-6 object-contain"
+                      height="24"
+                      src={option.logoSrc}
+                      width="24"
+                    />
                   </span>
                   <span className="min-w-0 flex-1 font-black font-sans text-base text-hs-ink">
                     {option.name}
