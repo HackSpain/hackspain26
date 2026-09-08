@@ -166,7 +166,7 @@ export function HarnessPollPage() {
                   >
                     <img
                       alt=""
-                      className="size-6 object-contain"
+                      className={`object-contain ${option.id === "devin-desktop" ? "size-7" : "size-6"}`}
                       height="24"
                       src={option.logoSrc}
                       width="24"
