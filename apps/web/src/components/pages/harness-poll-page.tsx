@@ -248,7 +248,7 @@ export function HarnessPollPage() {
             <>
               <span
                 aria-hidden="true"
-                className="size-5 animate-spin border-[3px] border-hs-ink border-r-transparent"
+                className="size-5 animate-spin rounded-full border-[3px] border-hs-ink border-r-transparent"
               />
               Guardando…
             </>
