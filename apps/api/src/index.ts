@@ -9,6 +9,8 @@ const PROVIDERS: Record<string, string> = {
   helmcode: "https://api.helmcode.com",
   quiverai: "https://api.quiver.ai",
   fal: "https://queue.fal.run",
+  "fal/queue": "https://queue.fal.run",
+  "fal/run": "https://fal.run",
 };
 const STRIPPED = new Set([
   "connection",
@@ -69,6 +71,20 @@ function trackingEnvironment(): TrackingEnvironment {
   };
 }
 
+function resolveUpstream(provider: string, path: string): URL | undefined {
+  const mode = path.split("/")[1];
+  const explicitFal =
+    provider === "fal" && (mode === "queue" || mode === "run");
+  const key = explicitFal ? `fal/${mode}` : provider;
+  const base = Object.hasOwn(PROVIDERS, key) ? PROVIDERS[key] : undefined;
+  if (!base) {
+    return;
+  }
+  const upstream = new URL(base);
+  upstream.pathname = explicitFal ? path.slice(mode.length + 1) || "/" : path;
+  return upstream;
+}
+
 function responseHeaders(input: Headers): Headers {
   const headers = cleanHeaders(input);
   // Node fetch decompresses the body but retains upstream encoding headers.
@@ -110,17 +126,16 @@ export function createApp(
       }
       const slash = url.pathname.indexOf("/", 1);
       const provider = url.pathname.slice(1, slash === -1 ? undefined : slash);
-      const base = Object.hasOwn(PROVIDERS, provider)
-        ? PROVIDERS[provider]
-        : undefined;
-      if (!base) {
+      const upstream = resolveUpstream(
+        provider,
+        slash === -1 ? "/" : url.pathname.slice(slash)
+      );
+      if (!upstream) {
         return Response.json(
           { error: "Unknown provider" },
           { status: 404, headers: CORS }
         );
       }
-      const upstream = new URL(base);
-      upstream.pathname = slash === -1 ? "/" : url.pathname.slice(slash);
       upstream.search = url.search;
       const startedAt = Date.now();
       const eventId = crypto.randomUUID();

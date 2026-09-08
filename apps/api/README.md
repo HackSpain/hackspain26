@@ -8,10 +8,14 @@ Elysia API running on Node.js, deployed as a separate Vercel project. Participan
 | /helmcode | https://api.helmcode.com | Authorization: Bearer HELMCODE_API_KEY |
 | /quiverai | https://api.quiver.ai | Authorization: Bearer QUIVERAI_API_KEY |
 | /fal | https://queue.fal.run | Authorization: Key FAL_KEY |
+| /fal/queue | https://queue.fal.run | Authorization: Key FAL_KEY |
+| /fal/run | https://fal.run | Authorization: Key FAL_KEY |
 
 Use https://api.hackspain.com/helmcode/v1 as an OpenAI-compatible base URL. Credentials belong in participant backends, not public frontend bundles.
 
-fal returns its original queue URLs. To track subsequent status/result/cancel calls, replace https://queue.fal.run with https://api.hackspain.com/fal in those URLs. Direct fal SDK integration and WebSockets are not covered. Redirects are returned without being followed by the proxy.
+Use `/fal/queue/{model}` for asynchronous inference and `/fal/run/{model}` for synchronous inference. `/fal/{model}` remains a backward-compatible Queue alias; `queue` and `run` are reserved routing segments. Synchronous requests remain subject to the hosting function timeout.
+
+fal returns its original queue URLs. To track subsequent status/result/cancel calls, replace https://queue.fal.run with https://api.hackspain.com/fal/queue in those URLs. Direct fal SDK integration and WebSockets are not covered. Redirects are returned without being followed by the proxy. Both modes retain provider `fal` in RawTree and classify operations using the upstream path.
 
 ## RawTree tracking
 

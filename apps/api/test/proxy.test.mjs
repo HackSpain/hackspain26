@@ -39,6 +39,101 @@ const env = {
   RAWTREE_PROXY_TABLE: "hackspain_proxy_usage",
 };
 
+test("fal routes sync, queue and legacy paths without changing credentials or tracking", async (t) => {
+  for (const [path, host, upstreamPath, method, operation] of [
+    [
+      "/fal/run/fal-ai/flux/dev",
+      "fal.run",
+      "/fal-ai/flux/dev",
+      "POST",
+      "inference",
+    ],
+    [
+      "/fal/queue/fal-ai/flux/dev",
+      "queue.fal.run",
+      "/fal-ai/flux/dev",
+      "POST",
+      "inference",
+    ],
+    [
+      "/fal/fal-ai/flux/dev",
+      "queue.fal.run",
+      "/fal-ai/flux/dev",
+      "POST",
+      "inference",
+    ],
+    [
+      "/fal/queue/fal-ai/flux/requests/id/status",
+      "queue.fal.run",
+      "/fal-ai/flux/requests/id/status",
+      "GET",
+      "queue.status",
+    ],
+    [
+      "/fal/queue/fal-ai/flux/requests/id",
+      "queue.fal.run",
+      "/fal-ai/flux/requests/id",
+      "GET",
+      "queue.result",
+    ],
+    [
+      "/fal/queue/fal-ai/flux/requests/id/cancel",
+      "queue.fal.run",
+      "/fal-ai/flux/requests/id/cancel",
+      "PUT",
+      "queue.cancel",
+    ],
+    [
+      "/fal/run//evil.example/model",
+      "fal.run",
+      "//evil.example/model",
+      "POST",
+      "other",
+    ],
+    ["/fal/runner/model", "queue.fal.run", "/runner/model", "POST", "other"],
+  ]) {
+    const pending = [];
+    let event;
+    t.mock.method(globalThis, "fetch", async (url, init) => {
+      if (url.hostname === "api.rawtree.com") {
+        event = JSON.parse(init.body)[0];
+        return Response.json({ inserted: 1 });
+      }
+      assert.equal(url.hostname, host);
+      assert.equal(url.pathname, upstreamPath);
+      assert.equal(url.search, "?logs=1");
+      assert.equal(init.method, method);
+      assert.equal(init.headers.get("authorization"), "Key participant-secret");
+      if (method === "POST") {
+        assert.equal(
+          await new Response(init.body).text(),
+          '{"prompt":"private"}'
+        );
+      }
+      return new Response("provider result", { status: 202 });
+    });
+    const response = await createApp(env, (promise) =>
+      pending.push(promise)
+    ).handle(
+      new Request(`https://api.hackspain.com${path}?logs=1`, {
+        method,
+        headers: {
+          authorization: "Key participant-secret",
+          "content-type": "application/json",
+        },
+        body: method === "POST" ? '{"prompt":"private"}' : undefined,
+      })
+    );
+    assert.equal(response.status, 202);
+    assert.equal(await response.text(), "provider result");
+    await Promise.all(pending);
+    assert.equal(event.provider, "fal");
+    assert.equal(event.operation, operation);
+    assert.equal(JSON.stringify(event).includes("participant-secret"), false);
+    t.mock.restoreAll();
+  }
+});
+
 test("forwards original credentials and bodies for every provider; tracking excludes private data", async (t) => {
   for (const [provider, host, name, value] of [
     ["exa", "api.exa.ai", "x-api-key", "exa-private"],
