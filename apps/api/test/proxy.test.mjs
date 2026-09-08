@@ -1,6 +1,37 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import worker from "../src/index.ts";
+import { createApp } from "../src/index.ts";
+
+test("Elysia leaves JSON and multipart bytes untouched and relays decoded responses", async (t) => {
+  for (const [contentType, body] of [
+    ["application/json", '{ "query": "hello" }'],
+    [
+      "multipart/form-data; boundary=example",
+      "--example\r\nContent-Disposition: form-data; name=upload\r\n\r\nraw\u0000bytes\r\n--example--\r\n",
+    ],
+  ]) {
+    t.mock.method(globalThis, "fetch", async (_url, init) => {
+      assert.equal(init.headers.get("content-type"), contentType);
+      assert.equal(await new Response(init.body).text(), body);
+      assert.equal(init.duplex, "half");
+      return new Response("decoded", {
+        headers: { "content-encoding": "gzip", "content-length": "27" },
+      });
+    });
+    const response = await createApp({}, (promise) => promise).handle(
+      new Request("https://api.hackspain.com/exa/search", {
+        method: "POST",
+        headers: { "content-type": contentType },
+        body,
+      })
+    );
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), "decoded");
+    assert.equal(response.headers.get("content-encoding"), null);
+    assert.equal(response.headers.get("content-length"), null);
+    t.mock.restoreAll();
+  }
+});
 
 const env = {
   RAWTREE_API_KEY: "tracking-only-secret",
@@ -34,7 +65,8 @@ test("forwards original credentials and bodies for every provider; tracking excl
         headers: { "retry-after": "7" },
       });
     });
-    const response = await worker.fetch(
+    const app = createApp(env, (promise) => pending.push(promise));
+    const response = await app.handle(
       new Request(
         `https://api.hackspain.com/${provider}/search?private=query-secret`,
         {
@@ -42,9 +74,7 @@ test("forwards original credentials and bodies for every provider; tracking excl
           headers: { [name]: value, cookie: "private-cookie" },
           body: "private prompt",
         }
-      ),
-      env,
-      { waitUntil: (promise) => pending.push(promise) }
+      )
     );
     assert.equal(response.status, 429);
     assert.equal(response.headers.get("retry-after"), "7");
@@ -80,12 +110,9 @@ test("tracking retries preserve deduplication and never replace the provider res
     assert.equal(url.hostname, "api.exa.ai");
     return Promise.resolve(new Response("ok"));
   });
-  const response = await worker.fetch(
-    new Request("https://api.hackspain.com/exa//evil.example/private-id"),
-    env,
-    {
-      waitUntil: (promise) => pending.push(promise),
-    }
+  const app = createApp(env, (promise) => pending.push(promise));
+  const response = await app.handle(
+    new Request("https://api.hackspain.com/exa//evil.example/private-id")
   );
   assert.equal(await response.text(), "ok");
   await Promise.all(pending);

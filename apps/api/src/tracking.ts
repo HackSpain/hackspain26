@@ -47,7 +47,16 @@ export interface ProxyEvent {
   status: number;
 }
 
-export async function trackRequest(env: Env, event: ProxyEvent): Promise<void> {
+export interface TrackingEnvironment {
+  RAWTREE_API_KEY?: string;
+  RAWTREE_DATABASE?: string;
+  RAWTREE_PROXY_TABLE?: string;
+}
+
+export async function trackRequest(
+  env: TrackingEnvironment,
+  event: ProxyEvent
+): Promise<void> {
   if (!(env.RAWTREE_API_KEY && env.RAWTREE_DATABASE)) {
     console.error(
       JSON.stringify({
@@ -58,7 +67,7 @@ export async function trackRequest(env: Env, event: ProxyEvent): Promise<void> {
     return;
   }
   const url = new URL(
-    `https://api.rawtree.com/v1/tables/${encodeURIComponent(env.RAWTREE_PROXY_TABLE)}`
+    `https://api.rawtree.com/v1/tables/${encodeURIComponent(env.RAWTREE_PROXY_TABLE ?? "hackspain_proxy_usage")}`
   );
   url.searchParams.set("database", env.RAWTREE_DATABASE);
   url.searchParams.set("deduplicate_insert", "enable");

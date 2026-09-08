@@ -20,7 +20,6 @@
     "check:api": "pnpm --filter api check",
     "lint": "oxlint -c oxlint.config.mjs oxlint.config.mjs && pnpm --filter app lint && pnpm --filter web lint && pnpm --filter cli lint && pnpm --filter api lint",
     "fix": "oxlint -c oxlint.config.mjs --fix oxlint.config.mjs && pnpm --filter app fix && pnpm --filter web fix && pnpm --filter cli fix && pnpm --filter api fix",
-    "deploy:api": "pnpm --filter api deploy",
     "og:generate": "pnpm --filter web og:generate",
     "assets:quiver": "pnpm --filter web assets:quiver",
     "assets:quiver:tiles": "pnpm --filter web assets:quiver:tiles",

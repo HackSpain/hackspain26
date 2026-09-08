@@ -1,6 +1,6 @@
 # Provider proxy
 
-Participants send their own provider credentials unchanged. No HackSpain key or provider secrets are configured on the Worker. Providers authenticate requests and enforce their own quotas. Paths, queries, bodies, status codes and streamed responses pass through; destinations are fixed.
+Elysia API running on Node.js, deployed as a separate Vercel project. Participants send their own provider credentials unchanged. No HackSpain key or provider secrets are configured on the server. Providers authenticate requests and enforce their own quotas. Paths, queries, bodies, status codes and streamed responses pass through; destinations are fixed. Elysia body parsing is disabled so JSON, multipart and binary bodies are forwarded without being consumed.
 
 | Public base | Upstream | Participant header |
 | --- | --- | --- |
@@ -11,7 +11,7 @@ Participants send their own provider credentials unchanged. No HackSpain key or 
 
 Use https://api.hackspain.com/helmcode/v1 as an OpenAI-compatible base URL. Credentials belong in participant backends, not public frontend bundles.
 
-fal returns its original queue URLs. To track subsequent status/result/cancel calls, replace https://queue.fal.run with https://api.hackspain.com/fal in those URLs. File uploads, direct fal SDK integration and WebSockets are not covered. Redirects are returned without being followed by the Worker.
+fal returns its original queue URLs. To track subsequent status/result/cancel calls, replace https://queue.fal.run with https://api.hackspain.com/fal in those URLs. Direct fal SDK integration and WebSockets are not covered. Redirects are returned without being followed by the proxy.
 
 ## RawTree tracking
 
@@ -19,16 +19,14 @@ Separate table: `hackspain_proxy_usage`. Each `hackspain.proxy.v1` event records
 
 Tracking uses waitUntil, a five-second timeout per attempt, and two attempts with a stable RawTree deduplication token. Failures are logged by event ID and do not fail the proxy. Delivery is best effort, not durable accounting. No token, model-from-body or cost metrics are inferred.
 
-Set RAWTREE_API_KEY (write_only) and RAWTREE_DATABASE in ignored apps/api/.dev.vars. Provision the table in that database using the same JSON/Dynamic ingestion setup as the existing CLI telemetry table. The Worker does not create tables.
+Set RAWTREE_API_KEY (write_only) and RAWTREE_DATABASE in the Vercel project environment. Locally, copy .env.example to .env and load it before starting. Provision the table in that database using the same JSON/Dynamic ingestion setup as the existing CLI telemetry table. The API does not create tables.
 
 ```sh
 pnpm dev:api
 pnpm check:api
-pnpm --filter app exec tsx --test ../api/test/proxy.test.mjs
-cd apps/api
-pnpm exec wrangler deploy --secrets-file .dev.vars
+pnpm --filter api test
 ```
 
-Provider secrets are not needed. The deployment account must own the domain. RawTree credentials stay server-side.
+Create a Vercel project with Root Directory apps/api and the Elysia framework preset, then attach api.hackspain.com. Vercel detects the default Elysia export in src/index.ts. Configure its function duration for the chosen plan; streams are subject to that duration and request payloads to Vercel limits. Provider secrets are not needed. RawTree credentials stay server-side. Background tracking uses @vercel/functions waitUntil in production.
 
 To inspect usage, aggregate the event fields after deduplicating by eventId: request count, count of status >= 400, and average headersDurationMs, grouped by provider and operation. Polling calls count separately from inference submissions. No dashboard is included.
