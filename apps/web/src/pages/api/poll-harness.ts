@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request }) => {
       table,
       values: [event],
     });
-    if (result.inserted !== 0 && result.inserted !== 1) {
+    if (result.inserted !== 1) {
       throw new Error(`RawTree inserted ${result.inserted} poll responses`);
     }
   } catch (error) {

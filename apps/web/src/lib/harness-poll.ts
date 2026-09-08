@@ -23,9 +23,9 @@ export const HARNESS_OPTIONS = [
     name: "Gemini CLI",
   },
   {
-    id: "windsurf",
-    logoSrc: "/harnesses/windsurf.svg",
-    name: "Windsurf",
+    id: "devin-desktop",
+    logoSrc: "/harnesses/devin.svg",
+    name: "Devin Desktop",
   },
 ] as const;
 
