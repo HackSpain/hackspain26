@@ -104,10 +104,26 @@ export function tvHasBackground(background?: boolean): boolean {
 }
 
 export function tvFontSizeClass(kind: TvWidgetKind, fontSize?: number): string {
+  if (fontSize !== undefined && fontSize >= 8 && fontSize <= 240) {
+    return "";
+  }
   if (fontSize !== undefined && isTvFontSize(fontSize)) {
     return TV_FONT_SIZE_CLASS[fontSize];
   }
   return TV_KIND_SIZE_CLASS[kind] ?? TV_FONT_SIZE_CLASS[1.1];
+}
+
+// New sizes use pixels on a 1920px canvas. Legacy presets keep their rendering.
+export function tvFontSizeStyle(fontSize?: number) {
+  return fontSize !== undefined && Number.isFinite(fontSize) && fontSize >= 8 && fontSize <= 240
+    ? { fontSize: `${fontSize / 19.2}cqw` }
+    : undefined;
+}
+
+export function tvFontSizePixels(kind: TvWidgetKind, value?: number): number {
+  if (value !== undefined && value >= 8) return value;
+  const legacy: Record<number, number> = { 0.85: 19, 1.1: 28, 1.5: 32, 2: 48, 2.75: 72 };
+  return value !== undefined ? legacy[value] ?? 28 : kind === "clock" ? 80 : kind === "banner" ? 72 : kind === "ticker" ? 32 : 28;
 }
 
 export function tvFontWeightClass(fontWeight?: TvFontWeight): string | undefined {

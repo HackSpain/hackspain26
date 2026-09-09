@@ -40,17 +40,14 @@ function adminNavActive(pathname: string, href: string) {
 function AccountMenu({
   pathname,
   name,
-  isAdmin,
   isJudge,
 }: {
   pathname: string;
   name?: string;
-  isAdmin: boolean;
   isJudge: boolean;
 }) {
   const { signOut } = useAuthActions();
   const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
-  const adminActive = pathname.startsWith("/admin");
   const judgingActive = pathname === "/judging" || pathname.startsWith("/judging/");
 
   return (
@@ -94,19 +91,6 @@ function AccountMenu({
               )}
             >
               Juzgar
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
-        {isAdmin ? (
-          <DropdownMenuItem asChild>
-            <Link
-              href="/admin"
-              className={cn(
-                "font-bungee uppercase",
-                adminActive && "bg-hs-gold text-hs-ink",
-              )}
-            >
-              Admin
             </Link>
           </DropdownMenuItem>
         ) : null}
@@ -188,12 +172,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AppHeader
         pathname={pathname}
         accountMenu={
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button asChild variant="outline" className={cn("text-xs", pathname.startsWith("/admin") && "bg-hs-gold")}>
+                <Link href="/admin" aria-current={pathname === "/admin" ? "page" : undefined}>Admin panel</Link>
+              </Button>
+            )}
           <AccountMenu
             pathname={pathname}
             name={displayName ?? undefined}
-            isAdmin={isAdmin}
             isJudge={isJudge}
           />
+          </div>
         }
       />
       {isAdmin && (pathname.startsWith("/admin") || pathname.startsWith("/judging")) ? (
@@ -205,6 +195,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           "mx-auto",
           isHome
             ? "flex w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:py-5 lg:min-h-0"
+            : pathname === "/admin/tv"
+              ? "w-full max-w-[1800px] px-4 py-6 sm:px-6 sm:py-8"
             : pathname === "/participantes"
               ? "w-full py-6 sm:py-8"
               : "max-w-6xl px-4 py-6 sm:py-8",

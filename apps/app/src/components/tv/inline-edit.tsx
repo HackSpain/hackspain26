@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import {
   TV_PALETTE,
   tvFontSizeClass,
+  tvFontSizeStyle,
   tvFontWeightClass,
   tvHasBackground,
 } from "@/lib/tv";
@@ -97,6 +98,7 @@ export function TvInlineEditor({
             finish(true);
           }
         }}
+        style={tvFontSizeStyle(fontSize)}
         className={cn(
           "h-full w-full resize-none border-0 bg-transparent p-0 outline-none",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-ink",
