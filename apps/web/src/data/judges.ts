@@ -1,5 +1,6 @@
 import adriaBlancafortPhoto from "../assets/judges/adria-blancafort.jpg";
 import alejandroBujanPhoto from "../assets/judges/alejandro-bujan.jpg";
+import alejandroCanadaPhoto from "../assets/judges/alejandro-canada.jpg";
 import felixGilPhoto from "../assets/judges/felix-gil.jpg";
 import ignacioAlfeiranPhoto from "../assets/judges/ignacio-alfeiran.jpg";
 import ivanFernandezPhoto from "../assets/judges/ivan-fernandez.jpg";
@@ -12,6 +13,7 @@ import miguelGonzalezPhoto from "../assets/judges/miguel-gonzalez.jpg";
 import nicolasDeOryPhoto from "../assets/judges/nicolas-de-ory.jpg";
 import pabloMenendezPhoto from "../assets/judges/pablo-menendez.jpg";
 import quiliPenaPhoto from "../assets/judges/quili-pena.jpg";
+import xabierIrizarPhoto from "../assets/judges/xabier-irizar.jpg";
 
 export interface Judge {
   company: string;
@@ -115,5 +117,17 @@ export const GENERAL_JUDGES: Judge[] = [
     id: "marta-santiago",
     name: "Marta Santiago",
     photoSrc: martaSantiagoPhoto.src,
+  },
+  {
+    company: "Canopy Labs",
+    id: "xabier-irizar",
+    name: "Xabier Irizar",
+    photoSrc: xabierIrizarPhoto.src,
+  },
+  {
+    company: "Sperid Labs",
+    id: "alejandro-canada",
+    name: "Alejandro Cañada Hinojosa",
+    photoSrc: alejandroCanadaPhoto.src,
   },
 ];
