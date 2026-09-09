@@ -53,7 +53,7 @@ export function TvLayoutsBar({
   return (
     <section
       aria-label="Pantallas guardadas"
-      className="space-y-5 border-b border-hs-ink/15 pb-5 md:border-r md:border-b-0 md:pr-5 md:pb-0"
+      className="space-y-5 border-r border-hs-ink/15 pr-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -112,7 +112,7 @@ export function TvLayoutsBar({
         </form>
       </div>
 
-      <div className="grid gap-3 border-t border-hs-ink/15 pt-4 sm:grid-cols-2 md:max-h-[60vh] md:grid-cols-1 md:overflow-y-auto">
+      <div className="grid max-h-[60vh] grid-cols-1 gap-3 overflow-y-auto border-t border-hs-ink/15 pt-4">
         {layouts === undefined ? (
           <p className="text-sm font-medium text-hs-brown">Cargando…</p>
         ) : layouts.length === 0 ? (

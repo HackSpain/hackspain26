@@ -470,8 +470,9 @@ export function TvEditor() {
   return (
     <div className="space-y-4">
       <FormError message={formError} />
-      <div className="grid items-start gap-6 md:grid-cols-[16rem_minmax(0,1fr)]">
-      <aside className="min-w-0 md:sticky md:top-6" aria-label="Biblioteca de pantallas">
+      <div className="overflow-x-auto">
+      <div className="grid min-w-[960px] grid-cols-[16rem_minmax(0,1fr)] items-start gap-6">
+      <aside className="min-w-0" aria-label="Biblioteca de pantallas">
       <TvLayoutsBar
         layouts={layouts}
         currentId={currentLayoutId}
@@ -666,6 +667,7 @@ export function TvEditor() {
         Arrastra para mover · Esquina para tamaño · Flechas para ajustar · Doble
         clic para escribir
       </p>
+      </div>
       </div>
       </div>
 
