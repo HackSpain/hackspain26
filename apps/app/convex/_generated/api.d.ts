@@ -44,6 +44,8 @@ import type * as submissions from "../submissions.js";
 import type * as teams from "../teams.js";
 import type * as tracks from "../tracks.js";
 import type * as tv from "../tv.js";
+import type * as tvPlayback from "../tvPlayback.js";
+import type * as lib_tvLayouts from "../lib/tvLayouts.js";
 import type * as users from "../users.js";
 
 import type {
@@ -89,6 +91,8 @@ declare const fullApi: ApiFromModules<{
   teams: typeof teams;
   tracks: typeof tracks;
   tv: typeof tv;
+  tvPlayback: typeof tvPlayback;
+  "lib/tvLayouts": typeof lib_tvLayouts;
   users: typeof users;
 }>;
 

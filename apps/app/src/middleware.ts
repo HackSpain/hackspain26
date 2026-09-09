@@ -17,6 +17,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/cli(.*)",
   "/api/files(.*)",
   "/tv",
+  "/api/tv",
 ]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {

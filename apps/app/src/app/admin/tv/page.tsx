@@ -3,6 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import { Page } from "@/components/page";
 import { TvEditor } from "@/components/tv/editor";
+import { TvReloadControl } from "@/components/tv/reload-control";
 
 export default function AdminTvPage() {
   return (
@@ -26,6 +27,7 @@ export default function AdminTvPage() {
       }
     >
       <TvEditor />
+      <TvReloadControl />
     </Page>
   );
 }

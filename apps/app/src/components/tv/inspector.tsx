@@ -4,12 +4,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  TV_FONT_SIZE_OPTIONS,
   TV_FONT_WEIGHT_OPTIONS,
   TV_PALETTE,
-  defaultTvFontSize,
   defaultTvFontWeight,
-  isTvFontSize,
+  tvFontSizePixels,
   isTvFontWeight,
   layoutTvBox,
   tvHasBackground,
@@ -243,30 +241,36 @@ function FontSizeField({
   widget: TvWidget;
   onPatch: (id: string, patch: Partial<TvWidget>) => void;
 }) {
+  const pixels = tvFontSizePixels(widget.kind, widget.fontSize);
+  const [value, setValue] = useState(String(pixels));
+  const [seen, setSeen] = useState(pixels);
+  if (seen !== pixels) {
+    setSeen(pixels);
+    setValue(String(pixels));
+  }
   return (
     <label className="block text-xs text-hs-brown">
-      Tamaño
-      <select
-        value={
-          widget.fontSize !== undefined && isTvFontSize(widget.fontSize)
-            ? widget.fontSize
-            : defaultTvFontSize(widget.kind)
-        }
-        onChange={(event) => {
-          const next = Number(event.target.value);
-          if (!isTvFontSize(next) || next === widget.fontSize) {
+      Tamaño de texto (px)
+      <Input
+        type="number"
+        min={8}
+        max={240}
+        step={1}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => {
+          const next = Number(value);
+          if (!Number.isFinite(next) || next < 8 || next > 240) {
+            setValue(String(pixels));
             return;
           }
+          if (next === pixels) return;
           onPatch(widget._id, { fontSize: next });
         }}
-        className="mt-1 min-h-11 w-full border-[3px] border-hs-ink bg-hs-paper px-2 text-sm text-hs-ink outline-none focus-visible:border-hs-navy"
-      >
-        {TV_FONT_SIZE_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+        className="mt-1 tabular-nums"
+      />
+      <span className="mt-1 block text-xs">8–240 px sobre 1920 px de ancho. Se adapta a la pantalla.</span>
     </label>
   );
 }
@@ -279,10 +283,10 @@ function GeometryFields({
   onPatch: (id: string, patch: Partial<TvWidget>) => void;
 }) {
   const rounded = {
-    x: Math.round(widget.x),
-    y: Math.round(widget.y),
-    w: Math.round(widget.w),
-    h: Math.round(widget.h),
+    x: Number(widget.x.toFixed(1)),
+    y: Number(widget.y.toFixed(1)),
+    w: Number(widget.w.toFixed(1)),
+    h: Number(widget.h.toFixed(1)),
   };
   const [box, setBox] = useState(rounded);
   const [seen, setSeen] = useState(rounded);
@@ -320,11 +324,12 @@ function GeometryFields({
         ] as const
       ).map(([key, label]) => (
         <label key={key} className="block text-xs text-hs-brown">
-          {label}
+          {label} (%)
           <Input
             type="number"
             min={0}
             max={100}
+            step={0.1}
             value={box[key]}
             onChange={(event) =>
               setBox((current) => ({

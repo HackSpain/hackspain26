@@ -24,6 +24,7 @@ export function TvLayoutsBar({
   layouts,
   currentId,
   currentName,
+  liveName,
   dirty,
   onSave,
   onLoad,
@@ -50,33 +51,74 @@ export function TvLayoutsBar({
   const nameDirty = name.trim() !== (currentName ?? "").trim();
 
   return (
-    <div className="flex flex-col gap-3 border-[3px] border-hs-ink bg-hs-paper px-3 py-2.5 md:grid md:grid-cols-[auto_minmax(0,1fr)] md:items-stretch md:gap-0">
-      <form
-        className="flex h-full min-h-11 shrink-0 items-center gap-2.5 md:pr-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave(draftName);
-        }}
-      >
-        <Input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Sin nombre"
-          aria-label="Nombre del estado"
-          autoComplete="off"
-          className="h-11 w-44 text-sm font-medium"
-        />
-        <Button type="submit" size="sm" disabled={!(dirty || nameDirty)}>
-          Guardar
-        </Button>
-      </form>
+    <section
+      aria-label="Pantallas guardadas"
+      className="space-y-5 border-b border-hs-ink/15 pb-5 md:border-r md:border-b-0 md:pr-5 md:pb-0"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-base">Pantallas guardadas</h2>
+          <p className="mt-1 text-sm text-hs-brown">
+            {liveName
+              ? `En vivo: ${liveName}`
+              : "Todavía no hay una pantalla publicada."}
+          </p>
+        </div>
+        <form
+          className="w-full space-y-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSave(draftName);
+          }}
+        >
+          <label
+            htmlFor="tv-layout-name"
+            className="block text-xs text-hs-brown"
+          >
+            {currentId
+              ? "Guardar cambios en esta pantalla"
+              : "Guardar el lienzo como nueva pantalla"}
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="tv-layout-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Sin nombre"
+              aria-label="Nombre del estado"
+              autoComplete="off"
+              className="h-11 min-w-0 flex-1 text-sm font-medium"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              className="h-11 shrink-0 px-2 text-xs"
+              disabled={currentId !== null && !(dirty || nameDirty)}
+            >
+              Guardar
+            </Button>
+          </div>
+          {dirty && (
+            <p className="text-xs text-hs-brown">
+              Cambios sin guardar
+              {currentId &&
+              layouts?.some(
+                (layout) => layout._id === currentId && layout.isLive,
+              )
+                ? " · Guardar actualizará la TV en vivo."
+                : "."}
+            </p>
+          )}
+        </form>
+      </div>
 
-      <div className="flex min-h-11 min-w-0 flex-wrap items-center gap-1.5 md:border-l-[3px] md:border-hs-ink md:pl-4">
+      <div className="grid gap-3 border-t border-hs-ink/15 pt-4 sm:grid-cols-2 md:max-h-[60vh] md:grid-cols-1 md:overflow-y-auto">
         {layouts === undefined ? (
           <p className="text-sm font-medium text-hs-brown">Cargando…</p>
         ) : layouts.length === 0 ? (
           <p className="text-sm font-medium text-hs-brown">
-            Guarda Bienvenida, Hackeando, Cena…
+            Guarda tu primera pantalla para recuperarla o emitirla cuando
+            quieras.
           </p>
         ) : (
           layouts.map((layout) => {
@@ -85,61 +127,77 @@ export function TvLayoutsBar({
               <div
                 key={layout._id}
                 className={cn(
-                  "flex items-center border-[3px]",
+                  "flex min-w-0 flex-col border p-4",
                   current
-                    ? "border-hs-ink bg-hs-gold"
-                    : "border-hs-ink/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60",
+                    ? "border-hs-navy/40 bg-hs-sand/60"
+                    : "border-hs-ink/15",
                 )}
               >
-                <button
-                  type="button"
-                  onClick={() => onSetLive(layout._id)}
-                  aria-label={
-                    layout.isLive
-                      ? `${layout.name}, en vivo`
-                      : `Poner ${layout.name} en vivo`
-                  }
-                  className="inline-flex min-h-11 items-center px-2.5 text-sm font-medium outline-none motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97] focus-visible:border-hs-navy"
-                >
-                  {layout.name}
-                  {layout.isLive ? (
-                    <span className="ml-1.5 text-[10px] font-medium tracking-wide text-hs-teal uppercase">
-                      Live
-                    </span>
-                  ) : null}
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="outline"
-                      className="size-11 border-0 border-l-[3px] border-hs-ink/20"
-                      aria-label={`Opciones de ${layout.name}`}
-                    >
-                      <MoreHorizontal />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onSelect={() => onLoad(layout._id)}>
-                      Cargar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onSetLive(layout._id)}>
-                      Poner en vivo
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-hs-red"
-                      onSelect={() => onRemove(layout._id)}
-                    >
-                      Borrar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="break-words font-sans text-base font-semibold">
+                      {layout.name}
+                    </h3>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
+                      {layout.isLive && (
+                        <span className="text-hs-teal">● En vivo</span>
+                      )}
+                      {current && (
+                        <span className="text-hs-navy">En el editor</span>
+                      )}
+                      {!layout.isLive && !current && (
+                        <span className="text-hs-brown">Guardada</span>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="size-10 shrink-0 border-0"
+                        aria-label={`Opciones de ${layout.name}`}
+                      >
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        className="text-hs-red"
+                        onSelect={() => onRemove(layout._id)}
+                      >
+                        Borrar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="mt-4 flex items-center gap-2 border-t border-hs-ink/15 pt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label={`Editar ${layout.name}`}
+                    className="min-h-10 shrink-0 px-2 text-xs"
+                    onClick={() => onLoad(layout._id)}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={layout.isLive}
+                    aria-label={`Poner ${layout.name} en vivo`}
+                    className="min-h-10 min-w-0 flex-1 px-2 text-xs"
+                    onClick={() => onSetLive(layout._id)}
+                  >
+                    {layout.isLive ? "En emisión" : "Poner en vivo"}
+                  </Button>
+                </div>
               </div>
             );
           })
         )}
       </div>
-    </div>
+    </section>
   );
 }

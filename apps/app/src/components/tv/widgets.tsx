@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { TvFontWeight, TvWidget } from "@/lib/tv";
-import { tvFontSizeClass, tvFontWeightClass, tvHasBackground } from "@/lib/tv";
+import { tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from "@/lib/tv";
 import { cn } from "@/lib/utils";
 import {
   InsightsActivityBox,
@@ -55,6 +55,7 @@ function BannerWidget({
       )}
     >
       <p
+        style={tvFontSizeStyle(fontSize)}
         className={cn(
           "font-bungee leading-tight text-balance text-hs-gold uppercase",
           tvFontSizeClass("banner", fontSize),
@@ -99,6 +100,7 @@ function TickerWidget({
           <p
             key={copy}
             aria-hidden={copy === 1}
+            style={tvFontSizeStyle(fontSize)}
             className={cn(
               "flex shrink-0 whitespace-nowrap font-bungee uppercase",
               fill ? "text-hs-ink" : "text-hs-gold",
@@ -123,6 +125,7 @@ function ClockWidget({ fontSize }: { fontSize?: number }) {
   return (
     <div className="flex h-full items-center justify-center bg-hs-ink px-3">
       <p
+        style={tvFontSizeStyle(fontSize)}
         className={cn(
           "font-bungee tabular-nums text-hs-paper",
           tvFontSizeClass("clock", fontSize),
@@ -160,6 +163,7 @@ function MessageWidget({
       )}
     >
       <p
+        style={tvFontSizeStyle(fontSize)}
         className={cn(
           "whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper",
           tvFontSizeClass("message", fontSize),
