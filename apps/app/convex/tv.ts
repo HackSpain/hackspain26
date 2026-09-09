@@ -1,9 +1,11 @@
 import { v } from "convex/values";
+import type { Infer } from "convex/values";
 import { query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { getSignupForUser } from "./lib/auth";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
+import { INSIGHTS_LAYOUT } from "./lib/tvLayouts";
 
 export const tvZoneValidator = v.union(
   v.literal("banner"),
@@ -12,7 +14,7 @@ export const tvZoneValidator = v.union(
   v.literal("ticker"),
 );
 
-const messageReturn = v.object({
+export const messageReturn = v.object({
   _id: v.id("tvMessages"),
   text: v.string(),
   zone: tvZoneValidator,
@@ -225,6 +227,9 @@ function parseFontSize(value: number | undefined): number | undefined {
   if (value === undefined) {
     return undefined;
   }
+  if (Number.isFinite(value) && value >= 8 && value <= 240) {
+    return value;
+  }
   const match = TV_FONT_SIZES.find((size) => Math.abs(size - value) < 0.001);
   if (!match) {
     throw new Error("Tamaño de fuente no válido");
@@ -232,7 +237,7 @@ function parseFontSize(value: number | undefined): number | undefined {
   return match;
 }
 
-const widgetReturn = v.object({
+export const widgetReturn = v.object({
   _id: v.string(),
   kind: tvWidgetKindValidator,
   x: v.number(),
@@ -806,6 +811,7 @@ export const adminListLayouts = adminQuery({
   },
 });
 
+
 export const adminSaveLayout = adminMutation({
   args: { name: v.string(), layoutId: v.optional(v.id("tvLayouts")) },
   returns: v.id("tvLayouts"),
@@ -833,12 +839,24 @@ export const adminSaveLayout = adminMutation({
 });
 
 export const adminLoadLayout = adminMutation({
-  args: { layoutId: v.id("tvLayouts") },
+  args: { layoutId: v.optional(v.id("tvLayouts")) },
   returns: v.array(widgetReturn),
   handler: async (ctx, args) => {
-    const layout = await ctx.db.get(args.layoutId);
+    const layout: { widgets: Omit<Infer<typeof widgetReturn>, "_id">[] } | null = args.layoutId ? await ctx.db.get(args.layoutId) : { widgets: INSIGHTS_LAYOUT };
     if (!layout) throw new Error("Estado no encontrado");
     const current = await ctx.db.query("tvWidgets").collect();
+    if (!args.layoutId && current.length > 0) {
+      const now = Date.now();
+      const hasLiveLayout = (await ctx.db.query("tvLayouts").collect()).some((saved) => saved.isLive);
+      await ctx.db.insert("tvLayouts", {
+        name: `Antes de restaurar · ${new Date(now).toISOString()}`,
+        widgets: current.sort(byZ).map(snapshotOf),
+        isLive: !hasLiveLayout,
+        createdBy: ctx.user._id,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
     for (const row of current) {
       await ctx.db.delete(row._id);
     }

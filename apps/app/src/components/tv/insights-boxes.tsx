@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ActivityChart, Sparkline, TeamScatter, UsageDonut } from "@/app/insights/charts";
-import { TechnologyStacks } from "@/app/insights/event-insights";
+import type { ReactNode } from "react";
+import { ActivityChart, Sparkline, TeamScatter } from "@/app/insights/charts";
+import { technologyRows } from "@/app/insights/event-data";
 import { ConsumptionChart } from "@/app/insights/evolution-charts";
 import { Panel } from "@/app/insights/panel";
 import {
@@ -36,6 +37,26 @@ function useInsightSnapshot() {
   }, [tick]);
 }
 
+function TvInsightPanel({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex h-full min-h-0 flex-col gap-[0.7cqw] border border-hs-paper/15 bg-hs-paper p-[1cqw] text-hs-ink">
+      <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-hs-ink/15 pb-[0.6cqw]">
+        <h2 className="font-bungee text-[1.05cqw] leading-tight">{title}</h2>
+        <p className="text-[0.7cqw] text-hs-brown">{subtitle}</p>
+      </header>
+      <div className="min-h-0 flex-1">{children}</div>
+    </section>
+  );
+}
+
 function MiniStat({
   label,
   value,
@@ -52,20 +73,22 @@ function MiniStat({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col justify-between border-[3px] border-hs-ink/20 bg-hs-paper p-3",
-        highlight && "border-hs-ink bg-hs-gold",
+        "flex min-w-0 flex-col justify-between border border-hs-ink/15 bg-hs-paper p-[1cqw]",
+        highlight && "bg-hs-gold",
       )}
     >
-      <p className="text-[10px] font-semibold tracking-wide text-hs-brown uppercase">
+      <p className="text-[0.85cqw] font-semibold tracking-wide text-hs-brown uppercase">
         {label}
       </p>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="font-sans text-2xl font-black tracking-[-0.06em] tabular-nums lg:text-3xl">
+      <div className="flex items-end justify-between gap-2">
+        <p className="font-sans text-[2.8cqw] leading-none font-black tracking-[-0.06em] tabular-nums">
           {value}
         </p>
         <Sparkline values={trend} color={highlight ? "#4a2c1f" : "#35858a"} />
       </div>
-      <p className="mt-2 text-[10px] text-hs-brown">{detail}</p>
+      <p className="border-t border-hs-ink/15 pt-[0.45cqw] text-[0.75cqw] text-hs-brown">
+        {detail}
+      </p>
     </div>
   );
 }
@@ -80,30 +103,30 @@ export function InsightsStatsBox() {
         ],
     );
   return (
-    <div className="grid h-full grid-cols-2 gap-2 lg:grid-cols-4">
+    <div className="grid h-full grid-cols-4 gap-[0.7cqw]">
       <MiniStat
-        label="Tokens"
+        label="Tokens procesados"
         value={compact(totals.tokens)}
-        detail={`${percent(totals.cachedTokens, totals.tokens)} caché`}
+        detail={`${percent(totals.cachedTokens, totals.tokens)} reutilizados desde caché`}
         trend={trend("tokens")}
         highlight
       />
       <MiniStat
-        label="Commits"
+        label="Commits publicados"
         value={number(totals.commits)}
-        detail={`${number(totals.commits / Math.max(teams.length, 1))} / equipo`}
+        detail={`${teams.length} equipos · ${number(totals.commits / Math.max(teams.length, 1))} commits por equipo`}
         trend={trend("commits")}
       />
       <MiniStat
-        label="Sesiones"
+        label="Sesiones de agentes"
         value={number(totals.sessions)}
-        detail={`${tools.filter((tool) => tool.sessions > 0).length} harnesses`}
+        detail={`${tools.filter((tool) => tool.sessions > 0).length} herramientas en uso`}
         trend={trend("sessions")}
       />
       <MiniStat
-        label="PRs"
+        label="Pull requests"
         value={number(totals.pullRequests)}
-        detail="Flujo del evento"
+        detail="Contribuciones durante el evento"
         trend={trend("pullRequests")}
       />
     </div>
@@ -113,13 +136,12 @@ export function InsightsStatsBox() {
 export function InsightsActivityBox() {
   const { samples } = useInsightSnapshot();
   return (
-    <Panel
-      title="Actividad del evento"
-      eyebrow="Intervalos de 30 minutos"
-      className="h-full overflow-hidden border-hs-ink/20 py-3"
+    <TvInsightPanel
+      title="El pulso del evento"
+      subtitle="Tokens · intervalos de 30 min"
     >
-      <ActivityChart samples={samples} metric="tokens" />
-    </Panel>
+      <ActivityChart samples={samples} metric="tokens" mode="tv" />
+    </TvInsightPanel>
   );
 }
 
@@ -128,28 +150,68 @@ export function InsightsHarnessBox() {
   const sorted = [...tools].sort((a, b) => b.tokens - a.tokens);
   const total = sorted.reduce((sum, row) => sum + row.tokens, 0);
   return (
-    <Panel
-      title="Uso de harnesses"
-      eyebrow="Cuota por herramienta"
-      className="h-full overflow-hidden border-hs-ink/20 py-3"
-    >
-      <div className="flex flex-col items-center gap-3">
-        <UsageDonut rows={sorted} metric="tokens" onExplore={() => undefined} />
-        <p className="font-bungee text-sm leading-snug">{sorted[0]?.name}</p>
-        <p className="text-xl font-bold tabular-nums">
-          {percent(sorted[0]?.tokens ?? 0, total)}
-        </p>
+    <TvInsightPanel title="Herramientas de IA" subtitle="Cuota de tokens">
+      <div className="grid h-full grid-cols-2 content-between gap-x-[2cqw] gap-y-[0.5cqw]">
+        {sorted.map((row) => (
+          <div key={row.id} className="space-y-[0.25cqw]">
+            <div className="flex items-center justify-between text-[0.85cqw]">
+              <span className="font-semibold">{row.name}</span>
+              <span className="tabular-nums text-hs-brown">
+                {percent(row.tokens, total)}
+              </span>
+            </div>
+            <div className="h-[0.25cqw] bg-hs-ink/5">
+              <div
+                className="h-full"
+                style={{
+                  width: `${total ? (row.tokens / total) * 100 : 0}%`,
+                  backgroundColor: row.color,
+                }}
+              />
+            </div>
+          </div>
+        ))}
       </div>
-    </Panel>
+    </TvInsightPanel>
   );
 }
 
 export function InsightsStacksBox() {
   const { teams } = useInsightSnapshot();
+  const rows = technologyRows(
+    teams.map((team) => team.id),
+    "all",
+  ).slice(0, 5);
   return (
-    <div className="h-full overflow-hidden">
-      <TechnologyStacks teams={teams} />
-    </div>
+    <TvInsightPanel
+      title="Con qué construimos"
+      subtitle="Tecnologías · equipos"
+    >
+      <div className="grid h-full grid-cols-2 content-between gap-x-[2cqw] gap-y-[0.5cqw]">
+        {rows.map((row) => (
+          <div key={row.name} className="space-y-[0.25cqw]">
+            <div className="flex items-center justify-between text-[0.85cqw]">
+              <span className="font-semibold">{row.name}</span>
+              <span className="tabular-nums text-hs-brown">
+                {row.teams.length} / {teams.length}
+              </span>
+            </div>
+            <div className="h-[0.3cqw] bg-hs-ink/5">
+              <div
+                className="h-full"
+                style={{
+                  width: `${(row.teams.length / Math.max(teams.length, 1)) * 100}%`,
+                  backgroundColor: row.color,
+                }}
+              />
+            </div>
+          </div>
+        ))}
+        <p className="self-center text-[0.65cqw] text-hs-brown">
+          Cada equipo puede usar varias tecnologías.
+        </p>
+      </div>
+    </TvInsightPanel>
   );
 }
 
@@ -219,4 +281,3 @@ export function InsightsEvolutionBox() {
     </Panel>
   );
 }
-

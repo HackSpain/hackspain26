@@ -14,6 +14,7 @@ const authTablesWithoutUsers = Object.fromEntries(
 ) as Omit<typeof authTables, "users">;
 
 export default defineSchema({
+  tvPlaybackControl: defineTable({ key: v.string(), reloadVersion: v.number() }).index("by_key", ["key"]),
   ...authTablesWithoutUsers,
   ambassadorApplications: defineTable({
     email: v.string(),

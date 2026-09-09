@@ -1,12 +1,12 @@
 "use client";
 
-import { useQuery } from "convex/react";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { api } from "@convex/_generated/api";
+import type { TvSnapshot } from "@convex/tvPlayback";
 import { TvStage } from "@/components/tv/stage";
+import { PlaybackBoundary, useTvPlayback } from "@/components/tv/playback";
 
 type Zone = "banner" | "left" | "right" | "ticker";
 
@@ -52,8 +52,7 @@ function Column({ title, items }: { title: string; items: TvMessage[] }) {
   );
 }
 
-function TvMessagesBoard({ showBackLink }: { showBackLink: boolean }) {
-  const messages = useQuery(api.tv.list);
+function TvMessagesBoard({ showBackLink, messages }: { showBackLink: boolean; messages: TvSnapshot["messages"] | undefined }) {
   const now = useClock();
 
   const banner = zoneMessages(messages, "banner");
@@ -162,8 +161,7 @@ function TvBackLink() {
   );
 }
 
-function TvComposition({ showBackLink }: { showBackLink: boolean }) {
-  const widgets = useQuery(api.tv.listWidgets);
+function TvComposition({ showBackLink, widgets }: { showBackLink: boolean; widgets: TvSnapshot["widgets"] | undefined }) {
 
   return (
     <div className="relative h-dvh overflow-hidden bg-hs-ink">
@@ -177,22 +175,26 @@ function TvComposition({ showBackLink }: { showBackLink: boolean }) {
   );
 }
 
-function TvScreen() {
+function TvScreen({ snapshot }: { snapshot: TvSnapshot | undefined }) {
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
   const fromApp = searchParams.get("from") === "app";
 
   if (view === "messages") {
-    return <TvMessagesBoard showBackLink={fromApp} />;
+    return <TvMessagesBoard showBackLink={fromApp} messages={snapshot?.messages} />;
   }
 
-  return <TvComposition showBackLink={fromApp} />;
+  return <TvComposition showBackLink={fromApp} widgets={snapshot?.widgets} />;
 }
 
 export default function TvPage() {
+  const { snapshot, connected, revision } = useTvPlayback();
   return (
+    <>
     <Suspense fallback={<div className="min-h-dvh bg-hs-ink" />}>
-      <TvScreen />
+      <PlaybackBoundary key={revision}><TvScreen snapshot={snapshot} /></PlaybackBoundary>
     </Suspense>
+    {!connected && <p role="status" className="fixed right-4 bottom-3 z-50 bg-hs-ink/90 px-3 py-1 text-sm text-hs-paper">Reconectando · mantenemos la última pantalla</p>}
+    </>
   );
 }

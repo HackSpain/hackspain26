@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import type { ReactNode } from 'react';
-import { TV_PALETTE, tvFontSizeClass, tvFontWeightClass, tvHasBackground } from '@/lib/tv';
+import { TV_PALETTE, tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from '@/lib/tv';
 import type { TvFontWeight, TvWidget } from '@/lib/tv';
 import { cn } from '@/lib/utils';
 import { SponsorTickerBox } from './sponsor-boxes';
@@ -26,6 +26,7 @@ function BannerPreview({
       )}
     >
       <p
+        style={tvFontSizeStyle(fontSize)}
         className={cn(
           'font-bungee leading-tight text-balance text-hs-gold uppercase',
           tvFontSizeClass('banner', fontSize),
@@ -58,6 +59,7 @@ function TickerPreview({
       )}
     >
       <p
+        style={tvFontSizeStyle(fontSize)}
         className={cn(
           'truncate font-bungee uppercase',
           fill ? 'text-hs-ink' : 'text-hs-gold',
@@ -75,6 +77,7 @@ function ClockPreview({ fontSize }: { fontSize?: number }) {
   return (
     <div className="flex h-full items-center justify-center bg-hs-ink px-3">
       <p
+        style={tvFontSizeStyle(fontSize)}
         className={cn(
           "font-bungee tabular-nums text-hs-paper",
           tvFontSizeClass("clock", fontSize),
@@ -106,6 +109,7 @@ function MessagePreview({
       )}
     >
       <p
+        style={tvFontSizeStyle(fontSize)}
         className={cn(
           'line-clamp-6 whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper',
           tvFontSizeClass('message', fontSize),

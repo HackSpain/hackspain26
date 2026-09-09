@@ -441,16 +441,17 @@ export function TvEditor() {
     }, "No se ha podido guardar el estado");
   }
 
-  async function applyLoad(id: Id<"tvLayouts">) {
-    const named = layouts?.find((layout) => layout._id === id)?.name ?? null;
+  async function applyLoad(id?: Id<"tvLayouts">) {
+    const named = id ? layouts?.find((layout) => layout._id === id)?.name ?? null : "Insights · Panorama";
     await run(async () => {
       const loaded = await loadLayout({ layoutId: id });
       setSavedPrint(fingerprint(loaded));
-      setCurrentLayoutId(id);
+      setCurrentLayoutId(id ?? null);
       setCurrentName(named);
       setAdding(false);
       setSelectedId(null);
       setDraft(null);
+      setEditingId(null);
     }, "No se ha podido cargar el estado");
   }
 
@@ -469,10 +470,51 @@ export function TvEditor() {
   return (
     <div className="space-y-4">
       <FormError message={formError} />
+      <div className="overflow-x-auto">
+      <div className="grid min-w-[960px] grid-cols-[16rem_minmax(0,1fr)] items-start gap-6">
+      <aside className="min-w-0" aria-label="Biblioteca de pantallas">
+      <TvLayoutsBar
+        layouts={layouts}
+        currentId={currentLayoutId}
+        currentName={editingName}
+        liveName={liveName}
+        dirty={dirty}
+        onSave={(name) => void handleSaveLayout(name)}
+        onLoad={handleLoad}
+        onSetLive={(id) =>
+          void run(() => setLive({ layoutId: id }), "No se ha podido poner en vivo")
+        }
+        onRemove={(id) => {
+          setConfirm({
+            title: "Borrar estado",
+            description: "¿Borrar este estado?",
+            action: () =>
+              void run(async () => {
+                await removeLayout({ layoutId: id });
+                if (id === currentLayoutId) {
+                  setCurrentLayoutId(null);
+                  setCurrentName(null);
+                }
+              }, "No se ha podido borrar el estado"),
+          });
+        }}
+      />
+      </aside>
+      <div className="min-w-0 space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <Button variant="outline" disabled={pending || !widgets} onClick={() => setConfirm({
+          title: "¿Restaurar el layout por defecto?",
+          description: "Guardaremos una copia del lienzo actual en tus estados. Se restaurará Insights · Panorama; los estados guardados y la emisión en vivo no cambian. Guarda y pon en vivo el resultado cuando esté listo.",
+          action: () => {
+            setPending(true);
+            void applyLoad().finally(() => setPending(false));
+          },
+        })}>Restaurar por defecto</Button>
+      </div>
       <div className="relative w-full">
         <div
           ref={canvasRef}
-          className="relative mr-0 aspect-video h-auto w-auto min-h-0 overflow-hidden border-[3px] border-hs-ink bg-hs-ink select-none lg:mr-[21rem]"
+          className="relative mr-0 aspect-video h-auto w-auto min-h-0 overflow-hidden border-[3px] border-hs-ink bg-hs-ink select-none xl:mr-[18rem]"
           onPointerDown={(event) => {
             if (!(event.target instanceof Element)) {return;}
             if (event.target.closest("[data-tv-widget]")) {return;}
@@ -604,7 +646,7 @@ export function TvEditor() {
             <Plus className="size-6" strokeWidth={2.5} aria-hidden />
           </button>
         </div>
-        <div className="max-lg:mt-4 lg:absolute lg:top-0 lg:right-0 lg:flex lg:h-full lg:w-80 lg:flex-col lg:overflow-hidden">
+        <div className="max-xl:mt-4 xl:absolute xl:top-0 xl:right-0 xl:flex xl:h-full xl:w-68 xl:flex-col xl:overflow-hidden">
           <TvInspector
             widget={selected}
             mode={inspectorMode}
@@ -621,36 +663,13 @@ export function TvEditor() {
           />
         </div>
       </div>
-      <TvLayoutsBar
-        layouts={layouts}
-        currentId={currentLayoutId}
-        currentName={editingName}
-        liveName={liveName}
-        dirty={dirty}
-        onSave={(name) => void handleSaveLayout(name)}
-        onLoad={handleLoad}
-        onSetLive={(id) =>
-          void run(() => setLive({ layoutId: id }), "No se ha podido poner en vivo")
-        }
-        onRemove={(id) => {
-          setConfirm({
-            title: "Borrar estado",
-            description: "¿Borrar este estado?",
-            action: () =>
-              void run(async () => {
-                await removeLayout({ layoutId: id });
-                if (id === currentLayoutId) {
-                  setCurrentLayoutId(null);
-                  setCurrentName(null);
-                }
-              }, "No se ha podido borrar el estado"),
-          });
-        }}
-      />
       <p className="text-sm font-medium text-hs-brown">
         Arrastra para mover · Esquina para tamaño · Flechas para ajustar · Doble
         clic para escribir
       </p>
+      </div>
+      </div>
+      </div>
 
       <Dialog
         open={confirm !== null}
