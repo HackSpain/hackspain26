@@ -1,3 +1,4 @@
+import carlosSerranoPhoto from "../assets/mentors/carlos-serrano.jpg";
 import davidGomesPhoto from "../assets/mentors/david-gomes.jpg";
 import guillermoGarciaCoboPhoto from "../assets/mentors/guillermo-garcia-cobo.jpg";
 import joanRodriguezPhoto from "../assets/mentors/joan-rodriguez.jpg";
@@ -9,13 +10,18 @@ import spacexLogo from "../assets/mentors/logos/spacex.svg";
 import maexAmentPhoto from "../assets/mentors/maex-ament.jpg";
 import markVillacampaPhoto from "../assets/mentors/mark-villacampa.jpg";
 import miguelCarranzaPhoto from "../assets/mentors/miguel-carranza.jpg";
-import { causaPrimaLogo, revenuecatLogo } from "../components/theme/assets";
+import mihuraPhoto from "../assets/mentors/mihura.jpg";
+import {
+  causaPrimaLogo,
+  embatLogo,
+  revenuecatLogo,
+} from "../components/theme/assets";
 
 export interface Mentor {
   /** Company the logo belongs to, used for the logo alt text. */
-  company: string;
+  company?: string;
   /** Logo silhouette shown on the card (rendered via CSS mask, ink tint). */
-  companyLogoSrc: string;
+  companyLogoSrc?: string;
   /** One or two short sentences on why this mentor is worth cornering. */
   description: string;
   /** Stable key, also used as the card anchor id. */
@@ -80,6 +86,16 @@ export const MENTORS: Mentor[] = [
     role: "Gigs · ex GM en Trade Republic y Shopify",
   },
   {
+    company: "Embat",
+    companyLogoSrc: embatLogo.src,
+    description:
+      "Más de una década en JP Morgan antes de llevar la tesorería de cientos de empresas a tiempo real.",
+    id: "carlos-serrano",
+    name: "Carlos Serrano",
+    photoSrc: carlosSerranoPhoto.src,
+    role: "Cofundador de Embat",
+  },
+  {
     company: "SpaceX",
     companyLogoSrc: spacexLogo.src,
     description: "Ingeniero en SpaceX; antes en Cursor y Neon.",
@@ -107,5 +123,12 @@ export const MENTORS: Mentor[] = [
     name: "Mark Villacampa",
     photoSrc: markVillacampaPhoto.src,
     role: "Software Engineer en RevenueCat",
+  },
+  {
+    description: "Interiorista y creador del mejor lector de PDFs del mundo.",
+    id: "mihura",
+    name: "Mihura",
+    photoSrc: mihuraPhoto.src,
+    role: "@XMihura",
   },
 ];

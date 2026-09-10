@@ -44,14 +44,16 @@ function MentorCard({ mentor }: { mentor: Mentor }) {
         <p className="mt-2 mb-3 font-sans font-semibold text-[clamp(0.75rem,1.8vw,0.9rem)] text-hs-ink leading-snug">
           {mentor.description}
         </p>
-        <span
-          aria-label={mentor.company}
-          className={`mt-auto block w-full max-w-[7.5rem] bg-hs-ink/70 ${
-            mentor.logoHeight ?? "h-[clamp(0.9rem,2vw,1.15rem)]"
-          }`}
-          role="img"
-          style={logoMaskStyle(mentor.companyLogoSrc)}
-        />
+        {mentor.company && mentor.companyLogoSrc ? (
+          <span
+            aria-label={mentor.company}
+            className={`mt-auto block w-full max-w-[7.5rem] bg-hs-ink/70 ${
+              mentor.logoHeight ?? "h-[clamp(0.9rem,2vw,1.15rem)]"
+            }`}
+            role="img"
+            style={logoMaskStyle(mentor.companyLogoSrc)}
+          />
+        ) : null}
       </div>
     </article>
   );
