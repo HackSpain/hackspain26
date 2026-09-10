@@ -89,7 +89,7 @@ export const MENTORS: Mentor[] = [
     company: "Embat",
     companyLogoSrc: embatLogo.src,
     description:
-      "Más de una década en JP Morgan antes de llevar la tesorería de cientos de empresas a tiempo real.",
+      "Ex JP Morgan; ahora lleva la tesorería de cientos de empresas a tiempo real con Embat.",
     id: "carlos-serrano",
     name: "Carlos Serrano",
     photoSrc: carlosSerranoPhoto.src,
