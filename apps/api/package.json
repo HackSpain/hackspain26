@@ -1,0 +1,31 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/dev.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm run typecheck && pnpm run test",
+    "test": "tsx --test test/*.test.mjs",
+    "lint": "oxlint -c oxlint.config.mjs . && ultracite check",
+    "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.12",
+    "@types/node": "^20",
+    "oxlint": "1.81.0",
+    "typescript": "^5",
+    "tsx": "^4.23.13"
+  },
+  "dependencies": {
+    "@elysia/node": "^1.4.6",
+    "@sinclair/typebox": "^0.34.52",
+    "@vercel/functions": "^3.9.5",
+    "elysia": "^1.4.30",
+    "openapi-types": "^12.1.3"
+  }
+}

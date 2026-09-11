@@ -7,6 +7,7 @@ Monorepo for [HackSpain](https://hackspain.com) (Hack Spain 2026, Madrid).
 | `apps/web` | Astro 6, React islands, Tailwind v4, Neon/Drizzle | [localhost:4321](http://localhost:4321) |
 | `apps/app` | Next.js, Convex, Convex Auth, shadcn | [localhost:3000](http://localhost:3000) |
 | `apps/cli` | Bun, Commander, clack; `hackspain` binary for participants | `pnpm dev:cli -- --help` |
+| `apps/api` | Elysia on Node.js / Vercel, provider proxy + RawTree | [api.hackspain.com](https://api.hackspain.com) |
 
 Package manager is pnpm 11. The CLI still requires Bun to run its tests and compile standalone binaries. Node.js ≥ 22.12.
 
@@ -28,11 +29,13 @@ The dashboard needs a Convex development deployment (`pnpm dev:convex` / `pnpm -
 | :------ | :---------- |
 | `pnpm dev` / `pnpm dev:web` | Landing only |
 | `pnpm dev:app` | Dashboard Next.js server |
+| `pnpm dev:api` | Elysia provider proxy on localhost:3001 |
 | `pnpm dev:convex` | Convex functions + codegen (development only) |
 | `pnpm dev:all` | Landing + dashboard + Convex in one terminal |
 | `pnpm build` / `pnpm build:app` | Production builds |
 | `pnpm preview` | Preview the landing build |
 | `pnpm check` | Astro + TypeScript checks |
+| `pnpm check:api` | Typecheck and test the provider proxy |
 | `pnpm lint` / `pnpm fix` | Check or fix the monorepo with Oxlint and Ultracite |
 | `pnpm migrate:convex` | Import Neon signups/ambassadors into Convex |
 | `pnpm dev:cli -- <args>` / `pnpm test:cli` / `pnpm build:cli` | Run, test, or compile the `hackspain` CLI (participants install it with `curl -fsSL https://hackspain.com/install.sh \| sh`) |
