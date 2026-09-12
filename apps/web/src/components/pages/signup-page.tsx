@@ -28,7 +28,6 @@ import type {
   OccupationStatusId,
 } from "../../lib/signup-validation";
 import {
-  cleanProfilePasteText,
   DIETARY_RESTRICTION_OPTIONS,
   HEARD_FROM_OPTIONS,
   HEARD_FROM_SOURCE_IDS,
@@ -55,11 +54,7 @@ const MAX_TIMEOUT_MS = 2_147_483_647;
 const UNICODE_LEFT_ARROW_PREFIX_RE = /^\u2190\s*/;
 const ASCII_LEFT_ARROW_PREFIX_RE = /^←\s*/;
 const LINE_BREAK_SPLIT_RE = /\r?\n/;
-const EMAIL_LOOKUP_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const EMAIL_PREFILL_DEBOUNCE_MS = 800;
-
 type FlowStatus = "idle" | "success" | "error" | "alreadyApplied" | "closed";
-type PrefillStatus = "idle" | "loading" | "loaded" | "error";
 
 type HackSpainCheckboxProps = Omit<ComponentPropsWithRef<"input">, "type"> & {
   size?: "default" | "large";
@@ -117,14 +112,6 @@ function readAppliedFlag(): boolean {
 function setAppliedFlag() {
   try {
     localStorage.setItem(STORAGE_APPLIED_KEY, "1");
-  } catch {
-    /* ignore */
-  }
-}
-
-function clearAppliedFlag() {
-  try {
-    localStorage.removeItem(STORAGE_APPLIED_KEY);
   } catch {
     /* ignore */
   }
@@ -257,28 +244,11 @@ function clearStoredFields() {
   }
 }
 
-function invitationTokenFromLocation(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
-  const hashParams = new URLSearchParams(window.location.hash.slice(1));
-  return hashParams.get("token")?.trim() ?? "";
-}
-
 function signupLateAccessKeyFromLocation(): string {
   if (typeof window === "undefined") {
     return "";
   }
   return signupLateAccessKeyFromSearch(window.location.search);
-}
-
-interface SignupPrefillFields {
-  email: string;
-  fullName: string;
-  githubUrl: string;
-  linkedinUrl: string;
-  webUrl: string;
-  xUrl: string;
 }
 
 const X_PREFIX = "x.com/";
@@ -346,8 +316,6 @@ const t = {
   legalSubmitNoticeBefore: "Al enviar este formulario aceptas nuestra ",
   linkedin: "LinkedIn",
   occupationStatus: "¿Estudias / trabajas?",
-  prefillLoaded:
-    "Hemos completado los datos de tu pre-inscripción. Revisa la información y termina la solicitud.",
   signupsClosed:
     "Las inscripciones para HackSpain 2026 están cerradas. Gracias por el interés — síguenos en redes para enterarte de la próxima edición.",
   signupsClosedSubtitle:
@@ -389,14 +357,12 @@ export function SignupPage() {
     register,
     handleSubmit,
     control,
-    getValues,
     setValue,
     watch,
     reset,
     formState,
   } = useForm<StoredFields>({ defaultValues: { ...EMPTY_FIELDS } });
   const { isSubmitting } = formState;
-  const email = watch("email");
   const heardFromSources = watch("heardFromSources");
   const occupationStatuses = watch("occupationStatuses");
   const wantsAmbassador = watch("wantsAmbassador");
@@ -410,9 +376,6 @@ export function SignupPage() {
   const ambassadorSectionRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<FlowStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [invitationToken, setInvitationToken] = useState("");
-  const [prefillStatus, setPrefillStatus] = useState<PrefillStatus>("idle");
-  const [emailPrefillLoaded, setEmailPrefillLoaded] = useState(false);
   const [deadlinePassed, setDeadlinePassed] = useState(() =>
     areSignupsClosed()
   );
@@ -441,138 +404,11 @@ export function SignupPage() {
   }, [deadlinePassed]);
 
   useLayoutEffect(() => {
-    if (!invitationTokenFromLocation() && readAppliedFlag()) {
+    if (readAppliedFlag()) {
       setStatus("alreadyApplied");
       return;
     }
     reset(readStoredFields());
-  }, [reset]);
-
-  useEffect(() => {
-    if (
-      invitationToken ||
-      emailPrefillLoaded ||
-      invitationTokenFromLocation()
-    ) {
-      return;
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    if (
-      normalizedEmail.length > 320 ||
-      !EMAIL_LOOKUP_RE.test(normalizedEmail)
-    ) {
-      setPrefillStatus("idle");
-      return;
-    }
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setPrefillStatus("loading");
-      try {
-        const response = await fetch("/api/signup-prefill", {
-          body: JSON.stringify({ email: normalizedEmail }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-          signal: controller.signal,
-        });
-        const responseBody = (await response.json().catch(() => ({}))) as {
-          data?: SignupPrefillFields | null;
-        };
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (!(response.ok && responseBody.data)) {
-          setPrefillStatus("idle");
-          return;
-        }
-
-        const prefill = responseBody.data;
-        reset({
-          ...getValues(),
-          email: prefill.email,
-          fullName: prefill.fullName,
-          githubUrl: cleanProfilePasteText(prefill.githubUrl, "github"),
-          linkedinUrl: cleanProfilePasteText(prefill.linkedinUrl, "linkedin"),
-          webUrl: prefill.webUrl,
-          xUrl: cleanProfilePasteText(prefill.xUrl, "x"),
-        });
-        setEmailPrefillLoaded(true);
-        setPrefillStatus("loaded");
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setPrefillStatus("idle");
-          captureException(error);
-        }
-      }
-    }, EMAIL_PREFILL_DEBOUNCE_MS);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [email, emailPrefillLoaded, getValues, invitationToken, reset]);
-
-  useEffect(() => {
-    const token = invitationTokenFromLocation();
-    if (!token) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const loadPrefill = async (): Promise<void> => {
-      setPrefillStatus("loading");
-      try {
-        const response = await fetch("/api/signup-prefill", {
-          body: JSON.stringify({ token }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-          signal: controller.signal,
-        });
-        const responseBody = (await response.json().catch(() => ({}))) as {
-          data?: SignupPrefillFields;
-          error?: string;
-        };
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (response.status === 410) {
-          setStatus("alreadyApplied");
-          setPrefillStatus("idle");
-          return;
-        }
-        if (!(response.ok && responseBody.data)) {
-          setPrefillStatus("error");
-          return;
-        }
-
-        const prefill = responseBody.data;
-        reset({
-          ...readStoredFields(),
-          email: prefill.email,
-          fullName: prefill.fullName,
-          githubUrl: cleanProfilePasteText(prefill.githubUrl, "github"),
-          linkedinUrl: cleanProfilePasteText(prefill.linkedinUrl, "linkedin"),
-          webUrl: prefill.webUrl,
-          xUrl: cleanProfilePasteText(prefill.xUrl, "x"),
-        });
-        setInvitationToken(token);
-        setPrefillStatus("loaded");
-        clearAppliedFlag();
-
-        const cleanUrl = new URL(window.location.href);
-        cleanUrl.hash = "";
-        window.history.replaceState(null, "", cleanUrl);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setPrefillStatus("error");
-          captureException(error);
-        }
-      }
-    };
-
-    loadPrefill();
-    return () => controller.abort();
   }, [reset]);
 
   const watched = useWatch({ control });
@@ -659,9 +495,6 @@ export function SignupPage() {
     const referralCode = getStoredReferralCode();
     if (referralCode) {
       Object.assign(payload, { referralCode });
-    }
-    if (invitationToken) {
-      Object.assign(payload, { invitationToken });
     }
     if (hasValidSignupAccessKey(lateAccessKey)) {
       Object.assign(payload, { signupAccessKey: lateAccessKey });
@@ -938,20 +771,6 @@ export function SignupPage() {
                 data-sentry-mask
                 onSubmit={handleSubmit(onSubmitForm)}
               >
-                {prefillStatus === "loaded" || prefillStatus === "error" ? (
-                  <div
-                    className={`border-hs-ink border-b-[3px] px-4 py-3 font-bold font-sans text-sm sm:text-base ${
-                      prefillStatus === "error"
-                        ? "bg-hs-red/20"
-                        : "bg-hs-teal/20"
-                    }`}
-                    role={prefillStatus === "error" ? "alert" : "status"}
-                  >
-                    {prefillStatus === "loaded"
-                      ? t.prefillLoaded
-                      : t.errorInvitation}
-                  </div>
-                ) : null}
                 <div className="grid gap-0 sm:grid-cols-2">
                   <FormField
                     className={cellLeftSm}
@@ -973,7 +792,6 @@ export function SignupPage() {
                   >
                     <Input
                       autoComplete="email"
-                      readOnly={prefillStatus === "loaded"}
                       required
                       type="email"
                       {...register("email")}
