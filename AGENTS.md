@@ -52,7 +52,7 @@ Interactive pages are Astro shells that mount one React island with `client:load
 | `/privacy` | Privacy | yes |
 | `/asistencia` | Mentor/sponsor attendance | no |
 | `/confirmacion`, `/comparte`, `/cancelacion` | Place confirmation, badge share, cancellation | no |
-| `/api/signup`, `/api/signup-prefill`, `/api/mentor-sponsor-signup` | JSON POST | no |
+| `/api/signup`, `/api/mentor-sponsor-signup` | JSON POST | no |
 | `/llms.txt` | Machine-readable site summary | yes |
 
 Landing section slugs live in `src/data/section-routes.ts`. Adding a section means updating that list, mosaic cells, `landing-meta.ts` SEO arrays, and a root alias page.
