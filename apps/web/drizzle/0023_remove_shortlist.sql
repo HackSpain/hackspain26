@@ -1,0 +1,1 @@
+DROP TABLE "shortlist_reviews" CASCADE;

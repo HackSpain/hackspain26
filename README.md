@@ -18,7 +18,7 @@ cp apps/web/.env.example apps/web/.env
 cp apps/app/.env.example apps/app/.env.local
 ```
 
-Landing static pages run without a database. Signup and ambassador APIs need `DATABASE_URL` (Neon PostgreSQL). Optional `DISCORD_WEBHOOK_URL` notifies Discord on new submissions. `SHORTLIST_PASSWORD` gates the internal `/shortlist` review page; without it the page renders no data.
+Landing static pages run without a database. Signup and ambassador APIs need `DATABASE_URL` (Neon PostgreSQL). Optional `DISCORD_WEBHOOK_URL` notifies Discord on new submissions.
 
 The dashboard needs a Convex development deployment (`pnpm dev:convex` / `pnpm --filter app exec convex dev`). Do not use `pnpm --filter app exec convex deploy` unless you are shipping production. Dashboard env lives in `apps/app/.env.example`.
 
@@ -72,7 +72,7 @@ pnpm dlx @convex-dev/auth
 
 ### Confirming details
 
-Accepted hackers confirm phone (E.164 + code), dietary restrictions, travel origin, and attend/cancel. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` on the Convex deployment to deliver codes via SMS (partial config fails loudly). Without Twilio, the phone code is only logged and returned as a stub when the Convex env `ALLOW_PHONE_STUB=true`; otherwise the request fails with "SMS is not configured". The number is not auto-confirmed. Import marks Neon `approval_status = confirmed` (and shortlist `finalSelected`) as accepted. Everyone else stays unaccepted until CRM.
+Accepted hackers confirm phone (E.164 + code), dietary restrictions, travel origin, and attend/cancel. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` on the Convex deployment to deliver codes via SMS (partial config fails loudly). Without Twilio, the phone code is only logged and returned as a stub when the Convex env `ALLOW_PHONE_STUB=true`; otherwise the request fails with "SMS is not configured". The number is not auto-confirmed. Import marks Neon `approval_status = confirmed` as accepted. Everyone else stays unaccepted until CRM.
 
 ## Migrating Neon to Convex
 
@@ -80,7 +80,7 @@ Accepted hackers confirm phone (E.164 + code), dietary restrictions, travel orig
 
 It loads `DATABASE_URL` from `apps/web/.env`, and `NEXT_PUBLIC_CONVEX_URL` plus `MIGRATION_SECRET` from `apps/app/.env.local`. Shell exports win if already set. `MIGRATION_SECRET` must match the Convex deployment env.
 
-The script upserts `hackathon_signups` and `ambassador_applications` into Convex. Emails with `finalSelected` in the landing shortlist JSON are marked accepted. Re-runs do not clear an admin’s accepted flag. It does not copy the rest of the shortlist into Convex.
+The script upserts `hackathon_signups` and `ambassador_applications` into Convex. Rows with `approval_status = confirmed` are marked accepted. Re-runs do not clear an admin’s accepted flag.
 
 ## Design
 
@@ -88,8 +88,6 @@ Landing and dashboard share these tokens:
 
 - paper `#f4ecd8`, sand `#e8dcc4`, gold `#eab619`, orange `#d96b2a`, red `#cc291f`, brown `#4a2c1f`, slate `#8fb8d1`, teal `#35858a`, navy `#1e3958`, ink `#2a170f`
 - DM Sans (body), Bungee (display / buttons)
-
-`/shortlist` stays on the landing app only (noindex, PII). It is server-rendered and gated by `SHORTLIST_PASSWORD`. It is not part of the dashboard.
 
 ## Deploy
 
@@ -125,4 +123,4 @@ Do **not** set `ALLOW_PHONE_STUB` or `ALLOW_EMAIL_OTP_STUB` on production. Do **
 
 `convex deploy --cmd` injects `NEXT_PUBLIC_CONVEX_URL` for the Next.js build. You do not need to paste the prod Convex URL into Vercel unless you skip the deploy-key flow.
 
-Landing Vercel env stays as today (`DATABASE_URL`, `RESEND_*`, `SHORTLIST_PASSWORD`, `SENTRY_*`, …). Those are not Convex.
+Landing Vercel env stays as today (`DATABASE_URL`, `RESEND_*`, `SENTRY_*`, …). Those are not Convex.

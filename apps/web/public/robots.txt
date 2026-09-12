@@ -1,7 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /shortlist
-
 # AI / LLM discovery (AEO): https://hackspain.com/llms.txt
 
 Sitemap: https://hackspain.com/sitemap.xml

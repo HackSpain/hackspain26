@@ -1,0 +1,460 @@
+{
+  "id": "3a2d8950-545b-4cb6-bdca-2b14e14cb04c",
+  "prevId": "2b948479-04f3-4dbe-b0d8-40ad15842260",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.hackathon_pre_signups": {
+      "name": "hackathon_pre_signups",
+      "schema": "",
+      "columns": {
+        "cancellation_token": {
+          "name": "cancellation_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "github_url": {
+          "name": "github_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "linkedin_url": {
+          "name": "linkedin_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referral_code": {
+          "name": "referral_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "signup_completed_at": {
+          "name": "signup_completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "signup_token": {
+          "name": "signup_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "web_url": {
+          "name": "web_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "x_url": {
+          "name": "x_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "hackathon_pre_signups_cancellation_token_unique": {
+          "name": "hackathon_pre_signups_cancellation_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "cancellation_token"
+          ]
+        },
+        "hackathon_pre_signups_email_unique": {
+          "name": "hackathon_pre_signups_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        },
+        "hackathon_pre_signups_signup_token_unique": {
+          "name": "hackathon_pre_signups_signup_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "signup_token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.hackathon_signups": {
+      "name": "hackathon_signups",
+      "schema": "",
+      "columns": {
+        "achievements": {
+          "name": "achievements",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ambassador_motivation": {
+          "name": "ambassador_motivation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_status": {
+          "name": "approval_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "badge_photo": {
+          "name": "badge_photo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "badge_photo_updated_at": {
+          "name": "badge_photo_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "came_from_pre_signup": {
+          "name": "came_from_pre_signup",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "cancellation_email_sent_at": {
+          "name": "cancellation_email_sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "dietary_consent_at": {
+          "name": "dietary_consent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dietary_details": {
+          "name": "dietary_details",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dietary_restrictions": {
+          "name": "dietary_restrictions",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY[]::text[]"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "employer": {
+          "name": "employer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "free_time": {
+          "name": "free_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "github_url": {
+          "name": "github_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "heard_from_sources": {
+          "name": "heard_from_sources",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY[]::text[]"
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "linkedin_url": {
+          "name": "linkedin_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "management_token": {
+          "name": "management_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "occupation_statuses": {
+          "name": "occupation_statuses",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY[]::text[]"
+        },
+        "referral_code": {
+          "name": "referral_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "study_institution": {
+          "name": "study_institution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wants_ambassador": {
+          "name": "wants_ambassador",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "web_url": {
+          "name": "web_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "x_url": {
+          "name": "x_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "hackathon_signups_email_unique": {
+          "name": "hackathon_signups_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        },
+        "hackathon_signups_management_token_unique": {
+          "name": "hackathon_signups_management_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "management_token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "hackathon_signups_approval_status_check": {
+          "name": "hackathon_signups_approval_status_check",
+          "value": "\"hackathon_signups\".\"approval_status\" IN ('pending', 'rejected', 'accepted', 'confirmed', 'cancelled', 'waitlist')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.mentor_sponsor_signups": {
+      "name": "mentor_sponsor_signups",
+      "schema": "",
+      "columns": {
+        "attendance_slots": {
+          "name": "attendance_slots",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY[]::text[]"
+        },
+        "company": {
+          "name": "company",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "dietary_consent_at": {
+          "name": "dietary_consent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dietary_details": {
+          "name": "dietary_details",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dietary_restrictions": {
+          "name": "dietary_restrictions",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY[]::text[]"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "management_token": {
+          "name": "management_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "mentor_sponsor_signups_email_unique": {
+          "name": "mentor_sponsor_signups_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        },
+        "mentor_sponsor_signups_management_token_unique": {
+          "name": "mentor_sponsor_signups_management_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "management_token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "mentor_sponsor_signups_role_check": {
+          "name": "mentor_sponsor_signups_role_check",
+          "value": "\"mentor_sponsor_signups\".\"role\" IS NULL OR \"mentor_sponsor_signups\".\"role\" IN ('mentor', 'sponsor')"
+        },
+        "mentor_sponsor_signups_attendance_slots_check": {
+          "name": "mentor_sponsor_signups_attendance_slots_check",
+          "value": "\"mentor_sponsor_signups\".\"attendance_slots\" <@ ARRAY['fri_morning', 'fri_lunch', 'fri_afternoon', 'fri_dinner', 'sat_morning', 'sat_lunch', 'sat_afternoon', 'sat_dinner', 'sun_morning', 'sun_lunch', 'sun_afternoon', 'sun_dinner']::text[]"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -25,8 +25,8 @@ pnpm-debug.log*
 .env.production
 .env*.local
 
-# Internal shortlist snapshot (PII). Latest shortlist loads from Neon.
-apps/web/src/data/shortlistApplicants.json
+# Local exports can contain applicant PII and must never be committed.
+/outputs/
 
 # macOS-specific files
 .DS_Store

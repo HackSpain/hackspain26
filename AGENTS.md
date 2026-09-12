@@ -35,7 +35,7 @@ apps/web/src/
 ├── data/                # SEO, section routes, llms.txt, mentors/judges
 ├── db/                  # Drizzle client + schema (Neon)
 ├── layouts/layout.astro # SEO + JSON-LD
-├── lib/                 # Zod validation, email, badge, shortlist
+├── lib/                 # Zod validation, email, badge
 ├── middleware.ts        # AEO: Accept text/markdown on landing URLs → llms.txt
 └── pages/               # routes + /api/*
 ```
@@ -52,13 +52,10 @@ Interactive pages are Astro shells that mount one React island with `client:load
 | `/privacy` | Privacy | yes |
 | `/asistencia` | Mentor/sponsor attendance | no |
 | `/confirmacion`, `/comparte`, `/cancelacion` | Place confirmation, badge share, cancellation | no |
-| `/shortlist` | Internal applicant review. Password-gated (`SHORTLIST_PASSWORD`). | no |
 | `/api/signup`, `/api/signup-prefill`, `/api/mentor-sponsor-signup` | JSON POST | no |
 | `/llms.txt` | Machine-readable site summary | yes |
 
 Landing section slugs live in `src/data/section-routes.ts`. Adding a section means updating that list, mosaic cells, `landing-meta.ts` SEO arrays, and a root alias page.
-
-`/shortlist` is internal to the landing app. It is server-rendered (`prerender = false`) and gated by the `SHORTLIST_PASSWORD` server env via an httpOnly cookie. Applicants load from Neon on the server (`shortlist-server.ts`) and are passed as props — never import applicant JSON in the client. `/api/shortlist` uses the same cookie. Keep `noindex, nofollow`, `Disallow: /shortlist` in `apps/web/public/robots.txt`, and do not add it to the sitemap, public nav, or the dashboard. Do not log or dump applicant PII.
 
 ### SEO
 
@@ -84,7 +81,7 @@ Validation is Zod in `src/lib/signup-validation.ts` and `src/lib/mentor-sponsor-
 
 `POST` handlers (`prerender = false`) check BotID, require `application/json`, reject duplicate emails (409), write through `getDb()`, and send transactional mail through Resend when configured.
 
-Tables in `src/db/schema.ts` include `hackathon_signups`, `hackathon_pre_signups`, `mentor_sponsor_signups`, `shortlist_reviews`. Change schema with Drizzle (`pnpm db:generate` then migrate). Do not hand-edit applied SQL as the source of truth.
+Tables in `src/db/schema.ts` include `hackathon_signups`, `hackathon_pre_signups`, and `mentor_sponsor_signups`. Change schema with Drizzle (`pnpm db:generate` then migrate). Do not hand-edit applied SQL as the source of truth.
 
 New dashboard data lives in Convex, not Neon. Keep using Neon for the public signup API until that is migrated separately.
 
@@ -104,7 +101,7 @@ GitHub linking is a custom OAuth flow, not a Convex Auth provider (Convex Auth o
 
 Profiles store social links as `urls: { kind, url }[]`. `githubUsername` / `twitterHandle` stay denormalized for team lookup. One submission can enter multiple challenges via `challengeIds` and records partner perks in `perkIds`. Submit stays closed until an admin opens the window. Drafts can be saved before that.
 
-`pnpm migrate:convex` is idempotent on email. It uses `apps/web/.env` for Neon. `approval_status = confirmed` and shortlist `finalSelected` emails are marked accepted. Re-runs do not un-accept someone an admin already marked. Waitlist / pending / rejected stay unaccepted. The rest of the shortlist JSON is not imported.
+`pnpm migrate:convex` is idempotent on email. It uses `apps/web/.env` for Neon. `approval_status = confirmed` emails are marked accepted. Re-runs do not un-accept someone an admin already marked. Waitlist / pending / rejected stay unaccepted.
 
 ### Dashboard routes
 

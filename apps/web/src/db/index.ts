@@ -4,13 +4,11 @@ import { envFromRuntime } from "../lib/runtime-env";
 import {
   hackathonPreSignups,
   hackathonSignups,
-  shortlistReviews,
 } from "./schema";
 
 const schema = {
   hackathonPreSignups,
   hackathonSignups,
-  shortlistReviews,
 };
 
 function requireDatabaseUrl(): string {

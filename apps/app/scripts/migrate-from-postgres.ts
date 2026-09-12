@@ -74,28 +74,6 @@ function loadEnvFile(path: string, overrideKeys?: Set<string>): void {
 loadEnvFile(resolve(repoRoot, "apps/app/.env.local"));
 loadEnvFile(resolve(repoRoot, "apps/web/.env"), new Set(["DATABASE_URL"]));
 
-function loadAcceptedEmails(): Set<string> {
-  const path = resolve(repoRoot, "apps/web/src/data/shortlistApplicants.json");
-  if (!existsSync(path)) {
-    return new Set();
-  }
-  const rows = JSON.parse(readFileSync(path, "utf8")) as {
-    email?: string;
-    finalSelected?: boolean;
-  }[];
-  const emails = new Set<string>();
-  for (const row of rows) {
-    if (!row.finalSelected) {
-      continue;
-    }
-    const email = row.email?.trim().toLowerCase();
-    if (email) {
-      emails.add(email);
-    }
-  }
-  return emails;
-}
-
 function toMillis(value: Date | string): number {
   const date = value instanceof Date ? value : new Date(value);
   const ms = date.getTime();
@@ -161,7 +139,6 @@ async function main(): Promise<void> {
 
   const sql = neon(databaseUrl);
   const convex = new ConvexHttpClient(convexUrl);
-  const acceptedEmails = loadAcceptedEmails();
 
   // Live Neon and a fresh database from the repo's Drizzle schema disagree on
   // optional columns, so probe what actually exists before selecting.
@@ -222,8 +199,7 @@ async function main(): Promise<void> {
     : [];
 
   const rowAccepted = (row: SignupRow): boolean =>
-    (hasApprovalStatus && row.approval_status === "confirmed") ||
-    acceptedEmails.has(row.email.trim().toLowerCase());
+    hasApprovalStatus && row.approval_status === "confirmed";
 
   let signupInserted = 0;
   let signupUpdated = 0;
@@ -273,7 +249,7 @@ async function main(): Promise<void> {
 
   const acceptedInBatch = signups.filter(rowAccepted).length;
   console.log(
-    `Signups: ${signups.length} read, ${signupInserted} inserted, ${signupUpdated} updated, ${acceptedInBatch} marked accepted (Neon confirmed + shortlist)`
+    `Signups: ${signups.length} read, ${signupInserted} inserted, ${signupUpdated} updated, ${acceptedInBatch} marked accepted (Neon confirmed)`
   );
   if (ambassadorTables.length === 0) {
     console.log("Ambassador applications: table not in Neon, skipped");
