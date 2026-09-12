@@ -3,11 +3,9 @@
 @import "shadcn/tailwind.css";
 
 @theme inline {
-  --font-sans:
-    var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-bungee:
-    var(--font-bungee-next), "Bungee", ui-sans-serif, system-ui, sans-serif;
+  --font-bungee: var(--font-bungee-next), "Bungee", ui-sans-serif, system-ui, sans-serif;
 
   --color-hs-paper: #f4ecd8;
   --color-hs-sand: #e8dcc4;
@@ -160,6 +158,66 @@
 }
 .hs-stagger > *:nth-child(n + 6) {
   animation-delay: 150ms;
+}
+
+/* /tv bottom ticker: content is duplicated, so -50% loops seamlessly. */
+@keyframes tv-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.tv-ticker {
+  animation: tv-ticker 30s linear infinite;
+}
+
+@keyframes tv-stream-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tv-stream-row {
+  animation: tv-stream-in 280ms ease-out both;
+}
+
+@keyframes tv-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.tv-pulse {
+  animation: tv-pulse 1.2s ease-in-out infinite;
+}
+
+.tv-odometer-digit {
+  transition-property: transform;
+  transition-duration: 280ms;
+  transition-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-ticker,
+  .tv-stream-row,
+  .tv-pulse {
+    animation: none;
+  }
+  .tv-odometer-digit {
+    transition-duration: 0ms;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {

@@ -7,7 +7,9 @@ import type { Ui } from "../lib/output";
 import { formatWhen, uiFor } from "../lib/output";
 import type { Team } from "../lib/participant";
 import { openParticipant } from "../lib/participant";
-import { confirmOrFlag, pickOne } from "../lib/prompts";
+import { ensureGithubLinked } from "../lib/github-link";
+import { confirmOrFlag, pickOne, textOrFlag } from "../lib/prompts";
+import { detectAndConfirmStack } from "../lib/stack-flow";
 import { c, cmd, highlight } from "../lib/style";
 
 function collect(value: string, previous: string[]): string[] {
@@ -28,12 +30,17 @@ function renderTeam(ui: Ui, team: Team, myId: string): void {
       "Team",
       `${highlight(team.name)} ${c.dim(`· since ${formatWhen(team.createdAt)}`)}`,
     ],
-    ["Repo", team.repoUrl ?? c.dim("not set · hackspain team repo <url>")],
+    [
+      "Repo",
+      team.repoUrls.length
+        ? team.repoUrls.join(", ")
+        : (team.repoUrl ?? c.dim("not set · hackspain team repo <url>")),
+    ],
     [
       "Stack",
       team.techStack.length
         ? team.techStack.join(", ")
-        : c.dim("not set · hackspain stack set <tech…>"),
+        : c.dim("not set · hackspain team repo · detects from the repo"),
     ],
   ]);
   ui.table(
@@ -147,7 +154,7 @@ export function registerTeam(program: Command): void {
         ui.next([
           ["hackspain team repo <url>", "point organisers at your GitHub repo"],
           ["hackspain track list", "choose the tracks you are entering"],
-          ["hackspain stack set <tech…>", "brag about your stack"],
+          ["hackspain stack detect", "read the stack from the repo"],
         ]);
         ui.outro("Now go find your teammates.");
       }
@@ -253,38 +260,79 @@ export function registerTeam(program: Command): void {
     });
 
   team
-    .command("repo [url]")
+    .command("repo [urls...]")
     .description(
-      "Show or set the team's GitHub repository (organisers pull activity from it)"
+      "Show or set the team's GitHub repo(s); we detect the stack from them"
     )
-    .option("--clear", "remove the repository")
+    .option("--clear", "remove the repositories")
+    .option("-y, --yes", "accept the detected stack without asking")
     .action(
       async (
-        url: string | undefined,
-        opts: { clear?: boolean },
+        urls: string[],
+        opts: { clear?: boolean; yes?: boolean },
         command: Command
       ) => {
         const ctx = contextFor(command);
         const ui = uiFor(ctx);
-        const { session } = await openParticipant(ctx);
-        if (url && opts.clear) {
-          throw usageError("Pass either a URL or --clear, not both.");
+        const { session, me } = await openParticipant(ctx);
+        if (urls.length > 0 && opts.clear) {
+          throw usageError("Pass either URLs or --clear, not both.");
         }
-        if (!(url || opts.clear)) {
-          const mine = await session.client.query(api.teams.mine, {});
-          if (!mine) {
-            noTeam();
-          }
-          ui.result({ repoUrl: mine.repoUrl ?? null });
-          ui.line(mine.repoUrl ?? "(not set)");
+        const mine = await session.client.query(api.teams.mine, {});
+        if (!mine) {
+          noTeam();
+        }
+        if (opts.clear) {
+          await session.client.mutation(api.teams.setRepoUrls, { urls: [] });
+          ui.result({ repoUrl: null, repoUrls: [], techStack: mine.techStack });
+          ui.success("Repositories cleared.");
           return;
         }
-        const saved = await session.client.mutation(api.teams.setRepoUrl, {
-          url: opts.clear ? null : (url ?? ""),
+        if (urls.length === 0 && !ctx.interactive) {
+          ui.result({
+            repoUrl: mine.repoUrl ?? null,
+            repoUrls: mine.repoUrls,
+            techStack: mine.techStack,
+          });
+          ui.line(
+            mine.repoUrls.join("\n") || mine.repoUrl || "(not set)"
+          );
+          return;
+        }
+        await ensureGithubLinked(ctx, ui, session, me);
+        const raw =
+          urls.length > 0
+            ? urls.flatMap((value) => value.split(/[,\s]+/)).filter(Boolean)
+            : (
+                await textOrFlag(ctx, undefined, {
+                  flag: "<urls>",
+                  initialValue: mine.repoUrls.join(", ") || mine.repoUrl,
+                  message: "Team project repo(s), GitHub URLs or org/name",
+                  placeholder: "org/repo, org/other",
+                })
+              )
+                .split(/[,\s]+/)
+                .filter(Boolean);
+        if (raw.length === 0) {
+          throw usageError("Pass at least one GitHub repo.");
+        }
+        const saved = await ui.spin(
+          "Saving repos…",
+          () => session.client.mutation(api.teams.setRepoUrls, { urls: raw }),
+          "Saved"
+        );
+        const detected = await detectAndConfirmStack(ctx, ui, session, {
+          yes: opts.yes,
         });
-        ui.result({ repoUrl: saved });
+        ui.result({
+          repoUrl: saved[0] ?? null,
+          repoUrls: saved,
+          techStack: detected,
+        });
         ui.success(
-          saved ? `Repository set to ${saved}` : "Repository cleared."
+          saved.length === 1
+            ? `Repository set to ${saved[0]}`
+            : `Repositories set (${saved.length})`
         );
       }
     );

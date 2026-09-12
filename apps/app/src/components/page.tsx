@@ -17,16 +17,18 @@ export function Page({
   description,
   children,
   className,
+  compact = false,
 }: {
   title?: ReactNode;
   description?: ReactNode;
   children: ReactNode;
   className?: string;
+  compact?: boolean;
 }) {
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn(compact ? "space-y-4" : "space-y-6", className)}>
       {title ? (
-        <div className="hs-enter min-w-0">
+        <div className={cn("hs-enter min-w-0", compact && "shrink-0")}>
           {typeof title === "string" ? (
             <h1 className="font-bungee text-2xl leading-tight sm:text-3xl">
               {title}
@@ -35,7 +37,7 @@ export function Page({
             title
           )}
           {description ? (
-            <p className="mt-1 text-sm text-hs-brown">{description}</p>
+            <p className="mt-1 text-sm font-medium text-hs-brown">{description}</p>
           ) : null}
         </div>
       ) : null}
@@ -57,6 +59,15 @@ export function LoadingText() {
     <p className="font-bungee text-hs-brown" role="status">
       Cargando…
     </p>
+  );
+}
+
+export function Skeleton({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden
+      className={cn("bg-hs-sand motion-safe:animate-pulse", className)}
+    />
   );
 }
 
@@ -143,18 +154,27 @@ export function RecordList({
 export function RecordCard({
   title,
   subtitle,
+  badges,
   children,
   actions,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
+  badges?: ReactNode;
   children?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
     <Card className="gap-3">
       <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
+        {badges ? (
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base [&_[data-slot=badge]]:whitespace-nowrap">
+            <span>{title}</span>
+            {badges}
+          </CardTitle>
+        ) : (
+          <CardTitle className="text-base">{title}</CardTitle>
+        )}
         {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}
       </CardHeader>
       {children || actions ? (
@@ -177,7 +197,7 @@ export function MetaRow({
   children: ReactNode;
 }) {
   return (
-    <p className="min-w-0 text-sm">
+    <p className="min-w-0 text-sm font-medium">
       <span className="font-bungee text-xs">{label}</span>
       <br />
       <span className="break-words">{children}</span>

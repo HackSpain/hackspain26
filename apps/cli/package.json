@@ -16,6 +16,7 @@
     "lint": "oxlint -c oxlint.config.mjs . && ultracite check",
     "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix",
     "test": "bun test",
+    "check": "tsc --noEmit && oxlint -c oxlint.config.mjs . && ultracite check && bun test",
     "build:bin:host": "bash scripts/build-all.sh --host",
     "build:bin": "bash scripts/build-all.sh"
   },

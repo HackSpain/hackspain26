@@ -1,7 +1,9 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import { useMemo, useState } from "react";
 import { Tabs } from "radix-ui";
+import { api } from "@convex/_generated/api";
 import {
   Select,
   SelectContent,
@@ -51,6 +53,78 @@ function SummaryMetric({
       <p className="text-2xl font-bold tabular-nums">{value}</p>
       <p className="text-[11px] text-hs-brown">{detail}</p>
     </Card>
+  );
+}
+
+const STACK_COLORS = ["#1e3958", "#35858a", "#d96b2a", "#8b6b9f", "#a67516", "#677558"];
+
+export function LiveTechnologyStacks() {
+  const histogram = useQuery(api.stack.histogram);
+  const [category, setCategory] = useState("all");
+  const rows = (histogram?.rows ?? []).filter(
+    (row) => category === "all" || row.category === category
+  );
+  const total = histogram?.total ?? 0;
+  return (
+    <Panel
+      title="Stacks más usados"
+      eyebrow="Detectado de los repos vinculados"
+    >
+      {histogram === undefined ? (
+        <p className="text-sm text-hs-brown">Cargando stacks…</p>
+      ) : total === 0 ? (
+        <p className="text-sm text-hs-brown">
+          Aún no hay stacks. Se leen del repo al vincularlo con{" "}
+          <code className="font-mono text-xs">hackspain team repo</code>.
+        </p>
+      ) : (
+        <>
+          <div className="mb-4">
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger
+                aria-label="Categoría de tecnologías"
+                className="min-h-10 border text-xs sm:w-32"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["all", "Frontend", "Backend", "Datos", "Otras"].map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item === "all" ? "Todas" : item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-4">
+            {rows.map((row, index) => (
+              <div key={row.name}>
+                <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+                  <span className="font-semibold">{row.name}</span>
+                  <span className="text-hs-brown tabular-nums">
+                    {row.count} {row.count === 1 ? "equipo" : "equipos"} ·{" "}
+                    {percent(row.count, total)}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-hs-sand">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      backgroundColor:
+                        STACK_COLORS[index % STACK_COLORS.length],
+                      width: `${(row.count / Math.max(total, 1)) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
+        Datos reales del repo. El resto de insights de esta página es una demo.
+      </p>
+    </Panel>
   );
 }
 

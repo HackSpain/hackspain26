@@ -43,7 +43,7 @@ export const startLink = authedMutation({
     const url = new URL("https://github.com/login/oauth/authorize");
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", githubRedirectUri());
-    url.searchParams.set("scope", "read:user");
+    url.searchParams.set("scope", "read:user repo");
     url.searchParams.set("state", state);
     return { url: url.toString() };
   },
@@ -54,6 +54,7 @@ export const unlink = authedMutation({
   args: {},
   handler: async (ctx) => {
     await ctx.db.patch(ctx.user._id, {
+      githubAccessToken: undefined,
       githubId: undefined,
       githubUsername: undefined,
       githubLinkedAt: undefined,
@@ -84,6 +85,7 @@ export const consumeState = internalMutation({
 
 export const linkAccount = internalMutation({
   args: {
+    accessToken: v.string(),
     avatarUrl: v.optional(v.string()),
     githubId: v.string(),
     login: v.string(),
@@ -103,6 +105,7 @@ export const linkAccount = internalMutation({
     }
     const login = args.login.trim().toLowerCase();
     await ctx.db.patch(user._id, {
+      githubAccessToken: args.accessToken,
       githubId: args.githubId,
       githubUsername: login,
       githubLinkedAt: Date.now(),

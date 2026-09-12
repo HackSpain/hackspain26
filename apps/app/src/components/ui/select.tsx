@@ -31,7 +31,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-full min-w-0 items-center justify-between gap-2 border-[3px] border-hs-ink bg-hs-paper px-3 text-base text-hs-ink outline-none select-none touch-manipulation motion-safe:transition-[border-color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] focus-visible:border-hs-navy disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-hs-ink/40 data-[size=default]:h-11 data-[size=sm]:h-10 motion-safe:active:not-disabled:scale-[0.97] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex w-full min-w-0 items-center justify-between gap-2 border-2 border-hs-ink/25 bg-hs-paper px-3 text-base text-hs-ink outline-none select-none touch-manipulation motion-safe:transition-[border-color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] focus-visible:border-hs-navy focus-visible:ring-2 focus-visible:ring-hs-navy/25 disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-hs-ink/40 data-[size=default]:h-11 data-[size=sm]:h-10 motion-safe:active:not-disabled:scale-[0.97] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -57,7 +57,7 @@ function SelectContent({
         data-slot="select-content"
         data-align-trigger={position === "item-aligned"}
         className={cn(
-          "relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto border-[3px] border-hs-ink bg-hs-paper text-hs-ink motion-safe:duration-200 motion-safe:data-closed:duration-150 motion-safe:ease-[var(--ease-out)] data-[align-trigger=true]:animate-none data-open:animate-in data-open:fade-in-0 motion-safe:data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 motion-safe:data-closed:zoom-out-95",
+          "relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto border border-hs-ink/20 bg-hs-paper text-hs-ink motion-safe:duration-200 motion-safe:data-closed:duration-150 motion-safe:ease-[var(--ease-out)] data-[align-trigger=true]:animate-none data-open:animate-in data-open:fade-in-0 motion-safe:data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 motion-safe:data-closed:zoom-out-95",
           className
         )}
         position={position}

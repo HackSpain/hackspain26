@@ -75,6 +75,7 @@ describe("projectArgsFrom", () => {
       name: "",
       perkIds: [],
       repoUrl: undefined,
+      videoUrl: undefined,
     });
   });
 

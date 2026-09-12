@@ -123,6 +123,7 @@ export const me = query({
       signupId: user.signupId ?? signup?._id,
       githubUsername: user.githubUsername ?? signup?.githubUsername,
       githubLinked: user.githubLinkedAt !== undefined,
+      githubCanReadRepos: Boolean(user.githubAccessToken),
     };
   },
   returns: v.union(meValidator, v.null()),

@@ -2,7 +2,15 @@
   "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite/biome/core"],
   "files": {
-    "includes": ["src/**", "test/**", "scripts/**"]
+    "includes": [
+      "src/**",
+      "test/**",
+      "scripts/**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/.cache",
+      "!test/fixtures"
+    ]
   },
   "javascript": {
     "globals": ["Bun"]
@@ -25,7 +33,7 @@
   },
   "overrides": [
     {
-      "includes": ["test/**"],
+      "includes": ["test/**", "!test/fixtures"],
       "linter": {
         "rules": {
           "suspicious": {

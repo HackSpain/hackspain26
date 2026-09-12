@@ -22,6 +22,7 @@ type SubmitOptions = {
   description?: string;
   repo?: string;
   demo?: string;
+  video?: string;
   track: string[];
   perk: string[];
   yes?: boolean;
@@ -36,6 +37,7 @@ export function registerSubmit(program: Command): void {
     .option("--description <text>", "what it does, at least 10 characters")
     .option("--repo <url>", "GitHub repository URL")
     .option("--demo <url>", "demo URL")
+    .option("--video <url>", "YouTube, Loom, or MP4 URL for judges")
     .option(
       "--track <slug>",
       "track to enter (repeatable)",
@@ -114,6 +116,14 @@ export function registerSubmit(program: Command): void {
         validate: (v) =>
           HTTP_URL.test(v.trim()) ? undefined : "Must start with http(s)://",
       });
+      const videoUrl = await textOrFlag(ctx, opts.video, {
+        flag: "--video",
+        initialValue: existing.videoUrl ?? "",
+        message: "Video URL for judges (optional)",
+        optional: true,
+        validate: (v) =>
+          HTTP_URL.test(v.trim()) ? undefined : "Must start with http(s)://",
+      });
 
       const bySlug = new Map(tracks.map((t) => [t.slug, t]));
       const unknownTracks = opts.track.filter((s) => !bySlug.has(s));
@@ -183,6 +193,7 @@ export function registerSubmit(program: Command): void {
         name: name.trim(),
         perkIds,
         repoUrl: repoUrl.trim() || undefined,
+        videoUrl: videoUrl.trim() || undefined,
       };
 
       if (mode === "submit") {
@@ -194,6 +205,7 @@ export function registerSubmit(program: Command): void {
           ],
           ["Repo", args.repoUrl ?? c.dim("–")],
           ["Demo", args.demoUrl ?? c.dim("–")],
+          ["Video", args.videoUrl ?? c.dim("–")],
         ]);
         ui.warn(
           "Submitting is final. After this the project cannot be edited."

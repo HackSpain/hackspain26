@@ -1,12 +1,12 @@
 # HackSpain monorepo
 
-Marketing site for HackSpain 2026 (Madrid) at https://hackspain.com, plus the participant/admin dashboard.
+Marketing site for HackSpain 2026 (Madrid) at https://hackspain.com, plus the participant/admin dashboard and the `hackspain` CLI.
 
-Setup, env vars, and Convex login live in the [README](README.md). pnpm workspaces. Node ≥ 22.12.
+Setup, env vars, and Convex login live in the [README](README.md). pnpm workspaces. Node ≥ 22.12. The CLI still compiles and tests with Bun.
 
 ```text
 apps/web    # Astro 6 landing (Vercel, React islands, Tailwind v4, Neon/Drizzle)
-apps/app    # Next.js dashboard + Convex (auth, CRM, teams, perks)
+apps/app    # Next.js dashboard + Convex (auth, CRM, teams, perks, feed, TV)
 apps/cli    # `hackspain` terminal client for participants (Bun binary, same Convex backend)
 ```
 
@@ -22,6 +22,20 @@ pnpm migrate:convex      # Neon → Convex. Idempotent on email. Do not run unle
 Do not run `pnpm --filter app exec convex deploy` unless you are shipping Convex to production.
 
 Copy `apps/web/.env.example` → `apps/web/.env` for signup APIs. Copy `apps/app/.env.example` → `apps/app/.env.local` for the dashboard. Static landing pages run without a database.
+
+## Feature status
+
+The participant loop is real end-to-end: apply on the landing → import to Convex → accept in CRM → onboard → team / tracks / submit → feed. Public signup still writes Neon; Convex `signups` come from `pnpm migrate:convex` (or CRM). Do not treat Insights or server telemetry as live.
+
+| Area | Status |
+| --- | --- |
+| Landing mosaic, signup, prefill, mentor/sponsor attendance, badges, cancel | **Live** (Neon). `/shortlist` is internal (password). `/ambassador` is marketing; ambassador interest is a signup flag. |
+| Auth, onboarding, profile, GitHub link, home | **Live** (Convex). Phone SMS needs Twilio or `ALLOW_PHONE_STUB`. |
+| Teams, tracks, submissions, perks, admin CRM / notifications | **Live** (Convex). Submit stays closed until an admin opens the window. |
+| Feed (web + CLI) + GitHub activity from team repos | **Live**. Images via `/api/files/<id>`. Cron needs `GITHUB_TOKEN` on the Convex deployment. |
+| CLI: auth, profile, team (join/create/leave/transfer/dissolve/repo), tracks, submit, feed, watch, stack, milestones | **Live** against `/api/cli/*`. No team invite/rename and no perk **claim** in the CLI (dashboard only). |
+| Insights (`/insights`) | **Mock UI only** (`src/app/insights/mock-data.ts`, `event-data.ts`). Milestones and `teams.techStack` exist in Convex but are not wired here. |
+| Watcher telemetry | CLI collects (claude-code, codex, opencode, cline) and uploads to `POST /api/cli/telemetry`, which validates and returns `stored: false`. No Convex table. Cursor / Copilot collectors are not shipped. |
 
 ## Landing (`apps/web`)
 
@@ -115,14 +129,22 @@ Profiles store social links as `urls: { kind, url }[]`. `githubUsername` / `twit
 | `/pending` | Signup exists, not accepted |
 | `/onboarding` | Accepted hacker confirms phone, diet, travel, attend/cancel |
 | `/` | Home |
+| `/participantes` | Directory + connections graph (demo data) |
+| `/cli` | CLI install and command guide |
+| `/tv` | Public venue screen (no login) |
 | `/profile` | Edit phone, diet, travel, consent, attendance |
-| `/teams` | Create team, add by GitHub / X / email |
+| `/teams` | Read-only team view; create/join via CLI |
 | `/perks` | Catalog + claim |
 | `/tracks` | Challenges from Convex; one project form, multi-challenge; draft save; submit gated until open |
+| `/feed` | Shared posts + GitHub activity from team repos |
+| `/insights` | Event analytics UI. Mock data only; do not query Convex here. |
 | `/admin` | CRM |
+| `/admin/users/[id]` | Participant detail, accept, role, notes |
 | `/admin/perks` | Perk CRUD + code pools |
 | `/admin/applications` | Email perk applications queue |
 | `/admin/tracks` | Track copy, submission window, projects per challenge |
+| `/admin/notifications` | Broadcast email to audiences |
+| `/admin/tv` | Venue screen canvas editor |
 
 ## CLI (`apps/cli`)
 

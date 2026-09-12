@@ -10,6 +10,7 @@ const base: Me = {
   dietaryDetails: undefined,
   dietaryRestrictions: "Vegetarian",
   email: "ana@example.com",
+  githubCanReadRepos: true,
   githubLinked: true,
   githubUsername: "ana",
   isRegistered: true,

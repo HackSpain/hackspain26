@@ -4,12 +4,13 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import type { Role } from "@convex/lib/validators";
 import { api } from "@convex/_generated/api";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 
 function destination(me: {
-  role: "user" | "admin";
+  role: Role;
   isRegistered: boolean;
   accepted: boolean;
   onboardingComplete: boolean;
@@ -24,6 +25,43 @@ function destination(me: {
     return "/onboarding";
   }
   return null;
+}
+
+// /cli-auth approves a CLI login and carries a one-time ?code=. The code is
+// preserved through the login redirect via sessionStorage, since neither the
+// middleware nor this gate has a returnTo query.
+const CLI_AUTH_PATH = "/cli-auth";
+const RETURN_TO_KEY = "hs-return-to";
+
+function stashReturnTo(): void {
+  try {
+    sessionStorage.setItem(
+      RETURN_TO_KEY,
+      window.location.pathname + window.location.search,
+    );
+  } catch {
+    // Storage blocked; the user can reopen the link from the terminal.
+  }
+}
+
+// Peek, don't consume: the gate effect re-runs while the router is still on
+// /login, and removing the stash on first read would let a re-run fall
+// through to the participant-gate redirect. Cleared on arrival at /cli-auth.
+function peekReturnTo(): string | null {
+  try {
+    const value = sessionStorage.getItem(RETURN_TO_KEY);
+    return value?.startsWith(`${CLI_AUTH_PATH}?`) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearReturnTo(): void {
+  try {
+    sessionStorage.removeItem(RETURN_TO_KEY);
+  } catch {
+    // Nothing stashed without storage.
+  }
 }
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
@@ -41,16 +79,36 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [attachAfterLogin, isAuthenticated, me]);
 
   useEffect(() => {
+    if (pathname === "/tv") {
+      return;
+    }
     if (isLoading) {
       return;
     }
     if (!isAuthenticated) {
       if (pathname !== "/login") {
+        if (pathname === CLI_AUTH_PATH) {
+          stashReturnTo();
+        }
         router.replace("/login");
       }
       return;
     }
     if (!me) {
+      return;
+    }
+
+    if (pathname === "/login") {
+      const returnTo = peekReturnTo();
+      if (returnTo) {
+        router.replace(returnTo);
+        return;
+      }
+    }
+    // Any signed-in user may approve a CLI login; the participant gates
+    // (pending / onboarding) apply to the CLI session itself, not here.
+    if (pathname === CLI_AUTH_PATH) {
+      clearReturnTo();
       return;
     }
 
@@ -64,6 +122,44 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace("/");
       }
       if (pathname === "/pending" || pathname === "/unregistered") {
+        router.replace("/");
+      }
+      return;
+    }
+
+    if (me.role === "judge") {
+      if (pathname.startsWith("/admin")) {
+        router.replace("/");
+        return;
+      }
+      if (pathname === "/judging" || pathname.startsWith("/judging")) {
+        return;
+      }
+      if (pathname === "/login") {
+        const next = destination(me);
+        router.replace(next ?? "/");
+        return;
+      }
+      const next = destination(me);
+      if (next && pathname !== next) {
+        if (
+          next === "/pending" ||
+          next === "/unregistered" ||
+          next === "/onboarding"
+        ) {
+          router.replace("/judging");
+          return;
+        }
+        router.replace(next);
+        return;
+      }
+      if (
+        !next &&
+        (pathname === "/onboarding" ||
+          pathname === "/unregistered" ||
+          pathname === "/pending" ||
+          pathname === "/login")
+      ) {
         router.replace("/");
       }
       return;
@@ -88,6 +184,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isLoading, me, pathname, router]);
 
+  // /tv is a public screen; render it without waiting on auth.
+  if (pathname === "/tv") {
+    return <>{children}</>;
+  }
+
   if (isLoading || (isAuthenticated && me === undefined)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-hs-paper px-4">
@@ -100,13 +201,27 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  if (me && me.role !== "admin") {
+  if (me && me.role !== "admin" && pathname !== CLI_AUTH_PATH) {
     if (pathname.startsWith("/admin")) {
       return null;
     }
-    const next = destination(me);
-    if (next && pathname !== next) {
-      return null;
+    const judgingAllowed =
+      me.role === "judge" && pathname.startsWith("/judging");
+    if (!judgingAllowed) {
+      const next = destination(me);
+      if (
+        me.role === "judge" &&
+        next &&
+        (next === "/pending" ||
+          next === "/unregistered" ||
+          next === "/onboarding")
+      ) {
+        if (pathname !== "/judging") {
+          return null;
+        }
+      } else if (next && pathname !== next) {
+        return null;
+      }
     }
   }
 

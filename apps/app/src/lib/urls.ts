@@ -8,6 +8,7 @@ const LABELS: Record<UrlKind, string> = {
   github: "GitHub",
   linkedin: "LinkedIn",
   repo: "Repo",
+  video: "Vídeo",
   web: "Web",
   x: "X",
 };

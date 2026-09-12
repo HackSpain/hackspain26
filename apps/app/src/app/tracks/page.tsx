@@ -4,29 +4,15 @@ import { useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  Field,
-  FormError,
-  FormNotice,
-  LoadingText,
-  Page,
-  errorMessage,
-} from "@/components/page";
+import { Field, FormError, FormNotice, LoadingText, Page, errorMessage } from "@/components/page";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { urlOf } from "@/lib/urls";
-import type { UrlEntry } from "@/lib/urls";
+import { urlOf, type UrlEntry } from "@/lib/urls";
 import { perkName } from "@/lib/utils";
 
 type TrackRow = {
@@ -46,6 +32,7 @@ type SubmissionRow = {
   challengeIds: Id<"tracks">[];
   perkIds: Id<"perks">[];
   status: "draft" | "submitted";
+  techStack: string[];
 };
 
 type CatalogRow = {
@@ -60,12 +47,9 @@ export default function TracksPage() {
   const ensureCatalog = useMutation(api.tracks.ensureCatalog);
 
   useEffect(() => {
-    if (tracks === undefined) {
-      return;
-    }
+    if (tracks === undefined) return;
     const stale =
-      tracks.length === 0 ||
-      tracks.some((track) => PLACEHOLDER_SLUGS.has(track.slug));
+      tracks.length === 0 || tracks.some((track) => PLACEHOLDER_SLUGS.has(track.slug));
     if (stale) {
       void ensureCatalog({});
     }
@@ -102,8 +86,9 @@ function TracksReady({
   const [description, setDescription] = useState(mine?.description ?? "");
   const [repoUrl, setRepoUrl] = useState(urlOf(mine?.urls, "repo") ?? "");
   const [demoUrl, setDemoUrl] = useState(urlOf(mine?.urls, "demo") ?? "");
+  const [videoUrl, setVideoUrl] = useState(urlOf(mine?.urls, "video") ?? "");
   const [challengeIds, setChallengeIds] = useState<Id<"tracks">[]>(
-    mine?.challengeIds ?? []
+    mine?.challengeIds ?? [],
   );
   const [perkIds, setPerkIds] = useState<Id<"perks">[]>(mine?.perkIds ?? []);
   const [error, setError] = useState<string | null>(null);
@@ -111,31 +96,28 @@ function TracksReady({
   const [saving, setSaving] = useState(false);
 
   const locked = mine?.status === "submitted";
-  const entered = new Set(mine?.challengeIds);
+  const entered = new Set(mine?.challengeIds ?? []);
 
   function toggleChallenge(id: Id<"tracks">) {
     setChallengeIds((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id]
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     );
   }
 
   function togglePerk(id: Id<"perks">) {
     setPerkIds((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id]
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     );
   }
 
   const payload = {
-    challengeIds,
-    demoUrl: demoUrl || undefined,
-    description,
     name,
-    perkIds,
+    description,
     repoUrl: repoUrl || undefined,
+    demoUrl: demoUrl || undefined,
+    videoUrl: videoUrl || undefined,
+    challengeIds,
+    perkIds,
   };
 
   return (
@@ -153,18 +135,18 @@ function TracksReady({
           {tracks.map((track) => (
             <Card key={track._id}>
               <CardHeader>
-                <CardTitle className="text-xl">{track.label}</CardTitle>
+                <CardTitle className="flex flex-wrap items-center gap-2 text-xl">
+                  <span>{track.label}</span>
+                  {entered.has(track._id) ? (
+                    <Badge variant="gold" className="whitespace-nowrap">
+                      {mine?.status === "submitted" ? "Enviado" : "En el borrador"}
+                    </Badge>
+                  ) : null}
+                </CardTitle>
                 <CardDescription>{track.note}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent>
                 <p>{track.body}</p>
-                {entered.has(track._id) ? (
-                  <Badge variant="gold">
-                    {mine?.status === "submitted"
-                      ? "Enviado"
-                      : "En el borrador"}
-                  </Badge>
-                ) : null}
               </CardContent>
             </Card>
           ))}
@@ -175,8 +157,7 @@ function TracksReady({
         <CardHeader>
           <CardTitle>Proyecto</CardTitle>
           <CardDescription>
-            Rellena el proyecto una vez y elige todos los retos en los que
-            entra.
+            Rellena el proyecto una vez y elige todos los retos en los que entra.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -216,6 +197,30 @@ function TracksReady({
               />
             </Field>
           </div>
+          {mine?.techStack.length ? (
+            <div className="space-y-2">
+              <p className="font-bungee text-xs">Stack detectado</p>
+              <div className="flex flex-wrap gap-2">
+                {mine.techStack.map((tag) => (
+                  <Badge key={tag}>{tag}</Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <Field
+            label="Vídeo del proyecto"
+            htmlFor="video-url"
+            hint="YouTube, Loom o un MP4. Lo verán los jueces."
+          >
+            <Input
+              id="video-url"
+              value={videoUrl}
+              disabled={locked}
+              placeholder="https://youtube.com/… o https://….mp4"
+              onChange={(event) => setVideoUrl(event.target.value)}
+            />
+          </Field>
 
           <div className="space-y-2">
             <p className="font-bungee text-xs">Retos</p>
@@ -236,35 +241,26 @@ function TracksReady({
 
           <div className="space-y-2">
             <p className="font-bungee text-xs">Herramientas de partners</p>
-            {catalog ? (
-              catalog.length === 0 ? (
-                <p className="text-sm text-hs-brown">
-                  Aún no hay herramientas de partners.
-                </p>
-              ) : (
-                catalog.map(({ perk }) => (
-                  <label
-                    key={perk._id}
-                    className="flex items-start gap-3 text-sm"
-                  >
-                    <Checkbox
-                      checked={perkIds.includes(perk._id)}
-                      disabled={locked}
-                      onCheckedChange={() => togglePerk(perk._id)}
-                    />
-                    <span>{perkName(perk.company, perk.title)}</span>
-                  </label>
-                ))
-              )
-            ) : (
+            {!catalog ? (
               <p className="text-sm text-hs-brown">Cargando partners…</p>
+            ) : catalog.length === 0 ? (
+              <p className="text-sm text-hs-brown">Aún no hay herramientas de partners.</p>
+            ) : (
+              catalog.map(({ perk }) => (
+                <label key={perk._id} className="flex items-start gap-3 text-sm">
+                  <Checkbox
+                    checked={perkIds.includes(perk._id)}
+                    disabled={locked}
+                    onCheckedChange={() => togglePerk(perk._id)}
+                  />
+                  <span>{perkName(perk.company, perk.title)}</span>
+                </label>
+              ))
             )}
           </div>
 
           {locked ? (
-            <p className="text-sm text-hs-brown">
-              Este proyecto ya está enviado y bloqueado.
-            </p>
+            <p className="text-sm text-hs-brown">Este proyecto ya está enviado y bloqueado.</p>
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
@@ -276,13 +272,8 @@ function TracksReady({
                   setSaving(true);
                   void saveDraft(payload)
                     .then(() => setMessage("Borrador guardado"))
-                    .catch((caughtError: unknown) =>
-                      setError(
-                        errorMessage(
-                          caughtError,
-                          "No se ha podido guardar el borrador"
-                        )
-                      )
+                    .catch((err: unknown) =>
+                      setError(errorMessage(err, "No se ha podido guardar el borrador")),
                     )
                     .finally(() => setSaving(false));
                 }}
@@ -298,17 +289,13 @@ function TracksReady({
                     : "El envío de proyectos aún no está abierto"
                 }
                 onClick={() => {
-                  if (!submissionsOpen) {
-                    return;
-                  }
+                  if (!submissionsOpen) return;
                   setError(null);
                   setSaving(true);
                   void submit(payload)
                     .then(() => setMessage("Proyecto enviado"))
-                    .catch((caughtError: unknown) =>
-                      setError(
-                        errorMessage(caughtError, "No se ha podido enviar")
-                      )
+                    .catch((err: unknown) =>
+                      setError(errorMessage(err, "No se ha podido enviar")),
                     )
                     .finally(() => setSaving(false));
                 }}

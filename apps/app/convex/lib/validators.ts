@@ -1,12 +1,32 @@
+import type { Infer } from "convex/values";
 import { v } from "convex/values";
 import { urlsValidator } from "./urls";
 
-export const roleValidator = v.union(v.literal("user"), v.literal("admin"));
+export const roleValidator = v.union(
+  v.literal("user"),
+  v.literal("judge"),
+  v.literal("admin")
+);
+
+export type Role = Infer<typeof roleValidator>;
 
 export const submissionStatusValidator = v.union(
   v.literal("draft"),
   v.literal("submitted")
 );
+
+export const judgingContextValidator = v.union(
+  v.object({
+    group: v.number(),
+    kind: v.literal("general"),
+  }),
+  v.object({
+    kind: v.literal("track"),
+    trackId: v.id("tracks"),
+  })
+);
+
+export type JudgingContext = Infer<typeof judgingContextValidator>;
 
 export const attendanceValidator = v.union(
   v.literal("attending"),
@@ -22,6 +42,27 @@ export const claimStatusValidator = v.union(
   v.literal("rejected"),
   v.literal("assigned")
 );
+
+export const perkInputTypeValidator = v.union(
+  v.literal("text"),
+  v.literal("email"),
+  v.literal("url"),
+  v.literal("select"),
+);
+
+/** A field the participant fills in when claiming a perk. */
+export const perkInputValidator = v.object({
+  key: v.string(),
+  label: v.string(),
+  type: perkInputTypeValidator,
+  required: v.boolean(),
+  options: v.optional(v.array(v.string())),
+});
+
+export const perkAnswerValidator = v.object({
+  key: v.string(),
+  value: v.string(),
+});
 
 export const teamMemberStatusValidator = v.union(
   v.literal("member"),
@@ -80,6 +121,7 @@ export const meValidator = v.object({
   dietaryDetails: v.optional(v.string()),
   dietaryRestrictions: v.optional(v.string()),
   email: v.optional(v.string()),
+  githubCanReadRepos: v.boolean(),
   githubLinked: v.boolean(),
   githubUsername: v.optional(v.string()),
   isRegistered: v.boolean(),

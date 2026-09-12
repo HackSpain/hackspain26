@@ -21,7 +21,7 @@ export const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 const JUST_REFRESHED_MS = 20 * 1000;
 const LOCK_WAIT_MS = 15 * 1000;
 const LOCK_STALE_MS = 30 * 1000;
-const LOCK_POLL_MS = 100;
+const LOCK_POLL_MS = 20;
 
 export function credentialsPath(): string {
   return join(configDir(), "credentials.json");

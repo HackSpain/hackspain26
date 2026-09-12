@@ -16,8 +16,10 @@ Windows: download `hackspain-windows-x64.exe` from the
 Binaries are self-contained; nothing else to install.
 
 ```
-hackspain                       # where you stand and what to do next
-hackspain auth login            # email + 8-digit code; then asks for a missing name, phone or GitHub
+hackspain                       # where you stand, then a navigable menu (interactive terminals only)
+hackspain auth login            # sign in via the browser (approve on the dashboard's /cli-auth page),
+                                # or --email/--code for the 8-digit email code; then asks for a missing
+                                # name, phone or GitHub
 hackspain auth status | logout
 
 hackspain profile               # name, diet, travel, phone, notices, GitHub

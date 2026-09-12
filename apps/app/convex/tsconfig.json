@@ -2,10 +2,13 @@
   "compilerOptions": {
     "allowJs": true,
     "strict": true,
+    "target": "ESNext",
+    "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["./**/*"]
+  "include": ["./**/*"],
+  "exclude": ["**/*.test.ts"]
 }
