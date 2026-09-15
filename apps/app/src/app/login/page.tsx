@@ -101,11 +101,14 @@ export default function LoginPage() {
     setNotice(null);
     setPending(true);
     try {
-      const check = await fetch("/api/login-check", { method: "POST" });
-      if (!check.ok) {
-        throw new Error("login-check failed");
+      const response = await fetch("/api/login/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      if (!response.ok) {
+        throw new Error("otp send failed");
       }
-      await signIn("resend-otp", { email: normalizedEmail });
       return true;
     } catch {
       setError("No hemos podido enviar el código. Inténtalo otra vez.");
