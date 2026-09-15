@@ -1,8 +1,6 @@
-import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import type { Judge } from "../../data/judges";
 import { FINAL_AWARD_JUDGES, GENERAL_JUDGES } from "../../data/judges";
-import { useOverlayLock } from "../overlay/overlay-lock";
+import { OverlayDialog } from "../overlay/overlay-dialog";
 
 const TITLE_ID = "judges-overlay-title";
 
@@ -90,68 +88,31 @@ function JudgeGroup({
  * so the section-snapping wheel/swipe/key handlers stand down while it is open.
  */
 export function JudgesOverlay({ onClose }: { onClose: () => void }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
+  return (
+    <OverlayDialog onClose={onClose} titleId={TITLE_ID}>
+      <header className="text-center">
+        <p className="font-bungee text-[clamp(0.6rem,1.8vw,0.8rem)] text-hs-gold tracking-widest">
+          HACKSPAIN 2026
+        </p>
+        <h2
+          className="mt-2 font-bungee text-[clamp(1.8rem,7vw,3.5rem)] text-hs-paper leading-none"
+          id={TITLE_ID}
+        >
+          EL <span className="text-hs-gold">JURADO</span>
+        </h2>
+      </header>
 
-  useOverlayLock(true);
+      <JudgeGroup
+        accent="FINAL"
+        accentColor="text-hs-gold"
+        judges={FINAL_AWARD_JUDGES}
+      />
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    closeRef.current?.focus();
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  // Portal to <body>: the mosaic cells animate with transforms, and a
-  // transformed ancestor turns position:fixed into "fixed to that ancestor",
-  // clipping the overlay to its cell (visible on mobile).
-  return createPortal(
-    <div
-      aria-labelledby={TITLE_ID}
-      aria-modal="true"
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-hs-ink/97"
-      role="dialog"
-    >
-      <button
-        aria-label="Cerrar"
-        className="fixed top-4 right-4 z-10 border-[3px] border-hs-paper/40 bg-hs-ink px-3 pb-1 font-bungee text-3xl text-hs-paper/70 leading-none hover:border-hs-paper hover:text-hs-paper focus-visible:border-hs-gold focus-visible:outline-none sm:top-6 sm:right-8"
-        onClick={onClose}
-        ref={closeRef}
-        type="button"
-      >
-        ×
-      </button>
-
-      <div className="mx-auto max-w-4xl px-3 py-10 sm:px-4 sm:py-16">
-        <header className="text-center">
-          <p className="font-bungee text-[clamp(0.6rem,1.8vw,0.8rem)] text-hs-gold tracking-widest">
-            HACKSPAIN 2026
-          </p>
-          <h2
-            className="mt-2 font-bungee text-[clamp(1.8rem,7vw,3.5rem)] text-hs-paper leading-none"
-            id={TITLE_ID}
-          >
-            EL <span className="text-hs-gold">JURADO</span>
-          </h2>
-        </header>
-
-        <JudgeGroup
-          accent="FINAL"
-          accentColor="text-hs-gold"
-          judges={FINAL_AWARD_JUDGES}
-        />
-
-        <JudgeGroup
-          accent="GENERAL"
-          accentColor="text-hs-orange"
-          judges={GENERAL_JUDGES}
-        />
-      </div>
-    </div>,
-    document.body
+      <JudgeGroup
+        accent="GENERAL"
+        accentColor="text-hs-orange"
+        judges={GENERAL_JUDGES}
+      />
+    </OverlayDialog>
   );
 }

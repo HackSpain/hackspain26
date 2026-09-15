@@ -42,6 +42,12 @@ const PAGES: PageSeo[] = [
   },
   {
     description:
+      "Infraestructura para construir sin límites en HackSpain 2026, con Convex, Vercel, QuiverAI, Cloudflare, Tinybird, Cognition, Exa, fal.ai, Cursor y Helmcode.",
+    ogImageAlt: "HackSpain 2026 — infraestructura para construir",
+    title: "Infraestructura para construir | HackSpain 2026",
+  },
+  {
+    description:
       "Un único gran premio de 5.000 € para el equipo ganador de HackSpain 2026, con el patrocinio de JME Ventures, Kfund, Kibo Ventures, Enzo Ventures y Acurio Ventures.",
     ogImageAlt: "HackSpain 2026 — 1 gran premio de 5.000 €",
     title: "1 gran premio de 5.000 € | HackSpain 2026",
@@ -132,6 +138,7 @@ const KEYWORDS_BY_SECTION = [
   "MADRID 2026, 18 al 20 de Septiembre, 250 participantes",
   "España tiene talento, talento tech joven, 36 horas",
   "tracks originales, compute gratis, startups España",
+  "infraestructura hackathon, créditos cloud, herramientas para builders, infra sponsors",
   "gran premio, 5.000 euros, premio hackathon, fondos españoles, venture capital España",
   "comida bebida charlas, fundadores España, mentores hackathon, networking startups",
   "inscripción abierta, apúntate HackSpain",
