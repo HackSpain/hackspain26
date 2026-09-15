@@ -89,10 +89,10 @@ body {
     max-width: 100%;
     min-height: 0;
     font-family: var(--font-sans);
-    font-size: clamp(0.7rem, min(12cqw, 7cqh), 1.55rem);
+    font-size: clamp(1rem, min(8cqw, 11cqh), 2rem);
     font-weight: 700;
     line-height: 1.35;
-    text-wrap: pretty;
+    text-wrap: balance;
   }
 
   .hs-mosaic-hero-lg {

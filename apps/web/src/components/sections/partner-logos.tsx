@@ -4,13 +4,16 @@ import { shuffled } from "../../lib/shuffle";
 import {
   acurioLogo,
   causaPrimaLogo,
+  cloudflareLogo,
   cognitionLogo,
+  convexLogo,
   cursorLogo,
   embatLogo,
   enzoLogo,
   exaLogo,
   falLogo,
   happyrobotLogo,
+  helmcodeLogo,
   invopopLogo,
   jmeLogo,
   karumiLogo,
@@ -19,9 +22,12 @@ import {
   maisaLogo,
   onecoworkLogo,
   prosperAiLogo,
+  quiverAiLogo,
   reveniLogo,
   revenuecatLogo,
   theckerLogo,
+  tinybirdLogo,
+  vercelLogo,
 } from "../theme/assets";
 import { P } from "../ui/panel";
 
@@ -36,10 +42,9 @@ export interface Partner {
 const LOGO_SIZE = "h-[26cqh]";
 /** Squarer or wider marks need more height than wordmarks. */
 const LARGE_LOGO_SIZE = "h-[44cqh]";
-/** Cursor mark reads smaller at the same clamp as OneCoWork. */
-const CURSOR_LOGO_SIZE = "h-[54cqh]";
-/** Maisa wordmark needs extra height to read at parity with other marks. */
-const MAISA_LOGO_SIZE = "h-[52cqh]";
+/** Horizontal icon-and-name lockups, sized to their visible artwork. */
+const CURSOR_LOGO_SIZE = "h-[24cqh]";
+const MAISA_LOGO_SIZE = "h-[30cqh]";
 /** Prosper AI wordmark reads small at the default height. */
 const PROSPER_AI_LOGO_SIZE = "h-[36cqh]";
 /** Kibo's mark is a stacked three-line lockup, so height binds, not width. */
@@ -48,29 +53,37 @@ const KIBO_LOGO_SIZE = "h-[48cqh]";
 const ACURIO_LOGO_SIZE = "h-[38cqh]";
 /** Enzo is a chunky script wordmark. */
 const ENZO_LOGO_SIZE = "h-[32cqh]";
+/** Helmcode's long wordmark needs slightly less height than the default. */
+const HELMCODE_LOGO_SIZE = "h-[22cqh]";
 
 const LARGE_GRID_HEIGHT = "h-[clamp(2.1rem,10.5vw,4rem)]";
 const DEFAULT_GRID_HEIGHT = "h-[clamp(1.75rem,9vw,3.25rem)]";
 const CURSOR_GRID_HEIGHT = "h-[clamp(2.5rem,12.5vw,4.75rem)]";
-const MAISA_GRID_HEIGHT = "h-[clamp(2.45rem,12vw,4.6rem)]";
+const MAISA_GRID_HEIGHT = "h-[clamp(1.75rem,9vw,3.25rem)]";
 const PROSPER_AI_GRID_HEIGHT = "h-[clamp(1.95rem,9.75vw,3.55rem)]";
 const LARGE_REEL_HEIGHT = "h-[clamp(1.4rem,6.75vw,2.35rem)]";
 const DEFAULT_REEL_HEIGHT = "h-[clamp(1.1rem,5.5vw,1.85rem)]";
-const CURSOR_REEL_HEIGHT = "h-[clamp(1.65rem,8vw,2.75rem)]";
-const MAISA_REEL_HEIGHT = "h-[clamp(1.6rem,7.75vw,2.7rem)]";
+const CURSOR_REEL_HEIGHT = "h-[clamp(1.1rem,5.5vw,1.85rem)]";
+const MAISA_REEL_HEIGHT = "h-[clamp(1.1rem,5.5vw,1.85rem)]";
 const PROSPER_AI_REEL_HEIGHT = "h-[clamp(1.25rem,6.25vw,2.05rem)]";
+const HELMCODE_GRID_HEIGHT = "h-[clamp(1.45rem,7vw,2.6rem)]";
+const HELMCODE_REEL_HEIGHT = "h-[clamp(0.95rem,4.75vw,1.6rem)]";
 
 // OneCoWork is squarer/wider than wordmarks; Cursor and Maisa need an extra step up.
 const LARGE_PARTNER_SRC = new Set([onecoworkLogo.src]);
 const CURSOR_PARTNER_SRC = new Set([cursorLogo.src]);
 const MAISA_PARTNER_SRC = new Set([maisaLogo.src]);
 const PROSPER_AI_PARTNER_SRC = new Set([prosperAiLogo.src]);
+const HELMCODE_PARTNER_SRC = new Set([helmcodeLogo.src]);
 /** Kibo's stacked three-line lockup is nearly square, so height binds. */
 const STACKED_PARTNER_SRC = new Set([kiboLogo.src]);
 /** Acurio (wordmark over subtitle) and Enzo (chunky script) sit in between. */
 const MEDIUM_PARTNER_SRC = new Set([acurioLogo.src, enzoLogo.src]);
 
 function partnerGridHeight(src: string): string {
+  if (HELMCODE_PARTNER_SRC.has(src)) {
+    return HELMCODE_GRID_HEIGHT;
+  }
   if (STACKED_PARTNER_SRC.has(src)) {
     return CURSOR_GRID_HEIGHT;
   }
@@ -78,7 +91,7 @@ function partnerGridHeight(src: string): string {
     return PROSPER_AI_GRID_HEIGHT;
   }
   if (CURSOR_PARTNER_SRC.has(src)) {
-    return CURSOR_GRID_HEIGHT;
+    return DEFAULT_GRID_HEIGHT;
   }
   if (MAISA_PARTNER_SRC.has(src)) {
     return MAISA_GRID_HEIGHT;
@@ -93,6 +106,9 @@ function partnerGridHeight(src: string): string {
 }
 
 function partnerReelHeight(src: string): string {
+  if (HELMCODE_PARTNER_SRC.has(src)) {
+    return HELMCODE_REEL_HEIGHT;
+  }
   if (CURSOR_PARTNER_SRC.has(src)) {
     return CURSOR_REEL_HEIGHT;
   }
@@ -136,30 +152,88 @@ const MAISA: Partner = {
   src: maisaLogo.src,
 };
 
+const CONVEX: Partner = {
+  alt: "Convex — infra sponsor de HackSpain",
+  size: LOGO_SIZE,
+  src: convexLogo.src,
+};
+const VERCEL: Partner = {
+  alt: "Vercel — infra sponsor de HackSpain",
+  size: LOGO_SIZE,
+  src: vercelLogo.src,
+};
+const QUIVER_AI: Partner = {
+  alt: "QuiverAI — infra sponsor de HackSpain",
+  size: LOGO_SIZE,
+  src: quiverAiLogo.src,
+};
+const CLOUDFLARE: Partner = {
+  alt: "Cloudflare — infra sponsor de HackSpain",
+  size: LOGO_SIZE,
+  src: cloudflareLogo.src,
+};
+const TINYBIRD: Partner = {
+  alt: "Tinybird — infra sponsor de HackSpain",
+  size: LOGO_SIZE,
+  src: tinybirdLogo.src,
+};
+const COGNITION: Partner = {
+  alt: "Cognition — infra sponsor de HackSpain",
+  size: LOGO_SIZE,
+  src: cognitionLogo.src,
+};
+const EXA: Partner = {
+  alt: "Exa — infra sponsor de HackSpain",
+  size: "h-[22cqh]",
+  src: exaLogo.src,
+};
+const FAL: Partner = {
+  alt: "fal.ai — infra sponsor de HackSpain",
+  size: "h-[22cqh]",
+  src: falLogo.src,
+};
+const CURSOR: Partner = {
+  alt: "Cursor — infra sponsor de HackSpain",
+  size: CURSOR_LOGO_SIZE,
+  src: cursorLogo.src,
+};
+const HELMCODE: Partner = {
+  alt: "Helmcode — infra sponsor de HackSpain",
+  size: HELMCODE_LOGO_SIZE,
+  src: helmcodeLogo.src,
+};
+
+export const INFRA_SPONSORS: Partner[] = [
+  CONVEX,
+  VERCEL,
+  QUIVER_AI,
+  CLOUDFLARE,
+  TINYBIRD,
+  COGNITION,
+  EXA,
+  FAL,
+  CURSOR,
+  HELMCODE,
+];
+
 /** The list order doubles as the rotation order. */
 const PARTNERS: Partner[] = [
-  {
-    alt: "Cursor — partner de HackSpain",
-    size: CURSOR_LOGO_SIZE,
-    src: cursorLogo.src,
-  },
-  {
-    alt: "fal.ai — partner de HackSpain",
-    size: LOGO_SIZE,
-    src: falLogo.src,
-  },
-  {
-    alt: "Cognition — partner de HackSpain",
-    size: LOGO_SIZE,
-    src: cognitionLogo.src,
-  },
+  CURSOR,
+  FAL,
+  COGNITION,
   HAPPYROBOT,
   // {
   //   alt: "K Fund — partner de HackSpain",
   //   size: LOGO_SIZE,
   //   src: kfundLogo.src,
   // },
-  { alt: "Exa — partner de HackSpain", size: LOGO_SIZE, src: exaLogo.src },
+  EXA,
+  CONVEX,
+  VERCEL,
+  QUIVER_AI,
+  CLOUDFLARE,
+  TINYBIRD,
+  HELMCODE,
   {
     alt: "OneCoWork — partner de HackSpain",
     size: LARGE_LOGO_SIZE,
@@ -289,7 +363,20 @@ export function usePartnerRotation(
     () => (pinned === undefined ? undefined : shuffled(pinned)),
     [pinned]
   );
+  const [pinnedOffset, setPinnedOffset] = useState(0);
+  const rotatingPinned =
+    pinnedOrder !== undefined && pinnedOrder.length > count;
   const frozen = pinned !== undefined;
+
+  useEffect(() => {
+    if (!rotatingPinned || pinnedOrder === undefined) {
+      return;
+    }
+    const id = setInterval(() => {
+      setPinnedOffset((offset) => (offset + 1) % pinnedOrder.length);
+    }, SWAP_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [pinnedOrder, rotatingPinned]);
 
   useEffect(() => {
     if (frozen || PARTNERS.length <= count) {
@@ -317,46 +404,65 @@ export function usePartnerRotation(
     return () => clearInterval(id);
   }, [count, frozen]);
 
-  return pinnedOrder ?? state.onScreen;
+  if (pinnedOrder === undefined) {
+    return state.onScreen;
+  }
+  if (!rotatingPinned) {
+    return pinnedOrder;
+  }
+  return Array.from(
+    { length: count },
+    (_, i) => pinnedOrder[(pinnedOffset + i) % pinnedOrder.length]
+  ).filter((partner): partner is Partner => partner !== undefined);
 }
 
 /**
- * Two-column grid of partner logos with round-robin rotation, for mobile
- * sections. With `pinned` it shows that exact list, frozen; an odd final logo
- * spans the row so it centers instead of hanging off to the left.
+ * Partner grid for mobile sections. Larger sponsor sets use three columns so
+ * they stay readable without overflowing the compact mosaic cell.
  */
 export function PartnerLogoGrid({ pinned }: { pinned?: Partner[] }) {
-  const partners = usePartnerRotation(6, pinned);
-  const oddLast = partners.length % 2 === 1;
+  const partners = usePartnerRotation(pinned?.length ?? 6, pinned);
+  const dense = partners.length > 6;
+  const lastIsAlone = dense
+    ? partners.length % 3 === 1
+    : partners.length % 2 === 1;
   return (
-    <div className="grid w-full grid-cols-2 gap-6 px-4">
-      {partners.map((p, i) => (
-        <AnimatePresence initial={false} key={p.src} mode="wait">
-          <motion.span
-            animate={{ opacity: 1 }}
-            aria-label={p.alt}
-            className={`block bg-hs-ink/60 ${partnerGridHeight(p.src)} ${
-              oddLast && i === partners.length - 1
-                ? "col-span-2 mx-auto w-1/2"
-                : "w-full"
-            }`}
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            role="img"
-            style={{
-              WebkitMaskImage: `url(${p.src})`,
-              WebkitMaskPosition: "center",
-              WebkitMaskRepeat: "no-repeat",
-              WebkitMaskSize: "contain",
-              maskImage: `url(${p.src})`,
-              maskPosition: "center",
-              maskRepeat: "no-repeat",
-              maskSize: "contain",
-            }}
-            transition={{ duration: 0.3 }}
-          />
-        </AnimatePresence>
-      ))}
+    <div
+      className={`grid w-full ${
+        dense ? "grid-cols-3 gap-x-4 gap-y-3 px-2" : "grid-cols-2 gap-6 px-4"
+      }`}
+    >
+      {partners.map((p, i) => {
+        let widthClass = "w-full";
+        if (lastIsAlone && i === partners.length - 1) {
+          widthClass = dense
+            ? "col-start-2 w-full"
+            : "col-span-2 mx-auto w-1/2";
+        }
+        return (
+          <AnimatePresence initial={false} key={p.src} mode="wait">
+            <motion.span
+              animate={{ opacity: 1 }}
+              aria-label={p.alt}
+              className={`block bg-hs-ink/60 ${dense ? "h-[clamp(1.35rem,6vw,2rem)]" : partnerGridHeight(p.src)} ${widthClass}`}
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              role="img"
+              style={{
+                WebkitMaskImage: `url(${p.src})`,
+                WebkitMaskPosition: "center",
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskSize: "contain",
+                maskImage: `url(${p.src})`,
+                maskPosition: "center",
+                maskRepeat: "no-repeat",
+                maskSize: "contain",
+              }}
+              transition={{ duration: 0.3 }}
+            />
+          </AnimatePresence>
+        );
+      })}
     </div>
   );
 }
@@ -414,7 +520,7 @@ export function PartnerLogoCell({
         <motion.span
           animate={{ opacity: 1 }}
           aria-label={partner.alt}
-          className={`block w-full bg-hs-ink ${partner.size}`}
+          className={`block w-[78%] bg-hs-ink ${partner.size}`}
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           key={partner.src}

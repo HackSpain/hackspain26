@@ -1,3 +1,7 @@
+import adventureLaptop from "../../assets/illustration-adventure-laptop-brand.webp";
+import companionsBuild from "../../assets/illustration-companions-build-brand.webp";
+import midnightVenta from "../../assets/illustration-midnight-venta-brand.webp";
+import windmillCompute from "../../assets/illustration-windmill-compute-brand.webp";
 import type { LayoutProfile } from "../mosaic/artboard";
 import {
   codeSvg,
@@ -25,7 +29,14 @@ const SVG_MAP = {
   windmill: windmillSvg,
 } as const;
 
-type IllArt = keyof typeof SVG_MAP;
+const IMAGE_MAP = {
+  adventure: adventureLaptop.src,
+  companions: companionsBuild.src,
+  midnight: midnightVenta.src,
+  compute: windmillCompute.src,
+} as const;
+
+type IllArt = keyof typeof SVG_MAP | keyof typeof IMAGE_MAP;
 
 export interface IllDef {
   box: string;
@@ -36,6 +47,7 @@ export interface IllDef {
   h: number;
   id: string;
   img: string;
+  src?: string;
   svg: string | null;
   w: number;
   x: number;
@@ -44,10 +56,11 @@ export interface IllDef {
 
 const SCHEDULE: (IllArt | null)[][] = [
   ["windmill", "sun", "horse", "quixote", null, null], // Inicio
-  ["sun", "quixote", "windmill", "compass", null, null], // Misión
-  ["spark", "code", null, "compass", null, null], // Tracks
+  ["sun", "quixote", "windmill", "companions", null, null], // Misión
+  ["spark", "code", null, "adventure", null, null], // Tracks
+  [null, null, null, "compute", null, null], // Infraestructura: logos in the top cells
   ["medal", "trophy", null, "spark", null, null], // Gran premio
-  ["community", "sun", null, "quixote", null, null], // Comida, bebida y charlas
+  ["community", "sun", null, "midnight", null, null], // Comida, bebida y charlas
   ["trophy", "windmill", "horse", "quixote", null, null], // Apúntate
 ];
 
@@ -189,7 +202,12 @@ export function illustrationsForSection(
   const compact = profile === "compact";
   return SLOT_IDS.map((id, i) => {
     const art = row[i] ?? null;
-    const svg = art ? SVG_MAP[art] : null;
+    const svg =
+      art && art in SVG_MAP ? SVG_MAP[art as keyof typeof SVG_MAP] : null;
+    const src =
+      art && art in IMAGE_MAP
+        ? IMAGE_MAP[art as keyof typeof IMAGE_MAP]
+        : undefined;
 
     let x: number;
     let y: number;
@@ -245,9 +263,9 @@ export function illustrationsForSection(
     } else if (i === 3) {
       // Quixote/compass/trophy — centered vertically in the content band.
       x = 1220;
-      y = 425;
+      y = src ? 405 : 425;
       w = 220;
-      h = 200;
+      h = src ? 240 : 200;
     } else if (i === 4) {
       ({ x, y, w, h, clip } = slot4Geometry(art));
     } else {
@@ -264,6 +282,7 @@ export function illustrationsForSection(
       h,
       id,
       img: imgFor(i, art),
+      src,
       svg,
       w,
       x,

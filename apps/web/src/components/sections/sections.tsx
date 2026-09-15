@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import { Fragment, useState } from "react";
 import { HACKSPAIN_SOCIAL_URLS } from "../../data/landing-meta";
 import { areSignupsClosed } from "../../data/signup-deadline";
@@ -15,6 +16,7 @@ import {
   MOSAIC_LBL,
 } from "../mosaic/mosaic-typography";
 import {
+  codeSvg,
   exponentialLogo,
   horseSvg,
   logoSvg,
@@ -29,6 +31,7 @@ import { JudgesOverlay } from "./judges-overlay";
 import { MentorsOverlay } from "./mentors-overlay";
 import {
   GRAND_PRIZE_SPONSORS,
+  INFRA_SPONSORS,
   MENTOR_SPONSORS,
   PartnerLogoGrid,
   PartnerLogoReel,
@@ -178,7 +181,7 @@ function bottomRow(sectionIdx: number): Record<string, React.ReactNode> {
 // Compact (mobile) typography — viewport-based, unchanged from original layout.
 const CH = `${B} leading-tight`;
 const CLBL = `${D} text-[clamp(0.7rem,3vw,1rem)] font-black uppercase tracking-widest`;
-const CBD = `${D} text-[clamp(0.95rem,4vw,1.6rem)] font-semibold leading-snug`;
+const CBD = `${D} text-balance text-[clamp(1.05rem,4.8vw,1.8rem)] font-semibold leading-snug`;
 const CARD = "!gap-2 !p-4";
 // Card variant that hosts a faint decorative illustration behind the text.
 const CARDART = `${CARD} relative isolate overflow-hidden`;
@@ -275,7 +278,9 @@ function TracksInfoModal() {
         Ver tracks
       </Button>
 
-      {open && <TracksOverlay onClose={() => setOpen(false)} />}
+      <AnimatePresence>
+        {open && <TracksOverlay onClose={() => setOpen(false)} />}
+      </AnimatePresence>
     </>
   );
 }
@@ -295,7 +300,9 @@ function JudgesInfoModal() {
         Ver jurado
       </Button>
 
-      {open && <JudgesOverlay onClose={() => setOpen(false)} />}
+      <AnimatePresence>
+        {open && <JudgesOverlay onClose={() => setOpen(false)} />}
+      </AnimatePresence>
     </>
   );
 }
@@ -315,7 +322,9 @@ function MentorsInfoModal() {
         Ver mentores
       </Button>
 
-      {open && <MentorsOverlay onClose={() => setOpen(false)} />}
+      <AnimatePresence>
+        {open && <MentorsOverlay onClose={() => setOpen(false)} />}
+      </AnimatePresence>
     </>
   );
 }
@@ -515,6 +524,32 @@ export function buildSections(
     },
     {
       hero: (
+        <P bg="bg-hs-navy">
+          <p className={`${LBL} text-hs-gold`}>HACKSPAIN 2026</p>
+          <h2 className={`text-center ${MOSAIC_HERO_LG} text-hs-paper`}>
+            INFRA PARA
+            <br />
+            <span className="text-hs-gold">CONSTRUIR</span>
+          </h2>
+          <p className={`${LBL} text-hs-paper/60`}>Gratis para todos</p>
+        </P>
+      ),
+      r1c: <P bg="bg-hs-paper" />,
+      r3a: <P bg="bg-hs-paper" />,
+      r3b: <P bg="bg-hs-paper" />,
+      r4b: <P bg="bg-hs-paper" />,
+      r4c: (
+        <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-8">
+          <p className={`${BD} text-center text-hs-ink`}>
+            Diez compañías ponen la infraestructura y herramientas para que
+            construyas <span className="text-hs-red">sin límites.</span>
+          </p>
+        </P>
+      ),
+      ...bottomRow(3),
+    },
+    {
+      hero: (
         <P bg="bg-hs-red">
           <p className={`${LBL} text-hs-paper/70`}>HACKSPAIN 2026</p>
           <h2 className={`text-center ${MOSAIC_HERO_LG} text-hs-paper`}>
@@ -540,7 +575,7 @@ export function buildSections(
           <JudgesInfoModal />
         </P>
       ),
-      ...bottomRow(3),
+      ...bottomRow(4),
     },
     {
       hero: (
@@ -567,7 +602,7 @@ export function buildSections(
           <MentorsInfoModal />
         </P>
       ),
-      ...bottomRow(4),
+      ...bottomRow(5),
     },
     {
       hero: (
@@ -592,7 +627,7 @@ export function buildSections(
           />
         </P>
       ),
-      ...bottomRow(5),
+      ...bottomRow(6),
     },
   ];
 }
@@ -732,9 +767,9 @@ export function buildSectionsCompact(
     {
       hero: (
         <P bg="bg-hs-paper" className={CARD}>
-          <div className="flex w-full max-w-[320px] flex-col items-center gap-2">
+          <div className="flex h-full min-h-0 w-full max-w-[320px] flex-col items-center gap-1">
             <InlineSvg
-              className="h-auto w-full"
+              className="min-h-0 w-full flex-1"
               label="HackSpain 2026"
               svg={logoSvg}
             />
@@ -930,6 +965,44 @@ export function buildSectionsCompact(
         true
       ),
       // flip1=false, flip5=true → orn1 tl, orn5 tl
+      foot,
+    },
+    {
+      hero: (
+        <P bg="bg-hs-navy" className={CARD}>
+          <p className={`${CLBL} text-hs-gold`}>HACKSPAIN 2026</p>
+          <h2
+            className={`text-center ${CH} text-[clamp(1.85rem,8.5vw,3.3rem)] text-hs-paper`}
+          >
+            INFRA PARA <span className="text-hs-gold">CONSTRUIR</span>
+          </h2>
+          <p className={`${CLBL} text-hs-paper/60`}>Gratis para todos</p>
+        </P>
+      ),
+      b1: (
+        <P bg="bg-hs-teal" className={CARDART}>
+          {cardArt(codeSvg, "br")}
+          <p className={`${CBD} text-center text-white`}>
+            Diez compañías ponen la infraestructura y herramientas para que
+            construyas <span className="text-hs-gold">sin límites.</span>
+          </p>
+        </P>
+      ),
+      b2: (
+        <P bg="bg-hs-paper" className={`${CARD} !justify-center`}>
+          <PartnerLogoGrid pinned={INFRA_SPONSORS} />
+        </P>
+      ),
+      ...orn(
+        "bg-hs-red",
+        "bg-hs-paper",
+        "bg-hs-gold",
+        "bg-hs-orange",
+        "bg-hs-paper",
+        true,
+        false
+      ),
+      // flip1=true, flip5=false → orn1 br, orn5 br
       foot,
     },
     {

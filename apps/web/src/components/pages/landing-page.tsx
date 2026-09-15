@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   keywordsForSectionIndex,
@@ -6,6 +7,7 @@ import {
 } from "../../data/landing-meta";
 import {
   GRAND_PRIZE_SECTION_INDEX,
+  INFRA_SECTION_INDEX,
   MENTORS_SECTION_INDEX,
   parsePath,
   pathRootFromSectionIndex,
@@ -21,6 +23,7 @@ import { useReferralAwareHref } from "../referral/use-referral-href";
 import { illustrationsForSection } from "../sections/illustration-themes";
 import {
   GRAND_PRIZE_SPONSORS,
+  INFRA_SPONSORS,
   MENTOR_SPONSORS,
   PARTNER_CELL_COUNT,
   PartnerLogoCell,
@@ -35,6 +38,7 @@ const SECTION_NAV = [
   "Inicio",
   "Misión",
   "Tracks originales",
+  "Infraestructura",
   "Gran premio",
   "Comida, bebida y charlas",
   "Apúntate",
@@ -107,12 +111,13 @@ export function LandingPage({ initialSection = 0 }: Props) {
     () => illustrationsForSection(section, profile),
     [section, profile]
   );
-  // The tracks, gran premio, and mentores sections each hand the open row over
-  // to their own five sponsors and hold it there; everywhere else it rotates
-  // through all partners.
+  // Sponsor-led sections hand the open row to their own partners.
   const pinnedSponsors = useMemo(() => {
     if (section === TRACKS_SECTION_INDEX) {
       return TRACK_SPONSORS;
+    }
+    if (section === INFRA_SECTION_INDEX) {
+      return INFRA_SPONSORS;
     }
     if (section === GRAND_PRIZE_SECTION_INDEX) {
       return GRAND_PRIZE_SPONSORS;
@@ -276,7 +281,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
   const baseCurrent = sections[section] ?? {};
   // Partner logos fill any empty open-row cells (o1..o5) on every desktop section.
   // Cells already defined by the section are preserved.
-  const current =
+  const current: Record<string, ReactNode> =
     profile === "compact"
       ? baseCurrent
       : {
@@ -287,12 +292,33 @@ export function LandingPage({ initialSection = 0 }: Props) {
           o5: <PartnerLogoCell delay={0.2} partner={partners[4]} />,
           ...baseCurrent,
         };
+  if (!isCompact && section === INFRA_SECTION_INDEX) {
+    // Frame the central headline and copy with all ten infra sponsors.
+    for (const id of ["o1", "o2", "o3", "o4", "o5"]) {
+      delete current[id];
+    }
+    const sponsorCells = [
+      "r1b",
+      "r1c",
+      "r1d",
+      "r3a",
+      "r3b",
+      "r4b",
+      "r4d",
+      "o2",
+      "o3",
+      "o4",
+    ];
+    sponsorCells.forEach((id, index) => {
+      current[id] = <PartnerLogoCell partner={INFRA_SPONSORS[index]} />;
+    });
+  }
   const liveLabel = SECTION_NAV[section] ?? SECTION_NAV[0];
 
   const tileMotionClass = "absolute inset-0";
 
   const renderIll = (ill: (typeof ills)[number]) =>
-    ill.svg ? (
+    ill.svg || ill.src ? (
       <div
         aria-hidden
         className="pointer-events-none absolute z-10 overflow-hidden"
@@ -317,12 +343,24 @@ export function LandingPage({ initialSection = 0 }: Props) {
             }
             variants={variants}
           >
-            <InlineSvg
-              className={ill.img}
-              decorative
-              fill={ill.fill}
-              svg={ill.svg}
-            />
+            {ill.src && (
+              <img
+                alt=""
+                className="h-full w-full object-contain"
+                decoding="async"
+                height={640}
+                src={ill.src}
+                width={640}
+              />
+            )}
+            {!ill.src && ill.svg && (
+              <InlineSvg
+                className={ill.img}
+                decorative
+                fill={ill.fill}
+                svg={ill.svg}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -407,6 +445,51 @@ export function LandingPage({ initialSection = 0 }: Props) {
         {liveLabel}
       </p>
       <div className="absolute inset-0 overflow-hidden">{stageContent}</div>
+      {section === 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-[max(2.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center">
+          <button
+            aria-label="Descubrir más — ir a la siguiente sección"
+            className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full border border-hs-paper/20 bg-hs-ink px-5 py-2.5 font-bungee text-hs-paper text-xs tracking-[0.18em] shadow-lg transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-hs-gold focus-visible:outline-offset-4 active:scale-[0.96] motion-reduce:transition-none"
+            onClick={() => advance(1)}
+            type="button"
+          >
+            SCROLL
+            <svg
+              aria-hidden="true"
+              className="h-7 w-5 shrink-0 text-hs-gold"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.5"
+              viewBox="0 0 20 28"
+            >
+              <rect height="25" rx="8.5" width="17" x="1.5" y="1.5" />
+              <motion.path
+                animate={
+                  reducedMotion
+                    ? { opacity: 1, y: 0 }
+                    : { opacity: [0, 1, 1, 0], y: [0, 0, 7, 7] }
+                }
+                d="M10 7v4"
+                initial={{ opacity: 1, y: 0 }}
+                strokeWidth="3"
+                transition={
+                  reducedMotion
+                    ? { duration: 0 }
+                    : {
+                        duration: 1.8,
+                        ease: "easeInOut",
+                        repeat: Number.POSITIVE_INFINITY,
+                        repeatDelay: 0.4,
+                        times: [0, 0.15, 0.7, 1],
+                      }
+                }
+              />
+            </svg>
+          </button>
+        </div>
+      )}
     </section>
   );
 }

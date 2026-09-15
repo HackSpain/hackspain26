@@ -1,6 +1,7 @@
 export const SECTION_SLUGS = [
   "mission",
   "tracks",
+  "infra",
   "gran-premio",
   "mentores",
   "apuntate",
@@ -9,6 +10,9 @@ type SectionSlug = (typeof SECTION_SLUGS)[number];
 
 /** Section index of the tracks page (index 0 is the hero, so slugs start at 1). */
 export const TRACKS_SECTION_INDEX = SECTION_SLUGS.indexOf("tracks") + 1;
+
+/** Section index of the infrastructure sponsors page, after tracks. */
+export const INFRA_SECTION_INDEX = SECTION_SLUGS.indexOf("infra") + 1;
 
 /** Section index of the grand prize page, which follows tracks. */
 export const GRAND_PRIZE_SECTION_INDEX =
