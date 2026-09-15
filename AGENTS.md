@@ -25,17 +25,16 @@ Copy `apps/web/.env.example` → `apps/web/.env` for signup APIs. Copy `apps/app
 
 ## Feature status
 
-The participant loop is real end-to-end: apply on the landing → import to Convex → accept in CRM → onboard → team / tracks / submit → feed. Public signup still writes Neon; Convex `signups` come from `pnpm migrate:convex` (or CRM). Do not treat Insights or server telemetry as live.
+Public signup still writes Neon; Convex `signups` come from `pnpm migrate:convex` (or CRM). Insights stay mock. Watcher telemetry uploads to RawTree (`POST /api/cli/telemetry`).
 
 | Area | Status |
 | --- | --- |
-| Landing mosaic, signup, prefill, mentor/sponsor attendance, badges, cancel | **Live** (Neon). `/shortlist` is internal (password). `/ambassador` is marketing; ambassador interest is a signup flag. |
-| Auth, onboarding, profile, GitHub link, home | **Live** (Convex). Phone SMS needs Twilio or `ALLOW_PHONE_STUB`. |
-| Teams, tracks, submissions, perks, admin CRM / notifications | **Live** (Convex). Submit stays closed until an admin opens the window. |
-| Feed (web + CLI) + GitHub activity from team repos | **Live**. Images via `/api/files/<id>`. Cron needs `GITHUB_TOKEN` on the Convex deployment. |
-| CLI: auth, profile, team (join/create/leave/transfer/dissolve/repo), tracks, submit, feed, watch, stack, milestones | **Live** against `/api/cli/*`. No team invite/rename and no perk **claim** in the CLI (dashboard only). |
-| Insights (`/insights`) | **Mock UI only** (`src/app/insights/mock-data.ts`, `event-data.ts`). Milestones and `teams.techStack` exist in Convex but are not wired here. |
-| Watcher telemetry | CLI collects (claude-code, codex, opencode, cline) and uploads to `POST /api/cli/telemetry`, which validates and returns `stored: false`. No Convex table. Cursor / Copilot collectors are not shipped. |
+| Landing mosaic, signup, attendance, badges | **Live** (Neon). Signups closed 9 Aug. Shortlist and prefill are gone. |
+| Auth, onboarding, profile, GitHub link, feed, perks, tracks, CRM | **Live** (Convex). Submit stays closed until an admin opens the window. |
+| Teams | **Live**. This branch makes `/teams` read-only; create/join/transfer are CLI. |
+| CLI (commands + watch) | **Live** against `/api/cli/*`. This branch adds a TTY menu and dashboard login. |
+| Venue TV, judging, repo stack tags | **This branch.** `/tv`, `/admin/tv`, `/judging`. |
+| Insights (`/insights`) | **Mock UI only.** |
 
 ## Landing (`apps/web`)
 
@@ -128,7 +127,9 @@ Profiles store social links as `urls: { kind, url }[]`. `githubUsername` / `twit
 | `/` | Home |
 | `/participantes` | Directory + connections graph (demo data) |
 | `/cli` | CLI install and command guide |
+| `/cli-auth` | Approve a CLI device login |
 | `/tv` | Public venue screen (no login) |
+| `/judging` | Assigned judging queues |
 | `/profile` | Edit phone, diet, travel, consent, attendance |
 | `/teams` | Read-only team view; create/join via CLI |
 | `/perks` | Catalog + claim |
