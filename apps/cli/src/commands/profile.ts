@@ -404,7 +404,14 @@ export async function completeProfile(
     });
     if (wants) {
       try {
-        const phone = await runPhoneConfirmation(ctx, ui, session, current);
+        const phone = await runPhoneConfirmation(
+          ctx,
+          ui,
+          session,
+          current,
+          undefined,
+          undefined,
+        );
         current = { ...current, phone, phoneConfirmed: true };
         ui.success(`${phone} confirmed.`);
       } catch (error) {

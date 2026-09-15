@@ -6,7 +6,7 @@ export type MemberInput = {
   identifier: string;
 };
 
-const TYPES: IdentifierType[] = new Set(["email", "github", "twitter"]);
+const TYPES = new Set<IdentifierType>(["email", "github", "twitter"]);
 
 /**
  * Parse `github:octocat`, `email:a@b.c`, `twitter:@handle`. A bare value with

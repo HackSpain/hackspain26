@@ -275,7 +275,7 @@ export async function uploadImage(
   let response: Response;
   try {
     response = await fetchImpl(`${session.url}/api/cli/upload`, {
-      body: new Blob([[...bytes].buffer as ArrayBuffer], {
+      body: new Blob([bytes], {
         type: contentType,
       }),
       headers: {
