@@ -9,19 +9,21 @@ import {
   deviceStart,
   openSession,
 } from "../lib/api";
+import type { Tokens } from "../lib/auth-store";
 import {
   clearCredentials,
   credentialsFromTokens,
   readCredentials,
-  type Tokens,
   writeCredentials,
 } from "../lib/auth-store";
 import { openInBrowser } from "../lib/browser";
 import { resolveAppUrl } from "../lib/config";
-import { type CliContext, contextFor } from "../lib/context";
+import type { CliContext } from "../lib/context";
+import { contextFor } from "../lib/context";
 import { CliError } from "../lib/errors";
 import { describeGate, fetchMe } from "../lib/me";
-import { firstName, formatWhen, type Ui, uiFor } from "../lib/output";
+import type { Ui } from "../lib/output";
+import { firstName, formatWhen, uiFor } from "../lib/output";
 import { pickOne, textOrFlag } from "../lib/prompts";
 import { c, highlight } from "../lib/style";
 import { completeProfile } from "./profile";
@@ -121,10 +123,10 @@ async function pollUntilApproved(
       if (result.status === "expired") {
         break;
       }
-    } catch (err) {
+    } catch (error) {
       failures += 1;
       if (failures >= MAX_POLL_FAILURES) {
-        throw err;
+        throw error;
       }
     }
   }

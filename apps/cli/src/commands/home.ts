@@ -6,8 +6,10 @@ import { resolveAppUrl } from "../lib/config";
 import type { CliContext } from "../lib/context";
 import { contextFor } from "../lib/context";
 import { explainError } from "../lib/errors";
-import { describeGate, fetchMe, type Gate, type Me } from "../lib/me";
-import { type MenuStatus, menuStatusFrom, runMenu } from "../lib/menu";
+import type { Gate, Me } from "../lib/me";
+import { describeGate, fetchMe } from "../lib/me";
+import type { MenuStatus } from "../lib/menu";
+import { menuStatusFrom, runMenu } from "../lib/menu";
 import {
   bootFor,
   formatStatusBoard,
@@ -15,7 +17,8 @@ import {
   greetingFor,
   openingBoardRows,
 } from "../lib/opening";
-import { type Ui, uiFor } from "../lib/output";
+import type { Ui } from "../lib/output";
+import { uiFor } from "../lib/output";
 import type { Submission, Team } from "../lib/participant";
 import { c, cmd } from "../lib/style";
 import { VERSION } from "../version";
@@ -140,6 +143,10 @@ function renderReady(
   );
 }
 
+function unexpectedSnapshot(_snapshot: never): void {
+  throw new Error("unexpected snapshot");
+}
+
 function renderSnapshot(ui: Ui, snapshot: Snapshot, menuMode: boolean): void {
   switch (snapshot.kind) {
     case "loggedOut": {
@@ -157,7 +164,7 @@ function renderSnapshot(ui: Ui, snapshot: Snapshot, menuMode: boolean): void {
         ]);
         ui.outro("See you at the venue ⚡");
       }
-      return;
+      break;
     }
     case "expired": {
       ui.result({ loggedIn: false });
@@ -170,7 +177,7 @@ function renderSnapshot(ui: Ui, snapshot: Snapshot, menuMode: boolean): void {
       if (!menuMode) {
         ui.next([["hackspain auth login", "sign in again"]]);
       }
-      return;
+      break;
     }
     case "gated": {
       ui.result({ loggedIn: true, gate: snapshot.gate });
@@ -183,35 +190,39 @@ function renderSnapshot(ui: Ui, snapshot: Snapshot, menuMode: boolean): void {
       if (!menuMode) {
         ui.outro("Come back once that is sorted; the rest unlocks then.");
       }
-      return;
+      break;
     }
     case "ready": {
       renderReady(ui, snapshot, menuMode);
-      return;
+      break;
     }
-    default:
-      return;
+    default: {
+      unexpectedSnapshot(snapshot);
+    }
   }
 }
 
 function menuStatusOf(snapshot: Snapshot): MenuStatus {
   switch (snapshot.kind) {
-    case "gated":
+    case "gated": {
       return {
         loggedIn: true,
         gate: snapshot.gate.state,
         email: snapshot.email,
         name: snapshot.name ?? undefined,
       };
-    case "ready":
+    }
+    case "ready": {
       return menuStatusFrom(
         { email: snapshot.email, name: snapshot.me.name },
         snapshot.gate,
         snapshot.team,
         snapshot.submission
       );
-    default:
+    }
+    default: {
       return { loggedIn: false };
+    }
   }
 }
 
@@ -232,8 +243,8 @@ export function registerHome(program: Command, rebuild?: () => Command): void {
       // failed check-in degrades to the signed-out menu instead of aborting.
       try {
         snapshot = await loadSnapshot(ctx, url);
-      } catch (err) {
-        const explained = explainError(err);
+      } catch (error) {
+        const explained = explainError(error);
         ui.warn(
           `${explained.message}${explained.hint ? `\n${c.dim(explained.hint)}` : ""}`
         );

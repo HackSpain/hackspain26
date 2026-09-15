@@ -7,7 +7,8 @@ import { banner } from "./banner";
 import { resolveAppUrl } from "./config";
 import type { CliContext } from "./context";
 import { explainError } from "./errors";
-import { describeGate, fetchMe, type Gate, type GateState } from "./me";
+import type { Gate, GateState } from "./me";
+import { describeGate, fetchMe } from "./me";
 import { greetingFor, openingBoardRows, renderOpening } from "./opening";
 import { isCommanderError } from "./run";
 import { c, cmd } from "./style";
@@ -650,9 +651,9 @@ export async function runMenu(options: {
   const runArgv = async (argv: string[]): Promise<void> => {
     try {
       await dispatch(rebuild, ctx, argv);
-    } catch (err) {
-      if (!isCommanderError(err)) {
-        const explained = explainError(err);
+    } catch (error) {
+      if (!isCommanderError(error)) {
+        const explained = explainError(error);
         const hint = explained.hint ? `\n${c.dim(explained.hint)}` : "";
         log.error(`${c.red(explained.message)}${hint}`);
       }

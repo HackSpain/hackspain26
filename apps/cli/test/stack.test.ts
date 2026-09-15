@@ -6,7 +6,9 @@ describe("repoSlug", () => {
   test("accepts URLs and org/name", () => {
     expect(repoSlug("https://github.com/org/repo")).toBe("org/repo");
     expect(repoSlug("org/repo")).toBe("org/repo");
-    expect(canonicalRepoUrl("org/repo.git")).toBe("https://github.com/org/repo");
+    expect(canonicalRepoUrl("org/repo.git")).toBe(
+      "https://github.com/org/repo"
+    );
     expect(repoSlug("not-a-repo")).toBeNull();
   });
 });
@@ -88,7 +90,12 @@ describe("detectStack", () => {
       deps[`noise-${i}`] = "1.0.0";
     }
     const tags = detectStack({
-      files: [{ path: "package.json", content: JSON.stringify({ dependencies: deps }) }],
+      files: [
+        {
+          path: "package.json",
+          content: JSON.stringify({ dependencies: deps }),
+        },
+      ],
     });
     expect(tags.every((tag) => !tag.startsWith("noise-"))).toBe(true);
     expect(tags).not.toContain("lodash");
@@ -98,8 +105,11 @@ describe("detectStack", () => {
   test("Go, Rust and Unity path signals", () => {
     const tags = detectStack({
       files: [
-        { path: "go.mod", content: "module example\nrequire github.com/gin-gonic/gin v1.9.0\n" },
-        { path: "Cargo.toml", content: "[dependencies]\naxum = \"0.7\"\n" },
+        {
+          path: "go.mod",
+          content: "module example\nrequire github.com/gin-gonic/gin v1.9.0\n",
+        },
+        { path: "Cargo.toml", content: '[dependencies]\naxum = "0.7"\n' },
       ],
       paths: ["go.mod", "Cargo.toml", "Assets/Scenes/Main.unity"],
     });

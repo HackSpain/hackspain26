@@ -410,7 +410,7 @@ export async function completeProfile(
           session,
           current,
           undefined,
-          undefined,
+          undefined
         );
         current = { ...current, phone, phoneConfirmed: true };
         ui.success(`${phone} confirmed.`);

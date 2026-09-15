@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  buildMainMenu,
-  isResumeKey,
-  type MenuItem,
-  type MenuStatus,
-  statusLine,
-} from "../src/lib/menu";
+import type { MenuItem, MenuStatus } from "../src/lib/menu";
+import { buildMainMenu, isResumeKey, statusLine } from "../src/lib/menu";
 import { buildProgram } from "../src/lib/program";
 
 const LOGGED_OUT: MenuStatus = { loggedIn: false };

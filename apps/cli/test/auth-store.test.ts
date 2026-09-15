@@ -125,11 +125,11 @@ describe("currentToken", () => {
     writeCredentials(creds({ tokenExpiresAt: Date.now() + 1000 }));
     const exp = Math.floor(Date.now() / 1000) + 3600;
     let calls = 0;
-    const started = Promise.withResolvers<void>();
-    const hold = Promise.withResolvers<void>();
+    const started = Promise.withResolvers<undefined>();
+    const hold = Promise.withResolvers<undefined>();
     const refresh = async (refreshToken: string) => {
       calls++;
-      started.resolve();
+      started.resolve(undefined);
       await hold.promise;
       if (refreshToken !== "r1") {
         return null; // reuse would be a logout
@@ -139,7 +139,7 @@ describe("currentToken", () => {
     const first = currentToken(URL, refresh);
     await started.promise;
     const second = currentToken(URL, refresh);
-    hold.resolve();
+    hold.resolve(undefined);
     const [a, b] = await Promise.all([first, second]);
     expect(a).toBe(b);
     expect(calls).toBe(1);
@@ -185,11 +185,11 @@ describe("currentToken", () => {
 describe("withCredentialsLock", () => {
   test("serialises critical sections", async () => {
     const order: string[] = [];
-    const entered = Promise.withResolvers<void>();
-    const hold = Promise.withResolvers<void>();
+    const entered = Promise.withResolvers<undefined>();
+    const hold = Promise.withResolvers<undefined>();
     const first = withCredentialsLock(async () => {
       order.push("a-in");
-      entered.resolve();
+      entered.resolve(undefined);
       await hold.promise;
       order.push("a-out");
     });
@@ -198,7 +198,7 @@ describe("withCredentialsLock", () => {
       order.push("b-in");
       order.push("b-out");
     });
-    hold.resolve();
+    hold.resolve(undefined);
     await Promise.all([first, second]);
     expect(order).toEqual(["a-in", "a-out", "b-in", "b-out"]);
   });

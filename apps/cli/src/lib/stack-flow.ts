@@ -1,14 +1,16 @@
-import { api } from "./api";
 import type { Session } from "./api";
+import { api } from "./api";
 import type { CliContext } from "./context";
 import { CliError } from "./errors";
 import type { Ui } from "./output";
 import { confirmOrFlag, textOrFlag } from "./prompts";
 import { c, highlight } from "./style";
 
+const TAG_SPLIT = /[,\s]+/;
+
 function parseTags(raw: string): string[] {
   return raw
-    .split(/[,\s]+/)
+    .split(TAG_SPLIT)
     .map((tag) => tag.trim())
     .filter(Boolean);
 }

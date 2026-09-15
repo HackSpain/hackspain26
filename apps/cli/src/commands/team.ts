@@ -2,15 +2,17 @@ import type { Command } from "commander";
 import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { CliError, usageError } from "../lib/errors";
+import { ensureGithubLinked } from "../lib/github-link";
 import { formatMember, parseMember } from "../lib/members";
 import type { Ui } from "../lib/output";
 import { formatWhen, uiFor } from "../lib/output";
 import type { Team } from "../lib/participant";
 import { openParticipant } from "../lib/participant";
-import { ensureGithubLinked } from "../lib/github-link";
 import { confirmOrFlag, pickOne, textOrFlag } from "../lib/prompts";
 import { detectAndConfirmStack } from "../lib/stack-flow";
 import { c, cmd, highlight } from "../lib/style";
+
+const REPO_SPLIT = /[,\s]+/;
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -294,15 +296,13 @@ export function registerTeam(program: Command): void {
             repoUrls: mine.repoUrls,
             techStack: mine.techStack,
           });
-          ui.line(
-            mine.repoUrls.join("\n") || mine.repoUrl || "(not set)"
-          );
+          ui.line(mine.repoUrls.join("\n") || mine.repoUrl || "(not set)");
           return;
         }
         await ensureGithubLinked(ctx, ui, session, me);
         const raw =
           urls.length > 0
-            ? urls.flatMap((value) => value.split(/[,\s]+/)).filter(Boolean)
+            ? urls.flatMap((value) => value.split(REPO_SPLIT)).filter(Boolean)
             : (
                 await textOrFlag(ctx, undefined, {
                   flag: "<urls>",
@@ -311,7 +311,7 @@ export function registerTeam(program: Command): void {
                   placeholder: "org/repo, org/other",
                 })
               )
-                .split(/[,\s]+/)
+                .split(REPO_SPLIT)
                 .filter(Boolean);
         if (raw.length === 0) {
           throw usageError("Pass at least one GitHub repo.");
