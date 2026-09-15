@@ -3,6 +3,8 @@ import {
   api,
   authVerify,
   createClient,
+  devicePoll,
+  deviceStart,
   functionName,
   makeRefresh,
 } from "../src/lib/api";
@@ -168,5 +170,46 @@ describe("auth endpoints", () => {
       token: "t-refresh",
     });
     expect(calls[1]?.body).toEqual({ refreshToken: "r1" });
+  });
+
+  test("device start sends the secret, poll relays pending then tokens", async () => {
+    const secret = "s".repeat(43);
+    const responses = [
+      { code: "abcdmnpq2345", expiresAt: 1234 },
+      { status: "pending" },
+      {
+        status: "approved",
+        tokens: { token: "t1", refreshToken: "r1" },
+        email: "a@b.c",
+      },
+    ];
+    const { fetch, calls } = fakeFetch(() => ({
+      status: 200,
+      body: { ok: true, value: responses.shift() },
+    }));
+    expect(await deviceStart("https://app.test", secret, fetch)).toEqual({
+      code: "abcdmnpq2345",
+      expiresAt: 1234,
+    });
+    expect(calls[0]).toEqual({
+      url: "https://app.test/api/cli/auth/device/start",
+      body: { secret },
+      auth: null,
+    });
+    expect(
+      await devicePoll("https://app.test", "abcdmnpq2345", secret, fetch)
+    ).toEqual({ status: "pending" });
+    expect(calls[1]).toEqual({
+      url: "https://app.test/api/cli/auth/device/poll",
+      body: { code: "abcdmnpq2345", secret },
+      auth: null,
+    });
+    expect(
+      await devicePoll("https://app.test", "abcdmnpq2345", secret, fetch)
+    ).toEqual({
+      status: "approved",
+      tokens: { token: "t1", refreshToken: "r1" },
+      email: "a@b.c",
+    });
   });
 });

@@ -7,13 +7,14 @@ export type ProjectArgs = {
   description: string;
   repoUrl?: string;
   demoUrl?: string;
+  videoUrl?: string;
   challengeIds: Submission["challengeIds"];
   perkIds: Submission["perkIds"];
 };
 
 function urlOf(
   urls: Submission["urls"] | undefined,
-  kind: "repo" | "demo"
+  kind: "repo" | "demo" | "video"
 ): string | undefined {
   return urls?.find((entry) => entry.kind === kind)?.url;
 }
@@ -26,6 +27,7 @@ export function projectArgsFrom(submission: Submission | null): ProjectArgs {
     name: submission?.name ?? "",
     perkIds: submission?.perkIds ?? [],
     repoUrl: urlOf(submission?.urls, "repo"),
+    videoUrl: urlOf(submission?.urls, "video"),
   };
 }
 

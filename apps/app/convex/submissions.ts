@@ -4,10 +4,17 @@ import {
   onboardedMutation,
   onboardedQuery,
 } from "./lib/customFunctions";
+import {
+  countGroups,
+  DEFAULT_GENERAL_GROUP_COUNT,
+  JUDGING_SETTINGS_KEY,
+  pickBalancedGroup,
+} from "./lib/judging";
 import { submissionStatusValidator } from "./lib/validators";
-import { buildUrls, urlsValidator } from "./lib/urls";
+import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import { submissionsAreOpen } from "./tracks";
 import { findOwnedSubmission, membershipForUser } from "./lib/team";
+import { scheduleStackScan } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -37,6 +44,7 @@ const submissionReturn = v.object({
   submittedBy: v.id("users"),
   teamId: v.optional(v.id("teams")),
   teamName: v.optional(v.string()),
+  techStack: v.array(v.string()),
   updatedAt: v.number(),
   urls: urlsValidator,
 });
@@ -86,6 +94,7 @@ async function hydrateSubmission(
     submittedBy: submission.submittedBy,
     teamId: submission.teamId,
     teamName: team?.name,
+    techStack: submission.techStack ?? [],
     updatedAt: submission.updatedAt,
     urls: submission.urls,
   };
@@ -123,10 +132,26 @@ async function resolvePerkIds(
   return unique;
 }
 
-function projectUrls(repoUrl?: string, demoUrl?: string) {
+async function nextGeneralGroup(ctx: MutationCtx): Promise<number> {
+  const [settings, submitted] = await Promise.all([
+    ctx.db
+      .query("judgingSettings")
+      .withIndex("by_key", (q) => q.eq("key", JUDGING_SETTINGS_KEY))
+      .unique(),
+    ctx.db
+      .query("submissions")
+      .withIndex("by_status", (q) => q.eq("status", "submitted"))
+      .collect(),
+  ]);
+  const groupCount = settings?.generalGroupCount ?? DEFAULT_GENERAL_GROUP_COUNT;
+  return pickBalancedGroup(countGroups(submitted, groupCount), groupCount);
+}
+
+function projectUrls(repoUrl?: string, demoUrl?: string, videoUrl?: string) {
   return buildUrls([
     { kind: "repo", url: repoUrl },
     { kind: "demo", url: demoUrl },
+    { kind: "video", url: videoUrl },
   ]);
 }
 
@@ -149,6 +174,7 @@ const projectArgs = {
   name: v.string(),
   perkIds: v.array(v.id("perks")),
   repoUrl: v.optional(v.string()),
+  videoUrl: v.optional(v.string()),
 };
 
 async function upsertProject(
@@ -158,6 +184,7 @@ async function upsertProject(
     description: string;
     repoUrl?: string;
     demoUrl?: string;
+    videoUrl?: string;
     challengeIds: Id<"tracks">[];
     perkIds: Id<"perks">[];
   },
@@ -205,18 +232,37 @@ async function upsertProject(
     submittedBy: ctx.user._id,
     teamId: membership?.teamId,
     updatedAt: now,
-    urls: projectUrls(args.repoUrl, args.demoUrl),
-    ...(mode === "submit" ? { submittedAt: now } : {}),
+    urls: projectUrls(
+      args.repoUrl,
+      args.demoUrl,
+      args.videoUrl ?? urlOf(existing?.urls, "video"),
+    ),
+    ...(mode === "submit"
+      ? {
+          submittedAt: now,
+          generalGroup:
+            existing?.generalGroup ?? (await nextGeneralGroup(ctx)),
+        }
+      : {}),
   };
 
-  if (existing) {
-    await ctx.db.patch(existing._id, fields);
-    return existing._id;
+  const submissionId = existing
+    ? (await ctx.db.patch(existing._id, fields), existing._id)
+    : await ctx.db.insert("submissions", {
+        ...fields,
+        createdAt: now,
+      });
+  const repoUrl = args.repoUrl ?? urlOf(fields.urls, "repo");
+  if (repoUrl) {
+    await scheduleStackScan(ctx, {
+      force: mode === "submit",
+      repoUrls: [repoUrl],
+      submissionId,
+      teamId: membership?.teamId,
+      userId: ctx.user._id,
+    });
   }
-  return await ctx.db.insert("submissions", {
-    ...fields,
-    createdAt: now,
-  });
+  return submissionId;
 }
 
 export const saveDraft = onboardedMutation({

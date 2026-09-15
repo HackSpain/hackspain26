@@ -116,9 +116,11 @@ export function Sparkline({
 export function ActivityChart({
   samples,
   metric,
+  mode = "interactive",
 }: {
   samples: Sample[];
   metric: Metric;
+  mode?: "interactive" | "tv";
 }) {
   const [selectedBucket, setSelectedBucket] = useState<number | null>(null);
   const buckets = [...new Set(samples.map((sample) => sample.bucket))];
@@ -147,9 +149,9 @@ export function ActivityChart({
     )
   );
   return (
-    <div>
-      <div className={STAGE}>
-        <ResponsiveContainer width="100%" height={248} minWidth={0}>
+    <div className={mode === "tv" ? "flex h-full min-h-0 flex-col" : undefined}>
+      <div className={mode === "tv" ? "min-h-0 flex-1" : STAGE}>
+        <ResponsiveContainer width="100%" height={mode === "tv" ? "100%" : 248} minWidth={0}>
           <BarChart
             data={rows}
             margin={{ bottom: 0, left: -12, right: 0, top: 12 }}
@@ -204,12 +206,12 @@ export function ActivityChart({
           </BarChart>
         </ResponsiveContainer>
       </div>
-      {selected ? (
+      {selected && mode !== "tv" ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
           <label className="flex items-center gap-2 text-hs-brown">
             Intervalo
             <select
-              className="min-h-10 rounded-lg border border-hs-navy/15 bg-transparent px-2 font-mono text-xs text-hs-ink outline-offset-2 focus-visible:outline-hs-navy"
+              className="min-h-10 rounded-lg border-2 border-hs-ink/25 bg-transparent px-2 font-mono text-xs text-hs-ink outline-offset-2 focus-visible:outline-hs-navy"
               value={selected.bucket}
               onChange={(event) =>
                 setSelectedBucket(Number(event.target.value))
@@ -229,7 +231,7 @@ export function ActivityChart({
           </span>
         </div>
       ) : null}
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+      <div className={mode === "tv" ? "mt-[0.4cqw] flex shrink-0 flex-wrap gap-x-[0.8cqw] gap-y-1 [&>span]:text-[0.7cqw]" : "mt-3 flex flex-wrap gap-x-4 gap-y-2"}>
         {activeTools.map((harness) => (
           <span
             key={harness.id}

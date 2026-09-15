@@ -1,0 +1,33 @@
+"use client";
+
+import { ExternalLink } from "lucide-react";
+import { Page } from "@/components/page";
+import { TvEditor } from "@/components/tv/editor";
+import { TvReloadControl } from "@/components/tv/reload-control";
+
+export default function AdminTvPage() {
+  return (
+    <Page
+      title="Pantalla principal"
+      description={
+        <>
+          Arrastra las cajas, edita en el panel y guarda un estado. Ponlo en
+          vivo para{" "}
+          <a
+            href="/tv"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-hs-navy underline underline-offset-[3px]"
+          >
+            /tv
+            <ExternalLink className="size-3.5" aria-hidden />
+          </a>
+          .
+        </>
+      }
+    >
+      <TvEditor />
+      <TvReloadControl />
+    </Page>
+  );
+}

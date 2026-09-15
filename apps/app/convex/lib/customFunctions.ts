@@ -9,6 +9,7 @@ import {
   getCurrentUser,
   requireAccepted,
   requireAdmin,
+  requireJudge,
   requireOnboarded,
 } from "./auth";
 
@@ -42,3 +43,5 @@ export const onboardedQuery = wrapQuery(requireOnboarded);
 export const onboardedMutation = wrapMutation(requireOnboarded);
 export const adminQuery = wrapQuery(requireAdmin);
 export const adminMutation = wrapMutation(requireAdmin);
+export const judgeQuery = wrapQuery(requireJudge);
+export const judgeMutation = wrapMutation(requireJudge);

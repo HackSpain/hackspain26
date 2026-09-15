@@ -2,13 +2,19 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
-import { milestoneKindValidator } from "./lib/validators";
+import {
+  milestoneKindValidator,
+  perkAnswerValidator,
+  perkInputValidator,
+  roleValidator,
+} from "./lib/validators";
 
 const authTablesWithoutUsers = Object.fromEntries(
   Object.entries(authTables).filter(([name]) => name !== "users")
 ) as Omit<typeof authTables, "users">;
 
 export default defineSchema({
+  tvPlaybackControl: defineTable({ key: v.string(), reloadVersion: v.number() }).index("by_key", ["key"]),
   ...authTablesWithoutUsers,
   ambassadorApplications: defineTable({
     email: v.string(),
@@ -80,6 +86,7 @@ export default defineSchema({
       v.literal("assigned")
     ),
     codeId: v.optional(v.id("perkCodes")),
+    answers: v.optional(v.array(perkAnswerValidator)),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -105,6 +112,8 @@ export default defineSchema({
     value: v.string(),
     description: v.string(),
     type: v.union(v.literal("email"), v.literal("code")),
+    sponsorUrl: v.optional(v.string()),
+    inputs: v.optional(v.array(perkInputValidator)),
     active: v.boolean(),
     createdBy: v.id("users"),
     createdAt: v.number(),
@@ -183,10 +192,15 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     submittedAt: v.optional(v.number()),
+    generalGroup: v.optional(v.number()),
+    techStack: v.optional(v.array(v.string())),
+    techStackAt: v.optional(v.number()),
+    techStackSource: v.optional(v.literal("repo")),
   })
     .index("by_team", ["teamId"])
     .index("by_user", ["submittedBy"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_status_and_general_group", ["status", "generalGroup"]),
 
   teamMembers: defineTable({
     teamId: v.id("teams"),
@@ -212,7 +226,10 @@ export default defineSchema({
     ownerId: v.id("users"),
     joinCode: v.optional(v.string()),
     repoUrl: v.optional(v.string()),
+    repoUrls: v.optional(v.array(v.string())),
     techStack: v.optional(v.array(v.string())),
+    techStackAt: v.optional(v.number()),
+    techStackSource: v.optional(v.literal("repo")),
     // GitHub feed polling: ETag for conditional requests, last poll time.
     githubEtag: v.optional(v.string()),
     githubPolledAt: v.optional(v.number()),
@@ -241,7 +258,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
-    role: v.union(v.literal("user"), v.literal("admin")),
+    role: roleValidator,
     signupId: v.optional(v.id("signups")),
     phoneConfirmed: v.boolean(),
     notificationConsent: v.boolean(),
@@ -260,6 +277,8 @@ export default defineSchema({
     githubId: v.optional(v.string()),
     githubUsername: v.optional(v.string()),
     githubLinkedAt: v.optional(v.number()),
+    /** User OAuth token from github.startLink. Never return from public queries. */
+    githubAccessToken: v.optional(v.string()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"])
@@ -268,4 +287,205 @@ export default defineSchema({
     .index("by_attendance", ["attendanceStatus"])
     .index("by_github_id", ["githubId"])
     .index("by_github", ["githubUsername"]),
+
+  /** Pending `hackspain auth login` browser approvals. See convex/cliAuth.ts. */
+  cliAuthRequests: defineTable({
+    code: v.string(),
+    secret: v.string(),
+    status: v.union(v.literal("pending"), v.literal("approved")),
+    userId: v.optional(v.id("users")),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_expires", ["expiresAt"]),
+
+  tvMessages: defineTable({
+    text: v.string(),
+    zone: v.union(
+      v.literal("banner"),
+      v.literal("left"),
+      v.literal("right"),
+      v.literal("ticker")
+    ),
+    order: v.number(),
+    active: v.boolean(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_zone", ["zone", "order"]),
+
+  tvWidgets: defineTable({
+    kind: v.union(
+      v.literal("banner"),
+      v.literal("ticker"),
+      v.literal("clock"),
+      v.literal("message"),
+      v.literal("insightsStats"),
+      v.literal("insightsActivity"),
+      v.literal("insightsHarness"),
+      v.literal("insightsStacks"),
+      v.literal("insightsScatter"),
+      v.literal("insightsLeaderboard"),
+      v.literal("insightsEvolution"),
+      v.literal("liveCommits"),
+      v.literal("liveAgents"),
+      v.literal("liveTokens"),
+      v.literal("liveLeaderboard"),
+      v.literal("feed"),
+      v.literal("sponsorGrid"),
+      v.literal("sponsorTicker")
+    ),
+    x: v.number(),
+    y: v.number(),
+    w: v.number(),
+    h: v.number(),
+    z: v.number(),
+    text: v.string(),
+    sponsors: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          logoUrl: v.string(),
+          href: v.string(),
+          tier: v.union(
+            v.literal("gold"),
+            v.literal("silver"),
+            v.literal("community")
+          ),
+        })
+      )
+    ),
+    tickerSpeed: v.optional(
+      v.union(v.literal("slow"), v.literal("normal"), v.literal("fast"))
+    ),
+    feedMode: v.optional(v.union(v.literal("latest"), v.literal("rotate"))),
+    feedSource: v.optional(
+      v.union(
+        v.literal("all"),
+        v.literal("participants"),
+        v.literal("github")
+      )
+    ),
+    fontSize: v.optional(v.number()),
+    fontWeight: v.optional(
+      v.union(
+        v.literal("normal"),
+        v.literal("medium"),
+        v.literal("semibold"),
+        v.literal("bold")
+      )
+    ),
+    background: v.optional(v.boolean()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_z", ["z"]),
+
+  tvLayouts: defineTable({
+    name: v.string(),
+    isLive: v.boolean(),
+    widgets: v.array(
+      v.object({
+        kind: v.union(
+          v.literal("banner"),
+          v.literal("ticker"),
+          v.literal("clock"),
+          v.literal("message"),
+          v.literal("insightsStats"),
+          v.literal("insightsActivity"),
+          v.literal("insightsHarness"),
+          v.literal("insightsStacks"),
+          v.literal("insightsScatter"),
+          v.literal("insightsLeaderboard"),
+          v.literal("insightsEvolution"),
+          v.literal("liveCommits"),
+          v.literal("liveAgents"),
+          v.literal("liveTokens"),
+          v.literal("liveLeaderboard"),
+          v.literal("feed"),
+          v.literal("sponsorGrid"),
+          v.literal("sponsorTicker")
+        ),
+        x: v.number(),
+        y: v.number(),
+        w: v.number(),
+        h: v.number(),
+        z: v.number(),
+        text: v.string(),
+        sponsors: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              logoUrl: v.string(),
+              href: v.string(),
+              tier: v.union(
+                v.literal("gold"),
+                v.literal("silver"),
+                v.literal("community")
+              ),
+            })
+          )
+        ),
+        tickerSpeed: v.optional(
+          v.union(v.literal("slow"), v.literal("normal"), v.literal("fast"))
+        ),
+        feedMode: v.optional(v.union(v.literal("latest"), v.literal("rotate"))),
+        feedSource: v.optional(
+          v.union(
+            v.literal("all"),
+            v.literal("participants"),
+            v.literal("github")
+          )
+        ),
+        fontSize: v.optional(v.number()),
+        fontWeight: v.optional(
+          v.union(
+            v.literal("normal"),
+            v.literal("medium"),
+            v.literal("semibold"),
+            v.literal("bold")
+          )
+        ),
+        background: v.optional(v.boolean()),
+      })
+    ),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_live", ["isLive"]),
+
+  judgingSettings: defineTable({
+    key: v.string(),
+    generalGroupCount: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  judgingScores: defineTable({
+    submissionId: v.id("submissions"),
+    judgeId: v.id("users"),
+    contextKind: v.union(v.literal("general"), v.literal("track")),
+    contextKey: v.string(),
+    score: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_submission_context", ["submissionId", "contextKind", "contextKey"])
+    .index("by_judge_context", ["judgeId", "contextKind", "contextKey"])
+    .index("by_judge_submission", ["judgeId", "submissionId"])
+    .index("by_context", ["contextKind", "contextKey"]),
+
+  judgingAssignments: defineTable({
+    userId: v.id("users"),
+    contextKind: v.optional(v.union(v.literal("general"), v.literal("track"))),
+    contextKey: v.optional(v.string()),
+    /** Legacy general-group field. Prefer contextKind + contextKey. */
+    group: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_context", ["contextKind", "contextKey"])
+    .index("by_user_and_context", ["userId", "contextKind", "contextKey"])
+    .index("by_group", ["group"])
+    .index("by_user_and_group", ["userId", "group"]),
 });

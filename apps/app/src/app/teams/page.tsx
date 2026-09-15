@@ -1,16 +1,9 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useRef, useState } from "react";
+import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import {
-  Field,
-  FormError,
-  LoadingText,
-  Page,
-  errorMessage,
-} from "@/components/page";
+import { LoadingText, MetaLink, MetaRow, Page } from "@/components/page";
+import { TeamCliDialog } from "@/components/team-cli-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,258 +14,68 @@ import {
   CardTitle,
   Frame,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { Id } from "@convex/_generated/dataModel";
-import {
-  identifierPlaceholder,
-  identifierTypeLabel,
-  teamMemberStatusLabel,
-} from "@/lib/utils";
-import type { IdentifierType } from "@/lib/utils";
+import { identifierTypeLabel, teamMemberStatusLabel } from "@/lib/utils";
 
-const IDENTIFIER_OPTIONS = [
-  { label: "GitHub", value: "github" },
-  { label: "X / Twitter", value: "twitter" },
-  { label: "Email", value: "email" },
-] as const;
-
-type MemberDraft = {
-  key: string;
-  identifierType: IdentifierType;
-  identifier: string;
-};
-
-let memberDraftKey = 0;
-
-function newMemberDraft(): MemberDraft {
-  memberDraftKey += 1;
-  return {
-    identifier: "",
-    identifierType: "github",
-    key: String(memberDraftKey),
-  };
-}
-
-function MemberIdentifierInputs({
-  identifierType,
-  identifier,
-  onTypeChange,
-  onIdentifierChange,
-  inputId,
-}: {
-  identifierType: IdentifierType;
-  identifier: string;
-  onTypeChange: (type: IdentifierType) => void;
-  onIdentifierChange: (value: string) => void;
-  inputId?: string;
-}) {
+function CliCallout() {
   return (
-    <>
-      <Select
-        value={identifierType}
-        onValueChange={(value) => onTypeChange(value as IdentifierType)}
-      >
-        <SelectTrigger>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {IDENTIFIER_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Input
-        id={inputId}
-        value={identifier}
-        type={identifierType === "email" ? "email" : "text"}
-        autoComplete="off"
-        spellCheck={false}
-        onChange={(event) => onIdentifierChange(event.target.value)}
-        placeholder={identifierPlaceholder(identifierType)}
-      />
-    </>
-  );
-}
-
-function CreateTeamForm({ onCreated }: { onCreated: () => void }) {
-  const create = useMutation(api.teams.create);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState("");
-  const [memberRows, setMemberRows] = useState<MemberDraft[]>(() => [
-    newMemberDraft(),
-  ]);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  function updateMemberRow(key: string, patch: Partial<MemberDraft>) {
-    setMemberRows((rows) =>
-      rows.map((row) => (row.key === key ? { ...row, ...patch } : row))
-    );
-  }
-
-  async function submitCreate() {
-    setError(null);
-    const members = memberRows
-      .map((row) => ({
-        identifier: row.identifier.trim(),
-        identifierType: row.identifierType,
-      }))
-      .filter((row) => row.identifier.length > 0);
-    setPending(true);
-    try {
-      await create({ members, name });
-      onCreated();
-    } catch (caughtError: unknown) {
-      setError(errorMessage(caughtError, "No se ha podido crear"));
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <DialogContent
-      onOpenAutoFocus={(event) => {
-        event.preventDefault();
-        nameRef.current?.focus();
-      }}
+    <Frame
+      tone="navy"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
     >
-      <DialogHeader>
-        <DialogTitle>Crear equipo</DialogTitle>
-        <DialogDescription>
-          Añade gente por usuario de GitHub, handle de X o email.
-        </DialogDescription>
-      </DialogHeader>
-      <form
-        className="space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submitCreate();
-        }}
-      >
-        <FormError message={error} />
-        <Field label="Nombre del equipo" htmlFor="team-name">
-          <Input
-            ref={nameRef}
-            id="team-name"
-            value={name}
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </Field>
-        <Field
-          label="Miembros"
-          htmlFor={memberRows[0] ? `member-${memberRows[0].key}` : undefined}
-          hint="Opcional. Deja la fila vacía si aún no quieres añadir a nadie."
-        >
-          <div className="space-y-3">
-            {memberRows.map((row, index) => (
-              <div
-                key={row.key}
-                className={
-                  memberRows.length > 1
-                    ? "grid gap-3 sm:grid-cols-[150px_1fr_auto]"
-                    : "grid gap-3 sm:grid-cols-[150px_1fr]"
-                }
-              >
-                <MemberIdentifierInputs
-                  identifierType={row.identifierType}
-                  identifier={row.identifier}
-                  inputId={`member-${row.key}`}
-                  onTypeChange={(type) =>
-                    updateMemberRow(row.key, { identifierType: type })
-                  }
-                  onIdentifierChange={(value) =>
-                    updateMemberRow(row.key, { identifier: value })
-                  }
-                />
-                {memberRows.length > 1 ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    aria-label={`Quitar miembro ${index + 1}`}
-                    onClick={() =>
-                      setMemberRows((rows) =>
-                        rows.filter((item) => item.key !== row.key)
-                      )
-                    }
-                  >
-                    Quitar
-                  </Button>
-                ) : null}
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() =>
-                setMemberRows((rows) => [...rows, newMemberDraft()])
-              }
-            >
-              Añadir miembro
-            </Button>
-          </div>
-        </Field>
-        <DialogFooter>
-          <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-            {pending ? "Creando…" : "Crear equipo"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
+      <p className="text-hs-navy">
+        La gestión del equipo vive en la CLI de hackspain:{" "}
+        <code className="font-mono text-xs">
+          hackspain team create/join/leave/repo…
+        </code>
+      </p>
+      <TeamCliDialog>
+        <Button variant="outline" className="w-full shrink-0 sm:w-auto">
+          Comandos del equipo
+        </Button>
+      </TeamCliDialog>
+    </Frame>
   );
 }
 
-function TeamsPageContent() {
+function NoTeam() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Todavía no tienes equipo</CardTitle>
+        <CardDescription>
+          Los equipos se crean y se gestionan desde la CLI. También puedes
+          participar en solitario.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-hs-brown">
+          Para unirte a un equipo existente pide al dueño su código de
+          invitación de 8 caracteres (lo ve con{" "}
+          <code className="font-mono text-xs">hackspain team code</code>) y usa{" "}
+          <code className="font-mono text-xs">hackspain team join</code>.
+        </p>
+        <TeamCliDialog>
+          <Button className="w-full sm:w-auto">
+            Cómo crear o unirte a un equipo
+          </Button>
+        </TeamCliDialog>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function TeamsPage() {
   const team = useQuery(api.teams.mine);
-  const rename = useMutation(api.teams.rename);
-  const addMember = useMutation(api.teams.addMember);
-  const removeMember = useMutation(api.teams.removeMember);
-  const leave = useMutation(api.teams.leave);
-  const router = useRouter();
-  const search = useSearchParams();
-  const [createOpen, setCreateOpen] = useState(() => search.get("new") === "1");
-  const [name, setName] = useState("");
-  const [identifier, setIdentifier] = useState("");
-  const [identifierType, setIdentifierType] =
-    useState<IdentifierType>("github");
-  const [error, setError] = useState<string | null>(null);
 
-  if (team === undefined) {
-    return <LoadingText />;
-  }
-
-  function setCreateDialog(open: boolean) {
-    setCreateOpen(open);
-    if (!open && search.has("new")) {
-      router.replace("/teams", { scroll: false });
-    }
-  }
+  if (team === undefined) return <LoadingText />;
 
   return (
     <Page title="Equipo">
-      <FormError message={error} />
+      <CliCallout />
 
-      {team ? (
+      {!team ? (
+        <NoTeam />
+      ) : (
         <Card>
           <CardHeader>
             <CardTitle>{team.name}</CardTitle>
@@ -281,25 +84,24 @@ function TeamsPageContent() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {team.isOwner ? (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  value={name || team.name}
-                  onChange={(event) => setName(event.target.value)}
-                />
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                  onClick={() =>
-                    void rename({ teamId: team._id, name: name || team.name })
-                  }
-                >
-                  Renombrar
-                </Button>
+            {team.joinCode ? (
+              <div className="space-y-1">
+                <p className="font-bungee text-xs">Código de invitación</p>
+                <p className="font-mono text-lg tracking-wide select-all">
+                  {team.joinCode}
+                </p>
+                <p className="text-sm text-hs-brown">
+                  Compártelo con tu gente: se unen con{" "}
+                  <code className="font-mono text-xs">
+                    hackspain team join {team.joinCode}
+                  </code>
+                  .
+                </p>
               </div>
             ) : null}
 
             <div className="space-y-2">
+              <p className="font-bungee text-xs">Miembros</p>
               {team.members.map((member) => (
                 <Frame
                   key={member._id}
@@ -310,111 +112,58 @@ function TeamsPageContent() {
                       {member.name ?? member.identifier}
                     </p>
                     <p className="text-xs break-all text-hs-brown">
-                      {identifierTypeLabel(member.identifierType)}:{" "}
-                      {member.identifier}
+                      {identifierTypeLabel(member.identifierType)}: {member.identifier}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {member.userId === team.ownerId ? <Badge>Dueño</Badge> : null}
                     <Badge>{teamMemberStatusLabel(member.status)}</Badge>
-                    {team.isOwner && member.userId !== team.ownerId ? (
-                      <Button
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        onClick={() =>
-                          void removeMember({
-                            memberId: member._id as Id<"teamMembers">,
-                          })
-                        }
-                      >
-                        Quitar
-                      </Button>
-                    ) : null}
                   </div>
                 </Frame>
               ))}
             </div>
 
-            {team.isOwner ? (
-              <div className="grid gap-3 sm:grid-cols-[160px_1fr] lg:grid-cols-[160px_1fr_auto]">
-                <MemberIdentifierInputs
-                  identifierType={identifierType}
-                  identifier={identifier}
-                  onTypeChange={setIdentifierType}
-                  onIdentifierChange={setIdentifier}
-                />
-                <Button
-                  className="w-full lg:w-auto"
-                  onClick={() => {
-                    setError(null);
-                    void addMember({
-                      teamId: team._id,
-                      identifierType,
-                      identifier,
-                    })
-                      .then(() => setIdentifier(""))
-                      .catch((caughtError: unknown) =>
-                        setError(
-                          errorMessage(caughtError, "No se ha podido añadir")
-                        )
-                      );
-                  }}
-                >
-                  Añadir
-                </Button>
-              </div>
-            ) : null}
-
-            {!team.isOwner ? (
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  setError(null);
-                  void leave({}).catch((caughtError: unknown) =>
-                    setError(
-                      errorMessage(
-                        caughtError,
-                        "No has podido salir del equipo"
-                      )
-                    )
-                  );
-                }}
-              >
-                Salir del equipo
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Todavía no tienes equipo</CardTitle>
-            <CardDescription>
-              Crea uno y añade a tu gente por GitHub, X o email. También puedes
-              participar en solitario.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Dialog open={createOpen} onOpenChange={setCreateDialog}>
-              <Button
-                className="w-full sm:w-auto"
-                onClick={() => setCreateDialog(true)}
-              >
-                Crear equipo
-              </Button>
-              <CreateTeamForm onCreated={() => setCreateDialog(false)} />
-            </Dialog>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetaRow label="Repositorio">
+                {team.repoUrls.length > 0 ? (
+                  <span className="flex flex-col gap-1">
+                    {team.repoUrls.map((url) => (
+                      <MetaLink key={url} href={url}>
+                        {url}
+                      </MetaLink>
+                    ))}
+                  </span>
+                ) : team.repoUrl ? (
+                  <MetaLink href={team.repoUrl}>{team.repoUrl}</MetaLink>
+                ) : (
+                  <>
+                    Sin vincular. Usa{" "}
+                    <code className="font-mono text-xs">
+                      hackspain team repo &lt;url&gt;
+                    </code>
+                  </>
+                )}
+              </MetaRow>
+              <MetaRow label="Stack">
+                {team.techStack.length > 0 ? (
+                  <span className="flex flex-wrap gap-2">
+                    {team.techStack.map((tech) => (
+                      <Badge key={tech}>{tech}</Badge>
+                    ))}
+                  </span>
+                ) : (
+                  <>
+                    Se detecta al vincular el repo con{" "}
+                    <code className="font-mono text-xs">
+                      hackspain team repo
+                    </code>
+                  </>
+                )}
+              </MetaRow>
+            </div>
           </CardContent>
         </Card>
       )}
     </Page>
-  );
-}
-
-export default function TeamsPage() {
-  return (
-    <Suspense fallback={<LoadingText />}>
-      <TeamsPageContent />
-    </Suspense>
   );
 }

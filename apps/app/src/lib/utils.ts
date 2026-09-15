@@ -45,6 +45,16 @@ export function displayedAttendance(
   return status;
 }
 
+export function roleLabel(role: string | undefined): string | undefined {
+  if (role === "admin") {
+    return "admin";
+  }
+  if (role === "judge") {
+    return "juez";
+  }
+  return undefined;
+}
+
 export function attendanceLabel(status: string | null | undefined): string {
   switch (status) {
     case "attending": {
