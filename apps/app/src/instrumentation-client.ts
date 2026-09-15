@@ -4,7 +4,7 @@ initBotId({
   protect: [
     {
       method: "POST",
-      path: "/api/login-check",
+      path: "/api/login/otp",
     },
   ],
 });
