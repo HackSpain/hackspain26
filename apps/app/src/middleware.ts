@@ -15,9 +15,11 @@ const BOTID_PREFIX =
 // /tv is the public venue screen: no login, reads a public Convex query.
 // /cli-auth is public at the middleware level so ?hs-code= survives a
 // server-side redirect; AuthGate stashes it and routes visitors via /login.
+// /cli-auth/handoff signs the browser in from a CLI session, so it must be
+// reachable without one.
 const isPublicRoute = createRouteMatcher([
   "/login",
-  "/cli-auth",
+  "/cli-auth(.*)",
   "/api/login/otp",
   "/api/cli(.*)",
   "/api/files(.*)",

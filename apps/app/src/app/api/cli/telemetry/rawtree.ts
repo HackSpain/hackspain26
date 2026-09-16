@@ -20,8 +20,11 @@ const HARNESSES = [
   "opencode",
   "cline",
   "copilot",
+  "gemini-cli",
+  "qwen-code",
+  "kilo-code",
 ] as const;
-const MODEL_FAMILIES = ["claude", "gpt", "gemini", "other"] as const;
+const MODEL_FAMILIES = ["claude", "gpt", "gemini", "qwen", "other"] as const;
 
 type EventType = (typeof EVENT_TYPES)[number];
 type Harness = (typeof HARNESSES)[number];

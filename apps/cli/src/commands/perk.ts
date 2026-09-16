@@ -52,7 +52,7 @@ export function registerPerk(program: Command): void {
         ["Partner", "Perk", "Value", "Status", "Id"]
       );
       ui.next([
-        ["app.hackspain.com/perks", "claim a perk from the dashboard"],
+        ["hackspain open perks", "claim a perk from the dashboard, signed in"],
         [
           "hackspain submit --perk <id>",
           "credit the perks you used in your project",

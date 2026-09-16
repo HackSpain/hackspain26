@@ -18,6 +18,8 @@ export type Ui = {
   warn(message: string): void;
   step(message: string): void;
   line(message: string): void;
+  /** Write bytes to stdout untouched (terminal image protocols); no-op in --json. */
+  raw(text: string): void;
   /** Key/value block with dim keys. */
   kv(rows: [string, string][]): void;
   table(rows: string[][], header?: string[]): void;
@@ -96,6 +98,11 @@ export function uiFor(ctx: CliContext): Ui {
     json: ctx.json,
     kv: (rows) => out(renderKv(rows)),
     line: out,
+    raw: (text) => {
+      if (!quiet) {
+        process.stdout.write(text);
+      }
+    },
     next: (steps) =>
       quiet
         ? err(steps.map(([command]) => command).join("\n"))

@@ -31,6 +31,10 @@ function destination(me: {
 // preserved through the login redirect via sessionStorage, since neither the
 // middleware nor this gate has a returnTo query.
 const CLI_AUTH_PATH = "/cli-auth";
+// /cli-auth/handoff signs the browser in with a token minted by the CLI
+// (`hackspain open`). Like /tv it renders without a session; the page itself
+// navigates onward once the cookies are set, and the gates apply there.
+const CLI_HANDOFF_PATH = "/cli-auth/handoff";
 const RETURN_TO_KEY = "hs-return-to";
 
 function stashReturnTo(): void {
@@ -79,7 +83,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [attachAfterLogin, isAuthenticated, me]);
 
   useEffect(() => {
-    if (pathname === "/tv") {
+    if (pathname === "/tv" || pathname === CLI_HANDOFF_PATH) {
       return;
     }
     if (isLoading) {
@@ -184,8 +188,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isLoading, me, pathname, router]);
 
-  // /tv is a public screen; render it without waiting on auth.
-  if (pathname === "/tv") {
+  // /tv is a public screen and /cli-auth/handoff creates the session itself;
+  // render both without waiting on auth.
+  if (pathname === "/tv" || pathname === CLI_HANDOFF_PATH) {
     return <>{children}</>;
   }
 

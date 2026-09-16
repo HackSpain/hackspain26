@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Session } from "../lib/api";
-import { api } from "../lib/api";
+import { api, fetchImage } from "../lib/api";
 import {
   ensureDir,
   readJsonFile,
@@ -11,29 +11,51 @@ import {
 import { CliError, EXIT } from "../lib/errors";
 import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
+import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
 import { createBatcher } from "./batcher";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
+import { geminiCliCollector } from "./collectors/gemini-cli";
+import { kiloCodeCollector } from "./collectors/kilo-code";
 import { openCodeCollector } from "./collectors/opencode";
+import { qwenCodeCollector } from "./collectors/qwen-code";
 import { openCursorStore } from "./cursor-store";
+import type { MemoryStore } from "./memory";
+import {
+  openMemory,
+  rememberNotification,
+  replaySpool,
+  shouldToast,
+} from "./memory";
 import type { Toaster } from "./notify";
 import { platformToaster } from "./notify";
 import type { RawEvent, TelemetryEvent } from "./schema";
 import { SCHEMA, validateEvent } from "./schema";
 import { httpSink } from "./sinks/http";
 import type { Sink } from "./sinks/spool";
-import { spoolSink } from "./sinks/spool";
+import { readSpool, spoolSink } from "./sinks/spool";
 import type { WatchState } from "./state";
-import { recordEvent, recordLog, recordNotification } from "./state";
+import {
+  appendOlderFeed,
+  FEED_PAGE,
+  mergeNewerFeed,
+  recordEvent,
+  recordLog,
+  recordNotification,
+  WATCH_IMAGE_BOUNDS,
+} from "./state";
 import type { Collector, CollectorContext } from "./types";
 
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
   codexCollector,
+  geminiCliCollector,
+  qwenCodeCollector,
   openCodeCollector,
+  kiloCodeCollector,
   clineCollector,
 ];
 
@@ -60,9 +82,15 @@ export type WatchDeps = {
   toaster?: Toaster;
   collectors?: Collector[];
   extraSinks?: Sink[];
+  /** Cross-run memory (first start, last scan, announcements); defaults to the state dir. */
+  memory?: MemoryStore;
+  /** Usage events recorded by earlier runs, replayed onto the board; defaults to the spool. */
+  history?: Iterable<TelemetryEvent>;
 };
 
 const RECENT_IDS_CAP = 5000;
+/** Thumbnails fetched per loop iteration, so a burst of images never stalls a scan. */
+const FEED_IMAGES_PER_TURN = 4;
 const TEAM_REFRESH_MS = 5 * 60 * 1000;
 /** After this long without a usage event, scans slow down to save battery. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000;
@@ -247,6 +275,7 @@ export async function runWatch(
     }
   };
   const collectors = deps.collectors ?? COLLECTORS;
+  const memory = deps.memory ?? openMemory();
   const cursors = openCursorStore();
   const recent = loadRecentIds();
   const sinks: Sink[] = [spoolSink(), ...(deps.extraSinks ?? [])];
@@ -285,11 +314,22 @@ export async function runWatch(
   }
   if (state) {
     state.harnesses = collectors.map((c) => ({
+      cached: 0,
       found: discovered.includes(c.id),
       id: c.id,
       requests: 0,
       tokens: 0,
     }));
+    // The board remembers: everything this machine reported since the first
+    // run comes back from the local spool, and the last announcements too.
+    state.trackedSince = memory.data.firstStartedAt;
+    const replayed = replaySpool(state, deps.history ?? readSpool());
+    if (replayed > 0) {
+      log(`replayed ${replayed} events from the local spool`);
+    }
+    for (const n of memory.data.notifications.toReversed()) {
+      recordNotification(state, n.subject, n.body, n.at);
+    }
   }
   say(
     discovered.length
@@ -303,7 +343,9 @@ export async function runWatch(
   }
 
   const toaster = deps.toaster ?? platformToaster();
-  let lastSeen = Date.now();
+  // Poll from the last announcement seen by any run, so messages sent while
+  // the watcher was closed still show up (a first run fetches them all).
+  let lastSeen = memory.data.lastNotificationAt ?? 0;
   const pollNotifications = async (): Promise<void> => {
     let rows: Awaited<
       ReturnType<typeof session.client.query<typeof api.notifications.forMe>>
@@ -316,11 +358,18 @@ export async function runWatch(
       log(`notifications: ${String(error)}`);
       return;
     }
+    let remembered = false;
     for (const row of rows) {
       if (row.sentAt <= lastSeen) {
         continue;
       }
       lastSeen = row.sentAt;
+      rememberNotification(memory.data, {
+        at: row.sentAt,
+        body: row.body,
+        subject: row.subject,
+      });
+      remembered = true;
       if (state) {
         recordNotification(state, row.subject, row.body, row.sentAt);
       }
@@ -329,7 +378,8 @@ export async function runWatch(
         row.body,
         row.sentAt
       );
-      if (options.toast) {
+      // Catching up on old announcements stays on screen; only fresh ones toast.
+      if (options.toast && shouldToast(row.sentAt)) {
         toaster(row.subject, row.body).then((ok) => {
           if (!ok) {
             log("toast failed; notifications still print here");
@@ -337,21 +387,91 @@ export async function runWatch(
         });
       }
     }
+    if (remembered) {
+      memory.save();
+    }
   };
 
-  /** Latest feed posts for the board; nothing to do in line mode. */
+  /**
+   * Thumbnails for loaded posts that do not have one yet, a few per call.
+   * Only when the terminal can draw them; failures turn into links.
+   */
+  const loadFeedImages = async (): Promise<void> => {
+    if (!state?.imageProtocol) {
+      return;
+    }
+    const width = WATCH_IMAGE_BOUNDS.maxColumns * PIXELS_PER_COLUMN;
+    let budget = FEED_IMAGES_PER_TURN;
+    for (const post of state.feed) {
+      if (budget === 0) {
+        return;
+      }
+      if (
+        !post.imagePath ||
+        state.feedImages.has(post._id) ||
+        state.feedImageFailed.has(post._id)
+      ) {
+        continue;
+      }
+      budget--;
+      const png = await fetchImage(session, post.imagePath, width);
+      const size = png ? pngSize(png) : null;
+      if (png && size) {
+        state.feedImages.set(post._id, { png, ...size });
+      } else {
+        state.feedImageFailed.add(post._id);
+      }
+    }
+  };
+
+  /** Latest feed page for the board; nothing to do in line mode. */
   const pollFeed = async (): Promise<void> => {
     if (!state) {
       return;
     }
     try {
-      state.feed = withImageUrls(
-        await session.client.query(api.feed.list, { limit: 15 }),
-        session.url
+      mergeNewerFeed(
+        state,
+        withImageUrls(
+          await session.client.query(api.feed.list, { limit: FEED_PAGE }),
+          session.url
+        )
       );
     } catch (error) {
       log(`feed: ${String(error)}`);
+      return;
     }
+    await loadFeedImages();
+  };
+
+  /** The next older page, when scrolling asked for it. */
+  const fetchOlderFeed = async (): Promise<void> => {
+    if (!state?.feedNeedOlder) {
+      return;
+    }
+    const oldest = state.feed.at(-1);
+    if (!oldest) {
+      state.feedNeedOlder = false;
+      return;
+    }
+    try {
+      appendOlderFeed(
+        state,
+        withImageUrls(
+          await session.client.query(api.feed.list, {
+            before: oldest.createdAt,
+            limit: FEED_PAGE,
+          }),
+          session.url
+        ),
+        FEED_PAGE
+      );
+    } catch (error) {
+      state.feedNeedOlder = false;
+      log(`feed: ${String(error)}`);
+      return;
+    }
+    await loadFeedImages();
   };
 
   let stopping = false;
@@ -385,6 +505,9 @@ export async function runWatch(
       cursors.save();
       saveRecentIds(recent);
     }
+    // The next run catches up from here.
+    memory.data.lastActiveAt = Date.now();
+    memory.save();
     if (state) {
       state.scanning = false;
       state.lastScanAt = Date.now();
@@ -446,6 +569,10 @@ export async function runWatch(
       }
       // One wakeup per second at most; a key press wakes it immediately.
       await sleepOrWake(state, state?.paused ? 5000 : 1000);
+      // Scrolling past the loaded posts asks for an older page; pictures
+      // for anything loaded trickle in a few per turn.
+      await fetchOlderFeed();
+      await loadFeedImages();
     }
     say("Stopping, flushing…");
     await batcher.flush();

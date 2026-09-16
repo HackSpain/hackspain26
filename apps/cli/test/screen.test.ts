@@ -36,8 +36,8 @@ function sampleState() {
   });
   state.startedAt = NOW - 5 * 60 * 1000;
   state.harnesses = [
-    { found: true, id: "claude-code", requests: 0, tokens: 0 },
-    { found: false, id: "codex", requests: 0, tokens: 0 },
+    { cached: 0, found: true, id: "claude-code", requests: 0, tokens: 0 },
+    { cached: 0, found: false, id: "codex", requests: 0, tokens: 0 },
   ];
   for (let i = 0; i < 6; i++) {
     recordEvent(state, {
@@ -218,7 +218,9 @@ describe("primitives", () => {
     const state = sampleState();
     expect(state.recent).toHaveLength(6);
     expect(state.recent[0]?.at).toBeGreaterThan(state.recent[5]?.at ?? 0);
-    expect(state.harnesses[0]?.tokens).toBe(6 * 100);
+    // Fresh tokens (10 in + 20 out per event); cache traffic (30 + 40) apart.
+    expect(state.harnesses[0]?.tokens).toBe(6 * 30);
+    expect(state.harnesses[0]?.cached).toBe(6 * 70);
     expect(seriesWindow(state, 8, NOW).map((p) => p.requests)).toEqual([
       0, 0, 1, 1, 1, 1, 1, 1,
     ]);

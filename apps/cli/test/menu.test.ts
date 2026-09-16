@@ -90,10 +90,12 @@ describe("buildMainMenu", () => {
     const items = buildMainMenu(PENDING);
     expect(values(items)).toEqual([
       "auth-status",
+      "open",
       "auth-logout",
       "update",
       "exit",
     ]);
+    expect(itemOf(items, "open").argv).toEqual(["open"]);
   });
 
   test("ready without a team: join and create come first, exit last", () => {
@@ -160,6 +162,7 @@ describe("buildMainMenu", () => {
       "Profile",
       "Perks",
       "Milestones",
+      "Open the dashboard",
       "Start the watcher",
       "Exit",
     ]);

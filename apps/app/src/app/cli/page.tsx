@@ -96,6 +96,10 @@ export default function CliPage() {
           <CommandRow command="hackspain auth login">
             Email + código de 8 dígitos, como en la web.
           </CommandRow>
+          <CommandRow command="hackspain open [feed|teams|perks|…]">
+            Abre el dashboard en tu navegador ya con la sesión iniciada: no
+            hace falta volver a pedir el código.
+          </CommandRow>
           <CommandRow command="hackspain auth status">
             Comprueba tu sesión.
           </CommandRow>
@@ -189,8 +193,10 @@ export default function CliPage() {
           title="Feed"
           description="El mismo feed que la página Feed del dashboard: mensajes de todo el mundo más pushes y PRs de cada repo de equipo."
         >
-          <CommandRow command="hackspain feed [-n 20]">
-            Últimas publicaciones y actividad de GitHub.
+          <CommandRow command="hackspain feed [-n 20] [--no-images] [--before …]">
+            Últimas publicaciones y actividad de GitHub, por páginas. En
+            kitty, Ghostty, WezTerm, iTerm2 o la terminal de VS Code las fotos
+            se ven en la propia terminal; en el resto, un enlace.
           </CommandRow>
           <CommandRow command='hackspain post "texto" [--image foto.jpg]'>
             Publica (≤500 caracteres; jpeg/png/webp/gif ≤5 MB).
@@ -199,11 +205,15 @@ export default function CliPage() {
 
         <CommandCard
           title="Watcher"
-          description="Pensado para quedarse abierto en su propia terminal todo el fin de semana: detecta tus harnesses de IA (Claude Code, Codex, OpenCode, Cline), muestra el feed y los avisos de la organización, y reporta uso. Nunca salen prompts ni rutas completas de tu máquina."
+          description="Pensado para quedarse abierto en su propia terminal todo el fin de semana: detecta tus harnesses de IA (Claude Code, Codex, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline), muestra el feed y los avisos de la organización, y reporta uso. Nunca salen prompts ni rutas completas de tu máquina."
         >
-          <CommandRow command="hackspain watch [--interval 30] [--backfill <hours>] [--no-upload] [--once]">
-            Arranca el watcher. <code className="font-mono text-xs">q</code>{" "}
-            sale, <code className="font-mono text-xs">p</code> pausa.
+          <CommandRow command="hackspain watch [--interval 30] [--backfill <hours>] [--no-upload] [--no-images] [--once]">
+            Arranca el watcher; recuerda lo reportado entre sesiones y recoge
+            el uso que hubo mientras estaba cerrado.{" "}
+            <code className="font-mono text-xs">q</code> sale,{" "}
+            <code className="font-mono text-xs">p</code> pausa,{" "}
+            <code className="font-mono text-xs">↑↓</code> recorren el feed y{" "}
+            <code className="font-mono text-xs">g</code> vuelve al directo.
           </CommandRow>
           <CommandRow command="hackspain telemetry stats">
             Lo que el watcher ha registrado en esta máquina.
