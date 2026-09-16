@@ -52,10 +52,6 @@ export const PARTICIPANT_SECTIONS: Sections = [
 
 export const ALL_SECTIONS: Sections = [...SECTION_KEYS];
 
-export function isSectionKey(value: string): value is SectionKey {
-  return (SECTION_KEYS as readonly string[]).includes(value);
-}
-
 export function normalizeSections(input: readonly string[]): Sections {
   const wanted = new Set(input);
   return SECTION_KEYS.filter((key) => wanted.has(key));

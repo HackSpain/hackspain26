@@ -31,6 +31,22 @@ export function createBatcher(
   const backoff = new Map<string, number>();
   let dropped = 0;
 
+  const succeeded = (name: string) => {
+    backoff.delete(name);
+    notBefore.delete(name);
+  };
+  const failed = (name: string, error: unknown, queued: number) => {
+    const wait = Math.min(
+      BACKOFF_MAX_MS,
+      (backoff.get(name) ?? BACKOFF_MIN_MS / 2) * 2
+    );
+    backoff.set(name, wait);
+    notBefore.set(name, now() + wait);
+    log(
+      `${name}: ${String(error)} (retry in ${Math.round(wait / 1000)}s, ${queued} queued)`
+    );
+  };
+
   return {
     dropped: () => dropped,
     flush: async () => {
@@ -48,18 +64,9 @@ export function createBatcher(
         if (queue.length === 0) {
           try {
             await sink.flushPending?.();
-            backoff.delete(sink.name);
-            notBefore.delete(sink.name);
+            succeeded(sink.name);
           } catch (error) {
-            const wait = Math.min(
-              BACKOFF_MAX_MS,
-              (backoff.get(sink.name) ?? BACKOFF_MIN_MS / 2) * 2
-            );
-            backoff.set(sink.name, wait);
-            notBefore.set(sink.name, now() + wait);
-            log(
-              `${sink.name}: ${String(error)} (retry in ${Math.round(wait / 1000)}s, ${durablePending} queued)`
-            );
+            failed(sink.name, error, durablePending);
             allOk = false;
           }
           continue;
@@ -69,18 +76,9 @@ export function createBatcher(
           try {
             await sink.write(batch);
             queue.splice(0, batch.length);
-            backoff.delete(sink.name);
-            notBefore.delete(sink.name);
+            succeeded(sink.name);
           } catch (error) {
-            const wait = Math.min(
-              BACKOFF_MAX_MS,
-              (backoff.get(sink.name) ?? BACKOFF_MIN_MS / 2) * 2
-            );
-            backoff.set(sink.name, wait);
-            notBefore.set(sink.name, now() + wait);
-            log(
-              `${sink.name}: ${String(error)} (retry in ${Math.round(wait / 1000)}s, ${queue.length} queued)`
-            );
+            failed(sink.name, error, queue.length);
             allOk = false;
             break;
           }

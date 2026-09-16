@@ -43,7 +43,6 @@ export const HARNESSES = [
   },
 ] as const;
 
-export const MODELS = ["GPT", "Claude", "Gemini", "Otros"] as const;
 export const TRACKS = ["Agents", "DevTools", "Impacto"] as const;
 export const PERIODS = [
   { buckets: 24, id: "event", label: "Todo el evento" },
