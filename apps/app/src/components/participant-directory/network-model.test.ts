@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildNetwork,
+  ENTITY_KINDS,
   initialPoints,
+  networkNeighbors,
   networkSprings,
   tickForces,
 } from "./network-model";
@@ -10,55 +12,89 @@ import type { DirectoryParticipant } from "./types";
 
 const person: DirectoryParticipant = {
   city: "Madrid",
-  company: "Nébula",
-  degree: "Informática",
   displayName: "Ana",
   id: "a",
   role: "Developer",
-  skills: ["React", "TypeScript"],
-  team: { id: "one", name: "Órbita" },
+  skills: ["React"],
+  interests: ["IA"],
   university: "UPM",
 };
-const peer = { ...person, company: "nebula", displayName: "Bruno", id: "b" };
+const peer = { ...person, displayName: "Bruno", id: "b" };
+const kinds = new Set(ENTITY_KINDS);
 
-test("global graph retains isolated people and preserves every relationship type for each pair", () => {
-  const isolated = {
-    city: "Bilbao",
-    displayName: "Clara",
-    id: "c",
-    role: "Designer",
-    skills: [],
-  };
+test("people link to shared city and university nodes, never to each other", () => {
+  const isolated = { ...person, id: "c", city: "", university: undefined };
   const network = buildNetwork([person, peer, isolated]);
   assert.equal(network.participants.length, 3);
+  assert.equal(network.entities.length, 2);
+  assert.equal(network.edges.length, 4);
   assert.deepEqual(
     new Set(network.edges.map((edge) => edge.kind)),
-    new Set(["city", "company", "degree", "university", "team", "skills"])
+    new Set(["city", "university"]),
   );
-  assert.equal(network.edges.length, 6);
-  assert.ok(
-    network.edges.every((edge) => edge.source === "a" && edge.target === "b")
-  );
+  for (const edge of network.edges) {
+    assert.ok(network.participants.some((p) => p.id === edge.source));
+    assert.ok(network.entities.some((entity) => entity.id === edge.target));
+  }
+  assert.ok(initialPoints(network).some((point) => point.id === isolated.id));
+  assert.equal(networkNeighbors(network, isolated.id, kinds).length, 0);
+});
+
+test("entity identities normalize accents and spaces but keep distinct categories", () => {
+  const a = { ...person, city: " Málaga ", university: "Málaga" };
+  const b = { ...peer, city: "MALAGA", university: "malaga" };
+  const network = buildNetwork([a, b, a]);
+  assert.equal(network.participants.length, 2);
+  assert.equal(network.entities.length, 2);
+  assert.equal(network.edges.length, 4);
+  assert.notEqual(network.entities[0].id, network.entities[1].id);
+  assert.ok(network.entities.every((entity) => entity.memberIds.length === 2));
+  assert.deepEqual(buildNetwork([b, a]), network);
+});
+
+test("entity selection shows members; person selection traverses shared entities with filters", () => {
+  const cityPeer = { ...peer, id: "c", university: "Other" };
+  const network = buildNetwork([person, peer, cityPeer]);
+  const madrid = network.entities.find((entity) => entity.kind === "city");
+  assert.ok(madrid);
+  assert.equal(networkNeighbors(network, madrid.id, kinds).length, 3);
+  const neighbors = networkNeighbors(network, person.id, kinds);
   assert.deepEqual(
-    network.edges.find((edge) => edge.kind === "skills")?.values,
-    ["React", "TypeScript"]
+    neighbors.map(({ person: p }) => p.id),
+    ["b", "c"],
   );
-});
-
-test("teams match by stable id, never merely by display name", () => {
-  const otherTeam = { ...peer, team: { id: "two", name: "Órbita" } };
-  assert.equal(
-    buildNetwork([person, otherTeam]).edges.some(
-      (edge) => edge.kind === "team"
+  assert.equal(neighbors[0].links.length, 2);
+  assert.deepEqual(
+    networkNeighbors(network, person.id, new Set(["university"])).map(
+      ({ person: p }) => p.id,
     ),
-    false
+    ["b"],
   );
-  assert.equal(networkSprings(buildNetwork([person, peer]))[0].team, true);
+  assert.equal(
+    networkNeighbors(network, madrid.id, new Set(["university"])).length,
+    0,
+  );
+  assert.equal(networkNeighbors(network, person.id, new Set()).length, 0);
 });
 
-test("force layout is deterministic regardless of input order and keeps dragged nodes pinned", () => {
+test("membership count grows linearly even when everyone shares all attributes", () => {
+  const people = Array.from({ length: 262 }, (_, i) => ({
+    ...person,
+    id: `p${i}`,
+  }));
+  const network = buildNetwork(people);
+  assert.equal(network.entities.length, 2);
+  assert.equal(network.edges.length, 524);
+  assert.equal(networkSprings(network).length, 524);
+  assert.ok(
+    network.entities.every((entity) => entity.memberIds.length === 262),
+  );
+});
+
+test("layout includes both node types, is deterministic and respects pinned nodes", () => {
   const network = buildNetwork([person, peer]);
   const points = initialPoints(network);
+  assert.equal(points.length, 4);
   assert.deepEqual(points, initialPoints(buildNetwork([peer, person])));
   const original = { ...points[0] };
   tickForces(points, networkSprings(network), 0.5, points[0].id);
@@ -66,42 +102,39 @@ test("force layout is deterministic regardless of input order and keeps dragged 
   assert.equal(points[0].y, original.y);
   assert.ok(
     points.every(
-      (point) => Number.isFinite(point.x) && Number.isFinite(point.y)
-    )
+      (point) => Number.isFinite(point.x) && Number.isFinite(point.y),
+    ),
   );
-  assert.ok(
-    Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) > 50
-  );
+  assert.equal(initialPoints(buildNetwork([])).length, 0);
 });
 
-test("team members cluster tightly even when every person shares other affinities", () => {
-  const people = Array.from({ length: 6 }, (_, index) => ({
+test("company, degree and team are entities; same team names do not merge distinct teams", () => {
+  const a = {
     ...person,
-    id: `person-${index}`,
-    team: {
-      id: index < 3 ? "one" : "two",
-      name: index < 3 ? "Órbita" : "Prisma",
-    },
-  }));
-  const points = initialPoints(buildNetwork(people));
-  const within: number[] = [],
-    between: number[] = [];
-  for (let i = 0; i < points.length; i++) {
-    for (let j = i + 1; j < points.length; j++) {
-      const distance = Math.hypot(
-        points[i].x - points[j].x,
-        points[i].y - points[j].y
-      );
-      (people[i].team.id === people[j].team.id ? within : between).push(
-        distance
-      );
-    }
-  }
-  const mean = (values: number[]) =>
-    values.reduce((sum, value) => sum + value, 0) / values.length;
-  assert.ok(mean(within) < mean(between) * 0.45);
-  assert.ok(
-    Math.min(...within) > 45,
-    "teammates remain individually selectable"
+    company: "Nébula",
+    degree: "Informática",
+    team: { id: "one", name: "Órbita" },
+  };
+  const b = {
+    ...peer,
+    company: "nebula",
+    degree: "informatica",
+    team: { id: "two", name: "Órbita" },
+  };
+  const network = buildNetwork([a, b]);
+  assert.equal(network.entities.length, 6);
+  assert.equal(network.edges.length, 10);
+  assert.deepEqual(
+    new Set(network.entities.map((entity) => entity.kind)),
+    kinds,
+  );
+  const teams = network.entities.filter((entity) => entity.kind === "team");
+  assert.equal(teams.length, 2);
+  assert.ok(teams.every((entity) => entity.memberIds.length === 1));
+  assert.equal(networkNeighbors(network, a.id, new Set(["team"])).length, 0);
+  assert.equal(
+    networkNeighbors(network, a.id, new Set(["company", "degree"]))[0].links
+      .length,
+    2,
   );
 });
