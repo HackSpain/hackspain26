@@ -43,9 +43,11 @@ function JudgeCard({ judge }: { judge: Judge }) {
         <h4 className="min-h-[2.5em] font-bungee text-[clamp(0.7rem,1.7vw,0.85rem)] text-hs-ink leading-tight">
           {judge.name}
         </h4>
-        <p className="mt-0.5 font-bold font-sans text-[clamp(0.65rem,1.5vw,0.75rem)] text-hs-brown leading-snug">
-          {judge.company}
-        </p>
+        {judge.company ? (
+          <p className="mt-0.5 font-bold font-sans text-[clamp(0.65rem,1.5vw,0.75rem)] text-hs-brown leading-snug">
+            {judge.company}
+          </p>
+        ) : null}
       </div>
     </article>
   );

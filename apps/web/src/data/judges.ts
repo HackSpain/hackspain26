@@ -17,7 +17,8 @@ import quiliPenaPhoto from "../assets/judges/quili-pena.jpg";
 import xabierIrizarPhoto from "../assets/judges/xabier-irizar.jpg";
 
 export interface Judge {
-  company: string;
+  /** Omitted when the judge should show a name only. */
+  company?: string;
   /** Stable key, also used as the card anchor id. */
   id: string;
   name: string;
@@ -132,7 +133,6 @@ export const GENERAL_JUDGES: Judge[] = [
     photoSrc: alejandroCanadaPhoto.src,
   },
   {
-    company: "Mira",
     id: "gigi-alcaraz",
     name: "Gigi Alcaraz",
     photoSrc: gigiAlcarazPhoto.src,
