@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
+import { directoryValidator } from "./lib/directory";
 import { sectionsValidator } from "./lib/userTypes";
 import {
   milestoneKindValidator,
@@ -281,6 +282,8 @@ export default defineSchema({
     /** Uploaded profile picture, served as /api/files/<id>. */
     avatarId: v.optional(v.id("_storage")),
     userTypeId: v.optional(v.id("userTypes")),
+    /** Participant directory card; drives the connections graph. See convex/lib/directory.ts. */
+    directory: v.optional(directoryValidator),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
     phone: v.optional(v.string()),
