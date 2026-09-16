@@ -20,7 +20,7 @@ import {
   perkTypeValidator,
 } from "./lib/validators";
 import type { Doc } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 function perkFields(perk: Doc<"perks">) {
   return {
@@ -373,6 +373,66 @@ async function teamNameFor(ctx: QueryCtx, userId: Doc<"users">["_id"]) {
   return team?.name;
 }
 
+async function attachCodeToClaim(
+  ctx: MutationCtx,
+  claim: Doc<"perkClaims">,
+  raw: string,
+) {
+  const code = raw.trim();
+  if (!code) {
+    return claim.codeId;
+  }
+  const existing = await ctx.db
+    .query("perkCodes")
+    .withIndex("by_perk", (q) => q.eq("perkId", claim.perkId))
+    .collect();
+  const match = existing.find((row) => row.code === code);
+  const now = Date.now();
+  if (match) {
+    if (match.assignedTo && match.assignedTo !== claim.userId) {
+      throw new Error("Ese código ya está asignado a otra persona");
+    }
+    if (claim.codeId && claim.codeId !== match._id) {
+      const previous = await ctx.db.get(claim.codeId);
+      if (previous && previous.assignedTo === claim.userId) {
+        await ctx.db.patch(previous._id, {
+          available: true,
+          assignedTo: undefined,
+          assignedAt: undefined,
+        });
+      }
+    }
+    await ctx.db.patch(match._id, {
+      available: false,
+      assignedTo: claim.userId,
+      assignedAt: now,
+    });
+    return match._id;
+  }
+  return await ctx.db.insert("perkCodes", {
+    perkId: claim.perkId,
+    code,
+    available: false,
+    assignedTo: claim.userId,
+    assignedAt: now,
+  });
+}
+
+async function releaseClaimCode(
+  ctx: MutationCtx,
+  claim: Doc<"perkClaims">,
+) {
+  if (!claim.codeId) return;
+  const assigned = await ctx.db.get(claim.codeId);
+  if (assigned && assigned.assignedTo === claim.userId) {
+    await ctx.db.patch(assigned._id, {
+      available: true,
+      assignedTo: undefined,
+      assignedAt: undefined,
+    });
+  }
+}
+
 /** Every participant who claimed or applied for one perk, with their answers. */
 export const adminRequests = adminQuery({
   args: { perkId: v.id("perks") },
@@ -432,6 +492,7 @@ export const adminApplications = adminQuery({
       email: v.optional(v.string()),
       name: v.optional(v.string()),
       status: claimStatusValidator,
+      code: v.optional(v.string()),
       answers: v.array(v.object({ label: v.string(), value: v.string() })),
       createdAt: v.number(),
     }),
@@ -449,6 +510,11 @@ export const adminApplications = adminQuery({
       const perk = await ctx.db.get(claim.perkId);
       const user = await ctx.db.get(claim.userId);
       if (!perk) continue;
+      let code: string | undefined;
+      if (claim.codeId) {
+        const assigned = await ctx.db.get(claim.codeId);
+        code = assigned?.code;
+      }
       const labels = new Map((perk.inputs ?? []).map((input) => [input.key, input.label]));
       rows.push({
         _id: claim._id,
@@ -459,6 +525,7 @@ export const adminApplications = adminQuery({
         email: user?.email,
         name: user?.name,
         status: claim.status,
+        code,
         answers: (claim.answers ?? []).map((answer) => ({
           label: labels.get(answer.key) ?? answer.key,
           value: answer.value,
@@ -474,6 +541,7 @@ export const adminSetApplicationStatus = adminMutation({
   args: {
     claimId: v.id("perkClaims"),
     status: v.union(v.literal("pending"), v.literal("added"), v.literal("rejected")),
+    code: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -482,8 +550,22 @@ export const adminSetApplicationStatus = adminMutation({
     if (claim.type !== "email") {
       throw new Error("Aquí solo se revisan solicitudes de perks por email");
     }
+    if (args.status === "rejected") {
+      await releaseClaimCode(ctx, claim);
+      await ctx.db.patch(claim._id, {
+        status: args.status,
+        codeId: undefined,
+        updatedAt: Date.now(),
+      });
+      return null;
+    }
+    const codeId =
+      args.status === "added"
+        ? await attachCodeToClaim(ctx, claim, args.code ?? "")
+        : claim.codeId;
     await ctx.db.patch(claim._id, {
       status: args.status,
+      codeId,
       updatedAt: Date.now(),
     });
     return null;

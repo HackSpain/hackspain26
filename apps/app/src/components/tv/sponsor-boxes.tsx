@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   TICKER_DURATION,
+  resolveTvSponsors,
   sponsorLogoSources,
   type TvSponsor,
   type TvTickerSpeed,
@@ -40,6 +41,7 @@ function SponsorLogo({
         referrerPolicy="no-referrer"
         className={cn(
           "h-8 w-auto max-w-24 object-contain outline outline-1 -outline-offset-1 outline-black/10",
+          src.startsWith("/sponsors/") && "brightness-0",
           editor &&
             "grayscale motion-safe:transition-[filter] motion-safe:duration-150 group-hover:grayscale-0",
         )}
@@ -76,16 +78,7 @@ export function SponsorGridBox({
   sponsors: TvSponsor[];
   editor?: boolean;
 }) {
-  const rows = sponsors.length > 0 ? sponsors : [];
-  if (rows.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center bg-hs-paper p-3 text-hs-brown">
-        <p className="text-sm">
-          {editor ? "Doble clic para añadir sponsors" : "Sponsors"}
-        </p>
-      </div>
-    );
-  }
+  const rows = resolveTvSponsors(sponsors);
   return (
     <div className="grid h-full grid-cols-2 content-start gap-2 bg-hs-paper p-3 text-hs-ink sm:grid-cols-3">
       {rows.map((sponsor) => (
@@ -113,7 +106,7 @@ export function SponsorTickerBox({
   speed?: TvTickerSpeed;
   editor?: boolean;
 }) {
-  const items = sponsors.length > 0 ? sponsors : [];
+  const items = resolveTvSponsors(sponsors);
   const reduced = usePrefersReducedMotion();
   const visible = usePageVisible();
   if (reduced) {

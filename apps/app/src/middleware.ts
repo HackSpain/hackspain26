@@ -12,12 +12,13 @@ const BOTID_PREFIX =
 // /api/cli/* authenticates with a bearer token, not the cookie session.
 // /api/files/* accepts either and does its own redirect, so image links from
 // the CLI work in a browser.
-// /tv is the public venue screen: no login, reads a public Convex query.
+// / is the unauthenticated splash. /tv is the public venue screen.
 // /cli-auth is public at the middleware level so ?hs-code= survives a
 // server-side redirect; AuthGate stashes it and routes visitors via /login.
 // /cli-auth/handoff signs the browser in from a CLI session, so it must be
 // reachable without one.
 const isPublicRoute = createRouteMatcher([
+  "/",
   "/login",
   "/cli-auth(.*)",
   "/api/login/otp",

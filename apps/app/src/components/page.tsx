@@ -165,23 +165,25 @@ export function RecordCard({
   actions?: ReactNode;
 }) {
   return (
-    <Card className="gap-3">
-      <CardHeader>
+    <Card className="min-w-0 gap-3 overflow-hidden">
+      <CardHeader className="min-w-0">
         {badges ? (
-          <CardTitle className="flex flex-wrap items-center gap-2 text-base [&_[data-slot=badge]]:whitespace-nowrap">
-            <span>{title}</span>
+          <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 text-base [&_[data-slot=badge]]:whitespace-nowrap">
+            <span className="min-w-0 break-words">{title}</span>
             {badges}
           </CardTitle>
         ) : (
-          <CardTitle className="text-base">{title}</CardTitle>
+          <CardTitle className="min-w-0 break-words text-base">{title}</CardTitle>
         )}
-        {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}
+        {subtitle ? (
+          <CardDescription className="min-w-0 break-all">{subtitle}</CardDescription>
+        ) : null}
       </CardHeader>
       {children || actions ? (
-        <CardContent className="space-y-3">
+        <CardContent className="min-w-0 space-y-3">
           {children}
           {actions ? (
-            <div className="flex flex-col gap-2 sm:flex-row">{actions}</div>
+            <div className="flex min-w-0 flex-col gap-2">{actions}</div>
           ) : null}
         </CardContent>
       ) : null}

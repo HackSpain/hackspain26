@@ -501,7 +501,22 @@ export function TvEditor() {
       />
       </aside>
       <div className="min-w-0 space-y-4">
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button
+          type="button"
+          aria-pressed={adding}
+          disabled={pending || !widgets}
+          onClick={() => {
+            if (editingIdRef.current) {
+              commitText();
+            }
+            setSelectedId(null);
+            setAdding(true);
+          }}
+        >
+          <Plus strokeWidth={2.5} aria-hidden />
+          Añadir caja
+        </Button>
         <Button variant="outline" disabled={pending || !widgets} onClick={() => setConfirm({
           title: "¿Restaurar el layout por defecto?",
           description: "Guardaremos una copia del lienzo actual en tus estados. Se restaurará Insights · Panorama; los estados guardados y la emisión en vivo no cambian. Guarda y pon en vivo el resultado cuando esté listo.",
@@ -518,7 +533,6 @@ export function TvEditor() {
           onPointerDown={(event) => {
             if (!(event.target instanceof Element)) {return;}
             if (event.target.closest("[data-tv-widget]")) {return;}
-            if (event.target.closest("[data-tv-add]")) {return;}
             if (editingIdRef.current) {commitText();}
             setAdding(false);
             setSelectedId(null);
@@ -628,23 +642,6 @@ export function TvEditor() {
               }}
             />
           )}
-          <button
-            type="button"
-            data-tv-add=""
-            aria-label="Añadir caja"
-            aria-pressed={adding}
-            onClick={() => {
-              if (editingIdRef.current) {commitText();}
-              setSelectedId(null);
-              setAdding(true);
-            }}
-            className={cn(
-              "absolute right-3 bottom-3 z-50 flex size-12 items-center justify-center border-[3px] border-hs-ink bg-hs-gold text-hs-ink outline-none motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out motion-safe:active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-gold",
-              adding && "ring-[3px] ring-hs-paper",
-            )}
-          >
-            <Plus className="size-6" strokeWidth={2.5} aria-hidden />
-          </button>
         </div>
         <div className="max-xl:mt-4 xl:absolute xl:top-0 xl:right-0 xl:flex xl:h-full xl:w-68 xl:flex-col xl:overflow-hidden">
           <TvInspector

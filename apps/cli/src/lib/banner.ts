@@ -72,6 +72,10 @@ function tint(text: string, row: number): string {
   return `\x1B[38;2;${r};${g};${b}m${text}\x1B[39m`;
 }
 
+export function wordmarkLines(word = "HACKSPAIN"): string[] {
+  return wordmarkRows(word).map((row, i) => tint(row, i));
+}
+
 /** Rows the picture takes: the same six the block letters use. */
 const LOGO_ROWS = ROWS;
 /** Narrower than this and even the picture is a smudge; use the small mark. */
@@ -134,6 +138,5 @@ export function banner(
   if (columns < WORDMARK_WIDTH + 2) {
     return `${BRAND} ${c.dim(`· ${tagline}`)}`;
   }
-  const art = wordmarkRows().map((row, i) => tint(row, i));
-  return `${art.join("\n")}\n${c.dim(tagline)}`;
+  return `${wordmarkLines().join("\n")}\n${c.dim(tagline)}`;
 }

@@ -26,7 +26,6 @@ const ADMIN_NAV = [
   { href: "/admin", label: "CRM" },
   { href: "/admin/types", label: "Tipos" },
   { href: "/admin/perks", label: "Perks" },
-  { href: "/admin/applications", label: "Solicitudes" },
   { href: "/admin/tracks", label: "Retos" },
   { href: "/admin/notifications", label: "Avisos" },
   { href: "/admin/tv", label: "TV" },
@@ -124,7 +123,12 @@ function AdminStrip({ pathname }: { pathname: string }) {
     <nav aria-label="Admin" className="border-b-[3px] border-hs-ink bg-hs-paper">
       <div className={cn(contentWidth(pathname), "flex flex-wrap items-center gap-x-4 gap-y-1")}>
         {ADMIN_NAV.map((item) => {
-          const active = adminNavActive(pathname, item.href);
+          const active =
+            item.href === "/admin/perks"
+              ? pathname === "/admin/perks" ||
+                pathname.startsWith("/admin/perks/") ||
+                pathname.startsWith("/admin/applications")
+              : adminNavActive(pathname, item.href);
           return (
             <Link
               key={item.href}
@@ -197,7 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AdminStrip pathname={pathname} />
       ) : null}
       {askGithub ? <GithubLinkBanner /> : null}
-      <main className={cn(contentWidth(pathname), "py-6 sm:py-8")}>
+      <main className={cn(contentWidth(pathname), "min-w-0 py-6 sm:py-8")}>
         <Suspense fallback={null}>
           <GithubLinkResult />
         </Suspense>
