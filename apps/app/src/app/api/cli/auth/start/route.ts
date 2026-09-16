@@ -1,6 +1,6 @@
 import { api } from "@convex/_generated/api";
 import { fetchAction } from "convex/nextjs";
-import { fail, fromError, ok, readJson } from "../../_lib/respond";
+import { fail, failCoded, fromError, ok, readJson } from "../../_lib/respond";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -17,6 +17,12 @@ export async function POST(request: Request) {
       params: { email },
       provider: "resend-otp",
     });
+    if (result.reason === "UNREGISTERED") {
+      return failCoded(
+        "UNREGISTERED",
+        "No hay inscripción a la hackathon con este email"
+      );
+    }
     return ok({ started: Boolean(result.started) });
   } catch (error) {
     return fromError(error);

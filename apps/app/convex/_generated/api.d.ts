@@ -41,6 +41,7 @@ import type * as lib_tvValidators from "../lib/tvValidators.js";
 import type * as lib_urls from "../lib/urls.js";
 import type * as lib_userTypes from "../lib/userTypes.js";
 import type * as lib_validators from "../lib/validators.js";
+import type * as login from "../login.js";
 import type * as migrations from "../migrations.js";
 import type * as milestones from "../milestones.js";
 import type * as notifications from "../notifications.js";
@@ -98,6 +99,7 @@ declare const fullApi: ApiFromModules<{
   "lib/urls": typeof lib_urls;
   "lib/userTypes": typeof lib_userTypes;
   "lib/validators": typeof lib_validators;
+  login: typeof login;
   migrations: typeof migrations;
   milestones: typeof milestones;
   notifications: typeof notifications;

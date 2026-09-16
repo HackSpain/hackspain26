@@ -1,11 +1,12 @@
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
 import { convexAuth, type Tokens } from "@convex-dev/auth/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { action, type ActionCtx } from "./_generated/server";
 import { ResendOTP } from "./ResendOTP";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
+import { fail } from "./lib/errors";
 import { adminEmailAllowlist, normalizeEmail } from "./lib/normalize";
 import { findSignupByEmail, findUserByEmail, resolvedLoginRole } from "./lib/auth";
 
@@ -154,7 +155,53 @@ type SignInResult = {
   verifier?: string;
   tokens?: Tokens | null;
   started?: boolean;
+  /** Set with `started: false` when the send step refused the email. */
+  reason?: "UNREGISTERED";
 };
+
+const VERIFY_COPY = {
+  BAD_OTP: "Ese código no es correcto. Revisa el email o pide uno nuevo.",
+  OTP_EXPIRED: "Ese código ya no vale. Pide uno nuevo.",
+  TOO_MANY_ATTEMPTS:
+    "Demasiados intentos. Espera unos minutos y pide un código nuevo.",
+} as const;
+
+function isCouldNotVerify(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("Could not verify code");
+}
+
+/**
+ * Email OTP with a gentler edge than the library's. The send step checks
+ * `login.eligibility` first: an unknown email gets `{ started: false,
+ * reason }` back instead of an email and a "code sent" screen, and nothing
+ * is logged as an error. The verify step turns the library's one
+ * "Could not verify code" into a coded ConvexError (convex/lib/errors.ts)
+ * the login page and CLI can explain. Other providers pass straight through.
+ */
+async function signInWithEmailOtp(
+  ctx: ActionCtx,
+  args: Record<string, unknown>,
+  params: Record<string, unknown>,
+  email: string,
+): Promise<SignInResult> {
+  const forwarded = { ...args, params };
+  if (params.code === undefined) {
+    const eligible = await ctx.runQuery(internal.login.eligibility, { email });
+    if (eligible === "unregistered") {
+      return { started: false, reason: "UNREGISTERED" };
+    }
+    return await ctx.runAction(api.auth.signInWithProvider, forwarded);
+  }
+  try {
+    return await ctx.runAction(api.auth.signInWithProvider, forwarded);
+  } catch (error) {
+    if (error instanceof ConvexError || !isCouldNotVerify(error)) {
+      throw error;
+    }
+    const reason = await ctx.runQuery(internal.login.verifyFailure, { email });
+    return fail(reason, VERIFY_COPY[reason]);
+  }
+}
 
 export const signIn = action({
   args: {
@@ -166,6 +213,14 @@ export const signIn = action({
   },
   handler: async (ctx, args): Promise<SignInResult> => {
     const params: unknown = await resolveStubCode(ctx, args.provider, args.params);
+    if (
+      args.provider === ResendOTP.id &&
+      isRecord(params) &&
+      typeof params.email === "string"
+    ) {
+      const email = normalizeEmail(params.email);
+      return await signInWithEmailOtp(ctx, args, { ...params, email }, email);
+    }
     return await ctx.runAction(api.auth.signInWithProvider, { ...args, params });
   },
 });
