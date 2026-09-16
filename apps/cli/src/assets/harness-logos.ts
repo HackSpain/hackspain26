@@ -3,7 +3,8 @@
  * mark beside each harness in terminals that support images. Generated from
  * apps/web/public/harnesses/*.svg: each SVG gets a brand-coloured fill (the
  * files carry none) and is rasterised with sharp into a palette PNG on a
- * transparent background. Do not edit by hand; regenerate when the SVGs change.
+ * transparent background. Qwen Code has no logo in the repo yet and falls
+ * back to its glyph. Do not edit by hand; regenerate when the SVGs change.
  */
 
 export const HARNESS_LOGO_SIZE = 96;
@@ -120,6 +121,26 @@ const LOGOS: Record<string, string> = {
     "y/zhsMPLINDbyoUmKNuZesVd+xML3ut89JB9BjQwlEAwGL+VG7LxHR7X0AT2o3ztmx73ctLJgkO8Dagug70kQauPt4UmHTW26Qt+" +
     "RF15YmCa26oV6wiSWwTGGMQRn9UZJ5iLHMScMDzGrb0bIyhyCo2SaEfulyMFriaxYRiNK9ri7sT+QXScR2Xs3IKgdL4YVo0pfXHj" +
     "47CCV08CMwvxU40KXj1ZPKcVH2sznDT7g8Ev37m+8g/ld+neL9DWIwAAAABJRU5ErkJggg==",
+  "gemini-cli":
+    "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAABtlBMVEVMaXE/hfNBhPRBhPMzmf9BhfNBhPMA//9Vqv88h/BBhfND" +
+    "hvE/h/dChPNChfNChPM/f/9ChPVEgvI/f+lBhfNBhPNBhfRChPRDhvVChfRBhPRBhfRChfNBh/VChfRChfNChPRBhfNChPNChPNC" +
+    "hPRChfREiO5ChfM/f/JVf/9Fg/dMf/9BhfNChPNBhPNBh/RChPRChPRChfNChfNChfRDh/dChPRChfJBgvNFi/9ChPNBhfR/f/9G" +
+    "g/Y4jf9ChPVGf/BBhPRChfVChPM/f+8/hPVBhvRDh/RChfNDhvZEgvNChfVBhfJChfJChPNBhPVChPRChfRBhfRBhPRBhPRChfRB" +
+    "hfNBhfRBhPRBhPNAhvVBhfRAhPNBhfNChfRChPM/iPVBg/NChfRBhPQ/hPRChfRChPNBhPRChPRBhPRChPNBhfRChPRChPVBhfNB" +
+    "hPQ/hPVIkf9BhvRChPNChfNChfM/hvBChPRBhPRBhfJChPVBhPNChfRBhfNEgvFBhfRChPRBg/ZEiPZBhfNAhfJDg/NBhPRChPNB" +
+    "g/NBhfNBhPNBhfRBg/BBhfRChfNChfNBhPNChfSPfRYyAAAAkXRSTlMALMLlBf34AQMR+RMg+m/IBDYpDK6zpDI1817DoTOqncDJ" +
+    "mqLbkQ/3FAYhCrLnoC/q7i607yKtKisL/toCHQkbEmJnnhA4RjFFOS1QUlRVZnd6fHXoY3Hxo8Y3k26Xwd8cWaynMKbjq5bZue2l" +
+    "aM2QNAdh9ubHJKnsaU2J3FolqGAfHp8/QIyLQoj0uyN4mUHhUCneWgAAAAlwSFlzAAA7DgAAOw4BzLahgwAAAr9JREFUaN7Vmndb" +
+    "GkEQh5fO0Q5CkV4kREBFQVGjKXYTo1ET03vvvVfTTG/zjQMxURAObu9m/uD9AL/3uefZvZ2dWcb4yGQYLVaBWGDbSSzQbCEW7PUT" +
+    "C/bvIxYcOEgsSLYTCxJx2nxT/zKtoAfgO6ngMMAhUkEfwFHKfOcRAB2l4DOUmCUUhMuCF3T57kBZoDOTCcbgL3vIBNo1gY8q37WW" +
+    "D3YbkaDrnwCuEv0mhv8LjLtJBCuwTooi/65hQ2AhOJl3JKCCuAldcAuqOIedn75RLXi4Dfkk88AmorgCB9TwDDM/YqwVGNvw8kdf" +
+    "Qh1GRrHyd4WgLuJ2nHyzByToc6IsoAmQZAJhv5nboQFhvdr8Ti80xNupLl8IQRMSaTX5bVuhKSMzyvODD0AGRofC+MkrIJOooj/f" +
+    "88sgm+4g93p9fR24iA9yxZ9NWYATyx35lcC7VAcowJJ8LGvnTvvsoBC7b7pZ3drzUQeq0H0qSIYXgz9/AwLLUUekYlHpBduQf+5H" +
+    "LNQLiPRqY4tz/iGboC8JshrX/FJY7McU5MXc0rxLkxUq/7bFhWgeI/zrt8WI1L5zruYC6tID7z80WUju+1rl8do3bjlb4WLSoCR9" +
+    "2Dsley/PXuJWGG5q+I6aY3z5t6e4i4kgx8bIO5Rcba0eufkDVoVn2oJR3pFpIj30zxynLVvEtLrC6N75xvldKgsv+tKxtF5j0vkx" +
+    "lMumeUCyMEUp30sXEInf3yOkC0hpLdVdrdcm8S5phTp1TMcMQ+RkrWAc96Jc8196gtxKsD7dVO4itxIYG68WvMJv54iV+afx2zks" +
+    "QtyQYuzChuAESc9ucP0T7G+J25qnqBuz2VZtLdM3x8nb+yxXFnwhnID8Kgs0rIWHRORjLvpBXQGgyGiHpd2MtfS4l35gTT5yJ380" +
+    "QP7sgfzhBvnTE/LHMxneK80fjvBIZuTKOugAAAAASUVORK5CYII=",
   opencode:
     "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAACVBMVEVMaXEjw18ixV6DCk7NAAAAAnRSTlMAM8lDrC4AAAAJcEhZ" +
     "cwAAOw4AADsOAcy2oYMAAABOSURBVGje7dgxEgAQAAPB8P9Ha2hUxtCw94Bsn6RXD5c5AAAAAADeBcpi20AWAwAAAAAAAAAAAAAA" +

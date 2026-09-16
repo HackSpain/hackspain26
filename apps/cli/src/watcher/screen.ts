@@ -41,7 +41,9 @@ const HARNESS_NAMES: Record<string, string> = {
   codex: "Codex",
   copilot: "Copilot",
   cursor: "Cursor",
+  "gemini-cli": "Gemini CLI",
   opencode: "OpenCode",
+  "qwen-code": "Qwen Code",
 };
 
 type Rgb = readonly [number, number, number];
@@ -59,7 +61,9 @@ const HARNESS_BRAND: Record<string, { glyph: string; color: Rgb }> = {
   codex: { color: [16, 163, 127], glyph: "⬡" },
   copilot: { color: [139, 92, 246], glyph: "◉" },
   cursor: { color: [160, 166, 176], glyph: "▍" },
+  "gemini-cli": { color: [66, 133, 244], glyph: "✦" },
   opencode: { color: [34, 197, 94], glyph: "◆" },
+  "qwen-code": { color: [97, 91, 255], glyph: "❋" },
 };
 const UNKNOWN_BRAND = { color: TEAL, glyph: "●" } as const;
 

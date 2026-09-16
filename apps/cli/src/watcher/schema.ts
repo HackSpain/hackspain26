@@ -12,10 +12,18 @@ export const HARNESSES = [
   "opencode",
   "cline",
   "copilot",
+  "gemini-cli",
+  "qwen-code",
 ] as const;
 export type HarnessId = (typeof HARNESSES)[number];
 
-export const MODEL_FAMILIES = ["claude", "gpt", "gemini", "other"] as const;
+export const MODEL_FAMILIES = [
+  "claude",
+  "gpt",
+  "gemini",
+  "qwen",
+  "other",
+] as const;
 export type ModelFamily = (typeof MODEL_FAMILIES)[number];
 
 export type EventType = "usage" | "session.start" | "session.end";
@@ -76,6 +84,9 @@ export function modelFamily(raw: string): ModelFamily {
   }
   if (model.includes("gemini")) {
     return "gemini";
+  }
+  if (model.includes("qwen")) {
+    return "qwen";
   }
   return "other";
 }

@@ -18,7 +18,9 @@ import { createBatcher } from "./batcher";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
+import { geminiCliCollector } from "./collectors/gemini-cli";
 import { openCodeCollector } from "./collectors/opencode";
+import { qwenCodeCollector } from "./collectors/qwen-code";
 import { openCursorStore } from "./cursor-store";
 import type { MemoryStore } from "./memory";
 import {
@@ -49,6 +51,8 @@ import type { Collector, CollectorContext } from "./types";
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
   codexCollector,
+  geminiCliCollector,
+  qwenCodeCollector,
   openCodeCollector,
   clineCollector,
 ];
