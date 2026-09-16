@@ -1,10 +1,10 @@
 import { firstName } from "./output";
-import { BRAND, c, highlight, width } from "./style";
-import { box, kvLines, SPINNER } from "./tui";
+import { BRAND, c, highlight } from "./style";
+import { box, cardWidth, kvLines, SPINNER } from "./tui";
 
 /**
  * Designed post-banner opening: a short boot (check-in / loaded) and a
- * compact status board. Kept off clack's intro/spinner timeline so those
+ * compact status board. Kept off the prompt timeline so those
  * lines read as UI, not leftover logs.
  */
 
@@ -89,13 +89,8 @@ export function formatStatusBoard(
   if (rows.length === 0) {
     return "";
   }
-  const maxInner = Math.max(24, columns - 8);
-  const cells = kvLines(rows, maxInner);
-  const innerW = Math.min(
-    maxInner,
-    Math.max(width("status") + 4, ...cells.map((cell) => width(cell)))
-  );
-  return box({ title: "status" }, kvLines(rows, innerW), innerW + 4)
+  const w = cardWidth(columns);
+  return box({ title: "status" }, kvLines(rows, w - 4), w)
     .map((line) => `${INDENT}${line}`)
     .join("\n");
 }

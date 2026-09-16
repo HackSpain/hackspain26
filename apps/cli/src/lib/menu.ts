@@ -1,4 +1,4 @@
-import { isCancel, log, outro, select, text } from "@clack/prompts";
+import { isCancel, text } from "@clack/prompts";
 import type { Command } from "commander";
 import { VERSION } from "../version";
 import { api, openSession } from "./api";
@@ -12,6 +12,7 @@ import { describeGate, fetchMe } from "./me";
 import { greetingFor, openingBoardRows, renderOpening } from "./opening";
 import { isCommanderError } from "./run";
 import { c, cmd } from "./style";
+import { cardWidth, isPickCancel, pickInBox } from "./tui";
 
 /**
  * The interactive menu behind bare `hackspain` on a TTY. Every entry maps to
@@ -468,7 +469,7 @@ export async function fetchMenuStatus(ctx: CliContext): Promise<MenuStatus> {
   );
 }
 
-/** Wipe the terminal (stdout and stderr — clack may have used either). */
+/** Wipe the terminal (stdout and stderr). */
 function clearTerminal(): void {
   const wipe = "\x1b[2J\x1b[3J\x1b[H";
   if (process.stdout.isTTY) {
@@ -541,11 +542,10 @@ function pressAnyKey(): Promise<void> {
 type Level = { items: MenuItem[]; title: string };
 
 /**
- * Walk the menu tree with clack selects. Entering a submenu first runs its
- * preview commands (show before act). Submenus get a "back" entry. Esc at
- * the top level exits. ← Back / Esc from any submenu returns "home" so the
- * outer loop can wipe the screen and redraw the wordmark — calling select()
- * again in this same frame would leave clack's previous prompt stacked.
+ * Walk the menu tree as watcher-style cards. Entering a submenu first runs
+ * its preview commands (show before act). Submenus get a "back" entry. Esc
+ * at the top level exits. ← Back / Esc from any submenu returns "home" so
+ * the outer loop can wipe the screen and redraw the wordmark.
  */
 async function navigate(
   root: MenuItem[],
@@ -562,15 +562,16 @@ async function navigate(
       stack.length > 1
         ? [...level.items, { value: BACK_VALUE, label: "← Back" }]
         : level.items;
-    const choice = await select<string>({
-      message: level.title,
-      options: items.map((item) => ({
-        value: item.value,
-        label: item.label,
+    const choice = await pickInBox({
+      items: items.map((item) => ({
         hint: item.hint,
+        label: item.label,
+        value: item.value,
       })),
+      title: level.title,
+      width: cardWidth(),
     });
-    if (isCancel(choice) || choice === BACK_VALUE) {
+    if (isPickCancel(choice) || choice === BACK_VALUE) {
       if (stack.length === 1) {
         return null;
       }
@@ -669,7 +670,7 @@ export async function runMenu(options: {
       if (!isCommanderError(error)) {
         const explained = explainError(error);
         const hint = explained.hint ? `\n${c.dim(explained.hint)}` : "";
-        log.error(`${c.red(explained.message)}${hint}`);
+        console.error(`  ${c.red("✗")}  ${explained.message}${hint}`);
       }
     }
   };
@@ -680,18 +681,14 @@ export async function runMenu(options: {
   };
 
   for (;;) {
-    const picked = await navigate(
-      buildMainMenu(status),
-      "What do you want to do?",
-      runPreview
-    );
+    const picked = await navigate(buildMainMenu(status), "menu", runPreview);
     if (picked === "home") {
       renderHome(status);
       continue;
     }
     if (picked === null || picked === "exit") {
-      outro(
-        `See you at the venue ⚡ ${c.dim(`${cmd("hackspain --help")} lists every command.`)}`
+      console.log(
+        `\n  See you at the venue ⚡ ${c.dim(`${cmd("hackspain --help")} lists every command.`)}\n`
       );
       return;
     }
