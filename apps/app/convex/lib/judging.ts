@@ -119,12 +119,6 @@ export function assertGroupCount(count: number): void {
   }
 }
 
-export function assertGeneralGroup(group: number, maxGroup: number): void {
-  if (!Number.isInteger(group) || group < 1 || group > maxGroup) {
-    throw new Error("Ese grupo general no existe");
-  }
-}
-
 export function compareRanking(
   a: { average: number | null; name: string },
   b: { average: number | null; name: string }

@@ -89,8 +89,6 @@ export function claimStatusLabel(status: string): string {
   }
 }
 
-export type IdentifierType = "email" | "github" | "twitter";
-
 export function teamMemberStatusLabel(status: string): string {
   if (status === "member") {
     return "Miembro";
@@ -112,16 +110,6 @@ export function identifierTypeLabel(type: string): string {
     return "Email";
   }
   return type;
-}
-
-export function identifierPlaceholder(type: IdentifierType): string {
-  if (type === "email") {
-    return "name@email.com";
-  }
-  if (type === "github") {
-    return "username";
-  }
-  return "@handle";
 }
 
 export function submissionStatusLabel(status: string): string {

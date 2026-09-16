@@ -28,7 +28,6 @@ import {
   money,
   phaseRows,
   SNAPSHOT_MINUTE,
-  technologyRows,
   usageUsd,
 } from "./event-data";
 
@@ -123,64 +122,6 @@ export function LiveTechnologyStacks() {
       )}
       <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
         Datos reales del repo. El resto de insights de esta página es una demo.
-      </p>
-    </Panel>
-  );
-}
-
-export function TechnologyStacks({ teams }: { teams: TeamRow[] }) {
-  const [category, setCategory] = useState("Frontend");
-  const rows = technologyRows(
-    teams.map((team) => team.id),
-    category
-  );
-  return (
-    <Panel
-      title="Stacks más usados"
-      eyebrow="Tecnologías declaradas por los equipos"
-      action={
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger
-            aria-label="Categoría de tecnologías"
-            className="min-h-10 border text-xs sm:w-32"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {["all", "Frontend", "Backend", "Datos"].map((item) => (
-              <SelectItem key={item} value={item}>
-                {item === "all" ? "Todas" : item}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      }
-    >
-      <div className="space-y-4">
-        {rows.map((row) => (
-          <div key={row.name}>
-            <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-              <span className="font-semibold">{row.name}</span>
-              <span className="text-hs-brown tabular-nums">
-                {row.teams.length} equipos ·{" "}
-                {percent(row.teams.length, teams.length)}
-              </span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-hs-sand">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  backgroundColor: row.color,
-                  width: `${(row.teams.length / Math.max(teams.length, 1)) * 100}%`,
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
-        Un equipo puede utilizar varias tecnologías. No son los harnesses de sus
-        agentes.
       </p>
     </Panel>
   );

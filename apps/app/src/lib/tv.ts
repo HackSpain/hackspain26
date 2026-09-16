@@ -1,3 +1,5 @@
+export { layoutTvBox } from "../../convex/lib/tvLayout";
+
 export const TV_WIDGET_KINDS = [
   "banner",
   "ticker",
@@ -28,17 +30,6 @@ export type TvFeedSource = "all" | "participants" | "github";
 export const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
 export type TvFontSize = (typeof TV_FONT_SIZES)[number];
 export type TvFontWeight = "normal" | "medium" | "semibold" | "bold";
-
-export const TV_FONT_SIZE_OPTIONS: readonly {
-  value: TvFontSize;
-  label: string;
-}[] = [
-  { value: 0.85, label: "Pequeño" },
-  { value: 1.1, label: "Normal" },
-  { value: 1.5, label: "Grande" },
-  { value: 2, label: "Enorme" },
-  { value: 2.75, label: "Titular" },
-];
 
 export const TV_FONT_WEIGHT_OPTIONS: readonly {
   value: TvFontWeight;
@@ -83,16 +74,6 @@ export function isTvFontWeight(value: string): value is TvFontWeight {
     value === "semibold" ||
     value === "bold"
   );
-}
-
-export function defaultTvFontSize(kind: TvWidgetKind): TvFontSize {
-  if (kind === "banner" || kind === "clock") {
-    return 2.75;
-  }
-  if (kind === "ticker") {
-    return 1.5;
-  }
-  return 1.1;
 }
 
 export function defaultTvFontWeight(): TvFontWeight {
@@ -188,19 +169,6 @@ export type TvWidget = {
   fontWeight?: TvFontWeight;
   background?: boolean;
 };
-
-export const TV_TEXT_KINDS = new Set<TvWidgetKind>([
-  "banner",
-  "ticker",
-  "message",
-]);
-
-export const TV_SPONSOR_KINDS = new Set<TvWidgetKind>([
-  "sponsorGrid",
-  "sponsorTicker",
-]);
-
-export const TV_FEED_KINDS = new Set<TvWidgetKind>(["feed"]);
 
 export const TV_PALETTE: readonly {
   kind: TvWidgetKind;
@@ -304,32 +272,8 @@ export const TICKER_DURATION: Record<TvTickerSpeed, string> = {
   fast: "12s",
 };
 
-export const TV_MIN_SIZE = 8;
 export const TV_SNAP = 1;
-
-export function clampTv(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) {
-    return min;
-  }
-  return Math.min(max, Math.max(min, value));
-}
 
 export function snapTv(value: number) {
   return Math.round(value / TV_SNAP) * TV_SNAP;
-}
-
-export function layoutTvBox(input: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}) {
-  const w = clampTv(input.w, TV_MIN_SIZE, 100);
-  const h = clampTv(input.h, TV_MIN_SIZE, 100);
-  return {
-    x: clampTv(input.x, 0, 100 - w),
-    y: clampTv(input.y, 0, 100 - h),
-    w,
-    h,
-  };
 }

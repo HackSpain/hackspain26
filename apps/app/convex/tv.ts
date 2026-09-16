@@ -6,6 +6,16 @@ import type { QueryCtx } from "./_generated/server";
 import { getSignupForUser } from "./lib/auth";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import { INSIGHTS_LAYOUT } from "./lib/tvLayouts";
+import { clampTv, layoutTvBox as layoutBox } from "./lib/tvLayout";
+import {
+  tvFeedModeValidator,
+  tvFeedSourceValidator,
+  tvFontWeightValidator,
+  tvSponsorValidator,
+  tvTickerSpeedValidator,
+  tvWidgetFields,
+  tvWidgetKindValidator,
+} from "./lib/tvValidators";
 
 export const tvZoneValidator = v.union(
   v.literal("banner"),
@@ -169,58 +179,6 @@ export const adminMove = adminMutation({
   },
 });
 
-export const tvWidgetKindValidator = v.union(
-  v.literal("banner"),
-  v.literal("ticker"),
-  v.literal("clock"),
-  v.literal("message"),
-  v.literal("insightsStats"),
-  v.literal("insightsActivity"),
-  v.literal("insightsHarness"),
-  v.literal("insightsStacks"),
-  v.literal("insightsScatter"),
-  v.literal("insightsLeaderboard"),
-  v.literal("insightsEvolution"),
-  v.literal("liveCommits"),
-  v.literal("liveAgents"),
-  v.literal("liveTokens"),
-  v.literal("liveLeaderboard"),
-  v.literal("feed"),
-  v.literal("sponsorGrid"),
-  v.literal("sponsorTicker"),
-);
-
-export const tvSponsorValidator = v.object({
-  name: v.string(),
-  logoUrl: v.string(),
-  href: v.string(),
-  tier: v.union(v.literal("gold"), v.literal("silver"), v.literal("community")),
-});
-
-export const tvTickerSpeedValidator = v.union(
-  v.literal("slow"),
-  v.literal("normal"),
-  v.literal("fast"),
-);
-
-export const tvFeedModeValidator = v.union(
-  v.literal("latest"),
-  v.literal("rotate"),
-);
-
-export const tvFeedSourceValidator = v.union(
-  v.literal("all"),
-  v.literal("participants"),
-  v.literal("github"),
-);
-
-export const tvFontWeightValidator = v.union(
-  v.literal("normal"),
-  v.literal("medium"),
-  v.literal("semibold"),
-  v.literal("bold"),
-);
-
 const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
 
 function parseFontSize(value: number | undefined): number | undefined {
@@ -239,25 +197,10 @@ function parseFontSize(value: number | undefined): number | undefined {
 
 export const widgetReturn = v.object({
   _id: v.string(),
-  kind: tvWidgetKindValidator,
-  x: v.number(),
-  y: v.number(),
-  w: v.number(),
-  h: v.number(),
-  z: v.number(),
-  text: v.string(),
-  sponsors: v.optional(v.array(tvSponsorValidator)),
-  tickerSpeed: v.optional(tvTickerSpeedValidator),
-  feedMode: v.optional(tvFeedModeValidator),
-  feedSource: v.optional(tvFeedSourceValidator),
-  fontSize: v.optional(v.number()),
-  fontWeight: v.optional(tvFontWeightValidator),
-  background: v.optional(v.boolean()),
+  ...tvWidgetFields,
 });
 
 type WidgetKind = Doc<"tvWidgets">["kind"];
-
-const MIN_SIZE = 8;
 
 const TEXT_KINDS = new Set<WidgetKind>(["banner", "ticker", "message"]);
 const FONT_SIZE_KINDS = new Set<WidgetKind>([
@@ -324,44 +267,10 @@ const KIND_DEFAULTS: Record<
   sponsorTicker: { x: 0, y: 86, w: 100, h: 14, text: "" },
 };
 
-function clamp(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
-
-function layoutBox(input: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}): { x: number; y: number; w: number; h: number } {
-  const w = clamp(input.w, MIN_SIZE, 100);
-  const h = clamp(input.h, MIN_SIZE, 100);
-  return {
-    x: clamp(input.x, 0, 100 - w),
-    y: clamp(input.y, 0, 100 - h),
-    w,
-    h,
-  };
-}
-
 function toPublicWidget(row: Doc<"tvWidgets">) {
   return {
     _id: row._id,
-    kind: row.kind,
-    x: row.x,
-    y: row.y,
-    w: row.w,
-    h: row.h,
-    z: row.z,
-    text: row.text,
-    sponsors: row.sponsors,
-    tickerSpeed: row.tickerSpeed,
-    feedMode: row.feedMode,
-    feedSource: row.feedSource,
-    fontSize: row.fontSize,
-    fontWeight: row.fontWeight,
-    background: row.background,
+    ...snapshotOf(row),
   };
 }
 
@@ -634,7 +543,7 @@ export const adminUpdateWidget = adminMutation({
     await ctx.db.patch(widget._id, {
       ...box,
       text,
-      z: args.z === undefined ? widget.z : clamp(args.z, 0, 10_000),
+      z: args.z === undefined ? widget.z : clampTv(args.z, 0, 10_000),
       sponsors: args.sponsors ?? widget.sponsors,
       tickerSpeed: args.tickerSpeed ?? widget.tickerSpeed,
       feedMode: args.feedMode ?? widget.feedMode,
