@@ -88,13 +88,13 @@ export default function CliPage() {
 
         <CommandCard
           title="Primeros pasos"
-          description="Inicia sesión con el mismo email del dashboard. Tras el login te pedirá lo que falte: nombre, teléfono o GitHub."
+          description="Misma cuenta que este dashboard. El login abre el navegador para aprobar el dispositivo; también vale el código de 8 dígitos. Después te pedirá lo que falte: nombre, teléfono o GitHub."
         >
           <CommandRow command="hackspain">
-            Dónde estás y qué toca hacer a continuación.
+            Dónde estás y qué toca hacer. En una terminal interactiva, menú para moverte.
           </CommandRow>
-          <CommandRow command="hackspain auth login">
-            Email + código de 8 dígitos, como en la web.
+          <CommandRow command="hackspain auth login [--email …] [--code …]">
+            Por defecto abre /cli-auth para aprobar este dispositivo. Con --email/--code, el código de 8 dígitos por correo, como en la web.
           </CommandRow>
           <CommandRow command="hackspain open [feed|teams|perks|…]">
             Abre el dashboard en tu navegador ya con la sesión iniciada: no
@@ -110,7 +110,7 @@ export default function CliPage() {
           <CommandRow command="hackspain profile">
             Nombre, dieta, viaje, teléfono, avisos y GitHub.
           </CommandRow>
-          <CommandRow command="hackspain profile edit [--name …] [--diet …] [--from …]">
+          <CommandRow command="hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]">
             Edita los datos de tu perfil.
           </CommandRow>
           <CommandRow command="hackspain profile notify on|off">
@@ -140,8 +140,8 @@ export default function CliPage() {
           <CommandRow command="hackspain team code [--regenerate]">
             Muestra (o regenera) el código de invitación.
           </CommandRow>
-          <CommandRow command="hackspain team repo [url|--clear]">
-            Vincula el repositorio de GitHub; su actividad aparece en el feed.
+          <CommandRow command="hackspain team repo [url…] [--clear]">
+            Vincula el repositorio (o varios) de GitHub; su actividad aparece en el feed.
           </CommandRow>
           <CommandRow command="hackspain team leave">Sal del equipo.</CommandRow>
           <CommandRow command="hackspain team transfer [member]">

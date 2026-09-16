@@ -5,17 +5,26 @@ import type { FunctionReturnType } from "convex/server";
 import { ArrowUpRightIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import {
   EmptyState,
   Field,
   FormError,
   LoadingText,
   Page,
+  RecordCard,
+  RecordList,
   errorMessage,
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -64,7 +73,7 @@ import {
   slugKey,
   toCsv,
 } from "@/lib/perks";
-import { claimStatusLabel, perkName, perkTypeLabel } from "@/lib/utils";
+import { claimStatusLabel, cn, perkName, perkTypeLabel } from "@/lib/utils";
 
 type AdminPerk = FunctionReturnType<typeof api.perks.adminList>[number];
 type PerkType = AdminPerk["type"];
@@ -218,6 +227,8 @@ export default function AdminPerksPage() {
 
   return (
     <Page title="Admin de perks">
+      <EmailApplicationsQueue />
+
       <Card>
         <CardHeader>
           <CardTitle>Crear perk</CardTitle>
@@ -656,10 +667,211 @@ function InputsEditor({
   );
 }
 
+function Answers({
+  answers,
+}: {
+  answers: Array<{ label: string; value: string }>;
+}) {
+  if (answers.length === 0) return null;
+  return (
+    <dl className="mt-1 grid gap-0.5 text-xs">
+      {answers.map((answer) => (
+        <div key={answer.label} className="flex min-w-0 gap-1.5">
+          <dt className="shrink-0 font-bungee uppercase text-hs-brown">
+            {answer.label}
+          </dt>
+          <dd className="min-w-0 break-words">{answer.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function EmailApplicationsQueue() {
+  const [status, setStatus] = useState<
+    "all" | "pending" | "added" | "rejected"
+  >("pending");
+  const rows = useQuery(api.perks.adminApplications, {
+    status: status === "all" ? undefined : status,
+  });
+
+  return (
+    <Card id="solicitudes">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle>Solicitudes por email</CardTitle>
+          <CardDescription>
+            El hacker pide acceso; al marcarlo como añadido puedes pegar el
+            código que le toca.
+          </CardDescription>
+        </div>
+        <Select
+          value={status}
+          onValueChange={(value) =>
+            setStatus(value as "all" | "pending" | "added" | "rejected")
+          }
+        >
+          <SelectTrigger className="w-full sm:max-w-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="pending">Pendientes</SelectItem>
+            <SelectItem value="added">Añadidas</SelectItem>
+            <SelectItem value="rejected">Rechazadas</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent>
+        {!rows ? (
+          <LoadingText />
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-hs-brown">
+            Nada en este estado todavía.
+          </p>
+        ) : (
+          <RecordList
+            desktop={
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Solicitante</TableHead>
+                    <TableHead>Perk</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow key={row._id}>
+                      <TableCell>
+                        {row.name ?? "—"}
+                        <br />
+                        <span className="text-xs text-hs-brown">
+                          {row.email}
+                        </span>
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
+                        {perkName(row.company, row.title)}
+                        <Answers answers={row.answers} />
+                      </TableCell>
+                      <TableCell>
+                        <Badge>{claimStatusLabel(row.status)}</Badge>
+                        {row.code ? (
+                          <p className="mt-1 font-mono text-xs break-all">
+                            {row.code}
+                          </p>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        <ReviewActions claimId={row._id} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            }
+          >
+            {rows.map((row) => (
+              <RecordCard
+                key={row._id}
+                title={row.name ?? "—"}
+                subtitle={row.email}
+                badges={<Badge>{claimStatusLabel(row.status)}</Badge>}
+                actions={<ReviewActions claimId={row._id} stacked />}
+              >
+                <p className="text-sm text-hs-brown">
+                  {perkName(row.company, row.title)}
+                </p>
+                {row.code ? (
+                  <p className="font-mono text-xs break-all">{row.code}</p>
+                ) : null}
+                <Answers answers={row.answers} />
+              </RecordCard>
+            ))}
+          </RecordList>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReviewActions({
+  claimId,
+  compact,
+  stacked,
+}: {
+  claimId: Id<"perkClaims">;
+  compact?: boolean;
+  stacked?: boolean;
+}) {
+  const setApplicationStatus = useMutation(api.perks.adminSetApplicationStatus);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function setStatus(status: "added" | "rejected") {
+    setError(null);
+    setPending(true);
+    try {
+      await setApplicationStatus({
+        claimId,
+        status,
+        code: status === "added" && code.trim() ? code.trim() : undefined,
+      });
+      if (status === "added") {
+        setCode("");
+      }
+    } catch (err: unknown) {
+      setError(errorMessage(err, "No se ha podido actualizar"));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="grid min-w-0 gap-2">
+      <div
+        className={cn(
+          "flex gap-2",
+          stacked ? "flex-col" : "flex-wrap items-center",
+        )}
+      >
+        <Input
+          aria-label="Código del perk"
+          placeholder="Código"
+          value={code}
+          disabled={pending}
+          className={cn("font-mono", compact ? "h-9 min-w-28 flex-1 text-sm" : "max-w-48")}
+          onChange={(event) => setCode(event.target.value)}
+        />
+        <Button
+          size={compact ? "sm" : "default"}
+          className={stacked ? "w-full" : undefined}
+          disabled={pending}
+          onClick={() => void setStatus("added")}
+        >
+          Marcar añadida
+        </Button>
+        <Button
+          size={compact ? "sm" : "default"}
+          variant="outline"
+          className={stacked ? "w-full" : undefined}
+          disabled={pending}
+          onClick={() => void setStatus("rejected")}
+        >
+          Rechazar
+        </Button>
+      </div>
+      <FormError message={error} />
+    </div>
+  );
+}
+
 function RequestsSheet({ perk }: { perk: AdminPerk }) {
   const rows = useQuery(api.perks.adminRequests, { perkId: perk._id });
   const name = perkName(perk.company, perk.title);
-  const showCode = perk.type === "code";
+  const reviewEmail = perk.type === "email";
 
   function exportCsv() {
     if (!rows) return;
@@ -669,7 +881,7 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
       "Equipo",
       ...perk.inputs.map((input) => input.label),
       "Estado",
-      ...(showCode ? ["Código"] : []),
+      "Código",
       "Fecha",
     ];
     const body = rows.map((row) => [
@@ -678,7 +890,7 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
       row.teamName ?? "",
       ...perk.inputs.map((input) => answerFor(row.answers, input.key)),
       claimStatusLabel(row.status),
-      ...(showCode ? [row.code ?? ""] : []),
+      row.code ?? "",
       new Date(row.createdAt).toISOString(),
     ]);
     downloadCsv(`perk-${fileSlug(name)}-solicitudes.csv`, toCsv(header, body));
@@ -718,8 +930,9 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
                   <TableHead key={input.key}>{input.label}</TableHead>
                 ))}
                 <TableHead>Estado</TableHead>
-                {showCode ? <TableHead>Código</TableHead> : null}
+                <TableHead>Código</TableHead>
                 <TableHead>Fecha</TableHead>
+                {reviewEmail ? <TableHead /> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -736,12 +949,15 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
                   <TableCell>
                     <Badge>{claimStatusLabel(row.status)}</Badge>
                   </TableCell>
-                  {showCode ? (
-                    <TableCell className="font-mono text-xs">{row.code ?? "—"}</TableCell>
-                  ) : null}
+                  <TableCell className="font-mono text-xs">{row.code ?? "—"}</TableCell>
                   <TableCell className="tabular-nums text-hs-brown">
                     {dateFormat.format(new Date(row.createdAt))}
                   </TableCell>
+                  {reviewEmail ? (
+                    <TableCell>
+                      <ReviewActions claimId={row._id} compact />
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>

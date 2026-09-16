@@ -341,13 +341,9 @@ export const TvWidgetPreview = memo(function TvWidgetPreview({
       );
     }
     case "sponsorTicker": {
-      const sponsors = (widget.sponsors ?? []).filter((row) => row.name.trim());
-      if (sponsors.length === 0) {
-        return <SponsorPreview names={[]} />;
-      }
       return (
         <SponsorTickerBox
-          sponsors={sponsors}
+          sponsors={widget.sponsors ?? []}
           speed={widget.tickerSpeed}
         />
       );
