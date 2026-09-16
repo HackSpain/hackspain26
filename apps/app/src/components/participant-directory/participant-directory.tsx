@@ -7,15 +7,19 @@ import {
   LayoutGrid,
   MapPin,
   Network,
+  PencilLine,
   Search,
   Users,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { contentWidth } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 import type { DirectoryParticipant } from "./types";
 import { normalize } from "./affinities";
 import { ConnectionGraph } from "./connection-graph";
 import "./participant-directory.css";
 
-type ParticipantView = "directory" | "graph";
+type ParticipantView = "graph" | "directory";
 
 function ParticipantList({
   participants,
@@ -143,59 +147,72 @@ function ParticipantList({
   );
 }
 
+/**
+ * The map is the page: it bleeds edge to edge below a compact header. The
+ * card directory stays one click away inside the regular content width.
+ */
 export function ParticipantDirectory({
   participants,
+  onEdit,
 }: {
   participants: DirectoryParticipant[];
+  onEdit?: () => void;
 }) {
-  const [view, setView] = useState<ParticipantView>("directory");
+  const [view, setView] = useState<ParticipantView>("graph");
+  const container = contentWidth("/participantes");
 
   return (
     // Proton Pass can add data-protonpass-form before React hydrates this wrapper.
     // Suppress attribute mismatches only here; descendants still hydrate normally.
     <div className="participant-directory" suppressHydrationWarning>
-      <section className="pd-hero">
-        <div className="pd-hero-copy">
-          <h1>
-            CONOCE A LOS <em>BUILDERS</em> DEL FUTURO.
-          </h1>
+      <header className={cn("pd-header hs-enter", container)}>
+        <div className="pd-header-copy">
+          <h1>Participantes</h1>
           <p>
-            Conoce a quienes comparten tu ciudad, universidad, habilidades e
-            intereses.
+            {participants.length}{" "}
+            {participants.length === 1 ? "persona" : "personas"} con ficha.
+            Agrupa por equipo, reto, ciudad, universidad o empresa y toca a
+            alguien para ver qué tenéis en común.
           </p>
         </div>
-      </section>
+        <div className="pd-header-actions">
+          <div
+            className="pd-view-switcher"
+            role="group"
+            aria-label="Vista de participantes"
+          >
+            <button
+              type="button"
+              aria-controls="participantes"
+              aria-pressed={view === "graph"}
+              onClick={() => setView("graph")}
+            >
+              <Network aria-hidden="true" size={16} />
+              Mapa
+            </button>
+            <button
+              type="button"
+              aria-controls="pd-directory-panel"
+              aria-pressed={view === "directory"}
+              onClick={() => setView("directory")}
+            >
+              <LayoutGrid aria-hidden="true" size={16} />
+              Directorio
+            </button>
+          </div>
+          {onEdit ? (
+            <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+              <PencilLine aria-hidden /> Editar mi ficha
+            </Button>
+          ) : null}
+        </div>
+      </header>
 
-      <div
-        className="pd-view-switcher"
-        role="group"
-        aria-label="Vista de participantes"
-      >
-        <button
-          type="button"
-          aria-controls="pd-directory-panel"
-          aria-pressed={view === "directory"}
-          onClick={() => setView("directory")}
-        >
-          <LayoutGrid aria-hidden="true" size={17} />
-          Directorio
-        </button>
-        <button
-          type="button"
-          aria-controls="pd-graph-panel"
-          aria-pressed={view === "graph"}
-          onClick={() => setView("graph")}
-        >
-          <Network aria-hidden="true" size={17} />
-          Grafo
-        </button>
-      </div>
-
-      {view === "directory" ? (
-        <ParticipantList participants={participants} />
+      {view === "graph" ? (
+        <ConnectionGraph participants={participants} />
       ) : (
-        <div id="pd-graph-panel">
-          <ConnectionGraph participants={participants} />
+        <div className={container}>
+          <ParticipantList participants={participants} />
         </div>
       )}
     </div>

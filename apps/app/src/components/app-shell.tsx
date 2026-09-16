@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { contentWidth } from "@/lib/layout";
+import { contentWidth, fullBleed } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
@@ -165,6 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = me?.role === "admin";
+  const bleed = fullBleed(pathname);
   const displayName = me?.name ?? me?.email;
   const askGithub =
     me !== undefined &&
@@ -197,15 +198,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AdminStrip pathname={pathname} />
       ) : null}
       {askGithub ? <GithubLinkBanner /> : null}
-      <main className={cn(contentWidth(pathname), "py-6 sm:py-8")}>
-        <Suspense fallback={null}>
-          <GithubLinkResult />
-        </Suspense>
-        {pathname === "/" ? null : (
-          <div className="hs-enter mb-4">
-            <BackToHome />
-          </div>
+      <main
+        className={cn(
+          bleed ? "w-full pt-6 sm:pt-8" : cn(contentWidth(pathname), "py-6 sm:py-8"),
         )}
+      >
+        <div className={cn(bleed && contentWidth(pathname))}>
+          <Suspense fallback={null}>
+            <GithubLinkResult />
+          </Suspense>
+          {pathname === "/" ? null : (
+            <div className="hs-enter mb-4">
+              <BackToHome />
+            </div>
+          )}
+        </div>
         {children}
       </main>
     </div>

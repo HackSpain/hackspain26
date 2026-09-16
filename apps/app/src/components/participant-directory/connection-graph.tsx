@@ -1,455 +1,423 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  ArrowUpRight,
-  Check,
-  ChevronDown,
-  Search,
-  SlidersHorizontal,
-  Users,
-  X,
+	ArrowUpRight,
+	LocateFixed,
+	Minus,
+	Plus,
+	Scan,
+	Search,
+	X,
 } from "lucide-react";
-import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
-import { AFFINITY_KINDS, normalize, valuesFor } from "./affinities";
+import { initialsOf } from "@/components/avatar";
+import { contentWidth } from "@/lib/layout";
+import { cn } from "@/lib/utils";
+import { normalize, valuesFor } from "./affinities";
 import type { AffinityKind } from "./affinities";
-import { ENTITY_KINDS, networkNeighbors } from "./network-model";
-import type { GraphPoint, Network } from "./network-model";
+import {
+	LENS_LABELS,
+	LENSES,
+	linksFor,
+	uniqueParticipants,
+} from "./network-model";
+import type { Lens, Link } from "./network-model";
 import { CONNECTION_STYLES, NetworkCanvas } from "./network-canvas";
 import type { NetworkHandle } from "./network-canvas";
 import type { DirectoryParticipant } from "./types";
 import "./connection-graph.css";
 
-const LEGEND_ORDER = ENTITY_KINDS;
+const PANEL_WIDTH = 340;
+/** `contentWidth` is max-w-6xl with px-4: the overlays sit inside that box. */
+const CONTAINER_MAX = 1152;
+const CONTAINER_PAD = 16;
+const CONTAINER = contentWidth("/participantes");
+
+/** Left edge of the profile panel for a viewport width, or null when it is a sheet. */
+function panelLeft(viewportWidth: number): number | null {
+	if (viewportWidth < 900) {
+		return null;
+	}
+	const box = Math.min(CONTAINER_MAX, viewportWidth);
+	return (viewportWidth - box) / 2 + box - CONTAINER_PAD - PANEL_WIDTH;
+}
+const SEARCH_KINDS: AffinityKind[] = [
+	"city",
+	"university",
+	"company",
+	"team",
+	"skills",
+	"interests",
+];
+
+function Portrait({ person }: { person: DirectoryParticipant }) {
+	return person.photoUrl ? (
+		// eslint-disable-next-line @next/next/no-img-element -- profile images may use authenticated app URLs or GitHub avatars.
+		<img className="pg-portrait" src={person.photoUrl} alt="" />
+	) : (
+		<span className="pg-portrait" aria-hidden="true">
+			{initialsOf(person.displayName)}
+		</span>
+	);
+}
+
+function ProfilePanel({
+	person,
+	links,
+	onClose,
+	onFocus,
+}: {
+	person: DirectoryParticipant;
+	links: Link[];
+	onClose: () => void;
+	onFocus: (id: string) => void;
+}) {
+	const facts = [
+		person.city,
+		person.university,
+		person.company,
+		person.degree,
+	].filter(Boolean);
+	return (
+		<aside className="pg-panel" aria-label={`Perfil de ${person.displayName}`}>
+			<div className="pg-panel-head">
+				<Portrait person={person} />
+				<div className="pg-panel-identity">
+					<h2>
+						{person.displayName}
+						{person.isMe ? <span className="pg-me-chip">Tú</span> : null}
+					</h2>
+					<p>{person.role}</p>
+				</div>
+				<button type="button" aria-label="Cerrar perfil" onClick={onClose}>
+					<X size={18} />
+				</button>
+			</div>
+			{facts.length ? (
+				<p className="pg-panel-facts">{facts.join(" · ")}</p>
+			) : null}
+			{person.team ? (
+				<p className="pg-panel-team">
+					<span style={{ background: CONNECTION_STYLES.team.color }} />
+					{person.team.name}
+				</p>
+			) : null}
+			{person.bio ? <p className="pg-panel-bio">{person.bio}</p> : null}
+			{person.skills.length ? (
+				<ul className="pg-chips" aria-label="Habilidades">
+					{person.skills.slice(0, 8).map((skill) => (
+						<li key={skill}>{skill}</li>
+					))}
+				</ul>
+			) : null}
+			<div className="pg-panel-section">
+				<h3>En común</h3>
+				<span>{links.length}</span>
+			</div>
+			{links.length ? (
+				<ul className="pg-links-list">
+					{links.map((link) => (
+						<li key={link.participant.id}>
+							<button
+								type="button"
+								onClick={() => onFocus(link.participant.id)}
+							>
+								<Portrait person={link.participant} />
+								<span className="pg-link-body">
+									<span className="pg-link-name">
+										{link.participant.displayName}
+										<ArrowUpRight size={14} aria-hidden="true" />
+									</span>
+									<span className="pg-link-reasons">
+										{link.affinities.slice(0, 4).map((affinity) => (
+											<span
+												key={`${affinity.kind}:${affinity.value}`}
+												style={{
+													color: CONNECTION_STYLES[affinity.kind].color,
+												}}
+											>
+												{affinity.value}
+											</span>
+										))}
+										{link.affinities.length > 4 ? (
+											<span className="pg-link-more">
+												+{link.affinities.length - 4}
+											</span>
+										) : null}
+									</span>
+								</span>
+							</button>
+						</li>
+					))}
+				</ul>
+			) : (
+				<p className="pg-panel-empty">
+					Todavía no comparte ciudad, estudios, empresa, equipo, habilidades ni
+					intereses con nadie.
+				</p>
+			)}
+		</aside>
+	);
+}
 
 export function ConnectionGraph({
-  participants,
+	participants: input,
 }: {
-  participants: DirectoryParticipant[];
+	participants: DirectoryParticipant[];
 }) {
-  const [prepared, setPrepared] = useState<{
-    input: DirectoryParticipant[];
-    network: Network;
-    points: GraphPoint[];
-  } | null>(null);
-  const [failedInput, setFailedInput] = useState<DirectoryParticipant[] | null>(
-    null,
-  );
-  const failed = failedInput === participants;
-  useEffect(() => {
-    let worker: Worker | undefined;
-    try {
-      // Keep the relative module specifier explicit for the worker bundler.
-      // oxlint-disable-next-line unicorn/relative-url-style
-      worker = new Worker(new URL("./network.worker.ts", import.meta.url));
-      worker.addEventListener(
-        "message",
-        (event: MessageEvent<{ network: Network; points: GraphPoint[] }>) => {
-          setPrepared({ input: participants, ...event.data });
-          worker?.terminate();
-        },
-      );
-      worker.addEventListener("error", () => {
-        setFailedInput(participants);
-        worker?.terminate();
-      });
-      worker.postMessage(participants, []);
-    } catch {
-      // Worker construction can fail synchronously under browser security policies.
-      // oxlint-disable-next-line react/set-state-in-effect
-      setFailedInput(participants);
-    }
-    return () => worker?.terminate();
-  }, [participants]);
-  const ready = prepared?.input === participants;
-  const network = useMemo<Network>(
-    () =>
-      ready && prepared
-        ? prepared.network
-        : { participants, edges: [], entities: [] },
-    [ready, prepared, participants],
-  );
-  const [visibleKinds, setVisibleKinds] = useState(
-    () => new Set<AffinityKind>(ENTITY_KINDS),
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const mapRef = useRef<NetworkHandle>(null);
-  const profileRef = useRef<HTMLElement>(null);
-  const selected = network.participants.find(
-    (person) => person.id === selectedId,
-  );
-  const selectedEntity = network.entities.find(
-    (entity) => entity.id === selectedId && visibleKinds.has(entity.kind),
-  );
-  const selectionName = selected?.displayName ?? selectedEntity?.label;
-  const search = normalize(query);
-  const searchIndex = useMemo(
-    () =>
-      new Map(
-        network.participants.map((person) => [
-          person.id,
-          normalize(
-            [
-              person.displayName,
-              person.role,
-              ...ENTITY_KINDS.flatMap((kind) => valuesFor(person, kind)),
-            ].join(" "),
-          ),
-        ]),
-      ),
-    [network],
-  );
-  const matches = useMemo(
-    () =>
-      new Set(
-        network.participants
-          .filter((person) => searchIndex.get(person.id)?.includes(search))
-          .map((person) => person.id),
-      ),
-    [network, searchIndex, search],
-  );
-  const matchingEntities = useMemo(
-    () =>
-      network.entities.filter(
-        (entity) =>
-          visibleKinds.has(entity.kind) &&
-          normalize(entity.label).includes(search),
-      ),
-    [network, visibleKinds, search],
-  );
-  const highlightedMatches = useMemo(
-    () => new Set([...matches, ...matchingEntities.map((entity) => entity.id)]),
-    [matches, matchingEntities],
-  );
-  const index = useMemo(() => {
-    const counts = new Map<AffinityKind, number>();
-    for (const edge of network.edges) {
-      counts.set(edge.kind, (counts.get(edge.kind) ?? 0) + 1);
-    }
-    return { counts };
-  }, [network]);
-  const neighbors = useMemo(
-    () =>
-      selectedId ? networkNeighbors(network, selectedId, visibleKinds) : [],
-    [network, selectedId, visibleKinds],
-  );
+	const participants = useMemo(() => uniqueParticipants(input), [input]);
+	const [lens, setLens] = useState<Lens>("team");
+	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [query, setQuery] = useState("");
+	const [searchOpen, setSearchOpen] = useState(false);
+	const canvas = useRef<NetworkHandle>(null);
+	const searchInput = useRef<HTMLInputElement>(null);
 
-  function toggleKind(kind: AffinityKind) {
-    setSelectedId(null);
-    setVisibleKinds((previous) => {
-      const next = new Set(previous);
-      if (next.has(kind)) {
-        next.delete(kind);
-      } else {
-        next.add(kind);
-      }
-      return next;
-    });
-  }
-  function select(id: string | null) {
-    setSelectedId(id);
-    setQuery("");
-    if (
-      id &&
-      network.participants.some((person) => person.id === id) &&
-      window.matchMedia("(max-width: 700px)").matches
-    ) {
-      requestAnimationFrame(() =>
-        profileRef.current?.scrollIntoView({ block: "start" }),
-      );
-    }
-  }
+	// Links are computed lazily per person and remembered until the data changes.
+	const linksOf = useMemo(() => {
+		const cache = new Map<string, Link[]>();
+		return (id: string) => {
+			const cached = cache.get(id);
+			if (cached) {
+				return cached;
+			}
+			const person = participants.find((item) => item.id === id);
+			const links = person ? linksFor(person, participants) : [];
+			// oxlint-disable-next-line react/immutability -- the cache is private to this closure and reset with the data.
+			cache.set(id, links);
+			return links;
+		};
+	}, [participants]);
 
-  return (
-    <section
-      className="connection-graph"
-      id="participantes"
-      aria-label="Grafo de participantes"
-    >
-      <div className="ng-toolbar">
-        <div className="ng-search-wrap">
-          <div className="ng-search">
-            <Search size={17} aria-hidden="true" />
-            <input
-              aria-label="Buscar en el grafo"
-              disabled={!ready}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Busca una persona, ciudad, empresa…"
-            />
-            {query && (
-              <button
-                type="button"
-                aria-label="Limpiar búsqueda"
-                onClick={() => setQuery("")}
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-          {search && (
-            <div
-              className="ng-search-results"
-              aria-label="Resultados de búsqueda"
-            >
-              <p aria-live="polite">
-                {matches.size || matchingEntities.length
-                  ? `${matches.size} ${matches.size === 1 ? "persona" : "personas"} · ${matchingEntities.length} ${matchingEntities.length === 1 ? "entidad" : "entidades"}`
-                  : "No hay perfiles que coincidan"}
-              </p>
-              {matchingEntities.map((entity) => (
-                <button
-                  key={entity.id}
-                  type="button"
-                  onClick={() => mapRef.current?.focus(entity.id)}
-                >
-                  <span>
-                    <strong>{entity.label}</strong>
-                    <small>
-                      {CONNECTION_STYLES[entity.kind].label} ·{" "}
-                      {entity.memberIds.length}{" "}
-                      {entity.memberIds.length === 1 ? "persona" : "personas"}
-                    </small>
-                  </span>
-                  <ArrowUpRight size={15} />
-                </button>
-              ))}
-              {network.participants
-                .filter((person) => matches.has(person.id))
-                .map((person) => (
-                  <button
-                    key={person.id}
-                    type="button"
-                    onClick={() => mapRef.current?.focus(person.id)}
-                  >
-                    <span>
-                      <strong>{person.displayName}</strong>
-                      <small>
-                        {person.role} · {person.city}
-                      </small>
-                    </span>
-                    <ArrowUpRight size={15} />
-                  </button>
-                ))}
-            </div>
-          )}
-        </div>
-        <div className="ng-toolbar-actions">
-          <div className="ng-summary">
-            <Users size={15} />
-            <span>{participants.length} personas</span>
-            <span className="ng-summary-divider" />
-            <span>{network.entities.length} entidades</span>
-          </div>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="ng-filter-trigger"
-                disabled={!ready}
-                aria-label={`Filtros de conexiones, ${visibleKinds.size} de ${ENTITY_KINDS.length} activos`}
-              >
-                <SlidersHorizontal size={16} aria-hidden="true" />
-                Filtros
-                <span className="ng-filter-badge">{visibleKinds.size}</span>
-                <ChevronDown size={14} aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              className="ng-filter-menu"
-              align="end"
-              sideOffset={10}
-              collisionPadding={12}
-            >
-              <DropdownMenuLabel className="ng-filter-label">
-                Conexiones visibles{" "}
-                <span>
-                  {visibleKinds.size}/{ENTITY_KINDS.length}
-                </span>
-              </DropdownMenuLabel>
-              {LEGEND_ORDER.map((kind) => {
-                const style = CONNECTION_STYLES[kind];
-                const count = index.counts.get(kind) ?? 0;
-                return (
-                  <DropdownMenuPrimitive.CheckboxItem
-                    key={kind}
-                    className="ng-filter-option"
-                    checked={visibleKinds.has(kind)}
-                    onCheckedChange={() => toggleKind(kind)}
-                    onSelect={(event) => event.preventDefault()}
-                    aria-label={style.label}
-                  >
-                    <span
-                      className="ng-filter-color"
-                      style={{ backgroundColor: style.color }}
-                      aria-hidden="true"
-                    />
-                    <span className="ng-filter-name">{style.label}</span>
-                    <span className="ng-filter-count" aria-hidden="true">
-                      {count}
-                    </span>
-                    <span className="ng-filter-check" aria-hidden="true">
-                      <DropdownMenuPrimitive.ItemIndicator>
-                        <Check size={12} strokeWidth={2.5} />
-                      </DropdownMenuPrimitive.ItemIndicator>
-                    </span>
-                  </DropdownMenuPrimitive.CheckboxItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      <div className="ng-stage">
-        {!ready && (
-          <p role="status">
-            {failed
-              ? "No se pudo cargar el grafo. Recarga la página para volver a intentarlo."
-              : "Organizando participantes y conexiones…"}
-          </p>
-        )}
-        {ready && prepared && (
-          <NetworkCanvas
-            initial={prepared.points}
-            key={network.participants.map((person) => person.id).join("|")}
-            ref={mapRef}
-            network={network}
-            visibleKinds={visibleKinds}
-            selectedId={selectionName ? selectedId : null}
-            matches={highlightedMatches}
-            queryActive={Boolean(search)}
-            onSelect={select}
-          />
-        )}
-        {selectionName && (
-          <aside
-            ref={profileRef}
-            className="ng-profile"
-            aria-label={
-              selected
-                ? `Perfil de ${selected.displayName}`
-                : `${selectedEntity?.label}: participantes`
-            }
-          >
-            <div className="ng-profile-top">
-              <span className="ng-eyebrow">
-                {selectedEntity
-                  ? CONNECTION_STYLES[selectedEntity.kind].label
-                  : "EN LA COMUNIDAD"}
-              </span>
-              <button
-                type="button"
-                aria-label="Cerrar perfil y volver a la vista global"
-                onClick={() => mapRef.current?.clear()}
-              >
-                <X size={17} />
-              </button>
-            </div>
-            <div className="ng-profile-identity">
-              <span className="ng-profile-dot" />
-              <h3>{selectionName}</h3>
-            </div>
-            {selected && (
-              <>
-                <p className="ng-role">{selected.role}</p>
-                <dl className="ng-profile-facts">
-                  {AFFINITY_KINDS.filter(
-                    (kind) =>
-                      !["skills", "interests"].includes(kind) &&
-                      valuesFor(selected, kind).length,
-                  ).map((kind) => (
-                    <div key={kind}>
-                      <dt>
-                        <span
-                          style={{ background: CONNECTION_STYLES[kind].color }}
-                        />
-                        {CONNECTION_STYLES[kind].label}
-                      </dt>
-                      <dd>{valuesFor(selected, kind).join(", ")}</dd>
-                    </div>
-                  ))}
-                </dl>
-                {selected.bio && <p className="ng-bio">{selected.bio}</p>}
-                <div className="ng-entity-links">
-                  {network.entities
-                    .filter(
-                      (entity) =>
-                        entity.memberIds.includes(selected.id) &&
-                        visibleKinds.has(entity.kind),
-                    )
-                    .map((entity) => (
-                      <button
-                        key={entity.id}
-                        type="button"
-                        onClick={() => mapRef.current?.focus(entity.id)}
-                      >
-                        {CONNECTION_STYLES[entity.kind].label}: {entity.label}{" "}
-                        <ArrowUpRight size={14} />
-                      </button>
-                    ))}
-                </div>
-              </>
-            )}
-            <div className="ng-shared-heading">
-              <strong>
-                {selectedEntity
-                  ? "Participantes"
-                  : "Personas con entidades en común"}
-              </strong>
-              <span>{neighbors.length}</span>
-            </div>
-            <p className="ng-shared-description">
-              {selectedEntity
-                ? "Personas vinculadas a este nodo."
-                : "A través de las entidades visibles."}
-            </p>
-            <div className="ng-neighbors">
-              {neighbors.map(({ person, links }) => (
-                <button
-                  key={person.id}
-                  type="button"
-                  onClick={() => mapRef.current?.focus(person.id)}
-                >
-                  <span className="ng-neighbor-name">
-                    {person.displayName}
-                    <ArrowUpRight size={14} />
-                  </span>
-                  <span className="ng-reasons">
-                    {links.map((link) => (
-                      <span key={link.id}>
-                        <i
-                          style={{
-                            background: CONNECTION_STYLES[link.kind].color,
-                          }}
-                        />
-                        {link.values.join(" · ")}
-                      </span>
-                    ))}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {!neighbors.length && (
-              <p className="ng-no-neighbors">
-                No hay conexiones visibles para este perfil. Prueba a activar
-                otros tipos.
-              </p>
-            )}
-          </aside>
-        )}
-        {!participants.length && (
-          <div className="ng-empty">
-            Las conexiones aparecerán cuando haya perfiles disponibles.
-          </div>
-        )}
-      </div>
-    </section>
-  );
+	const me = useMemo(
+		() => participants.find((person) => person.isMe),
+		[participants],
+	);
+	const selected = useMemo(
+		() => participants.find((person) => person.id === selectedId) ?? null,
+		[participants, selectedId],
+	);
+	const searchIndex = useMemo(
+		() =>
+			new Map(
+				participants.map((person) => [
+					person.id,
+					normalize(
+						[
+							person.displayName,
+							person.role,
+							...SEARCH_KINDS.flatMap((kind) => valuesFor(person, kind)),
+						].join(" "),
+					),
+				]),
+			),
+		[participants],
+	);
+	const search = normalize(query);
+	const matches = useMemo(
+		() =>
+			search
+				? new Set(
+						participants
+							.filter((person) => searchIndex.get(person.id)?.includes(search))
+							.map((person) => person.id),
+					)
+				: null,
+		[participants, searchIndex, search],
+	);
+	const results = useMemo(
+		() =>
+			matches
+				? participants
+						.filter((person) => matches.has(person.id))
+						.toSorted((a, b) => {
+							const aName = normalize(a.displayName).startsWith(search);
+							const bName = normalize(b.displayName).startsWith(search);
+							return (
+								Number(bName) - Number(aName) ||
+								a.displayName.localeCompare(b.displayName, "es")
+							);
+						})
+						.slice(0, 8)
+				: [],
+		[participants, matches, search],
+	);
+
+	const select = useCallback((id: string | null) => {
+		setSelectedId(id);
+		if (id) {
+			setQuery("");
+			setSearchOpen(false);
+		}
+	}, []);
+	function focus(id: string) {
+		canvas.current?.focus(id);
+	}
+	function changeLens(next: Lens) {
+		setLens(next);
+		if (selectedId) {
+			// The clusters move under the selection; keep it in view once they settle.
+			requestAnimationFrame(() =>
+				setTimeout(() => canvas.current?.focus(selectedId), 500),
+			);
+		}
+	}
+
+	return (
+		<section
+			className="pg-stage"
+			id="participantes"
+			aria-label="Mapa de participantes"
+			style={{ "--pg-panel-width": `${PANEL_WIDTH}px` } as React.CSSProperties}
+		>
+			<NetworkCanvas
+				ref={canvas}
+				participants={participants}
+				lens={lens}
+				selectedId={selected ? selected.id : null}
+				matches={matches}
+				linksOf={linksOf}
+				panelLeft={panelLeft}
+				onSelect={select}
+			/>
+
+			<div className={cn("pg-overlay", CONTAINER)}>
+				<div className="pg-lenses" role="group" aria-label="Agrupar por">
+					{LENSES.map((item) => (
+						<button
+							key={item}
+							type="button"
+							aria-pressed={lens === item}
+							onClick={() => changeLens(item)}
+						>
+							{LENS_LABELS[item].label}
+						</button>
+					))}
+				</div>
+
+				<div className="pg-tools">
+					{me ? (
+						<button
+							type="button"
+							className="pg-tool"
+							aria-label="Ir a mi ficha"
+							title="Ir a mi ficha"
+							onClick={() => focus(me.id)}
+						>
+							<LocateFixed size={17} aria-hidden="true" />
+							<span>Tú</span>
+						</button>
+					) : null}
+					<div
+						className="pg-search"
+						data-open={searchOpen || query ? "" : undefined}
+					>
+						<Search size={17} aria-hidden="true" />
+						<input
+							ref={searchInput}
+							type="search"
+							aria-label="Buscar participantes"
+							placeholder="Buscar…"
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							onFocus={() => setSearchOpen(true)}
+							onBlur={() => setSearchOpen(false)}
+							onKeyDown={(event) => {
+								if (event.key === "Enter" && results[0]) {
+									event.preventDefault();
+									focus(results[0].id);
+									searchInput.current?.blur();
+								}
+								if (event.key === "Escape") {
+									setQuery("");
+									searchInput.current?.blur();
+								}
+							}}
+						/>
+						{query ? (
+							<button
+								type="button"
+								aria-label="Limpiar búsqueda"
+								onMouseDown={(event) => event.preventDefault()}
+								onClick={() => {
+									setQuery("");
+									searchInput.current?.focus();
+								}}
+							>
+								<X size={15} />
+							</button>
+						) : null}
+						{search ? (
+							<div className="pg-results" aria-label="Resultados">
+								<p aria-live="polite">
+									{matches?.size
+										? `${matches.size} ${matches.size === 1 ? "persona" : "personas"}`
+										: "Sin resultados"}
+								</p>
+								{results.map((person) => (
+									<button
+										key={person.id}
+										type="button"
+										onMouseDown={(event) => event.preventDefault()}
+										onClick={() => focus(person.id)}
+									>
+										<Portrait person={person} />
+										<span>
+											<strong>{person.displayName}</strong>
+											<small>
+												{person.role} · {person.city}
+											</small>
+										</span>
+									</button>
+								))}
+							</div>
+						) : null}
+					</div>
+				</div>
+
+				{selected ? (
+					<ProfilePanel
+						key={selected.id}
+						person={selected}
+						links={linksOf(selected.id)}
+						onClose={() => canvas.current?.clear()}
+						onFocus={focus}
+					/>
+				) : null}
+
+				<div className="pg-hint" aria-hidden="true">
+					Arrastra para moverte · Rueda para ampliar
+				</div>
+				<div className="pg-zoom" role="group" aria-label="Zoom">
+					<button
+						type="button"
+						onClick={() => canvas.current?.zoom(1 / 1.3)}
+						aria-label="Alejar"
+					>
+						<Minus size={18} />
+					</button>
+					<button
+						type="button"
+						onClick={() => canvas.current?.fit()}
+						aria-label="Encajar todo"
+					>
+						<Scan size={18} />
+					</button>
+					<button
+						type="button"
+						onClick={() => canvas.current?.zoom(1.3)}
+						aria-label="Acercar"
+					>
+						<Plus size={18} />
+					</button>
+				</div>
+
+				{!participants.length ? (
+					<p className="pg-empty" role="status">
+						El mapa se llenará cuando haya fichas completas.
+					</p>
+				) : null}
+			</div>
+		</section>
+	);
 }
