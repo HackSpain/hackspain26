@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Role } from "@convex/lib/validators";
 import { api } from "@convex/_generated/api";
+import { HomeSplash } from "@/components/home-splash";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { sectionForPath } from "@/lib/sections";
@@ -91,12 +92,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
     if (!isAuthenticated) {
-      if (pathname !== "/login") {
-        if (pathname === CLI_AUTH_PATH) {
-          stashReturnTo();
-        }
-        router.replace("/login");
+      if (pathname === "/login" || pathname === "/") {
+        return;
       }
+      if (pathname === CLI_AUTH_PATH) {
+        stashReturnTo();
+      }
+      router.replace("/login");
       return;
     }
     if (!me) {
@@ -210,6 +212,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         <LoadingText />
       </div>
     );
+  }
+
+  if (!isAuthenticated && pathname === "/") {
+    return <HomeSplash />;
   }
 
   if (!isAuthenticated && pathname !== "/login") {

@@ -201,7 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AdminStrip pathname={pathname} />
       ) : null}
       {askGithub ? <GithubLinkBanner /> : null}
-      <main className={cn(contentWidth(pathname), "py-6 sm:py-8")}>
+      <main className={cn(contentWidth(pathname), "min-w-0 py-6 sm:py-8")}>
         <Suspense fallback={null}>
           <GithubLinkResult />
         </Suspense>

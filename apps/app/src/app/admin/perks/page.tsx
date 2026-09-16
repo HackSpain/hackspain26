@@ -13,7 +13,6 @@ import {
   LoadingText,
   Page,
   RecordCard,
-  RecordList,
   errorMessage,
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
@@ -192,6 +191,7 @@ export default function AdminPerksPage() {
   const create = useMutation(api.perks.adminCreate);
   const update = useMutation(api.perks.adminUpdate);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [extraCodes, setExtraCodes] = useState<Record<string, string>>({});
@@ -218,6 +218,7 @@ export default function AdminPerksPage() {
         codes: draft.type === "code" ? lines(draft.codes) : undefined,
       });
       setDraft(emptyDraft);
+      setCreateOpen(false);
     } catch (err: unknown) {
       setCreateError(errorMessage(err, "No se ha podido crear el perk"));
     } finally {
@@ -226,46 +227,42 @@ export default function AdminPerksPage() {
   }
 
   return (
-    <Page title="Admin de perks">
-      <EmailApplicationsQueue />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Crear perk</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <FormError message={createError} />
-          <PerkFields draft={draft} onChange={setDraft} mode="create" />
-          <Button
-            className="w-full sm:w-auto"
-            disabled={creating}
-            onClick={() => void submitCreate()}
-          >
-            {creating ? "Creando…" : "Crear perk"}
+    <Page
+      className="min-w-0 overflow-x-hidden"
+      title={
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <h1 className="min-w-0 font-bungee text-2xl leading-tight sm:text-3xl">
+            Admin de perks
+          </h1>
+          <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
+            <PlusIcon aria-hidden />
+            Crear perk
           </Button>
-        </CardContent>
-      </Card>
-
+        </div>
+      }
+    >
       {perks === undefined ? (
         <LoadingText />
       ) : perks.length === 0 ? (
         <EmptyState title="Aún no hay perks">
-          Crea el primero con el formulario de arriba.
+          Crea el primero con el botón de arriba.
         </EmptyState>
       ) : (
         <div className="grid gap-4">
           {perks.map((perk) => (
-            <Card key={perk._id}>
-              <CardHeader>
-                <CardTitle className="flex flex-wrap items-center gap-2 [&_[data-slot=badge]]:whitespace-nowrap">
-                  <span>{perkName(perk.company, perk.title)}</span>
+            <Card key={perk._id} className="min-w-0 overflow-hidden">
+              <CardHeader className="min-w-0">
+                <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 [&_[data-slot=badge]]:whitespace-nowrap">
+                  <span className="min-w-0 break-words">{perkName(perk.company, perk.title)}</span>
                   <Badge>{perkTypeLabel(perk.type)}</Badge>
                   {perk.value ? <Badge variant="gold">{perk.value}</Badge> : null}
                   {perk.active ? null : <Badge className="bg-hs-paper">Inactivo</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                {perk.description ? <p>{perk.description}</p> : null}
+                {perk.description ? (
+                  <p className="min-w-0 break-words">{perk.description}</p>
+                ) : null}
                 <p className="text-hs-brown tabular-nums">
                   {perk.claimCount} {perk.claimCount === 1 ? "solicitud" : "solicitudes"}
                   {perk.type === "code"
@@ -339,6 +336,49 @@ export default function AdminPerksPage() {
           ))}
         </div>
       )}
+
+      <EmailApplicationsQueue />
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setCreateError(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitCreate();
+            }}
+            noValidate
+          >
+            <DialogHeader>
+              <DialogTitle>Crear perk</DialogTitle>
+              <DialogDescription>
+                Aparece en el catálogo. Los campos se rellenan al reclamar.
+              </DialogDescription>
+            </DialogHeader>
+            <FormError message={createError} />
+            <PerkFields draft={draft} onChange={setDraft} mode="create" />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={creating}
+                onClick={() => setCreateOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating ? "Creando…" : "Crear perk"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={editing !== null}
@@ -696,9 +736,9 @@ function EmailApplicationsQueue() {
   });
 
   return (
-    <Card id="solicitudes">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
+    <Card id="solicitudes" className="min-w-0 overflow-hidden">
+      <CardHeader className="min-w-0 gap-3">
+        <div className="min-w-0 space-y-1">
           <CardTitle>Solicitudes por email</CardTitle>
           <CardDescription>
             El hacker pide acceso; al marcarlo como añadido puedes pegar el
@@ -711,7 +751,7 @@ function EmailApplicationsQueue() {
             setStatus(value as "all" | "pending" | "added" | "rejected")
           }
         >
-          <SelectTrigger className="w-full sm:max-w-xs">
+          <SelectTrigger className="w-full max-w-full sm:max-w-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -722,7 +762,7 @@ function EmailApplicationsQueue() {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0">
         {!rows ? (
           <LoadingText />
         ) : rows.length === 0 ? (
@@ -730,66 +770,25 @@ function EmailApplicationsQueue() {
             Nada en este estado todavía.
           </p>
         ) : (
-          <RecordList
-            desktop={
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Solicitante</TableHead>
-                    <TableHead>Perk</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row._id}>
-                      <TableCell>
-                        {row.name ?? "—"}
-                        <br />
-                        <span className="text-xs text-hs-brown">
-                          {row.email}
-                        </span>
-                      </TableCell>
-                      <TableCell className="whitespace-normal">
-                        {perkName(row.company, row.title)}
-                        <Answers answers={row.answers} />
-                      </TableCell>
-                      <TableCell>
-                        <Badge>{claimStatusLabel(row.status)}</Badge>
-                        {row.code ? (
-                          <p className="mt-1 font-mono text-xs break-all">
-                            {row.code}
-                          </p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell>
-                        <ReviewActions claimId={row._id} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            }
-          >
+          <div className="grid min-w-0 gap-3">
             {rows.map((row) => (
               <RecordCard
                 key={row._id}
                 title={row.name ?? "—"}
                 subtitle={row.email}
                 badges={<Badge>{claimStatusLabel(row.status)}</Badge>}
-                actions={<ReviewActions claimId={row._id} stacked />}
               >
-                <p className="text-sm text-hs-brown">
+                <p className="min-w-0 text-sm break-words text-hs-brown">
                   {perkName(row.company, row.title)}
                 </p>
                 {row.code ? (
-                  <p className="font-mono text-xs break-all">{row.code}</p>
+                  <p className="min-w-0 font-mono text-xs break-all">{row.code}</p>
                 ) : null}
                 <Answers answers={row.answers} />
+                <ReviewActions claimId={row._id} stacked />
               </RecordCard>
             ))}
-          </RecordList>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -842,12 +841,15 @@ function ReviewActions({
           placeholder="Código"
           value={code}
           disabled={pending}
-          className={cn("font-mono", compact ? "h-9 min-w-28 flex-1 text-sm" : "max-w-48")}
+          className={cn(
+            "min-w-0 font-mono",
+            compact ? "h-9 flex-1 text-sm" : stacked ? "w-full" : "max-w-48",
+          )}
           onChange={(event) => setCode(event.target.value)}
         />
         <Button
           size={compact ? "sm" : "default"}
-          className={stacked ? "w-full" : undefined}
+          className={stacked ? "w-full min-w-0" : undefined}
           disabled={pending}
           onClick={() => void setStatus("added")}
         >
@@ -856,7 +858,7 @@ function ReviewActions({
         <Button
           size={compact ? "sm" : "default"}
           variant="outline"
-          className={stacked ? "w-full" : undefined}
+          className={stacked ? "w-full min-w-0" : undefined}
           disabled={pending}
           onClick={() => void setStatus("rejected")}
         >
