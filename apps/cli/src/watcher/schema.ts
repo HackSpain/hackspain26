@@ -14,6 +14,8 @@ export const HARNESSES = [
   "copilot",
   "gemini-cli",
   "qwen-code",
+  "roo-code",
+  "kilo-code",
 ] as const;
 export type HarnessId = (typeof HARNESSES)[number];
 

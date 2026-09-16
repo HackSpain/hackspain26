@@ -31,7 +31,7 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 | `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key for queries and downstream processing |
 | `occurredAt` | ISO-8601 UTC | When the harness recorded it |
 | `observedAt` | ISO-8601 UTC | When the watcher read it |
-| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
+| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `roo-code` \| `kilo-code` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
 | `harnessVersion` | string? | e.g. Claude Code `2.1.261`, Codex `0.130.0` |
 | `sessionId` | string | Harness session / task id |
 | `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path |
@@ -54,6 +54,8 @@ buckets on `occurredAt`.
 | opencode | `~/.local/share/opencode/opencode.db`, table `message`, assistant rows with `time.completed` | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
 | cline | VS Code globalStorage `saoudrizwan.claude-dev/tasks/<task>/ui_messages.json`, `say: "api_req_started"` | task id | entry `ts` | `tokensIn` | `tokensOut` | `cacheReads` | `cacheWrites` | `task_metadata.json` `model_usage` |
 | gemini-cli | `~/.gemini/tmp/<project>/chats/session-*.jsonl` (subagents one level deeper), records with `type: "gemini"` and a `tokens` object (a turn is appended again with the same `id` once usage arrives: dedupe) | metadata line `sessionId`, else the file name's short id | message `id` | `tokens.input − tokens.cached` | `tokens.output` | `tokens.cached` | 0 (implicit caching) | `model`; `tokens.thoughts` → `reasoning` |
+| roo-code | VS Code globalStorage `rooveterinaryinc.roo-cline/tasks/<task>/ui_messages.json`, same `api_req_started` entries as Cline; cwd from `history_item.json` `workspace` | task id | entry `ts` | `tokensIn` | `tokensOut` | `cacheReads` | `cacheWrites` | not recorded by Roo (`unknown`) |
+| kilo-code | `~/.local/share/kilo/kilo*.db` (OpenCode fork, same `message` table; channel builds use `kilo-<channel>.db`) | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
 | qwen-code | `~/.qwen/projects/<slug>/chats/<session>.jsonl` (`QWEN_HOME` overrides), records with `type: "assistant"` and `usageMetadata` | `sessionId` | record `uuid` | `promptTokenCount − cachedContentTokenCount` | `candidatesTokenCount` | `cachedContentTokenCount` | 0 | `model`; `thoughtsTokenCount` → `reasoning`; `version` → `harnessVersion` |
 
 Reasoning tokens go to `tokens.reasoning` when the harness reports them (Claude thinking,

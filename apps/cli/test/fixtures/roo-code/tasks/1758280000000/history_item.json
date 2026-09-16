@@ -1,0 +1,13 @@
+{
+  "id": "1758280000000",
+  "number": 3,
+  "ts": 1758280000000,
+  "task": "[redacted]",
+  "tokensIn": 4100,
+  "tokensOut": 260,
+  "cacheWrites": 800,
+  "cacheReads": 2900,
+  "totalCost": 0.017,
+  "workspace": "/home/hacker/agentos",
+  "mode": "code"
+}

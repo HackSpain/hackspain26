@@ -1,9 +1,10 @@
 /**
  * Harness logos as 96×96 PNGs, embedded so the watcher can draw the real
  * mark beside each harness in terminals that support images. Generated from
- * apps/web/public/harnesses/*.svg: each SVG gets a brand-coloured fill (the
- * files carry none) and is rasterised with sharp into a palette PNG on a
- * transparent background. Do not edit by hand; regenerate when the SVGs change.
+ * apps/web/public/harnesses/*.svg: single-colour marks get a brand-coloured
+ * fill (Kilo Code keeps its own yellow-and-black palette) and are rasterised
+ * with sharp into palette PNGs on a transparent background. Do not edit by
+ * hand; regenerate when the SVGs change.
  */
 
 export const HARNESS_LOGO_SIZE = 96;
@@ -179,6 +180,16 @@ const LOGOS: Record<string, string> = {
     "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAACVBMVEVMaXEjw18ixV6DCk7NAAAAAnRSTlMAM8lDrC4AAAAJcEhZ" +
     "cwAAOw4AADsOAcy2oYMAAABOSURBVGje7dgxEgAQAAPB8P9Ha2hUxtCw94Bsn6RXD5c5AAAAAADeBcpi20AWAwAAAAAAAAAAAAAA" +
     "AAAAAACAX4Drx6xzHAAAAACAsdsAmlEqMQyr1BwAAAAASUVORK5CYII=",
+  "kilo-code":
+    "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAAolBMVEX6909TUhpeXR5kYyDb2EXp50pOTRkAAADZ1kTq50qWlC+n" +
+    "pTWUki+sqjakojScmjEMDAS+vDy9uzwHBwIFBQIJCQN1cyWysDhJSBe3tTpXVhzMyUDLyUCHhivBvz1RUBoGBgJEQxWzsTmDgiqT" +
+    "kS759k+SkC4lJQzGxD9tbCKhnzOlozSppzUKCgOqqDavrDe1szm0sjm7uTt3dSVdXB1ubCPtZ4kiAAAACXBIWXMAADsOAAA7DgHM" +
+    "tqGDAAABXUlEQVRo3u3Y2XaCMBQF0Iii0latdKLgVGvnefr/X+sDNyGFBKS56bDWOY+H6OYl5IIYeI4AAAAAAAAAjEAvzJOoJqUm" +
+    "k0UWFrlpDUQiT181ATU9dQ9Cy7FvoEFgAOoFDqBWYAEuAs+A2PtvQNKhLFyAxa7M+j3/u6SyduwCaJnuW37NBVgFNsAm8AEWgREw" +
+    "C5yAUWAFTIIT8Lwj80rNEy9Qs5PTLuWarsSyCDw9i1QiAAB+BJgN85ypZklNLIt4aMsM0zUAAFsBW2w0mbm+x8YrvhNNZvLlMXFy" +
+    "4BkwC5yAUWAFTAIvIB59A9HfBK5oqkplcU4j35uct7obJ6D6OYOWFHNcHwAAAN8C5p1ykjJwqS590GeNictbZt3wO+J4jeUCXpqB" +
+    "Oyfg6LQROBy5AHahOA8qQivAKmgHTlloB9gE/UQrCS2BwcM6NCTTl6zu9Uu3mK4BAAAAAMDvAp8XIdpOsqYjUwAAAABJRU5ErkJg" +
+    "gg==",
   cline:
     "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAACQFBMVEVMaXGBjPeBjPeAi/eAi/eAjPeAi/eAjPeEjvSAi/eBjPeA" +
     "jPeAi/d/lP+Di/eBjPiBjPf///+Ai/eJif+BjPiBjPeBi/eBi/eAi/eBi/iAi/iBi/eBjPeCjPeAjPeAjPh/j/9/jPKDiveBjPiH" +
@@ -205,6 +216,28 @@ const LOGOS: Record<string, string> = {
     "KbqUQFwMaUSAGlrAY/zYpyMF5OAN6zalfzSn7OhJCXjAKQru1RMCaniF2XY6/wFu5TedLoUUfvE6hso/3kL1/ewbGn/vNksPCP2+" +
     "FP6ORyw/gfRQdMM5pUecBvsLzJnKz1ApqfbZa4OsPaQt+myPf0aa9adA96CPttqH/B5T9zOZwp+22HtMmdQ/9+YV5n4qNaj+8EWT" +
     "wdMTfKc/jkFGI6tyzJAAAAAASUVORK5CYII=",
+  "roo-code":
+    "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAACIlBMVEVMaXE3vvo6v/k4vPc/v/84vfc3vvc4vPcA//83vfg2tv9V" +
+    "qv83vfc/v/83u/Y4vfg3vfczu/84vfczv/I4vfc4vfg5ufM3vfc1u/E4vfg4vfgAf/83vPg4u/c3vPc4vPc4vPo6vfg4vfc3vfg3" +
+    "vPg3vPc4vfczsv83vvUzzP82vPg4vfg3vPc4vfg3vfc6vfc4u/Y5u/o4vPg3vPc2vfc4vPg4vfc5u/g3vfg4vPg4vPg6xP84vPg4" +
+    "vPc6uvU4vPc3vfg5vfY4vPg8wvI3vPg3vPc3vfc5vfc3vfc4vfc2vfkzwfQ0u/c3u/k3vfc3v/c4vPc4xv83vPk4vPg3vfg3vfc4" +
+    "vPc4u/c3vPc4vPg4uP84vPc3vPc3vPg3u/g3vfg3vPc4vPg2vfc3vfc4vfc3vfc3vfg4vPg4vPg3vPk4vPg4vfg3vPc4vfg3vPc4" +
+    "vfg4vPg2vPcuuf84u/Y4vPc4vPc4vPg4vPg4vvY4vPg5vfY4vfY4vPg3vPc3u/c3vfg4vPc4vfk3vPc4vfc5vPg4u/k4vfg1v/Q5" +
+    "v/k3vPg4vPg/v/82vvg3vPM4vPc5vfk3vfg3vPc8w/84vfk3vPg3vfc3vfg4vPc3vPg2vPg5u/k3vfg5vvc4vPg3vPg3vPY/v/82" +
+    "vPY3vPc3vvg3vfg3vPc4vPU3vfg2vfY4vfc4vPc4vPc3uvg2vfg3vPg4vPc3vPg3uvg3vfc3vfc4vPk4vfiUPtkXAAAAtXRSTlMA" +
+    "MzD6BIhm/gG7DgP8EDzegA/0FP2/FrMT3b4Cb0TzkTYn2enF9vkKNwUquvLohSNbNblgRsj1TOF/5g3rrBqx5T6iFerugWKqkC8Z" +
+    "IldpINQJLppK7YtI05YStPd3cqDY40Ku8Y9STZVYdp/Xw/vs50ELX8ytUZk/vTpex0VAk8tW79VQLXkYLJ1+CE8XaFWXzxFakvh4" +
+    "sHNUMeRD38BcDD2lU06GG5hdjLVsKXS8h0klzWUyzjMySwAAAAlwSFlzAAA7DgAAOw4BzLahgwAAAt1JREFUaN7tmOdbGkEQxhcE" +
+    "5EAFEURARI2iJnaNiT32Eo01vffeezW99957723+vwB3Fzjg4Np8u9+nvefZfd/bub3Z2SVERUVFRUVFBQFdNq5+lhvO6DOMaPo1" +
+    "qyGIZf1uXfwOxi8lcvSri4Glp/+oKU6PcfghI/x64LCMym2L7vMN/F8lh/8wxGDfZ9VwOlEA3yXqP34G8XH5vP8/yFgwhsOS9O80" +
+    "AD8tnTdehnr9DD7typQf/liKnYZrhAyE2gtE63e5QQA73Je7Q42UiyL1tRYQx3Zxf+LmBhDLCxHyZj2IpyJdsH4OBVIYEKo/aJGk" +
+    "D2laYfrDNpBIkVFQ+FNBMnXJ9ZfUggx25iTTH3eBLDYl0T9lk6cP9ny08DOc9PDrm9pBAf7w6hdsU0If5mfx6D/Kk6Ga1tk3m21P" +
+    "xGqnl+59tzQ6/E3nBecL++uCQIAnGAV7aYR0m9fgo1xxPm338jFizE0RIp/qZDLEcWYSv82Bh8z8j5Wti+7xjJn2kC50Ds1JLr//" +
+    "XHiVHKRfdZKQkUTv1rJlDzske0YS+XZufvulCfC3LLBiEqwCa+T2nThMVA3fknzPN6RcH71rdPCGiUrw15o/fC4afRKzME83xik+" +
+    "eMJEHRFSmORUaZ6+6VvR61v5wHGrsDf+nueZipV3vFKyvM6I2Vg2Klu/d0TpVyt9QDjB1a9V/ASyhrv2SxU38HIMWpU/Q9VzEud0" +
+    "5Q0WRhpsRTgFTkbo+4cQDGZFGNzFOMe+DevbLmAYnA0bVKKcxMMh6rmNYnBllDV4jnSZoPWzDhlIDvdZg5lIVyIeB+twAGkKI+sY" +
+    "g8IyJIc6dgrzsG6N+tmaqRnr2quJcbBiTaGeqTDz5mI5LGamcBPLoGQV3pZDo2HKyLVo94+NyAmD6I7hJgxCqspphw1oQbqOnDAI" +
+    "cSInDNJVQScME5rDVeSEQcglurxASxikmb4P+4Q3hSFDkEGioqKiIo9/XbD714sRL4AAAAAASUVORK5CYII=",
   copilot:
     "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAACuFBMVEVMaXGmi/mnivmlh/+qjf+mivm/f/+mivmni/l/f/+jkf+q" +
     "iP+lifunivmmi/myf/+ni/mmi/mljveii/+nivmmivmmivmqqv+qf/+njPiZmf+nh/emivqojfmfj/+mivqmi/qni/mnivqni/ql" +

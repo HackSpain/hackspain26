@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { projectRef } from "../project";
-import type { RawEvent } from "../schema";
+import type { HarnessId, RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 
@@ -38,7 +38,11 @@ export type MessageRow = {
   data: string;
 };
 
-export function normalizeOpenCode(row: MessageRow): RawEvent | null {
+/** OpenCode and its forks share the schema; `harness` names the fork. */
+export function normalizeOpenCode(
+  row: MessageRow,
+  harness: HarnessId = OPENCODE
+): RawEvent | null {
   let data: MessageData;
   try {
     data = JSON.parse(row.data) as MessageData;
@@ -50,8 +54,8 @@ export function normalizeOpenCode(row: MessageRow): RawEvent | null {
   }
   const model = data.modelID ?? "unknown";
   return {
-    eventId: eventId(OPENCODE, row.session_id, row.id),
-    harness: OPENCODE,
+    eventId: eventId(harness, row.session_id, row.id),
+    harness,
     model: {
       family: modelFamily(model),
       provider: data.providerID,
@@ -86,7 +90,8 @@ const PAGE = 500;
 
 export async function* collectOpenCode(
   dbPaths: string[],
-  ctx: CollectorContext
+  ctx: CollectorContext,
+  harness: HarnessId = OPENCODE
 ): AsyncIterable<RawEvent> {
   for (const path of dbPaths) {
     const previous = ctx.cursors.get(path);
@@ -96,7 +101,7 @@ export async function* collectOpenCode(
     try {
       db = new Database(path, { readonly: true });
     } catch (error) {
-      ctx.log(`opencode: cannot open ${path}: ${String(error)}`);
+      ctx.log(`${harness}: cannot open ${path}: ${String(error)}`);
       continue;
     }
     try {
@@ -110,15 +115,15 @@ export async function* collectOpenCode(
         }
         for (const row of rows) {
           since = Math.max(since, row.time_updated);
-          const event = normalizeOpenCode(row);
+          const event = normalizeOpenCode(row, harness);
           if (!event || Date.parse(event.occurredAt) < ctx.since) {
             continue;
           }
           if (!announced.has(event.sessionId)) {
             announced.add(event.sessionId);
             yield {
-              eventId: eventId(OPENCODE, event.sessionId, "start"),
-              harness: OPENCODE,
+              eventId: eventId(harness, event.sessionId, "start"),
+              harness,
               occurredAt: event.occurredAt,
               project: event.project,
               sessionId: event.sessionId,
@@ -132,7 +137,7 @@ export async function* collectOpenCode(
         }
       }
     } catch (error) {
-      ctx.log(`opencode: query failed on ${path}: ${String(error)}`);
+      ctx.log(`${harness}: query failed on ${path}: ${String(error)}`);
     } finally {
       db.close();
     }

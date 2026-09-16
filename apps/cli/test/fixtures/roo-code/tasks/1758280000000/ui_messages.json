@@ -1,0 +1,16 @@
+[
+  { "ts": 1758280000000, "type": "say", "say": "text", "text": "[redacted]" },
+  {
+    "ts": 1758280001000,
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"[redacted]\",\"tokensIn\":4100,\"tokensOut\":260,\"cacheWrites\":800,\"cacheReads\":2900,\"cost\":0.017,\"apiProtocol\":\"anthropic\"}",
+    "apiProtocol": "anthropic"
+  },
+  {
+    "ts": 1758280009000,
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"[redacted]\"}"
+  }
+]
