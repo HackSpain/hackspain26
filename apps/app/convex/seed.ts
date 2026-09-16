@@ -94,6 +94,72 @@ const CITIES = [
 ];
 const DIETS = ["Ninguna", "Ninguna", "Ninguna", "Vegetariana", "Vegana", "Sin gluten", "Sin lactosa"];
 
+const ROLES = [
+  "AI Engineer", "Backend Developer", "Frontend Developer", "Full-stack",
+  "Data Scientist", "Product Designer", "ML Engineer", "Mobile Developer",
+  "DevOps", "Product Manager",
+];
+const UNIVERSITIES = [
+  "Universidad Politécnica de Madrid", "Universitat Politècnica de Catalunya",
+  "Universitat Politècnica de València", "Universidad de Sevilla",
+  "Universidad del País Vasco", "Universidad de Zaragoza", "Universidad de Granada",
+  "Universidad Carlos III", "IE University", "Universitat de Barcelona",
+];
+const COMPANIES = [
+  "Nébula Labs", "Estudio Prisma", "Atlas Cloud", "Raíz Data", "Cabify",
+  "Glovo", "Factorial", "Wallapop", "Idealista", "Freelance",
+];
+const DEGREES = [
+  "Ingeniería Informática", "Ingeniería Informática", "Ciencia de Datos",
+  "Matemáticas", "Telecomunicaciones", "Diseño", "Física", "ADE",
+];
+const SKILLS = [
+  "Python", "TypeScript", "React", "Next.js", "Node.js", "Go", "Rust",
+  "PostgreSQL", "LLM", "Agents", "PyTorch", "SQL", "Docker", "Figma", "UX",
+  "Swift", "Kotlin", "ROS 2", "Machine Learning", "Convex",
+];
+const INTERESTS = [
+  "Agentes IA", "Open source", "Educación", "Herramientas dev", "Robótica",
+  "Fintech", "Salud", "Sostenibilidad", "Diseño accesible", "Música",
+  "Videojuegos", "Startups",
+];
+
+function directoryFor(city: string, stack: readonly string[]) {
+  const student = chance(0.55);
+  let company: string | undefined;
+  let university: string | undefined;
+  if (student) {
+    university = pick(UNIVERSITIES);
+    if (chance(0.3)) {
+      company = pick(COMPANIES);
+    }
+  } else {
+    company = pick(COMPANIES);
+    if (chance(0.4)) {
+      university = pick(UNIVERSITIES);
+    }
+  }
+  return {
+    bio: chance(0.7)
+      ? pick([
+          "Construye agentes que pasan del notebook a producción.",
+          "Convierte ideas en interfaces rápidas y accesibles.",
+          "Le gustan los sistemas que aguantan cuando falla el wifi.",
+          "Primer hackathon, muchas ganas de aprender.",
+          "Datos difíciles, decisiones claras.",
+        ])
+      : undefined,
+    city,
+    company,
+    degree: chance(0.8) ? pick(DEGREES) : undefined,
+    interests: shuffle(INTERESTS).slice(0, between(1, 4)),
+    role: pick(ROLES),
+    skills: shuffle([...new Set([...stack, ...shuffle(SKILLS).slice(0, 3)])]).slice(0, between(2, 6)),
+    university,
+    updatedAt: Date.now(),
+  };
+}
+
 const TEAM_NAMES = [
   "Churros & Code", "Los Deterministas", "Siesta Labs", "Paella Stack",
   "Tortilla Sin Cebolla", "404 Not Found", "Quantum Jamón", "La Terminal",
@@ -269,9 +335,15 @@ async function insertUser(
   }
 ): Promise<Id<"users">> {
   const name = `${person.first} ${person.last}`;
+  const travelOrigin = opts.onboarded ? pick(CITIES) : undefined;
   return await ctx.db.insert("users", {
     attendanceStatus: "attending",
     dietaryRestrictions: opts.onboarded ? pick(DIETS) : undefined,
+    // Nine in ten onboarded hackers have filled their directory card.
+    directory:
+      opts.onboarded && travelOrigin && chance(0.9)
+        ? directoryFor(travelOrigin, [])
+        : undefined,
     email: person.email,
     emailVerificationTime: Date.now() - between(1, 30) * 24 * HOUR,
     githubLinkedAt: chance(0.8) ? Date.now() - between(1, 20) * 24 * HOUR : undefined,
@@ -285,7 +357,7 @@ async function insertUser(
     role: opts.role,
     signupId: opts.signupId,
     termsAcceptedAt: opts.onboarded ? Date.now() - between(1, 10) * 24 * HOUR : undefined,
-    travelOrigin: opts.onboarded ? pick(CITIES) : undefined,
+    travelOrigin,
     userTypeId: opts.userTypeId,
   });
 }
