@@ -45,7 +45,6 @@ const HARNESS_NAMES: Record<string, string> = {
   "kilo-code": "Kilo Code",
   opencode: "OpenCode",
   "qwen-code": "Qwen Code",
-  "roo-code": "Roo Code",
 };
 
 type Rgb = readonly [number, number, number];
@@ -67,7 +66,6 @@ const HARNESS_BRAND: Record<string, { glyph: string; color: Rgb }> = {
   "kilo-code": { color: [250, 204, 21], glyph: "⬢" },
   opencode: { color: [34, 197, 94], glyph: "◆" },
   "qwen-code": { color: [97, 91, 255], glyph: "❋" },
-  "roo-code": { color: [56, 189, 248], glyph: "◭" },
 };
 const UNKNOWN_BRAND = { color: TEAL, glyph: "●" } as const;
 

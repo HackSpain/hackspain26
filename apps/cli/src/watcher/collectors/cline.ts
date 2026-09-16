@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { readJsonFile } from "../../lib/config";
 import { projectRef } from "../project";
-import type { HarnessId, RawEvent } from "../schema";
+import type { RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 
@@ -44,22 +44,6 @@ export type ClineTask = {
   taskId: string;
   messages: unknown;
   metadata?: TaskMetadata | null;
-  /** Roo-style `history_item.json`: the workspace stands in for cwd. */
-  workspace?: string;
-};
-
-type HistoryItem = { workspace?: string };
-
-/** What differs between Cline and its forks. */
-export type ClineFamily = {
-  id: HarnessId;
-  /** `<publisher>.<name>` folder under the editor's globalStorage. */
-  extension: string;
-};
-
-export const CLINE_FAMILY: ClineFamily = {
-  extension: "saoudrizwan.claude-dev",
-  id: CLINE,
 };
 
 /**
@@ -69,8 +53,7 @@ export const CLINE_FAMILY: ClineFamily = {
  */
 export function normalizeCline(
   task: ClineTask,
-  afterTs: number,
-  harness: HarnessId = CLINE
+  afterTs: number
 ): { events: RawEvent[]; mark: number } {
   const events: RawEvent[] = [];
   let mark = afterTs;
@@ -89,7 +72,7 @@ export function normalizeCline(
     }
     return current;
   };
-  const cwd = task.metadata?.cwdOnTaskInitialization ?? task.workspace;
+  const cwd = task.metadata?.cwdOnTaskInitialization;
   const sorted = (task.messages as UiMessage[])
     .filter(
       (m) =>
@@ -115,8 +98,8 @@ export function normalizeCline(
     const model = modelAt(ts);
     const raw = model?.model_id ?? "unknown";
     events.push({
-      eventId: eventId(harness, task.taskId, ts),
-      harness,
+      eventId: eventId(CLINE, task.taskId, ts),
+      harness: CLINE,
       model: {
         family: modelFamily(raw),
         provider: model?.model_provider_id,
@@ -140,6 +123,7 @@ export function normalizeCline(
 }
 
 const EDITORS = ["Code", "Code - Insiders", "VSCodium", "Cursor", "Windsurf"];
+const EXTENSION = "saoudrizwan.claude-dev";
 
 function storageBase(): string {
   const home = homedir();
@@ -152,7 +136,7 @@ function storageBase(): string {
   return process.env.XDG_CONFIG_HOME?.trim() || join(home, ".config");
 }
 
-export function globalStorageRoots(extension: string): string[] {
+function globalStorageRoots(): string[] {
   const roots: string[] = [];
   for (const base of [storageBase()]) {
     for (const editor of EDITORS) {
@@ -161,7 +145,7 @@ export function globalStorageRoots(extension: string): string[] {
         editor,
         "User",
         "globalStorage",
-        extension,
+        EXTENSION,
         "tasks"
       );
       if (existsSync(dir)) {
@@ -174,8 +158,7 @@ export function globalStorageRoots(extension: string): string[] {
 
 export async function* collectCline(
   roots: string[],
-  ctx: CollectorContext,
-  harness: HarnessId = CLINE
+  ctx: CollectorContext
 ): AsyncIterable<RawEvent> {
   for (const root of roots) {
     let taskDirs: string[];
@@ -184,7 +167,7 @@ export async function* collectCline(
         .filter((d) => d.isDirectory())
         .map((d) => join(root, d.name));
     } catch (error) {
-      ctx.log(`${harness}: cannot list ${root}: ${String(error)}`);
+      ctx.log(`cline: cannot list ${root}: ${String(error)}`);
       continue;
     }
     for (const dir of taskDirs) {
@@ -204,7 +187,7 @@ export async function* collectCline(
       try {
         messages = JSON.parse(readFileSync(file, "utf8"));
       } catch (error) {
-        ctx.log(`${harness}: cannot parse ${file}: ${String(error)}`);
+        ctx.log(`cline: cannot parse ${file}: ${String(error)}`);
         continue;
       }
       const afterTs =
@@ -214,19 +197,16 @@ export async function* collectCline(
           messages,
           metadata: readJsonFile<TaskMetadata>(join(dir, "task_metadata.json")),
           taskId: basename(dir) || dir,
-          workspace: readJsonFile<HistoryItem>(join(dir, "history_item.json"))
-            ?.workspace,
         },
-        afterTs,
-        harness
+        afterTs
       );
       const announced = new Set(previous?.seenSessions);
       for (const event of events) {
         if (!announced.has(event.sessionId)) {
           announced.add(event.sessionId);
           yield {
-            eventId: eventId(harness, event.sessionId, "start"),
-            harness,
+            eventId: eventId(CLINE, event.sessionId, "start"),
+            harness: CLINE,
             occurredAt: event.occurredAt,
             project: event.project,
             sessionId: event.sessionId,
@@ -246,14 +226,8 @@ export async function* collectCline(
   }
 }
 
-/** A collector for Cline or one of its forks. */
-export function clineFamilyCollector(family: ClineFamily): Collector {
-  return {
-    collect: (ctx) =>
-      collectCline(globalStorageRoots(family.extension), ctx, family.id),
-    discover: () => Promise.resolve(globalStorageRoots(family.extension)),
-    id: family.id,
-  };
-}
-
-export const clineCollector: Collector = clineFamilyCollector(CLINE_FAMILY);
+export const clineCollector: Collector = {
+  collect: (ctx) => collectCline(globalStorageRoots(), ctx),
+  discover: () => Promise.resolve(globalStorageRoots()),
+  id: CLINE,
+};

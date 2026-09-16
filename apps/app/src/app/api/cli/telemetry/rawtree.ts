@@ -22,7 +22,6 @@ const HARNESSES = [
   "copilot",
   "gemini-cli",
   "qwen-code",
-  "roo-code",
   "kilo-code",
 ] as const;
 const MODEL_FAMILIES = ["claude", "gpt", "gemini", "qwen", "other"] as const;

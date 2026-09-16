@@ -205,7 +205,7 @@ export default function CliPage() {
 
         <CommandCard
           title="Watcher"
-          description="Pensado para quedarse abierto en su propia terminal todo el fin de semana: detecta tus harnesses de IA (Claude Code, Codex, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Roo Code), muestra el feed y los avisos de la organización, y reporta uso. Nunca salen prompts ni rutas completas de tu máquina."
+          description="Pensado para quedarse abierto en su propia terminal todo el fin de semana: detecta tus harnesses de IA (Claude Code, Codex, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline), muestra el feed y los avisos de la organización, y reporta uso. Nunca salen prompts ni rutas completas de tu máquina."
         >
           <CommandRow command="hackspain watch [--interval 30] [--backfill <hours>] [--no-upload] [--no-images] [--once]">
             Arranca el watcher; recuerda lo reportado entre sesiones y recoge
