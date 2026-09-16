@@ -50,7 +50,7 @@ export function SectionTiles({
 
   return (
     <nav aria-label="Secciones" className={className}>
-      <ul className="hs-stagger grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-2">
+      <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-2">
         {tiles.map((tile) => {
           const Icon = tile.icon;
           return (
@@ -59,9 +59,9 @@ export function SectionTiles({
                 href={tile.href}
                 title={tile.hint}
                 className={cn(
-                  "flex min-h-24 flex-col items-center justify-center gap-2 border-[3px] border-hs-ink bg-hs-sand px-2 py-3 text-center outline-none",
-                  "motion-safe:transition-[transform,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.96]",
-                  "hover:bg-hs-gold focus-visible:bg-hs-gold focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-paper",
+                  "flex min-h-24 flex-col items-center justify-center gap-2 border border-hs-ink/30 bg-hs-sand px-2 py-3 text-center outline-none",
+                  "motion-safe:transition-[background-color,border-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
+                  "hover:border-hs-ink/30 hover:bg-hs-gold focus-visible:border-hs-navy/50 focus-visible:bg-hs-gold focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-paper",
                 )}
               >
                 <Icon className="size-7 shrink-0" strokeWidth={1.75} aria-hidden />

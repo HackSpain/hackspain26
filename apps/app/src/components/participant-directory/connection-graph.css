@@ -609,3 +609,25 @@
     min-height: 44px;
   }
 }
+
+.ng-entity-links {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 22px;
+}
+.ng-entity-links button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d8d2c4;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 11px;
+  min-height: 44px;
+}
+.ng-entity-links button:hover,
+.ng-entity-links button:focus-visible {
+  background: #eee9dd;
+}
