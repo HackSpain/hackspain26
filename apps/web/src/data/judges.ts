@@ -2,6 +2,7 @@ import adriaBlancafortPhoto from "../assets/judges/adria-blancafort.jpg";
 import alejandroBujanPhoto from "../assets/judges/alejandro-bujan.jpg";
 import alejandroCanadaPhoto from "../assets/judges/alejandro-canada.jpg";
 import felixGilPhoto from "../assets/judges/felix-gil.jpg";
+import gigiAlcarazPhoto from "../assets/judges/gigi-alcaraz.jpg";
 import ignacioAlfeiranPhoto from "../assets/judges/ignacio-alfeiran.jpg";
 import ivanFernandezPhoto from "../assets/judges/ivan-fernandez.jpg";
 import ivanLandabasoPhoto from "../assets/judges/ivan-landabaso.jpg";
@@ -16,7 +17,8 @@ import quiliPenaPhoto from "../assets/judges/quili-pena.jpg";
 import xabierIrizarPhoto from "../assets/judges/xabier-irizar.jpg";
 
 export interface Judge {
-  company: string;
+  /** Omitted when the judge should show a name only. */
+  company?: string;
   /** Stable key, also used as the card anchor id. */
   id: string;
   name: string;
@@ -129,5 +131,10 @@ export const GENERAL_JUDGES: Judge[] = [
     id: "alejandro-canada",
     name: "Alejandro Cañada Hinojosa",
     photoSrc: alejandroCanadaPhoto.src,
+  },
+  {
+    id: "gigi-alcaraz",
+    name: "Gigi Alcaraz",
+    photoSrc: gigiAlcarazPhoto.src,
   },
 ];

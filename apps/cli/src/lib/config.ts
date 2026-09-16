@@ -86,10 +86,6 @@ export function readConfig(): CliConfig {
   return readJsonFile<CliConfig>(configPath()) ?? {};
 }
 
-export function writeConfig(config: CliConfig): void {
-  writeFileAtomic(configPath(), `${JSON.stringify(config, null, 2)}\n`, 0o600);
-}
-
 export type UrlSource = "flag" | "env" | "config" | "default";
 
 export function resolveAppUrl(override?: string): {

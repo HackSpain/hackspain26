@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
 import { directoryValidator } from "./lib/directory";
 import { sectionsValidator } from "./lib/userTypes";
+import { tvWidgetFields, tvWidgetValidator } from "./lib/tvValidators";
 import {
   milestoneKindValidator,
   perkAnswerValidator,
@@ -360,67 +361,7 @@ export default defineSchema({
   }).index("by_zone", ["zone", "order"]),
 
   tvWidgets: defineTable({
-    kind: v.union(
-      v.literal("banner"),
-      v.literal("ticker"),
-      v.literal("clock"),
-      v.literal("message"),
-      v.literal("insightsStats"),
-      v.literal("insightsActivity"),
-      v.literal("insightsHarness"),
-      v.literal("insightsStacks"),
-      v.literal("insightsScatter"),
-      v.literal("insightsLeaderboard"),
-      v.literal("insightsEvolution"),
-      v.literal("liveCommits"),
-      v.literal("liveAgents"),
-      v.literal("liveTokens"),
-      v.literal("liveLeaderboard"),
-      v.literal("feed"),
-      v.literal("sponsorGrid"),
-      v.literal("sponsorTicker")
-    ),
-    x: v.number(),
-    y: v.number(),
-    w: v.number(),
-    h: v.number(),
-    z: v.number(),
-    text: v.string(),
-    sponsors: v.optional(
-      v.array(
-        v.object({
-          name: v.string(),
-          logoUrl: v.string(),
-          href: v.string(),
-          tier: v.union(
-            v.literal("gold"),
-            v.literal("silver"),
-            v.literal("community")
-          ),
-        })
-      )
-    ),
-    tickerSpeed: v.optional(
-      v.union(v.literal("slow"), v.literal("normal"), v.literal("fast"))
-    ),
-    feedMode: v.optional(v.union(v.literal("latest"), v.literal("rotate"))),
-    feedSource: v.optional(
-      v.union(
-        v.literal("all"),
-        v.literal("participants"),
-        v.literal("github")
-      )
-    ),
-    fontSize: v.optional(v.number()),
-    fontWeight: v.optional(
-      v.union(
-        v.literal("normal"),
-        v.literal("medium"),
-        v.literal("semibold"),
-        v.literal("bold")
-      )
-    ),
-    background: v.optional(v.boolean()),
+    ...tvWidgetFields,
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -429,71 +370,7 @@ export default defineSchema({
   tvLayouts: defineTable({
     name: v.string(),
     isLive: v.boolean(),
-    widgets: v.array(
-      v.object({
-        kind: v.union(
-          v.literal("banner"),
-          v.literal("ticker"),
-          v.literal("clock"),
-          v.literal("message"),
-          v.literal("insightsStats"),
-          v.literal("insightsActivity"),
-          v.literal("insightsHarness"),
-          v.literal("insightsStacks"),
-          v.literal("insightsScatter"),
-          v.literal("insightsLeaderboard"),
-          v.literal("insightsEvolution"),
-          v.literal("liveCommits"),
-          v.literal("liveAgents"),
-          v.literal("liveTokens"),
-          v.literal("liveLeaderboard"),
-          v.literal("feed"),
-          v.literal("sponsorGrid"),
-          v.literal("sponsorTicker")
-        ),
-        x: v.number(),
-        y: v.number(),
-        w: v.number(),
-        h: v.number(),
-        z: v.number(),
-        text: v.string(),
-        sponsors: v.optional(
-          v.array(
-            v.object({
-              name: v.string(),
-              logoUrl: v.string(),
-              href: v.string(),
-              tier: v.union(
-                v.literal("gold"),
-                v.literal("silver"),
-                v.literal("community")
-              ),
-            })
-          )
-        ),
-        tickerSpeed: v.optional(
-          v.union(v.literal("slow"), v.literal("normal"), v.literal("fast"))
-        ),
-        feedMode: v.optional(v.union(v.literal("latest"), v.literal("rotate"))),
-        feedSource: v.optional(
-          v.union(
-            v.literal("all"),
-            v.literal("participants"),
-            v.literal("github")
-          )
-        ),
-        fontSize: v.optional(v.number()),
-        fontWeight: v.optional(
-          v.union(
-            v.literal("normal"),
-            v.literal("medium"),
-            v.literal("semibold"),
-            v.literal("bold")
-          )
-        ),
-        background: v.optional(v.boolean()),
-      })
-    ),
+    widgets: v.array(tvWidgetValidator),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),

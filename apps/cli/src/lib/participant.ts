@@ -13,9 +13,6 @@ export type Track = FunctionReturnType<typeof api.tracks.list>[number];
 export type Submission = NonNullable<
   FunctionReturnType<typeof api.submissions.mine>
 >;
-export type PublicProject = FunctionReturnType<
-  typeof api.submissions.listPublic
->[number];
 export type PerkEntry = FunctionReturnType<
   typeof api.perks.listCatalog
 >[number];

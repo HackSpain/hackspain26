@@ -19,13 +19,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { contentWidth } from "@/lib/layout";
+import { contentWidth, fullBleed } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "CRM" },
   { href: "/admin/types", label: "Tipos" },
   { href: "/admin/perks", label: "Perks" },
+  { href: "/admin/applications", label: "Solicitudes" },
   { href: "/admin/tracks", label: "Retos" },
   { href: "/admin/notifications", label: "Avisos" },
   { href: "/admin/tv", label: "TV" },
@@ -123,12 +124,7 @@ function AdminStrip({ pathname }: { pathname: string }) {
     <nav aria-label="Admin" className="border-b-[3px] border-hs-ink bg-hs-paper">
       <div className={cn(contentWidth(pathname), "flex flex-wrap items-center gap-x-4 gap-y-1")}>
         {ADMIN_NAV.map((item) => {
-          const active =
-            item.href === "/admin/perks"
-              ? pathname === "/admin/perks" ||
-                pathname.startsWith("/admin/perks/") ||
-                pathname.startsWith("/admin/applications")
-              : adminNavActive(pathname, item.href);
+          const active = adminNavActive(pathname, item.href);
           return (
             <Link
               key={item.href}
@@ -169,6 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = me?.role === "admin";
+  const bleed = fullBleed(pathname);
   const displayName = me?.name ?? me?.email;
   const askGithub =
     me !== undefined &&
@@ -201,15 +198,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AdminStrip pathname={pathname} />
       ) : null}
       {askGithub ? <GithubLinkBanner /> : null}
-      <main className={cn(contentWidth(pathname), "min-w-0 py-6 sm:py-8")}>
-        <Suspense fallback={null}>
-          <GithubLinkResult />
-        </Suspense>
-        {pathname === "/" ? null : (
-          <div className="hs-enter mb-4">
-            <BackToHome />
-          </div>
+      <main
+        className={cn(
+          bleed ? "w-full pt-6 sm:pt-8" : cn(contentWidth(pathname), "min-w-0 py-6 sm:py-8"),
         )}
+      >
+        <div className={cn(bleed && contentWidth(pathname))}>
+          <Suspense fallback={null}>
+            <GithubLinkResult />
+          </Suspense>
+          {pathname === "/" ? null : (
+            <div className="hs-enter mb-4">
+              <BackToHome />
+            </div>
+          )}
+        </div>
         {children}
       </main>
     </div>
