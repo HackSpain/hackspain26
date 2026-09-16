@@ -93,11 +93,15 @@ async function finishLogin(
     if (gate.hint) {
       ui.line(c.dim(gate.hint));
     }
+    ui.next([
+      ["hackspain open", "the dashboard in your browser, already signed in"],
+    ]);
     ui.outro("Everything else unlocks once that is sorted.");
     return;
   }
   ui.next([
     ["hackspain", "see where you stand and what to do next"],
+    ["hackspain open", "the dashboard in your browser, no second login"],
     ["hackspain team create <name>", "start a team, or join one with a code"],
     ["hackspain watch", "keep it running in a spare terminal"],
   ]);

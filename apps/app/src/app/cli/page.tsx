@@ -96,6 +96,10 @@ export default function CliPage() {
           <CommandRow command="hackspain auth login">
             Email + código de 8 dígitos, como en la web.
           </CommandRow>
+          <CommandRow command="hackspain open [feed|teams|perks|…]">
+            Abre el dashboard en tu navegador ya con la sesión iniciada: no
+            hace falta volver a pedir el código.
+          </CommandRow>
           <CommandRow command="hackspain auth status">
             Comprueba tu sesión.
           </CommandRow>

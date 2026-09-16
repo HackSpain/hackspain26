@@ -21,6 +21,8 @@ hackspain auth login            # sign in via the browser (approve on the dashbo
                                 # or --email/--code for the 8-digit email code; then asks for a missing
                                 # name, phone or GitHub
 hackspain auth status | logout
+hackspain open [feed|teams|tracks|perks|profile|/path] [--print]
+                                # the dashboard in your browser, already signed in (link works once, 2 min)
 
 hackspain profile               # name, diet, travel, phone, notices, GitHub
 hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]
@@ -52,6 +54,17 @@ hackspain telemetry stats       # what the watcher recorded on this machine
 
 hackspain --json <command>      # one JSON object on stdout, prompts disabled
 ```
+
+## One login for the CLI and the web
+
+Both directions are covered. `hackspain auth login` (browser flow) approves the CLI from a
+signed-in dashboard tab. `hackspain open` goes the other way: the CLI's session mints a
+single-use token (`cliAuth.startWebHandoff` over `/api/cli/rpc`), opens
+`/cli-auth/handoff?hs-token=…&next=/feed`, and that page signs the browser in with the
+`cli-handoff` credentials provider, which sets the ordinary dashboard cookies. Tokens live two
+minutes and die on first use; `--print` shows the link instead of launching a browser, and
+`--json` returns `{ url, path, expiresAt }`. Menu entries and post-login hints point at it, so
+nobody has to type a second email code on the web.
 
 ## Watcher
 

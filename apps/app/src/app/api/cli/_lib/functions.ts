@@ -36,6 +36,7 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "onboarding:verifyPhoneCode": mutation(api.onboarding.verifyPhoneCode),
   "github:startLink": mutation(api.github.startLink),
   "github:unlink": mutation(api.github.unlink),
+  "cliAuth:startWebHandoff": mutation(api.cliAuth.startWebHandoff),
 
   // teams
   "teams:mine": query(api.teams.mine),

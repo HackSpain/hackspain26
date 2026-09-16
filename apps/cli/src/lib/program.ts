@@ -3,6 +3,7 @@ import { registerAuth } from "../commands/auth";
 import { registerFeed } from "../commands/feed";
 import { registerHome } from "../commands/home";
 import { registerMilestone } from "../commands/milestone";
+import { registerOpen } from "../commands/open";
 import { registerPerk } from "../commands/perk";
 import { registerProfile } from "../commands/profile";
 import { registerProject } from "../commands/project";
@@ -46,6 +47,7 @@ export function buildProgram(): Command {
 
   registerHome(program, buildProgram);
   registerAuth(program);
+  registerOpen(program);
   registerProfile(program);
   registerTeam(program);
   registerTrack(program);

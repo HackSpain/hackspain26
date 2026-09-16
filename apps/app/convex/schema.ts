@@ -300,6 +300,17 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_expires", ["expiresAt"]),
 
+  // Single-use tokens a signed-in CLI mints so `hackspain open` can sign the
+  // browser in (convex/cliAuth.ts, /cli-auth/handoff).
+  cliWebHandoffs: defineTable({
+    token: v.string(),
+    userId: v.id("users"),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_expires", ["expiresAt"]),
+
   tvMessages: defineTable({
     text: v.string(),
     zone: v.union(

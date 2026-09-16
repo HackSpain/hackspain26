@@ -78,6 +78,13 @@ const UPDATE_ITEM: MenuItem = {
   argv: ["update"],
 };
 
+const OPEN_ITEM: MenuItem = {
+  value: "open",
+  label: "Open the dashboard",
+  hint: "in your browser, already signed in",
+  argv: ["open"],
+};
+
 const BACK_VALUE = "__back";
 
 function plural(count: number, word: string): string {
@@ -327,6 +334,7 @@ function buildReadyMenu(status: MenuStatus): MenuItem[] {
     },
     { value: "perks", label: "Perks", argv: ["perk", "list"] },
     { value: "milestones", label: "Milestones", submenu: buildMilestoneMenu() },
+    OPEN_ITEM,
     {
       value: "watch",
       label: "Start the watcher",
@@ -360,6 +368,10 @@ export function buildMainMenu(status: MenuStatus): MenuItem[] {
         label: "Session status",
         hint: "what the server says about you",
         argv: ["auth", "status"],
+      },
+      {
+        ...OPEN_ITEM,
+        hint: "finish onboarding there, already signed in",
       },
       { value: "auth-logout", label: "Log out", argv: ["auth", "logout"] },
       UPDATE_ITEM,

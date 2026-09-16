@@ -30,6 +30,25 @@ const CliDevice = ConvexCredentials<DataModel>({
   },
 });
 
+// Reverse direction: a signed-in CLI mints a single-use handoff token
+// (cliAuth.startWebHandoff) and opens /cli-auth/handoff in the browser, whose
+// page signs in with this provider. The Next.js auth proxy then sets the same
+// cookies the email OTP login sets, so the browser never asks for a code.
+const CliHandoff = ConvexCredentials<DataModel>({
+  id: "cli-handoff",
+  authorize: async (credentials, ctx) => {
+    const token =
+      typeof credentials.token === "string" ? credentials.token : "";
+    if (!token) {
+      return null;
+    }
+    const userId = await ctx.runMutation(internal.cliAuth.redeemWebHandoff, {
+      token,
+    });
+    return userId ? { userId } : null;
+  },
+});
+
 // `signIn` below wraps the library action so a dev stub code can be swapped
 // for the real one. The client always calls `auth:signIn`.
 export const {
@@ -39,7 +58,7 @@ export const {
   store,
   isAuthenticated,
 } = convexAuth({
-  providers: [ResendOTP, CliDevice],
+  providers: [ResendOTP, CliDevice, CliHandoff],
   callbacks: {
     async createOrUpdateUser(ctx, args) {
       const rawEmail =
