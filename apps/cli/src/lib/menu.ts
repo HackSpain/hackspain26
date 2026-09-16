@@ -517,7 +517,9 @@ export function isResumeKey(_data: Uint8Array): boolean {
 /** Let the user finish reading, then return to the menu. Never process.exit. */
 function pressAnyKey(): Promise<void> {
   return new Promise((resolve) => {
-    process.stdout.write(`\n${c.dim("q · Esc to go back to the menu…")}\n`);
+    process.stdout.write(
+      `\n${c.gold("q")} ${c.dim("· Esc to go back to the menu…")}\n`
+    );
     const stdin = process.stdin;
     const raw = Boolean(stdin.isTTY);
     if (raw) {
