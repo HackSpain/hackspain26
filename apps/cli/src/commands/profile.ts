@@ -7,7 +7,7 @@ import { CliError, usageError } from "../lib/errors";
 import type { Me } from "../lib/me";
 import type { Ui } from "../lib/output";
 import { uiFor } from "../lib/output";
-import { openParticipant } from "../lib/participant";
+import { openProfile } from "../lib/participant";
 import { confirmOrFlag, textOrFlag } from "../lib/prompts";
 import { c, cmd, highlight } from "../lib/style";
 
@@ -91,7 +91,7 @@ export function profileJson(me: Me) {
 async function showProfile(command: Command): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
-  const { me } = await openParticipant(ctx);
+  const { me } = await openProfile(ctx);
   ui.result(profileJson(me));
   ui.intro("profile");
   ui.kv(profileRows(me));
@@ -111,7 +111,7 @@ type EditOptions = {
 async function editProfile(opts: EditOptions, command: Command): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
-  const { session, me } = await openParticipant(ctx);
+  const { session, me } = await openProfile(ctx);
   ui.intro("profile · edit");
   const name = await textOrFlag(ctx, opts.name, {
     flag: "--name",
@@ -172,7 +172,7 @@ async function setNotify(
   if (value !== "on" && value !== "off") {
     throw usageError(`Use "on" or "off", got "${value}".`);
   }
-  const { session } = await openParticipant(ctx);
+  const { session } = await openProfile(ctx);
   const consent = value === "on";
   await ui.spin(
     "Saving…",
@@ -249,7 +249,7 @@ async function confirmPhone(
 ): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
-  const { session, me } = await openParticipant(ctx);
+  const { session, me } = await openProfile(ctx);
   ui.intro("profile · phone");
   const phone = await runPhoneConfirmation(
     ctx,
@@ -269,7 +269,7 @@ async function linkGithub(
 ): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
-  const { session, me } = await openParticipant(ctx);
+  const { session, me } = await openProfile(ctx);
   if (opts.unlink) {
     if (!me.githubLinked) {
       ui.info("No GitHub account is linked.");

@@ -8,8 +8,7 @@ import {
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-
-const HACKATHON_SETTINGS_KEY = "hackathon";
+import { HACKATHON_SETTINGS_KEY, settingsDoc } from "./lib/eventWindow";
 
 const DEFAULT_TRACKS = [
   {
@@ -97,13 +96,6 @@ function trackFields(track: Doc<"tracks">) {
     sortOrder: track.sortOrder,
     website: track.website,
   };
-}
-
-async function settingsDoc(ctx: QueryCtx | MutationCtx) {
-  return await ctx.db
-    .query("settings")
-    .withIndex("by_key", (q) => q.eq("key", HACKATHON_SETTINGS_KEY))
-    .unique();
 }
 
 export async function submissionsAreOpen(

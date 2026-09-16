@@ -9,7 +9,7 @@ import { api } from "@convex/_generated/api";
 import { HomeSplash } from "@/components/home-splash";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { sectionForPath } from "@/lib/sections";
+import { isPathAllowedWhenClosed, sectionForPath } from "@/lib/sections";
 
 function destination(me: {
   role: Role;
@@ -134,6 +134,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Outside the hackathon window only the profile and the directory stay.
+    if (!me.event.open && !isPathAllowedWhenClosed(pathname)) {
+      router.replace("/");
+      return;
+    }
+
     // Hidden sections (CRM user type) bounce home; a judge without a signup
     // then continues to /judging through the ladder below.
     const section = sectionForPath(pathname);
@@ -224,6 +230,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (me && me.role !== "admin" && pathname !== CLI_AUTH_PATH) {
     if (pathname.startsWith("/admin")) {
+      return null;
+    }
+    if (!me.event.open && !isPathAllowedWhenClosed(pathname)) {
       return null;
     }
     const section = sectionForPath(pathname);

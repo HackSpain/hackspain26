@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { requireEventOpen } from "./eventWindow";
 import { canJudge } from "./userTypes";
 import type { Role } from "./validators";
 
@@ -83,6 +84,19 @@ export async function requireOnboarded(ctx: Ctx): Promise<Doc<"users">> {
   if (!user.onboardingComplete) {
     throw new Error("Confirma tus datos primero");
   }
+  return user;
+}
+
+/** Onboarded and inside the hackathon window (admins skip both). */
+export async function requireInEvent(ctx: Ctx): Promise<Doc<"users">> {
+  const user = await requireOnboarded(ctx);
+  await requireEventOpen(ctx, user);
+  return user;
+}
+
+export async function requireJudgeInEvent(ctx: Ctx): Promise<Doc<"users">> {
+  const user = await requireJudge(ctx);
+  await requireEventOpen(ctx, user);
   return user;
 }
 

@@ -49,7 +49,7 @@ const EXIT_CODES = [
   { code: "1", meaning: "Error del servidor o genérico" },
   { code: "2", meaning: "Error de uso (flags mal puestos, falta input en modo no interactivo)" },
   { code: "3", meaning: "Sin sesión o sesión caducada" },
-  { code: "4", meaning: "Aún no elegible (sin solicitud, sin aceptar u onboarding incompleto)" },
+  { code: "4", meaning: "Aún no elegible (sin solicitud, sin aceptar, onboarding incompleto o la hackathon no está en marcha)" },
   { code: "5", meaning: "No se pudo alcanzar el backend" },
   { code: "130", meaning: "Interrumpido (Ctrl+C)" },
 ] as const;
@@ -229,7 +229,7 @@ export default function CliPage() {
 
         <CommandCard
           title="Códigos de salida"
-          description="Los comandos que necesitan equipo, solicitud aceptada u onboarding completo fallan rápido con el siguiente paso a dar."
+          description="Los comandos que necesitan equipo, solicitud aceptada u onboarding completo fallan rápido con el siguiente paso a dar. Fuera de la ventana de la hackathon solo funciona hackspain profile."
         >
           <div>
             {EXIT_CODES.map((row) => (

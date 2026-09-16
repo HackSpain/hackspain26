@@ -10,4 +10,4 @@ export const IS_DEV_BUILD = VERSION === "0.0.0-dev";
  */
 export const DEFAULT_APP_URL: string =
   process.env.HACKSPAIN_APP_URL_DEFAULT ??
-  (IS_DEV_BUILD ? "http://localhost:3000" : "https://app.hackspain.com");
+  (IS_DEV_BUILD ? "http://localhost:3000" : "https://hackspain.app");

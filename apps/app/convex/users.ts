@@ -4,13 +4,14 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   authedMutation,
   authedQuery,
-  onboardedMutation,
+  profileMutation,
 } from "./lib/customFunctions";
 import { meValidator, signupPublicValidator } from "./lib/validators";
 import { defaultedAttendance } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";
 import { fail } from "./lib/errors";
 import { parseEventDetails } from "./lib/eventDetails";
+import { eventIsOpen, eventPhase, getEventWindow } from "./lib/eventWindow";
 import { imagePathFor } from "./lib/files";
 import { effectiveSections, userTypeFor } from "./lib/userTypes";
 import { normalizeGithub, normalizeTwitter } from "./lib/normalize";
@@ -114,9 +115,17 @@ export const me = query({
     const signup = await getSignupForUser(ctx, user);
     const type = await userTypeFor(ctx, user);
     const sections = effectiveSections(user, type);
+    const window = await getEventWindow(ctx);
+    const phase = eventPhase(window, Date.now());
     return {
       _id: user._id,
       email: user.email,
+      event: {
+        endsAt: window.endsAt,
+        open: user.role === "admin" || eventIsOpen(phase),
+        phase,
+        startsAt: window.startsAt,
+      },
       name: user.name ?? signup?.fullName,
       role: user.role,
       avatarUrl: avatarUrlFor(user),
@@ -264,7 +273,7 @@ export const removeAvatar = authedMutation({
   returns: v.null(),
 });
 
-export const setAttendance = onboardedMutation({
+export const setAttendance = profileMutation({
   args: {
     attendanceStatus: v.union(v.literal("attending"), v.literal("cancelled")),
   },
@@ -277,7 +286,7 @@ export const setAttendance = onboardedMutation({
   returns: v.null(),
 });
 
-export const setNotificationConsent = onboardedMutation({
+export const setNotificationConsent = profileMutation({
   args: { consent: v.boolean() },
   handler: async (ctx, args) => {
     await ctx.db.patch(ctx.user._id, {
@@ -289,7 +298,7 @@ export const setNotificationConsent = onboardedMutation({
   returns: v.null(),
 });
 
-export const updateEventDetails = onboardedMutation({
+export const updateEventDetails = profileMutation({
   args: {
     dietaryDetails: v.optional(v.string()),
     dietaryRestrictions: v.string(),
