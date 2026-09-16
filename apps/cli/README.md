@@ -108,6 +108,14 @@ paths ever leave the machine; only token counts, model, session ids, and a hash 
 directory. By default only usage after the watcher starts is reported; `--backfill 6` includes
 the last six hours.
 
+The watcher remembers. `~/.local/state/hackspain/watch-memory.json` keeps the first start, the
+last scan and the latest organiser announcements, and the local spool keeps every usage event, so
+reopening it shows the harness table and recent requests for everything since the first run (the
+Harnesses box says "since …"), the last announcements are back on screen, and the first scan reads
+harness logs written while the watcher was closed instead of skipping them. `--backfill <hours>`
+still overrides that start point. Announcements caught up on start stay on screen but do not
+toast; only ones from the last ten minutes do.
+
 One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.
 
 ## Feed

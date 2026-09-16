@@ -5,10 +5,11 @@ import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
 import { requireOnboarded } from "../lib/me";
-import { firstName, uiFor } from "../lib/output";
+import { firstName, formatWhen, uiFor } from "../lib/output";
 import { c } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
 import { acquireWatchLock, runWatch } from "../watcher";
+import { catchUpSince, openMemory } from "../watcher/memory";
 import { startScreen, summaryLines } from "../watcher/screen";
 import { createState, feedLive, scrollFeed } from "../watcher/state";
 
@@ -42,7 +43,7 @@ export function registerWatch(program: Command): void {
     .option("-i, --interval <seconds>", "seconds between scans", "30")
     .option(
       "--backfill <hours>",
-      "also report usage from the last N hours (default: from now)"
+      "also report usage from the last N hours (default: since the last run, or from now the first time)"
     )
     .option("--no-toast", "print notifications only, no desktop toast")
     .option("--no-upload", "keep events in the local spool only")
@@ -59,7 +60,13 @@ export function registerWatch(program: Command): void {
       const intervalMs = positiveNumber("--interval", flags.interval) * 1000;
       const backfillMs = flags.backfill
         ? positiveNumber("--backfill", flags.backfill) * 3_600_000
-        : 0;
+        : undefined;
+      const memory = openMemory();
+      // Default: everything since the last scan, so usage while the watcher
+      // was closed is reported too. An explicit --backfill overrides it.
+      const since = catchUpSince(memory.data, backfillMs);
+      const catchingUp =
+        backfillMs === undefined && since < Date.now() - 60_000;
 
       const session = await openSession(ctx, { requireAuth: true });
       const me = await requireOnboarded(session);
@@ -80,7 +87,7 @@ export function registerWatch(program: Command): void {
       const options = {
         intervalMs,
         once: Boolean(flags.once),
-        since: Date.now() - backfillMs,
+        since,
         toast: flags.toast,
         uploadUrl,
         verbose: Boolean(flags.verbose),
@@ -133,6 +140,7 @@ export function registerWatch(program: Command): void {
             announce: () => process.stdout.write("\x07"),
             log: () => undefined,
             me,
+            memory,
             say: () => undefined,
             session,
             state,
@@ -192,10 +200,14 @@ export function registerWatch(program: Command): void {
             )
           );
         }
+        if (catchingUp) {
+          ui.line(c.dim(`Catching up on usage since ${formatWhen(since)}.`));
+        }
         const code = await runWatch(options, {
           announce,
           log,
           me,
+          memory,
           say,
           session,
           teamId: team?._id,

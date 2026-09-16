@@ -174,6 +174,25 @@ function clockSeconds(at: number): string {
   });
 }
 
+/** "17:05" today, "Fri 18 Sep 17:05" otherwise. */
+export function sinceLabel(at: number, now: number): string {
+  const then = new Date(at);
+  const today = new Date(now);
+  const sameDay =
+    then.getFullYear() === today.getFullYear() &&
+    then.getMonth() === today.getMonth() &&
+    then.getDate() === today.getDate();
+  if (sameDay) {
+    return clock(at);
+  }
+  const day = then.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    weekday: "short",
+  });
+  return `${day} ${clock(at)}`;
+}
+
 function elapsed(since: number, now: number): string {
   const s = Math.max(0, Math.floor((now - since) / 1000));
   const h = Math.floor(s / 3600);
@@ -327,7 +346,13 @@ function harnessesBox(
   const breakdown = `${c.dim("tokens:")} ${compactNumber(t.input)} ${c.dim("in")} · ${compactNumber(t.output)} ${c.dim("out")} · ${compactNumber(t.cached)} ${c.dim("cached")}`;
   return {
     lines: box(
-      { height: h, subtitle: "what is being reported", title: "Harnesses" },
+      {
+        height: h,
+        subtitle: state.trackedSince
+          ? `since ${sinceLabel(state.trackedSince, now)}`
+          : "what is being reported",
+        title: "Harnesses",
+      },
       [...table, "", breakdown],
       w
     ),
@@ -851,7 +876,10 @@ export function startScreen(
 
 export function summaryLines(state: WatchState, now = Date.now()): string[] {
   const t = state.totals;
+  const scope = state.trackedSince
+    ? `Since ${sinceLabel(state.trackedSince, now)} (this run ${elapsed(state.startedAt, now)})`
+    : `Watched for ${elapsed(state.startedAt, now)}`;
   return [
-    `Watched for ${elapsed(state.startedAt, now)} · ${compactNumber(t.requests)} request${t.requests === 1 ? "" : "s"} from ${t.sessions.size} session${t.sessions.size === 1 ? "" : "s"} reported${state.upload.enabled ? "" : " (local only)"} · ${state.notifications.length} organiser message${state.notifications.length === 1 ? "" : "s"}.`,
+    `${scope} · ${compactNumber(t.requests)} request${t.requests === 1 ? "" : "s"} from ${t.sessions.size} session${t.sessions.size === 1 ? "" : "s"} reported${state.upload.enabled ? "" : " (local only)"} · ${state.notifications.length} organiser message${state.notifications.length === 1 ? "" : "s"}.`,
   ];
 }

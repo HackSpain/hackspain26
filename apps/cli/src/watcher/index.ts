@@ -20,13 +20,20 @@ import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
 import { openCodeCollector } from "./collectors/opencode";
 import { openCursorStore } from "./cursor-store";
+import type { MemoryStore } from "./memory";
+import {
+  openMemory,
+  rememberNotification,
+  replaySpool,
+  shouldToast,
+} from "./memory";
 import type { Toaster } from "./notify";
 import { platformToaster } from "./notify";
 import type { RawEvent, TelemetryEvent } from "./schema";
 import { SCHEMA, validateEvent } from "./schema";
 import { httpSink } from "./sinks/http";
 import type { Sink } from "./sinks/spool";
-import { spoolSink } from "./sinks/spool";
+import { readSpool, spoolSink } from "./sinks/spool";
 import type { WatchState } from "./state";
 import {
   appendOlderFeed,
@@ -69,6 +76,10 @@ export type WatchDeps = {
   toaster?: Toaster;
   collectors?: Collector[];
   extraSinks?: Sink[];
+  /** Cross-run memory (first start, last scan, announcements); defaults to the state dir. */
+  memory?: MemoryStore;
+  /** Usage events recorded by earlier runs, replayed onto the board; defaults to the spool. */
+  history?: Iterable<TelemetryEvent>;
 };
 
 const RECENT_IDS_CAP = 5000;
@@ -258,6 +269,7 @@ export async function runWatch(
     }
   };
   const collectors = deps.collectors ?? COLLECTORS;
+  const memory = deps.memory ?? openMemory();
   const cursors = openCursorStore();
   const recent = loadRecentIds();
   const sinks: Sink[] = [spoolSink(), ...(deps.extraSinks ?? [])];
@@ -301,6 +313,16 @@ export async function runWatch(
       requests: 0,
       tokens: 0,
     }));
+    // The board remembers: everything this machine reported since the first
+    // run comes back from the local spool, and the last announcements too.
+    state.trackedSince = memory.data.firstStartedAt;
+    const replayed = replaySpool(state, deps.history ?? readSpool());
+    if (replayed > 0) {
+      log(`replayed ${replayed} events from the local spool`);
+    }
+    for (const n of memory.data.notifications.toReversed()) {
+      recordNotification(state, n.subject, n.body, n.at);
+    }
   }
   say(
     discovered.length
@@ -314,7 +336,9 @@ export async function runWatch(
   }
 
   const toaster = deps.toaster ?? platformToaster();
-  let lastSeen = Date.now();
+  // Poll from the last announcement seen by any run, so messages sent while
+  // the watcher was closed still show up (a first run fetches them all).
+  let lastSeen = memory.data.lastNotificationAt ?? 0;
   const pollNotifications = async (): Promise<void> => {
     let rows: Awaited<
       ReturnType<typeof session.client.query<typeof api.notifications.forMe>>
@@ -327,11 +351,18 @@ export async function runWatch(
       log(`notifications: ${String(error)}`);
       return;
     }
+    let remembered = false;
     for (const row of rows) {
       if (row.sentAt <= lastSeen) {
         continue;
       }
       lastSeen = row.sentAt;
+      rememberNotification(memory.data, {
+        at: row.sentAt,
+        body: row.body,
+        subject: row.subject,
+      });
+      remembered = true;
       if (state) {
         recordNotification(state, row.subject, row.body, row.sentAt);
       }
@@ -340,13 +371,17 @@ export async function runWatch(
         row.body,
         row.sentAt
       );
-      if (options.toast) {
+      // Catching up on old announcements stays on screen; only fresh ones toast.
+      if (options.toast && shouldToast(row.sentAt)) {
         toaster(row.subject, row.body).then((ok) => {
           if (!ok) {
             log("toast failed; notifications still print here");
           }
         });
       }
+    }
+    if (remembered) {
+      memory.save();
     }
   };
 
@@ -463,6 +498,9 @@ export async function runWatch(
       cursors.save();
       saveRecentIds(recent);
     }
+    // The next run catches up from here.
+    memory.data.lastActiveAt = Date.now();
+    memory.save();
     if (state) {
       state.scanning = false;
       state.lastScanAt = Date.now();

@@ -4,7 +4,10 @@ import type { HarnessId, TelemetryEvent } from "./schema";
 
 /** Everything the live screen shows. runWatch mutates it; the screen only reads. */
 export type WatchState = {
+  /** This run's start; `elapsed` in the header. */
   startedAt: number;
+  /** First run on this machine; the totals cover everything since then. */
+  trackedSince?: number;
   me: { name: string; email?: string };
   team?: { name: string; isOwner: boolean; repoUrl?: string; members: number };
   project?: {
@@ -126,12 +129,13 @@ export function seriesWindow(
 }
 
 export function createState(
-  init: Pick<WatchState, "me" | "team" | "project"> & {
+  init: Pick<WatchState, "me" | "team" | "project" | "trackedSince"> & {
     uploadEnabled: boolean;
     imageProtocol?: ImageProtocol | null;
   }
 ): WatchState {
   return {
+    trackedSince: init.trackedSince,
     feed: [],
     feedExhausted: false,
     feedImageFailed: new Set(),
