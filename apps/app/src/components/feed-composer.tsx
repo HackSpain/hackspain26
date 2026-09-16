@@ -1,10 +1,13 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
+import type { OptimisticUpdate } from "convex/browser";
+import type { FunctionReturnType } from "convex/server";
 import { ImagePlus } from "lucide-react";
 import { useRef, useState } from "react";
 import type { Id } from "@convex/_generated/dataModel";
 import { api } from "@convex/_generated/api";
+import type { FeedPost } from "@/components/feed-timeline";
 import { FormError, errorMessage } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,8 +28,53 @@ function storageIdFromUpload(value: unknown): Id<"_storage"> {
   throw new Error("No se pudo subir la imagen");
 }
 
+type Me = FunctionReturnType<typeof api.users.me>;
+
+/** Shows the new post in every open feed list before the server confirms it. */
+function optimisticPost(me: Me | undefined): OptimisticUpdate<{
+  imageId?: Id<"_storage">;
+  text: string;
+}> {
+  return (localStore, args) => {
+    const now = Date.now();
+    const optimistic: FeedPost = {
+      _id: `optimistic-${now}` as Id<"posts">,
+      author: me
+        ? {
+            _id: me._id,
+            name: me.name,
+            email: me.email,
+            avatarUrl: me.avatarUrl,
+            userType: me.userType?.label,
+          }
+        : undefined,
+      createdAt: now,
+      github: undefined,
+      imagePath: undefined,
+      kind: "post",
+      mine: true,
+      pending: true,
+      project: undefined,
+      teamLogoUrl: undefined,
+      teamName: undefined,
+      text: args.text.trim(),
+    };
+    for (const { args: queryArgs, value } of localStore.getAllQueries(
+      api.feed.list,
+    )) {
+      if (!value || queryArgs.before !== undefined) {
+        continue;
+      }
+      localStore.setQuery(api.feed.list, queryArgs, [optimistic, ...value]);
+    }
+  };
+}
+
 export function FeedComposer({ framed = true }: { framed?: boolean }) {
-  const post = useMutation(api.feed.post);
+  const me = useQuery(api.users.me);
+  const post = useMutation(api.feed.post).withOptimisticUpdate(
+    optimisticPost(me),
+  );
   const generateUploadUrl = useMutation(api.feed.generateUploadUrl);
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -46,6 +94,7 @@ export function FeedComposer({ framed = true }: { framed?: boolean }) {
       return;
     }
     setBusy(true);
+    const draft = text;
     try {
       let imageId: Id<"_storage"> | undefined;
       if (file) {
@@ -58,11 +107,12 @@ export function FeedComposer({ framed = true }: { framed?: boolean }) {
         if (!response.ok) throw new Error("No se pudo subir la imagen");
         imageId = storageIdFromUpload(await response.json());
       }
-      await post({ text, imageId });
       setText("");
       setFile(null);
       if (fileInput.current) fileInput.current.value = "";
+      await post({ text: draft, imageId });
     } catch (err) {
+      setText(draft);
       setError(errorMessage(err, "No se pudo publicar"));
     } finally {
       setBusy(false);

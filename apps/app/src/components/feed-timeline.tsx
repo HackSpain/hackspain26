@@ -1,8 +1,7 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
-import { GitBranch, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useQuery } from "convex/react";
+import { GitBranch } from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import { Avatar } from "@/components/avatar";
@@ -11,7 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-export type FeedPost = FunctionReturnType<typeof api.feed.list>[number];
+export type FeedPost = FunctionReturnType<typeof api.feed.list>[number] & {
+  /** Set on optimistic rows inserted by the composer before the server confirms. */
+  pending?: boolean;
+};
 
 function timeAgo(at: number, now = Date.now()): string {
   const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
@@ -68,68 +70,48 @@ function PostContext({ post }: { post: FeedPost }) {
 }
 
 function PostCard({ post }: { post: FeedPost }) {
-  const remove = useMutation(api.feed.remove);
-  const [busy, setBusy] = useState(false);
   const isGithub = post.kind === "github";
   const who = isGithub
     ? (post.teamName ?? post.github?.repo ?? "GitHub")
     : (post.author?.name ?? post.author?.email ?? "Alguien");
 
   return (
-    <Card>
-      <CardContent className="space-y-3 pt-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            {isGithub ? (
-              <span
-                className="flex size-10 shrink-0 items-center justify-center border-[3px] border-hs-ink bg-hs-gold"
-                aria-hidden
-              >
-                <GitBranch className="size-5" />
-              </span>
-            ) : (
-              <Avatar
-                name={post.author?.name}
-                src={post.author?.avatarUrl}
-                className="size-10 text-sm"
-              />
-            )}
-            <div className="min-w-0 space-y-1">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                <span className="font-semibold break-words">{who}</span>
-                {isGithub ? (
-                  <Badge variant="gold" className="gap-1">
-                    <GitBranch className="size-3" aria-hidden /> GitHub
-                  </Badge>
-                ) : post.author?.userType ? (
-                  <Badge>{post.author.userType}</Badge>
-                ) : null}
-                {isGithub && post.github?.actor ? (
-                  <span className="text-hs-brown">· {post.github.actor}</span>
-                ) : null}
-                <span className="text-hs-brown">· {timeAgo(post.createdAt)}</span>
-              </div>
-              <PostContext post={post} />
-            </div>
-          </div>
-          {post.mine ? (
-            <button
-              type="button"
-              aria-label="Borrar publicación"
-              className="inline-flex size-11 shrink-0 items-center justify-center text-hs-brown hover:text-hs-red disabled:opacity-50"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await remove({ postId: post._id });
-                } finally {
-                  setBusy(false);
-                }
-              }}
+    <Card className={cn("gap-0", post.pending && "opacity-60")}>
+      <CardContent className="space-y-3">
+        <div className="flex min-w-0 items-start gap-3">
+          {isGithub ? (
+            <span
+              className="flex size-10 shrink-0 items-center justify-center border-[3px] border-hs-ink bg-hs-gold"
+              aria-hidden
             >
-              <Trash2 className="size-4" aria-hidden />
-            </button>
-          ) : null}
+              <GitBranch className="size-5" />
+            </span>
+          ) : (
+            <Avatar
+              name={post.author?.name}
+              src={post.author?.avatarUrl}
+              className="size-10 text-sm"
+            />
+          )}
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <span className="font-semibold break-words">{who}</span>
+              {isGithub ? (
+                <Badge variant="gold" className="gap-1">
+                  <GitBranch className="size-3" aria-hidden /> GitHub
+                </Badge>
+              ) : post.author?.userType ? (
+                <Badge>{post.author.userType}</Badge>
+              ) : null}
+              {isGithub && post.github?.actor ? (
+                <span className="text-hs-brown">· {post.github.actor}</span>
+              ) : null}
+              <span className="text-hs-brown">
+                · {post.pending ? "publicando…" : timeAgo(post.createdAt)}
+              </span>
+            </div>
+            <PostContext post={post} />
+          </div>
         </div>
         {post.text ? (
           <p className="text-pretty whitespace-pre-wrap break-words text-sm leading-relaxed">
