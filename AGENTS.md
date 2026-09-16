@@ -2,7 +2,7 @@
 
 Marketing site for HackSpain 2026 (Madrid) at https://hackspain.com, plus the participant/admin dashboard and the `hackspain` CLI.
 
-Setup, env vars, and Convex login live in the [README](README.md). pnpm workspaces. Node ≥ 22.12. The CLI still compiles and tests with Bun.
+Setup, env vars, and Convex login live in the [README](README.md). pnpm workspaces. Node ≥ 22.13. The CLI still compiles and tests with Bun.
 
 ```text
 apps/web    # Astro 6 landing (Vercel, React islands, Tailwind v4, Neon/Drizzle)
