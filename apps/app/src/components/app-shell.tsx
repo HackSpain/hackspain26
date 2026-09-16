@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
-import { CircleUser } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/app-header";
+import { Avatar } from "@/components/avatar";
 import { api } from "@convex/_generated/api";
 import { GithubLinkBanner, GithubLinkResult } from "@/components/github-link-banner";
 import { Button } from "@/components/ui/button";
@@ -18,10 +19,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { contentWidth } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "CRM" },
+  { href: "/admin/types", label: "Tipos" },
   { href: "/admin/perks", label: "Perks" },
   { href: "/admin/applications", label: "Solicitudes" },
   { href: "/admin/tracks", label: "Retos" },
@@ -40,15 +43,16 @@ function adminNavActive(pathname: string, href: string) {
 function AccountMenu({
   pathname,
   name,
-  isJudge,
+  avatarUrl,
+  userType,
 }: {
   pathname: string;
   name?: string;
-  isJudge: boolean;
+  avatarUrl?: string;
+  userType?: string;
 }) {
   const { signOut } = useAuthActions();
   const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
-  const judgingActive = pathname === "/judging" || pathname.startsWith("/judging/");
 
   return (
     <DropdownMenu>
@@ -57,16 +61,27 @@ function AccountMenu({
           type="button"
           variant="outline"
           size="icon"
-          className="data-open:bg-hs-sand"
+          className="overflow-hidden p-0 data-open:bg-hs-sand"
           aria-label="Cuenta"
         >
-          <CircleUser />
+          <Avatar
+            name={name}
+            src={avatarUrl}
+            className="size-full border-0 bg-transparent text-sm"
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {name ? (
           <>
-            <DropdownMenuLabel className="truncate font-semibold">{name}</DropdownMenuLabel>
+            <DropdownMenuLabel className="truncate font-semibold">
+              {name}
+              {userType ? (
+                <span className="block text-xs font-normal text-hs-brown">
+                  {userType}
+                </span>
+              ) : null}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
         ) : null}
@@ -81,19 +96,6 @@ function AccountMenu({
             Perfil
           </Link>
         </DropdownMenuItem>
-        {isJudge ? (
-          <DropdownMenuItem asChild>
-            <Link
-              href="/judging"
-              className={cn(
-                "font-bungee uppercase",
-                judgingActive && "bg-hs-gold text-hs-ink",
-              )}
-            >
-              Juzgar
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
         <DropdownMenuItem
           className="font-bungee uppercase text-hs-red focus:text-hs-red"
           onSelect={() => void signOut()}
@@ -105,10 +107,22 @@ function AccountMenu({
   );
 }
 
+/** Every page except the home gets a way back to the tiles. */
+function BackToHome() {
+  return (
+    <Link
+      href="/"
+      className="inline-flex min-h-11 items-center gap-2 font-bungee text-xs uppercase text-hs-brown underline-offset-4 outline-none hover:text-hs-ink hover:underline focus-visible:text-hs-ink focus-visible:underline motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
+    >
+      <ArrowLeft className="size-4" aria-hidden /> Volver al inicio
+    </Link>
+  );
+}
+
 function AdminStrip({ pathname }: { pathname: string }) {
   return (
     <nav aria-label="Admin" className="border-b-[3px] border-hs-ink bg-hs-paper">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4">
+      <div className={cn(contentWidth(pathname), "flex flex-wrap items-center gap-x-4 gap-y-1")}>
         {ADMIN_NAV.map((item) => {
           const active = adminNavActive(pathname, item.href);
           return (
@@ -151,7 +165,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = me?.role === "admin";
-  const isJudge = me?.role === "judge" || me?.role === "admin";
   const displayName = me?.name ?? me?.email;
   const askGithub =
     me !== undefined &&
@@ -160,15 +173,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     !pathname.startsWith("/admin") &&
     (isAdmin || (me.accepted && me.onboardingComplete));
 
-  const isHome = pathname === "/";
-
   return (
-    <div
-      className={cn(
-        "min-h-screen bg-hs-paper",
-        isHome && "flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden",
-      )}
-    >
+    <div className="min-h-screen bg-hs-paper">
       <AppHeader
         pathname={pathname}
         accountMenu={
@@ -178,11 +184,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link href="/admin" aria-current={pathname === "/admin" ? "page" : undefined}>Admin panel</Link>
               </Button>
             )}
-          <AccountMenu
-            pathname={pathname}
-            name={displayName ?? undefined}
-            isJudge={isJudge}
-          />
+            <AccountMenu
+              pathname={pathname}
+              name={displayName ?? undefined}
+              avatarUrl={me?.avatarUrl}
+              userType={me?.userType?.label}
+            />
           </div>
         }
       />
@@ -190,21 +197,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AdminStrip pathname={pathname} />
       ) : null}
       {askGithub ? <GithubLinkBanner /> : null}
-      <main
-        className={cn(
-          "mx-auto",
-          isHome
-            ? "flex w-full max-w-6xl flex-1 flex-col px-4 py-4 sm:py-5 lg:min-h-0"
-            : pathname === "/admin/tv"
-              ? "w-full max-w-[1800px] px-4 py-6 sm:px-6 sm:py-8"
-            : pathname === "/participantes"
-              ? "w-full py-6 sm:py-8"
-              : "max-w-6xl px-4 py-6 sm:py-8",
-        )}
-      >
+      <main className={cn(contentWidth(pathname), "py-6 sm:py-8")}>
         <Suspense fallback={null}>
           <GithubLinkResult />
         </Suspense>
+        {pathname === "/" ? null : (
+          <div className="hs-enter mb-4">
+            <BackToHome />
+          </div>
+        )}
         {children}
       </main>
     </div>

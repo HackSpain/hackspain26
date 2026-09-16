@@ -1,9 +1,15 @@
 import { v } from "convex/values";
-import { getSignupForUser } from "./lib/auth";
-import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
+import { getSignupForUser, isOnboarded } from "./lib/auth";
+import {
+  authedQuery,
+  onboardedMutation,
+  onboardedQuery,
+} from "./lib/customFunctions";
 import { fail } from "./lib/errors";
-import { membershipForUser } from "./lib/team";
-import type { Doc } from "./_generated/dataModel";
+import { imagePathFor } from "./lib/files";
+import { membershipForUser, teamLogoUrlFor } from "./lib/team";
+import { avatarUrlFor } from "./users";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 
 export const MAX_TEXT = 500;
@@ -17,6 +23,10 @@ export const postReturn = v.object({
       _id: v.id("users"),
       name: v.optional(v.string()),
       email: v.optional(v.string()),
+      /** /api/files/<id> for an uploaded picture, else the GitHub avatar. */
+      avatarUrl: v.optional(v.string()),
+      /** CRM user type label (Mentor, Jurado…); absent for plain hackers. */
+      userType: v.optional(v.string()),
     })
   ),
   createdAt: v.number(),
@@ -32,15 +42,57 @@ export const postReturn = v.object({
   imagePath: v.optional(v.string()),
   kind: v.union(v.literal("post"), v.literal("github")),
   mine: v.boolean(),
+  /** The team's project, when it has one: name plus the challenges it entered. */
+  project: v.optional(
+    v.object({
+      challenges: v.array(v.string()),
+      name: v.string(),
+      status: v.union(v.literal("draft"), v.literal("submitted")),
+    })
+  ),
+  /** /api/files/<id> when the team has a logo. */
+  teamLogoUrl: v.optional(v.string()),
   teamName: v.optional(v.string()),
   text: v.string(),
 });
 
-/** Images are served through the dashboard so links carry our domain, not Convex's. */
-export function imagePathFor(
-  imageId: Doc<"posts">["imageId"] & string
-): string {
-  return `/api/files/${imageId}`;
+async function projectForTeam(
+  ctx: QueryCtx | MutationCtx,
+  teamId: Id<"teams">
+) {
+  const submission = await ctx.db
+    .query("submissions")
+    .withIndex("by_team", (q) => q.eq("teamId", teamId))
+    .first();
+  if (!submission) {
+    return;
+  }
+  const challenges = [];
+  for (const trackId of submission.challengeIds) {
+    const track = await ctx.db.get(trackId);
+    if (track) {
+      challenges.push(track.label);
+    }
+  }
+  return { challenges, name: submission.name, status: submission.status };
+}
+
+/**
+ * Posts remember the team at posting time; when there was none (or the team
+ * was dissolved) fall back to the author's current membership so the feed
+ * still says who they build with.
+ */
+async function teamForPost(
+  ctx: QueryCtx | MutationCtx,
+  post: Doc<"posts">,
+  author: Doc<"users"> | null
+): Promise<Doc<"teams"> | null> {
+  const stored = post.teamId ? await ctx.db.get(post.teamId) : null;
+  if (stored || !author) {
+    return stored;
+  }
+  const membership = await membershipForUser(ctx, author._id);
+  return membership ? await ctx.db.get(membership.teamId) : null;
 }
 
 async function hydrate(
@@ -50,7 +102,8 @@ async function hydrate(
 ) {
   const author = post.authorId ? await ctx.db.get(post.authorId) : null;
   const signup = author ? await getSignupForUser(ctx, author) : null;
-  const team = post.teamId ? await ctx.db.get(post.teamId) : null;
+  const type = author?.userTypeId ? await ctx.db.get(author.userTypeId) : null;
+  const team = await teamForPost(ctx, post, author);
   return {
     _id: post._id,
     author: author
@@ -58,6 +111,8 @@ async function hydrate(
           _id: author._id,
           name: author.name ?? signup?.fullName,
           email: author.email,
+          avatarUrl: avatarUrlFor(author),
+          userType: type?.label,
         }
       : undefined,
     createdAt: post.createdAt,
@@ -65,6 +120,8 @@ async function hydrate(
     imagePath: post.imageId ? imagePathFor(post.imageId) : undefined,
     kind: post.kind,
     mine: post.authorId === viewerId,
+    project: team ? await projectForTeam(ctx, team._id) : undefined,
+    teamLogoUrl: teamLogoUrlFor(team),
     teamName: team?.name,
     text: post.text,
   };
@@ -135,17 +192,35 @@ export const post = onboardedMutation({
 });
 
 /**
- * Storage URL behind /api/files/<id>. Only images attached to a post resolve,
- * and only for onboarded participants, like the feed itself.
+ * Storage URL behind /api/files/<id>. Only images attached to a post, set as
+ * someone's profile picture or used as a team logo resolve, and only for
+ * signed-in users.
  */
-export const imageUrl = onboardedQuery({
+export const imageUrl = authedQuery({
   args: { imageId: v.id("_storage") },
   handler: async (ctx, args) => {
     const storedPost = await ctx.db
       .query("posts")
       .withIndex("by_image", (q) => q.eq("imageId", args.imageId))
       .first();
-    if (!storedPost) {
+    if (storedPost) {
+      // Feed images stay behind the participant gate, like the feed itself.
+      if (!(await isOnboarded(ctx, ctx.user))) {
+        return null;
+      }
+      return await ctx.storage.getUrl(args.imageId);
+    }
+    const avatarOwner = await ctx.db
+      .query("users")
+      .withIndex("by_avatar", (q) => q.eq("avatarId", args.imageId))
+      .first();
+    const logoTeam = avatarOwner
+      ? null
+      : await ctx.db
+          .query("teams")
+          .withIndex("by_logo", (q) => q.eq("logoId", args.imageId))
+          .first();
+    if (!avatarOwner && !logoTeam) {
       return null;
     }
     return await ctx.storage.getUrl(args.imageId);

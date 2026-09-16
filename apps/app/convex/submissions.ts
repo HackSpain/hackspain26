@@ -13,7 +13,7 @@ import {
 import { submissionStatusValidator } from "./lib/validators";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import { submissionsAreOpen } from "./tracks";
-import { findOwnedSubmission, membershipForUser } from "./lib/team";
+import { findOwnedSubmission, membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { scheduleStackScan } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -21,6 +21,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 const challengeSummary = v.object({
   _id: v.id("tracks"),
   label: v.string(),
+  logoUrl: v.optional(v.string()),
   slug: v.string(),
 });
 
@@ -43,6 +44,7 @@ const submissionReturn = v.object({
   submittedAt: v.optional(v.number()),
   submittedBy: v.id("users"),
   teamId: v.optional(v.id("teams")),
+  teamLogoUrl: v.optional(v.string()),
   teamName: v.optional(v.string()),
   techStack: v.array(v.string()),
   updatedAt: v.number(),
@@ -65,6 +67,7 @@ async function hydrateSubmission(
       challenges.push({
         _id: track._id,
         label: track.label,
+        logoUrl: track.logoUrl,
         slug: track.slug,
       });
     }
@@ -93,6 +96,7 @@ async function hydrateSubmission(
     submittedAt: submission.submittedAt,
     submittedBy: submission.submittedBy,
     teamId: submission.teamId,
+    teamLogoUrl: teamLogoUrlFor(team),
     teamName: team?.name,
     techStack: submission.techStack ?? [],
     updatedAt: submission.updatedAt,
@@ -285,6 +289,7 @@ const publicSubmissionReturn = v.object({
   status: submissionStatusValidator,
   submittedAt: v.optional(v.number()),
   teamId: v.optional(v.id("teams")),
+  teamLogoUrl: v.optional(v.string()),
   teamName: v.optional(v.string()),
   updatedAt: v.number(),
   urls: urlsValidator,
@@ -303,6 +308,7 @@ export const listPublic = onboardedQuery({
       rows.push({
         _id: hydrated._id,
         teamId: hydrated.teamId,
+        teamLogoUrl: hydrated.teamLogoUrl,
         teamName: hydrated.teamName,
         name: hydrated.name,
         description:

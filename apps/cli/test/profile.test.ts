@@ -7,6 +7,8 @@ const base: Me = {
   _id: "u1" as Me["_id"],
   accepted: true,
   attendanceStatus: "attending",
+  avatarUrl: undefined,
+  canJudge: false,
   dietaryDetails: undefined,
   dietaryRestrictions: "Vegetarian",
   email: "ana@example.com",
@@ -21,8 +23,10 @@ const base: Me = {
   phone: "+34600111222",
   phoneConfirmed: true,
   role: "user",
+  sections: ["teams", "tracks", "perks", "participantes", "cli"],
   signupId: undefined,
   travelOrigin: "Valencia",
+  userType: undefined,
 };
 
 function row(me: Me, label: string): string {

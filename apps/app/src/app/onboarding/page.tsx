@@ -41,7 +41,6 @@ export default function OnboardingPage() {
     body: string;
     code?: string;
   } | null>(null);
-  const [travelDraft, setTravelDraft] = useState<string | undefined>();
   const [consentDraft, setConsentDraft] = useState<boolean | undefined>();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [consentWarned, setConsentWarned] = useState(false);
@@ -50,7 +49,6 @@ export default function OnboardingPage() {
   const [pending, setPending] = useState(false);
 
   const phone = phoneDraft ?? status?.phone ?? "";
-  const travelOrigin = travelDraft ?? status?.travelOrigin ?? "";
   const consent = consentDraft ?? status?.notificationConsent ?? false;
 
   useEffect(() => {
@@ -128,7 +126,6 @@ export default function OnboardingPage() {
       await confirmDetails({
         consent,
         termsAccepted,
-        travelOrigin,
       });
       router.replace("/");
     } catch (caughtError) {
@@ -148,8 +145,8 @@ export default function OnboardingPage() {
             Confirma tus datos
           </CardTitle>
           <CardDescription>
-            Teléfono y desde dónde viajas. La dieta ya la tenemos de la
-            inscripción; puedes cambiarla en tu perfil.
+            Un teléfono de contacto para el evento y las condiciones de
+            participación. Nada más.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -215,15 +212,6 @@ export default function OnboardingPage() {
               </Field>
             )}
           </div>
-
-          <Field label="¿Desde dónde viajas?" htmlFor="travel-origin">
-            <Input
-              id="travel-origin"
-              placeholder="Ciudad o región"
-              value={travelOrigin}
-              onChange={(event) => setTravelDraft(event.target.value)}
-            />
-          </Field>
 
           <div className="space-y-3">
             <label className="flex items-start gap-3 text-sm">

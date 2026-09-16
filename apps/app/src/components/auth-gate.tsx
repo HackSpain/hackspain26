@@ -8,6 +8,7 @@ import type { Role } from "@convex/lib/validators";
 import { api } from "@convex/_generated/api";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
+import { sectionForPath } from "@/lib/sections";
 
 function destination(me: {
   role: Role;
@@ -131,7 +132,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (me.role === "judge") {
+    // Hidden sections (CRM user type) bounce home; a judge without a signup
+    // then continues to /judging through the ladder below.
+    const section = sectionForPath(pathname);
+    if (section && !me.sections.includes(section)) {
+      router.replace("/");
+      return;
+    }
+
+    // Judges by role or by user type may judge without a signup.
+    if (me.canJudge) {
       if (pathname.startsWith("/admin")) {
         router.replace("/");
         return;
@@ -210,12 +220,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith("/admin")) {
       return null;
     }
-    const judgingAllowed =
-      me.role === "judge" && pathname.startsWith("/judging");
+    const section = sectionForPath(pathname);
+    if (section && !me.sections.includes(section)) {
+      return null;
+    }
+    const judgingAllowed = me.canJudge && pathname.startsWith("/judging");
     if (!judgingAllowed) {
       const next = destination(me);
       if (
-        me.role === "judge" &&
+        me.canJudge &&
         next &&
         (next === "/pending" ||
           next === "/unregistered" ||

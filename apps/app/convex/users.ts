@@ -11,6 +11,8 @@ import { defaultedAttendance } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";
 import { fail } from "./lib/errors";
 import { parseEventDetails } from "./lib/eventDetails";
+import { imagePathFor } from "./lib/files";
+import { effectiveSections, userTypeFor } from "./lib/userTypes";
 import { normalizeGithub, normalizeTwitter } from "./lib/normalize";
 import { urlOf, urlsFromRecord } from "./lib/urls";
 import { membershipForUser } from "./lib/team";
@@ -89,6 +91,15 @@ export async function resolvePendingInvites(
   }
 }
 
+export function avatarUrlFor(
+  user: Pick<Doc<"users">, "avatarId" | "image">
+): string | undefined {
+  if (user.avatarId) {
+    return imagePathFor(user.avatarId);
+  }
+  return user.image;
+}
+
 export const me = query({
   args: {},
   handler: async (ctx) => {
@@ -101,11 +112,17 @@ export const me = query({
       return null;
     }
     const signup = await getSignupForUser(ctx, user);
+    const type = await userTypeFor(ctx, user);
+    const sections = effectiveSections(user, type);
     return {
       _id: user._id,
       email: user.email,
       name: user.name ?? signup?.fullName,
       role: user.role,
+      avatarUrl: avatarUrlFor(user),
+      canJudge: sections.includes("judging"),
+      sections,
+      userType: type ? { label: type.label, slug: type.slug } : undefined,
       phone: user.phone,
       phoneConfirmed: user.phoneConfirmed,
       notificationConsent: user.notificationConsent,
@@ -199,6 +216,52 @@ export const setName = authedMutation({
     return name;
   },
   returns: v.string(),
+});
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+
+/** Upload target for a profile picture. POST the file there, then call setAvatar. */
+export const generateAvatarUploadUrl = authedMutation({
+  args: {},
+  handler: async (ctx) => await ctx.storage.generateUploadUrl(),
+  returns: v.string(),
+});
+
+export const setAvatar = authedMutation({
+  args: { imageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const meta = await ctx.db.system.get(args.imageId);
+    if (!meta) {
+      fail("NOT_FOUND", "La imagen no se ha subido");
+    }
+    if (!meta.contentType?.startsWith("image/")) {
+      fail("VALIDATION", "Solo se admiten imágenes");
+    }
+    if (meta.size > MAX_AVATAR_BYTES) {
+      fail("VALIDATION", "La foto no puede superar 2 MB");
+    }
+    const previous = ctx.user.avatarId;
+    await ctx.db.patch(ctx.user._id, { avatarId: args.imageId });
+    if (previous && previous !== args.imageId) {
+      await ctx.storage.delete(previous);
+    }
+    return imagePathFor(args.imageId);
+  },
+  returns: v.string(),
+});
+
+export const removeAvatar = authedMutation({
+  args: {},
+  handler: async (ctx) => {
+    const previous = ctx.user.avatarId;
+    if (!previous) {
+      return null;
+    }
+    await ctx.db.patch(ctx.user._id, { avatarId: undefined });
+    await ctx.storage.delete(previous);
+    return null;
+  },
+  returns: v.null(),
 });
 
 export const setAttendance = onboardedMutation({

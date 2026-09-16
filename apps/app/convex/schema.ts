@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
+import { sectionsValidator } from "./lib/userTypes";
 import {
   milestoneKindValidator,
   perkAnswerValidator,
@@ -227,6 +228,8 @@ export default defineSchema({
     joinCode: v.optional(v.string()),
     repoUrl: v.optional(v.string()),
     repoUrls: v.optional(v.array(v.string())),
+    /** Team logo uploaded by the owner, served as /api/files/<id>. */
+    logoId: v.optional(v.id("_storage")),
     techStack: v.optional(v.array(v.string())),
     techStackAt: v.optional(v.number()),
     techStackSource: v.optional(v.literal("repo")),
@@ -237,22 +240,47 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
-    .index("by_join_code", ["joinCode"]),
+    .index("by_join_code", ["joinCode"])
+    .index("by_logo", ["logoId"]),
 
   tracks: defineTable({
     slug: v.string(),
     label: v.string(),
     body: v.string(),
     note: v.string(),
+    /** Sponsor logo: a path under /public (e.g. /tracks/maisa.png) or an absolute URL. */
+    logoUrl: v.optional(v.string()),
+    /** Sponsor website. */
+    website: v.optional(v.string()),
     sortOrder: v.number(),
     active: v.boolean(),
   })
     .index("by_slug", ["slug"])
     .index("by_active_and_sort", ["active", "sortOrder"]),
 
+  /** Admin-defined participant categories; `sections` drives the tabs. See convex/lib/userTypes.ts. */
+  userTypes: defineTable({
+    slug: v.string(),
+    label: v.string(),
+    description: v.optional(v.string()),
+    sections: sectionsValidator,
+    isDefault: v.boolean(),
+    sortOrder: v.number(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_default", ["isDefault"])
+    .index("by_sort", ["sortOrder"]),
+
   users: defineTable({
     name: v.optional(v.string()),
+    /** External avatar URL (GitHub). `avatarId` wins when set. */
     image: v.optional(v.string()),
+    /** Uploaded profile picture, served as /api/files/<id>. */
+    avatarId: v.optional(v.id("_storage")),
+    userTypeId: v.optional(v.id("userTypes")),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
     phone: v.optional(v.string()),
@@ -286,7 +314,9 @@ export default defineSchema({
     .index("by_role", ["role"])
     .index("by_attendance", ["attendanceStatus"])
     .index("by_github_id", ["githubId"])
-    .index("by_github", ["githubUsername"]),
+    .index("by_github", ["githubUsername"])
+    .index("by_avatar", ["avatarId"])
+    .index("by_user_type", ["userTypeId"]),
 
   /** Pending `hackspain auth login` browser approvals. See convex/cliAuth.ts. */
   cliAuthRequests: defineTable({

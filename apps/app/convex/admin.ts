@@ -10,6 +10,7 @@ import {
 import { countsAsAttending } from "./lib/attendance";
 import { urlsFromRecord, urlsValidator } from "./lib/urls";
 import { findOwnedSubmission, membershipForUser } from "./lib/team";
+import { userTypeSummaryValidator } from "./lib/userTypes";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import type { UrlEntry } from "./lib/urls";
@@ -72,6 +73,8 @@ const participantSummary = v.object({
   teamName: v.optional(v.string()),
   travelOrigin: v.optional(v.string()),
   userId: v.optional(v.id("users")),
+  userTypeId: v.optional(v.id("userTypes")),
+  userTypeLabel: v.optional(v.string()),
   wantsAmbassador: v.optional(v.boolean()),
 });
 
@@ -87,11 +90,17 @@ export const listParticipants = adminQuery({
     search: v.optional(v.string()),
     page: v.optional(v.number()),
     pageSize: v.optional(v.number()),
+    /** Filter by assigned type; "none" keeps only users without one. */
+    userType: v.optional(v.union(v.id("userTypes"), v.literal("none"))),
   },
   handler: async (ctx, args) => {
     const signups = await ctx.db.query("signups").collect();
     const users = await ctx.db.query("users").collect();
     const teamMap = await teamsByUserId(ctx);
+    const types = await ctx.db.query("userTypes").collect();
+    const typeLabels = new Map(types.map((type) => [type._id, type.label]));
+    const typeLabelOf = (user: (typeof users)[number] | undefined) =>
+      user?.userTypeId ? typeLabels.get(user.userTypeId) : undefined;
     const usersBySignup = new Map(
       users
         .filter((user) => user.signupId !== undefined)
@@ -132,6 +141,8 @@ export const listParticipants = adminQuery({
         teamName: team?.name,
         wantsAmbassador: signup.wantsAmbassador,
         createdAt: signup.createdAt,
+        userTypeId: user?.userTypeId,
+        userTypeLabel: typeLabelOf(user),
       });
     }
 
@@ -155,6 +166,8 @@ export const listParticipants = adminQuery({
         hasAccount: true,
         teamName: team?.name,
         createdAt: user._creationTime,
+        userTypeId: user.userTypeId,
+        userTypeLabel: typeLabelOf(user),
       });
     }
 
@@ -179,6 +192,16 @@ export const listParticipants = adminQuery({
           return false;
         }
         if (args.role && row.role !== args.role) {
+          return false;
+        }
+        if (args.userType === "none" && row.userTypeId !== undefined) {
+          return false;
+        }
+        if (
+          args.userType &&
+          args.userType !== "none" &&
+          row.userTypeId !== args.userType
+        ) {
           return false;
         }
         if (
@@ -256,6 +279,9 @@ export const getParticipant = adminQuery({
     const team = user
       ? ((await teamForUser(ctx, user._id)) ?? undefined)
       : undefined;
+    const userType = user?.userTypeId
+      ? await ctx.db.get(user.userTypeId)
+      : null;
 
     const claims = [];
     let submission:
@@ -357,6 +383,17 @@ export const getParticipant = adminQuery({
             attendanceStatus: user.attendanceStatus,
             onboardingComplete: user.onboardingComplete,
             adminNotes: user.adminNotes,
+            userType: userType
+              ? {
+                  _id: userType._id,
+                  description: userType.description,
+                  isDefault: userType.isDefault,
+                  label: userType.label,
+                  sections: userType.sections,
+                  slug: userType.slug,
+                  sortOrder: userType.sortOrder,
+                }
+              : undefined,
           }
         : undefined,
       ambassador: ambassador
@@ -399,6 +436,7 @@ export const getParticipant = adminQuery({
           attendanceStatus: attendanceValidator,
           onboardingComplete: v.boolean(),
           adminNotes: v.optional(v.string()),
+          userType: v.optional(userTypeSummaryValidator),
         })
       ),
       ambassador: v.optional(
@@ -444,6 +482,9 @@ export const getParticipant = adminQuery({
 export const setRole = adminMutation({
   args: { role: roleValidator, userId: v.id("users") },
   handler: async (ctx, args) => {
+    if (args.role === "judge") {
+      throw new Error("Los jueces se definen con un tipo de usuario");
+    }
     if (args.userId === ctx.user._id && args.role !== "admin") {
       throw new Error("No puedes quitarte el rol de admin a ti mismo");
     }
@@ -452,6 +493,27 @@ export const setRole = adminMutation({
       throw new Error("Usuario no encontrado");
     }
     await ctx.db.patch(user._id, { role: args.role });
+    return null;
+  },
+  returns: v.null(),
+});
+
+export const setUserType = adminMutation({
+  args: { typeId: v.union(v.id("userTypes"), v.null()), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+    if (args.typeId) {
+      const type = await ctx.db.get(args.typeId);
+      if (!type) {
+        throw new Error("Tipo no encontrado");
+      }
+      await ctx.db.patch(user._id, { userTypeId: type._id });
+    } else {
+      await ctx.db.patch(user._id, { userTypeId: undefined });
+    }
     return null;
   },
   returns: v.null(),

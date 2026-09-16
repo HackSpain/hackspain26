@@ -14,6 +14,7 @@ import {
   Page,
   errorMessage,
 } from "@/components/page";
+import { TrackLogo, TrackTag } from "@/components/track-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -168,13 +169,17 @@ function TrackEditor({
   const [label, setLabel] = useState(track.label);
   const [note, setNote] = useState(track.note);
   const [body, setBody] = useState(track.body);
+  const [logoUrl, setLogoUrl] = useState(track.logoUrl ?? "");
+  const [website, setWebsite] = useState(track.website ?? "");
   const [pending, setPending] = useState<"text" | "visibility" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const dirty =
     label.trim() !== track.label ||
     note.trim() !== track.note ||
-    body.trim() !== track.body;
+    body.trim() !== track.body ||
+    logoUrl.trim() !== (track.logoUrl ?? "") ||
+    website.trim() !== (track.website ?? "");
 
   const run = async (kind: "text" | "visibility", work: () => Promise<null>) => {
     setPending(kind);
@@ -191,8 +196,8 @@ function TrackEditor({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          {track.label}
+        <CardTitle className="flex flex-wrap items-center gap-3">
+          <TrackLogo track={{ label: track.label, logoUrl: logoUrl.trim() || undefined }} className="h-7" />
           <Badge>{track.active ? "Activo" : "Oculto"}</Badge>
           <Badge variant="gold" className="tabular-nums">
             {projectCount(submissions.length)}
@@ -223,6 +228,28 @@ function TrackEditor({
             onChange={(event) => setBody(event.target.value)}
           />
         </Field>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field
+            label="Logo del sponsor"
+            htmlFor="track-logo"
+            hint="Ruta bajo /public (por ejemplo /tracks/maisa.png) o URL https://."
+          >
+            <Input
+              id="track-logo"
+              value={logoUrl}
+              placeholder="/tracks/maisa.png"
+              onChange={(event) => setLogoUrl(event.target.value)}
+            />
+          </Field>
+          <Field label="Web del sponsor" htmlFor="track-website">
+            <Input
+              id="track-website"
+              value={website}
+              placeholder="https://"
+              onChange={(event) => setWebsite(event.target.value)}
+            />
+          </Field>
+        </div>
         <FormError message={error} />
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button
@@ -231,7 +258,7 @@ function TrackEditor({
             disabled={!dirty || pending !== null}
             onClick={() =>
               void run("text", () =>
-                update({ trackId: track._id, label, body, note }),
+                update({ trackId: track._id, label, body, note, logoUrl, website }),
               )
             }
           >
@@ -290,12 +317,7 @@ function ProjectRow({ row }: { row: Submission }) {
             {row.teamName ?? "Individual"}
           </span>
           {row.challenges.map((challenge) => (
-            <span
-              key={challenge._id}
-              className="border border-hs-ink/30 px-1.5 py-px text-[11px] uppercase tracking-wide"
-            >
-              {challenge.label}
-            </span>
+            <TrackTag key={challenge._id} track={challenge} />
           ))}
         </p>
         {row.perks.length > 0 ? (
