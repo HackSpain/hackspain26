@@ -66,6 +66,20 @@ describe("explainError", () => {
     ).toBe(EXIT.USAGE);
   });
 
+  test("EVENT_CLOSED is ineligible and gets English copy plus the profile hint", () => {
+    const e = explainError(
+      new RemoteError({
+        code: "EVENT_CLOSED",
+        message:
+          "La hackathon terminó el sábado. Solo puedes editar tu perfil.",
+      })
+    );
+    expect(e.code).toBe("EVENT_CLOSED");
+    expect(e.exitCode).toBe(EXIT.INELIGIBLE);
+    expect(e.message).toBe("The hackathon is not running right now.");
+    expect(e.hint).toContain("hackspain profile");
+  });
+
   test("strips the Convex wrapper from unknown server errors", () => {
     const e = explainError(convexWrapped("El dueño no puede salir del equipo"));
     expect(e).toMatchObject({

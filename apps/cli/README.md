@@ -124,7 +124,7 @@ One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.
 
 `hackspain feed` and `hackspain post` share one feed with the dashboard's `/feed` page: short
 messages, an optional image, and GitHub activity. Images are uploaded through `/api/cli/upload`
-and served from `https://app.hackspain.com/api/files/<id>` (needs a dashboard login; `hackspain
+and served from `https://hackspain.app/api/files/<id>` (needs a dashboard login; `hackspain
 open feed` gets you one). In terminals that speak the Kitty graphics protocol (kitty, Ghostty,
 WezTerm, Konsole 22.04+) or the iTerm2 inline-image protocol (iTerm2, Warp, VS Code) the picture
 is drawn inline: the CLI asks the server for a PNG thumbnail (`?w=576`) and hands the bytes to
@@ -157,7 +157,7 @@ HACKSPAIN_SMOKE_EMAIL=… scripts/smoke.sh           # end-to-end through the lo
 
 - A dev Convex deployment with `ALLOW_EMAIL_OTP_STUB=true` accepts `00000000` as the code.
 - Server resolution: `--url` → `HACKSPAIN_APP_URL` → `~/.config/hackspain/config.json`
-  (`appUrl`) → `http://localhost:3000` from source, `https://app.hackspain.com` in release
+  (`appUrl`) → `http://localhost:3000` from source, `https://hackspain.app` in release
   binaries (`HACKSPAIN_APP_URL_DEFAULT` at build time overrides).
 - Credentials live in `~/.config/hackspain/credentials.json` (mode 600). Access tokens last
   1 h and are refreshed through `/api/cli/auth/refresh` under a lock file, because Convex Auth
@@ -172,7 +172,7 @@ HACKSPAIN_SMOKE_EMAIL=… scripts/smoke.sh           # end-to-end through the lo
 Tag `master` with `cli-vX.Y.Z` (matching `apps/cli/package.json`) and push the tag. The
 `cli-release` workflow cross-compiles the five targets on Linux, writes `SHA256SUMS`, and attaches
 everything to a GitHub release; `install.sh` and `hackspain update` read that release. Release
-binaries target `https://app.hackspain.com`; the optional repository variable
+binaries target `https://hackspain.app`; the optional repository variable
 `HACKSPAIN_APP_URL` overrides that at build time. Nothing else to configure. `cli-ci` runs
 typecheck, lint, tests, and a host compile on every PR that touches `apps/cli` or the Convex
 functions.
@@ -185,6 +185,6 @@ functions.
 | 1 | Server or generic error |
 | 2 | Usage error (bad flags, missing input in non-interactive mode) |
 | 3 | Not logged in or session expired |
-| 4 | Not eligible yet (no signup, not accepted, onboarding incomplete) |
+| 4 | Not eligible (no signup, not accepted, onboarding incomplete, or the hackathon is not running: `EVENT_CLOSED`) |
 | 5 | Could not reach the backend |
 | 130 | Interrupted |

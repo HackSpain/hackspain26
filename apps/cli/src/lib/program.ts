@@ -40,7 +40,7 @@ export function buildProgram(): Command {
     .option("--json", "machine-readable output on stdout, no prompts")
     .option(
       "--url <url>",
-      "dashboard URL (default: HACKSPAIN_APP_URL, config, then app.hackspain.com)"
+      "dashboard URL (default: HACKSPAIN_APP_URL, config, then hackspain.app)"
     )
     .showHelpAfterError("(run with --help for usage)")
     .showSuggestionAfterError();

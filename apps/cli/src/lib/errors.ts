@@ -143,6 +143,7 @@ const GATE_MESSAGES: {
 const CODED_EXIT: Record<string, ExitCode> = {
   ALREADY_IN_TEAM: EXIT.ERROR,
   BAD_CODE: EXIT.ERROR,
+  EVENT_CLOSED: EXIT.INELIGIBLE,
   NOT_FOUND: EXIT.ERROR,
   NOT_MEMBER: EXIT.ERROR,
   NOT_OWNER: EXIT.ERROR,
@@ -154,8 +155,18 @@ const CODED_EXIT: Record<string, ExitCode> = {
 const CODED_HINT: Record<string, string> = {
   ALREADY_IN_TEAM: "Leave it first with `hackspain team leave`.",
   BAD_CODE: "Ask the team owner for the code shown by `hackspain team show`.",
+  EVENT_CLOSED:
+    "Only `hackspain profile` works outside the hackathon window; `hackspain auth status` shows the dates.",
   NO_TEAM:
     "Create one with `hackspain team create <name>` or join with `hackspain team join <code>`.",
+};
+
+/**
+ * The server's copy is Spanish (the web renders it verbatim); the CLI is
+ * English, so codes listed here replace the relayed message.
+ */
+const CODED_MESSAGE: Record<string, string> = {
+  EVENT_CLOSED: "The hackathon is not running right now.",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -206,7 +217,7 @@ export function explainError(err: unknown): Explained {
         code: data.code,
         exitCode: CODED_EXIT[data.code] ?? EXIT.ERROR,
         hint: CODED_HINT[data.code],
-        message,
+        message: CODED_MESSAGE[data.code] ?? message,
       };
     }
     return {

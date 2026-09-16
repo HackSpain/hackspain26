@@ -49,9 +49,9 @@ describe("feed formatting", () => {
   test("image paths become links on the dashboard domain", () => {
     const [withImage, without] = withImageUrls(
       [{ imagePath: "/api/files/abc" }, { imagePath: undefined }],
-      "https://app.hackspain.com/"
+      "https://hackspain.app/"
     );
-    expect(withImage?.imageUrl).toBe("https://app.hackspain.com/api/files/abc");
+    expect(withImage?.imageUrl).toBe("https://hackspain.app/api/files/abc");
     expect(without?.imageUrl).toBeUndefined();
   });
 

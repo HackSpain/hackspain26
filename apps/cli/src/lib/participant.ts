@@ -18,9 +18,19 @@ export type PerkEntry = FunctionReturnType<
 >[number];
 export type Milestone = FunctionReturnType<typeof api.milestones.mine>[number];
 
-/** Logged-in, accepted, onboarded (or admin). Fails fast otherwise. */
+/**
+ * Logged-in, accepted, onboarded (or admin), and inside the hackathon window.
+ * Fails fast otherwise; the server enforces the same gates.
+ */
 export async function openParticipant(ctx: CliContext): Promise<Participant> {
   const session = await openSession(ctx, { requireAuth: true });
   const me = await requireOnboarded(session);
+  return { me, session };
+}
+
+/** Same ladder minus the window: `hackspain profile` works while closed. */
+export async function openProfile(ctx: CliContext): Promise<Participant> {
+  const session = await openSession(ctx, { requireAuth: true });
+  const me = await requireOnboarded(session, { allowClosed: true });
   return { me, session };
 }

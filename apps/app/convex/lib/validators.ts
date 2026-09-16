@@ -1,5 +1,6 @@
 import type { Infer } from "convex/values";
 import { v } from "convex/values";
+import { eventWindowValidator } from "./eventWindow";
 import { urlsValidator } from "./urls";
 import { sectionsValidator } from "./userTypes";
 
@@ -130,6 +131,8 @@ export const meValidator = v.object({
   dietaryDetails: v.optional(v.string()),
   dietaryRestrictions: v.optional(v.string()),
   email: v.optional(v.string()),
+  /** Hackathon window as seen by this user; `open` is always true for admins. */
+  event: eventWindowValidator,
   githubCanReadRepos: v.boolean(),
   githubLinked: v.boolean(),
   githubUsername: v.optional(v.string()),

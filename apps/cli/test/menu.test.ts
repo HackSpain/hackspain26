@@ -11,6 +11,13 @@ const PENDING: MenuStatus = {
   email: "ana@example.com",
 };
 
+const CLOSED: MenuStatus = {
+  loggedIn: true,
+  gate: "closed",
+  gateMessage: "The hackathon ended on Sun 5 Oct, 18:00 (Madrid).",
+  email: "ana@example.com",
+};
+
 const READY_NO_TEAM: MenuStatus = {
   loggedIn: true,
   gate: "ready",
@@ -40,6 +47,7 @@ const READY_SUBMITTED: MenuStatus = {
 const ALL_STATUSES = [
   LOGGED_OUT,
   PENDING,
+  CLOSED,
   READY_NO_TEAM,
   READY_OWNER,
   READY_MEMBER,
@@ -96,6 +104,19 @@ describe("buildMainMenu", () => {
       "exit",
     ]);
     expect(itemOf(items, "open").argv).toEqual(["open"]);
+  });
+
+  test("outside the hackathon window: profile only, no team or project entries", () => {
+    const items = buildMainMenu(CLOSED);
+    expect(values(items)).toEqual(["profile", "open", "account", "exit"]);
+    expect(itemOf(items, "profile").preview).toEqual([["profile", "show"]]);
+    const argvs = allArgvs(items).map((argv) => argv[0]);
+    expect(argvs).not.toContain("team");
+    expect(argvs).not.toContain("submit");
+    expect(argvs).not.toContain("feed");
+    expect(argvs).not.toContain("watch");
+    expect(values(submenuOf(items, "account"))).toContain("auth-logout");
+    expect(statusLine(CLOSED)).toContain("The hackathon ended on");
   });
 
   test("ready without a team: join and create come first, exit last", () => {

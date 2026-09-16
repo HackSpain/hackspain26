@@ -32,3 +32,26 @@ export function sectionForPath(pathname: string): SectionKey | null {
   }
   return null;
 }
+
+/**
+ * Outside the hackathon window (convex/lib/eventWindow.ts) participants keep
+ * only the profile and the directory. Mirrors the server: everything else
+ * throws EVENT_CLOSED, so AuthGate bounces these paths home before they mount.
+ */
+const OPEN_WHEN_CLOSED = [
+  "/",
+  "/profile",
+  "/participantes",
+  "/tv",
+  "/cli-auth",
+  "/login",
+  "/onboarding",
+  "/pending",
+  "/unregistered",
+];
+
+export function isPathAllowedWhenClosed(pathname: string): boolean {
+  return OPEN_WHEN_CLOSED.some(
+    (href) => pathname === href || (href !== "/" && pathname.startsWith(`${href}/`))
+  );
+}

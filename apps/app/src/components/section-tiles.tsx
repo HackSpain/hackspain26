@@ -27,6 +27,9 @@ const SECTION_ICONS: Record<SectionKey, LucideIcon> = {
 
 type Tile = { href: string; label: string; hint: string; icon: LucideIcon; external?: boolean };
 
+/** Sections that stay open outside the hackathon window (src/lib/sections.ts). */
+const CLOSED_SECTIONS: ReadonlySet<SectionKey> = new Set(["participantes"]);
+
 /**
  * The launcher on the home page: one tile per section the user can open,
  * plus the profile and the venue screen. Replaces the old tab bar; every
@@ -34,13 +37,18 @@ type Tile = { href: string; label: string; hint: string; icon: LucideIcon; exter
  */
 export function SectionTiles({
   sections,
+  eventOpen = true,
   className,
 }: {
   sections?: readonly SectionKey[];
+  /** False outside the hackathon window: only the directory tile survives. */
+  eventOpen?: boolean;
   className?: string;
 }) {
+  const visible = (key: SectionKey) =>
+    sections?.includes(key) && (eventOpen || CLOSED_SECTIONS.has(key));
   const tiles: Tile[] = [
-    ...SECTION_ORDER.filter((key) => sections?.includes(key)).map((key) => ({
+    ...SECTION_ORDER.filter(visible).map((key) => ({
       ...SECTION_NAV[key],
       icon: SECTION_ICONS[key],
     })),

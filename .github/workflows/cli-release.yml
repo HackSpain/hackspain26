@@ -1,6 +1,6 @@
 name: cli-release
 # Tag `cli-vX.Y.Z` on master to publish binaries for every platform.
-# Binaries talk to https://app.hackspain.com; the optional repository
+# Binaries talk to https://hackspain.app; the optional repository
 # variable HACKSPAIN_APP_URL overrides that at build time.
 on:
   push:

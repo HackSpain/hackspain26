@@ -12,6 +12,7 @@ export type ErrorCode =
   | "NO_TEAM"
   | "ALREADY_IN_TEAM"
   | "BAD_CODE"
+  | "EVENT_CLOSED"
   | "VALIDATION";
 
 export type CodedError = { code: ErrorCode; message: string };

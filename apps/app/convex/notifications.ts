@@ -3,7 +3,7 @@ import { Resend as ResendAPI } from "resend";
 import { internalAction, internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { adminMutation, adminQuery, authedQuery } from "./lib/customFunctions";
+import { adminMutation, adminQuery, onboardedQuery } from "./lib/customFunctions";
 import { countsAsAttending } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -174,7 +174,7 @@ const FOR_ME_SCAN_LIMIT = 200;
  * Intentionally not gated on `notificationConsent`: that flag governs email,
  * and running the watcher is itself an opt-in to see organiser messages.
  */
-export const forMe = authedQuery({
+export const forMe = onboardedQuery({
   args: { since: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const since = args.since ?? 0;
