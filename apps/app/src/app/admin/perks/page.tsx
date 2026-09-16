@@ -5,17 +5,25 @@ import type { FunctionReturnType } from "convex/server";
 import { ArrowUpRightIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import {
   EmptyState,
   Field,
   FormError,
   LoadingText,
   Page,
+  RecordCard,
   errorMessage,
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -64,7 +72,7 @@ import {
   slugKey,
   toCsv,
 } from "@/lib/perks";
-import { claimStatusLabel, perkName, perkTypeLabel } from "@/lib/utils";
+import { claimStatusLabel, cn, perkName, perkTypeLabel } from "@/lib/utils";
 
 type AdminPerk = FunctionReturnType<typeof api.perks.adminList>[number];
 type PerkType = AdminPerk["type"];
@@ -183,6 +191,7 @@ export default function AdminPerksPage() {
   const create = useMutation(api.perks.adminCreate);
   const update = useMutation(api.perks.adminUpdate);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [extraCodes, setExtraCodes] = useState<Record<string, string>>({});
@@ -209,6 +218,7 @@ export default function AdminPerksPage() {
         codes: draft.type === "code" ? lines(draft.codes) : undefined,
       });
       setDraft(emptyDraft);
+      setCreateOpen(false);
     } catch (err: unknown) {
       setCreateError(errorMessage(err, "No se ha podido crear el perk"));
     } finally {
@@ -217,44 +227,42 @@ export default function AdminPerksPage() {
   }
 
   return (
-    <Page title="Admin de perks">
-      <Card>
-        <CardHeader>
-          <CardTitle>Crear perk</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <FormError message={createError} />
-          <PerkFields draft={draft} onChange={setDraft} mode="create" />
-          <Button
-            className="w-full sm:w-auto"
-            disabled={creating}
-            onClick={() => void submitCreate()}
-          >
-            {creating ? "Creando…" : "Crear perk"}
+    <Page
+      className="min-w-0 overflow-x-hidden"
+      title={
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <h1 className="min-w-0 font-bungee text-2xl leading-tight sm:text-3xl">
+            Admin de perks
+          </h1>
+          <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
+            <PlusIcon aria-hidden />
+            Crear perk
           </Button>
-        </CardContent>
-      </Card>
-
+        </div>
+      }
+    >
       {perks === undefined ? (
         <LoadingText />
       ) : perks.length === 0 ? (
         <EmptyState title="Aún no hay perks">
-          Crea el primero con el formulario de arriba.
+          Crea el primero con el botón de arriba.
         </EmptyState>
       ) : (
         <div className="grid gap-4">
           {perks.map((perk) => (
-            <Card key={perk._id}>
-              <CardHeader>
-                <CardTitle className="flex flex-wrap items-center gap-2 [&_[data-slot=badge]]:whitespace-nowrap">
-                  <span>{perkName(perk.company, perk.title)}</span>
+            <Card key={perk._id} className="min-w-0 overflow-hidden">
+              <CardHeader className="min-w-0">
+                <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 [&_[data-slot=badge]]:whitespace-nowrap">
+                  <span className="min-w-0 break-words">{perkName(perk.company, perk.title)}</span>
                   <Badge>{perkTypeLabel(perk.type)}</Badge>
                   {perk.value ? <Badge variant="gold">{perk.value}</Badge> : null}
                   {perk.active ? null : <Badge className="bg-hs-paper">Inactivo</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                {perk.description ? <p>{perk.description}</p> : null}
+                {perk.description ? (
+                  <p className="min-w-0 break-words">{perk.description}</p>
+                ) : null}
                 <p className="text-hs-brown tabular-nums">
                   {perk.claimCount} {perk.claimCount === 1 ? "solicitud" : "solicitudes"}
                   {perk.type === "code"
@@ -328,6 +336,49 @@ export default function AdminPerksPage() {
           ))}
         </div>
       )}
+
+      <EmailApplicationsQueue />
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setCreateError(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitCreate();
+            }}
+            noValidate
+          >
+            <DialogHeader>
+              <DialogTitle>Crear perk</DialogTitle>
+              <DialogDescription>
+                Aparece en el catálogo. Los campos se rellenan al reclamar.
+              </DialogDescription>
+            </DialogHeader>
+            <FormError message={createError} />
+            <PerkFields draft={draft} onChange={setDraft} mode="create" />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={creating}
+                onClick={() => setCreateOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating ? "Creando…" : "Crear perk"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={editing !== null}
@@ -656,10 +707,173 @@ function InputsEditor({
   );
 }
 
+function Answers({
+  answers,
+}: {
+  answers: Array<{ label: string; value: string }>;
+}) {
+  if (answers.length === 0) return null;
+  return (
+    <dl className="mt-1 grid gap-0.5 text-xs">
+      {answers.map((answer) => (
+        <div key={answer.label} className="flex min-w-0 gap-1.5">
+          <dt className="shrink-0 font-bungee uppercase text-hs-brown">
+            {answer.label}
+          </dt>
+          <dd className="min-w-0 break-words">{answer.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function EmailApplicationsQueue() {
+  const [status, setStatus] = useState<
+    "all" | "pending" | "added" | "rejected"
+  >("pending");
+  const rows = useQuery(api.perks.adminApplications, {
+    status: status === "all" ? undefined : status,
+  });
+
+  return (
+    <Card id="solicitudes" className="min-w-0 overflow-hidden">
+      <CardHeader className="min-w-0 gap-3">
+        <div className="min-w-0 space-y-1">
+          <CardTitle>Solicitudes por email</CardTitle>
+          <CardDescription>
+            El hacker pide acceso; al marcarlo como añadido puedes pegar el
+            código que le toca.
+          </CardDescription>
+        </div>
+        <Select
+          value={status}
+          onValueChange={(value) =>
+            setStatus(value as "all" | "pending" | "added" | "rejected")
+          }
+        >
+          <SelectTrigger className="w-full max-w-full sm:max-w-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="pending">Pendientes</SelectItem>
+            <SelectItem value="added">Añadidas</SelectItem>
+            <SelectItem value="rejected">Rechazadas</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent className="min-w-0">
+        {!rows ? (
+          <LoadingText />
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-hs-brown">
+            Nada en este estado todavía.
+          </p>
+        ) : (
+          <div className="grid min-w-0 gap-3">
+            {rows.map((row) => (
+              <RecordCard
+                key={row._id}
+                title={row.name ?? "—"}
+                subtitle={row.email}
+                badges={<Badge>{claimStatusLabel(row.status)}</Badge>}
+              >
+                <p className="min-w-0 text-sm break-words text-hs-brown">
+                  {perkName(row.company, row.title)}
+                </p>
+                {row.code ? (
+                  <p className="min-w-0 font-mono text-xs break-all">{row.code}</p>
+                ) : null}
+                <Answers answers={row.answers} />
+                <ReviewActions claimId={row._id} stacked />
+              </RecordCard>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReviewActions({
+  claimId,
+  compact,
+  stacked,
+}: {
+  claimId: Id<"perkClaims">;
+  compact?: boolean;
+  stacked?: boolean;
+}) {
+  const setApplicationStatus = useMutation(api.perks.adminSetApplicationStatus);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function setStatus(status: "added" | "rejected") {
+    setError(null);
+    setPending(true);
+    try {
+      await setApplicationStatus({
+        claimId,
+        status,
+        code: status === "added" && code.trim() ? code.trim() : undefined,
+      });
+      if (status === "added") {
+        setCode("");
+      }
+    } catch (err: unknown) {
+      setError(errorMessage(err, "No se ha podido actualizar"));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="grid min-w-0 gap-2">
+      <div
+        className={cn(
+          "flex gap-2",
+          stacked ? "flex-col" : "flex-wrap items-center",
+        )}
+      >
+        <Input
+          aria-label="Código del perk"
+          placeholder="Código"
+          value={code}
+          disabled={pending}
+          className={cn(
+            "min-w-0 font-mono",
+            compact ? "h-9 flex-1 text-sm" : stacked ? "w-full" : "max-w-48",
+          )}
+          onChange={(event) => setCode(event.target.value)}
+        />
+        <Button
+          size={compact ? "sm" : "default"}
+          className={stacked ? "w-full min-w-0" : undefined}
+          disabled={pending}
+          onClick={() => void setStatus("added")}
+        >
+          Marcar añadida
+        </Button>
+        <Button
+          size={compact ? "sm" : "default"}
+          variant="outline"
+          className={stacked ? "w-full min-w-0" : undefined}
+          disabled={pending}
+          onClick={() => void setStatus("rejected")}
+        >
+          Rechazar
+        </Button>
+      </div>
+      <FormError message={error} />
+    </div>
+  );
+}
+
 function RequestsSheet({ perk }: { perk: AdminPerk }) {
   const rows = useQuery(api.perks.adminRequests, { perkId: perk._id });
   const name = perkName(perk.company, perk.title);
-  const showCode = perk.type === "code";
+  const reviewEmail = perk.type === "email";
 
   function exportCsv() {
     if (!rows) return;
@@ -669,7 +883,7 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
       "Equipo",
       ...perk.inputs.map((input) => input.label),
       "Estado",
-      ...(showCode ? ["Código"] : []),
+      "Código",
       "Fecha",
     ];
     const body = rows.map((row) => [
@@ -678,7 +892,7 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
       row.teamName ?? "",
       ...perk.inputs.map((input) => answerFor(row.answers, input.key)),
       claimStatusLabel(row.status),
-      ...(showCode ? [row.code ?? ""] : []),
+      row.code ?? "",
       new Date(row.createdAt).toISOString(),
     ]);
     downloadCsv(`perk-${fileSlug(name)}-solicitudes.csv`, toCsv(header, body));
@@ -718,8 +932,9 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
                   <TableHead key={input.key}>{input.label}</TableHead>
                 ))}
                 <TableHead>Estado</TableHead>
-                {showCode ? <TableHead>Código</TableHead> : null}
+                <TableHead>Código</TableHead>
                 <TableHead>Fecha</TableHead>
+                {reviewEmail ? <TableHead /> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -736,12 +951,15 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
                   <TableCell>
                     <Badge>{claimStatusLabel(row.status)}</Badge>
                   </TableCell>
-                  {showCode ? (
-                    <TableCell className="font-mono text-xs">{row.code ?? "—"}</TableCell>
-                  ) : null}
+                  <TableCell className="font-mono text-xs">{row.code ?? "—"}</TableCell>
                   <TableCell className="tabular-nums text-hs-brown">
                     {dateFormat.format(new Date(row.createdAt))}
                   </TableCell>
+                  {reviewEmail ? (
+                    <TableCell>
+                      <ReviewActions claimId={row._id} compact />
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>

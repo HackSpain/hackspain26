@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { stripAnsi, width } from "../src/lib/style";
+import { box, fit, wrap } from "../src/lib/tui";
 import {
   IDLE_AFTER_MS,
   IDLE_INTERVAL_MS,
   scanIntervalFor,
 } from "../src/watcher/index";
-import { box, diffFrame, fit, frame, gauge, wrap } from "../src/watcher/screen";
+import { diffFrame, frame, gauge } from "../src/watcher/screen";
 import {
   BUCKET_MS,
   createState,
@@ -109,6 +110,9 @@ describe("frame", () => {
     expect(text).toContain("Keep this open");
     expect(text.replaceAll(/[│\s]+/g, " ")).toContain("never prompts or code");
     expect(text).toContain("Domènec");
+    expect(text).toContain("Team");
+    expect(text).toContain("Project");
+    expect(text).toContain("Repo");
     expect(text).toContain("Quijote Labs");
     expect(text).toContain("Claude Code");
     expect(text).toContain("● live");
@@ -142,7 +146,7 @@ describe("frame", () => {
     );
     expect(tall).toContain("██╗");
     expect(short).not.toContain("██╗");
-    expect(short).toContain("HACKSPAIN");
+    expect(short).toContain("hackspain");
   });
 
   test("paused is visible in the status line", () => {

@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
+
+const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 export function ScoreSlider({
   value,
@@ -9,70 +12,100 @@ export function ScoreSlider({
   disabled?: boolean;
   onCommit: (score: number) => void;
 }) {
-  const [draft, setDraft] = useState(value ?? 5);
-  const dragging = useRef(false);
+  const [draft, setDraft] = useState(value);
+  const [synced, setSynced] = useState(value);
+  if (value !== synced) {
+    setSynced(value);
+    setDraft(value);
+  }
+  const groupId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!dragging.current && value !== null) {
-      setDraft(value);
-    }
-  }, [value]);
-
-  const commit = () => {
-    dragging.current = false;
+  const pick = (score: number) => {
     if (disabled) {
       return;
     }
-    if (draft !== value) {
-      onCommit(draft);
+    setDraft(score);
+    if (score !== value) {
+      onCommit(score);
     }
+    rootRef.current
+      ?.querySelector<HTMLElement>(`[data-score="${score}"]`)
+      ?.focus();
   };
 
   return (
-    <div className="h-[5.25rem]">
+    <div>
       <div className="flex h-8 items-end justify-between gap-3">
-        <label htmlFor="judge-score" className="font-bungee text-xs uppercase">
+        <p className="font-bungee text-xs uppercase" id={groupId}>
           Tu nota
-        </label>
+        </p>
         <p className="font-bungee text-2xl leading-none tabular-nums">
-          <span className="inline-block min-w-[2ch] text-right">{draft}</span>
+          <span className="inline-block min-w-[2ch] text-right">
+            {draft ?? "—"}
+          </span>
           <span className="text-hs-brown">/10</span>
         </p>
       </div>
-      <input
-        id="judge-score"
-        type="range"
-        min={1}
-        max={10}
-        step={1}
-        value={draft}
-        disabled={disabled}
-        aria-valuemin={1}
-        aria-valuemax={10}
-        aria-valuenow={draft}
-        aria-label="Puntuación del 1 al 10"
-        className="mt-2 h-11 w-full cursor-pointer accent-hs-gold disabled:cursor-not-allowed disabled:opacity-50"
-        onPointerDown={() => {
-          dragging.current = true;
-        }}
-        onInput={(event) => {
-          setDraft(Number(event.currentTarget.value));
-        }}
-        onPointerUp={commit}
-        onBlur={commit}
-        onKeyUp={(event) => {
-          if (
-            event.key === "ArrowLeft" ||
-            event.key === "ArrowRight" ||
-            event.key === "ArrowUp" ||
-            event.key === "ArrowDown" ||
-            event.key === "Home" ||
-            event.key === "End"
-          ) {
-            commit();
+      <div
+        ref={rootRef}
+        role="radiogroup"
+        tabIndex={-1}
+        aria-labelledby={groupId}
+        className="mt-2 grid grid-cols-5 gap-1 sm:grid-cols-10"
+        onKeyDown={(event) => {
+          if (disabled) {
+            return;
+          }
+          const from = draft ?? 0;
+          if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+            event.preventDefault();
+            pick(Math.min(10, from === 0 ? 1 : from + 1));
+            return;
+          }
+          if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+            event.preventDefault();
+            pick(Math.max(1, from === 0 ? 10 : from - 1));
+            return;
+          }
+          if (event.key === "Home") {
+            event.preventDefault();
+            pick(1);
+            return;
+          }
+          if (event.key === "End") {
+            event.preventDefault();
+            pick(10);
           }
         }}
-      />
+      >
+        {SCORES.map((score) => {
+          const selected = draft === score;
+          return (
+            <button
+              key={score}
+              type="button"
+              role="radio"
+              data-score={score}
+              tabIndex={selected || (draft === null && score === 1) ? 0 : -1}
+              aria-checked={selected}
+              aria-label={`${score} de 10`}
+              disabled={disabled}
+              className={cn(
+                "min-h-11 border-[3px] border-hs-ink font-bungee text-sm tabular-nums outline-none select-none",
+                "motion-safe:transition-[transform,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:not-disabled:scale-[0.96]",
+                "focus-visible:border-hs-navy disabled:cursor-not-allowed disabled:opacity-50",
+                selected
+                  ? "bg-hs-gold text-hs-ink"
+                  : "bg-hs-paper text-hs-ink [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand",
+              )}
+              onClick={() => pick(score)}
+            >
+              {score}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

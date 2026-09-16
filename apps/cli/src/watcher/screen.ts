@@ -1,11 +1,12 @@
 import { harnessLogo, harnessLogoIds } from "../assets/harness-logos";
 import { LOGO_HEIGHT, LOGO_WIDTH, logoPng } from "../assets/logo";
-import { WORDMARK_WIDTH, wordmarkRows } from "../lib/banner";
+import { WORDMARK_WIDTH, wordmarkLines } from "../lib/banner";
 import type { FeedItem } from "../lib/feed-format";
 import { postLines } from "../lib/feed-format";
 import { compactNumber, formatAgo, renderTable } from "../lib/output";
-import { c, colorEnabled, stripAnsi, width } from "../lib/style";
+import { BRAND, c, colorEnabled, width } from "../lib/style";
 import { imageCells } from "../lib/term-images";
+import { box, fit, kvLines, pad, SPINNER, wrap } from "../lib/tui";
 import type { ImageSlot } from "./images";
 import { ScreenImages } from "./images";
 import type { WatchState } from "./state";
@@ -19,7 +20,6 @@ import { WATCH_IMAGE_BOUNDS } from "./state";
  * alternate screen buffer, redraws changed rows once a second, and maps
  * key presses onto the state.
  */
-const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const MIN_WIDTH = 40;
 const ESC = String.fromCodePoint(27);
 /** Column of post text inside the feed box: border, space, three-space indent. */
@@ -105,66 +105,6 @@ function rgb(color: Rgb, text: string): string {
   return `${ESC}[38;2;${color[0]};${color[1]};${color[2]}m${text}${ESC}[39m`;
 }
 
-function mix(a: Rgb, b: Rgb, t: number): Rgb {
-  const k = Math.max(0, Math.min(1, t));
-  return [
-    Math.round(a[0] + (b[0] - a[0]) * k),
-    Math.round(a[1] + (b[1] - a[1]) * k),
-    Math.round(a[2] + (b[2] - a[2]) * k),
-  ];
-}
-
-/** Cut to `max` visible cells; strips colour when it has to cut. */
-export function fit(text: string, max: number): string {
-  if (width(text) <= max) {
-    return text;
-  }
-  let out = "";
-  for (const ch of stripAnsi(text)) {
-    if (width(out + ch) > Math.max(0, max - 1)) {
-      break;
-    }
-    out += ch;
-  }
-  return `${out}…`;
-}
-
-function padRight(text: string, size: number): string {
-  return text + " ".repeat(Math.max(0, size - width(text)));
-}
-
-export type BoxOptions = {
-  title: string;
-  subtitle?: string;
-  accent?: Rgb;
-  /** Exact number of body rows; content is cut or padded to it. */
-  height?: number;
-};
-
-/** Rounded box: title inset on the top border, optional subtitle on the right. */
-export function box(options: BoxOptions, lines: string[], w: number): string[] {
-  const inner = w - 4;
-  const accent = options.accent ?? TEAL;
-  const border = (s: string) => rgb(accent, s);
-  const title = `${border("╭─ ")}${c.bold(rgb(GOLD, options.title))}${border(" ")}`;
-  const sub = options.subtitle
-    ? `${c.dim(options.subtitle)}${border(" ")}`
-    : "";
-  const filler = Math.max(0, w - width(title) - width(sub) - 1);
-  const top = `${title}${border("─".repeat(filler))}${sub}${border("╮")}`;
-  const rows =
-    options.height === undefined ? lines : lines.slice(0, options.height);
-  while (options.height !== undefined && rows.length < options.height) {
-    rows.push("");
-  }
-  const body = rows.map(
-    (line) =>
-      `${border("│")} ${padRight(fit(line, inner), inner)} ${border("│")}`
-  );
-  const bottom = border(`╰${"─".repeat(w - 2)}╯`);
-  return [top, ...body, bottom];
-}
-
 function clock(at: number): string {
   return new Date(at).toLocaleTimeString("en-GB", {
     hour: "2-digit",
@@ -218,24 +158,6 @@ export function gauge(
   return `${rgb(color, "█".repeat(filled))}${c.dim("░".repeat(size - filled))}`;
 }
 
-export function wrap(text: string, w: number): string[] {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let current = "";
-  for (const word of words) {
-    if (current && width(`${current} ${word}`) > w) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = current ? `${current} ${word}` : word;
-    }
-  }
-  if (current) {
-    lines.push(current);
-  }
-  return lines.length ? lines : [""];
-}
-
 /** What this screen is and how to use it. Always visible; shorter when rows are scarce. */
 function explainerBox(
   state: WatchState,
@@ -265,13 +187,19 @@ function youBox(state: WatchState, w: number): string[] {
   const project = state.project
     ? `${state.project.name || c.dim("(untitled draft)")} ${c.dim(`· ${state.project.status}${state.project.tracks.length ? ` · ${state.project.tracks.join(", ")}` : " · no track yet"}`)}`
     : c.dim("no project yet · hackspain submit --draft");
+  const repo =
+    state.team?.repoUrl?.replace("https://github.com/", "") ??
+    c.dim("not set · hackspain team repo <url>");
   return box(
     { height: 3, title: state.me.name },
-    [
-      `${c.dim("team   ")} ${team}`,
-      `${c.dim("project")} ${project}`,
-      `${c.dim("repo   ")} ${state.team?.repoUrl?.replace("https://github.com/", "") ?? c.dim("not set · hackspain team repo <url>")}`,
-    ],
+    kvLines(
+      [
+        ["Team", team],
+        ["Project", project],
+        ["Repo", repo],
+      ],
+      w - 4
+    ),
     w
   );
 }
@@ -443,10 +371,10 @@ function organisersBox(
     state.notifications[0] && now - state.notifications[0].at < 60 * 1000;
   return box(
     {
-      accent: fresh ? GOLD : TEAL,
+      accent: fresh ? "gold" : "teal",
       height: h,
       subtitle: `${state.notifications.length} message${state.notifications.length === 1 ? "" : "s"}`,
-      title: "📣 Organisers",
+      title: "Organisers",
     },
     lines,
     w
@@ -531,7 +459,7 @@ function feedBox(
   return {
     lines: box(
       {
-        accent: fresh && state.feedOffset === 0 ? GOLD : TEAL,
+        accent: fresh && state.feedOffset === 0 ? "gold" : "teal",
         height: h,
         subtitle,
         title: "Feed",
@@ -577,7 +505,7 @@ function statusLine(
   } else {
     parts.push(c.dim("upload off"));
   }
-  const right = `${rgb(GOLD, "q")} quit ${c.dim("·")} ${rgb(GOLD, "p")} ${state.paused ? "resume" : "pause"} ${c.dim("·")} ${rgb(GOLD, "↑↓")} feed`;
+  const right = `${c.gold("q")} quit ${c.dim("·")} ${c.gold("p")} ${state.paused ? "resume" : "pause"} ${c.dim("·")} ${c.gold("↑↓")} feed`;
   const left = fit(
     parts.join(c.dim("  ·  ")),
     Math.max(0, w - width(right) - 1)
@@ -616,12 +544,9 @@ function header(
         },
       };
     }
-    const rows = wordmarkRows().map((row, i) =>
-      rgb(mix(GOLD, ORANGE, i / 5), row)
-    );
-    return { lines: [...rows, tagLine] };
+    return { lines: [...wordmarkLines(), tagLine] };
   }
-  const left = `${rgb(GOLD, "⚡")} ${c.bold("HACKSPAIN")} ${c.dim("· live usage board")}`;
+  const left = `${BRAND} ${c.dim("· live usage board")}`;
   return {
     lines: [
       `${left}${" ".repeat(Math.max(1, w - width(left) - width(right)))}${right}`,
@@ -634,7 +559,7 @@ function columns(left: string[], leftWidth: number, right: string[]): string[] {
   const rows = Math.max(left.length, right.length);
   const out: string[] = [];
   for (let i = 0; i < rows; i++) {
-    out.push(`${padRight(left[i] ?? "", leftWidth)}${right[i] ?? ""}`);
+    out.push(`${pad(left[i] ?? "", leftWidth)}${right[i] ?? ""}`);
   }
   return out;
 }

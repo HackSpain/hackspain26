@@ -1,6 +1,7 @@
-import { intro, log, note, outro, spinner } from "@clack/prompts";
+import { spinner } from "@clack/prompts";
 import type { CliContext } from "./context";
 import { BRAND, c, cmd, width } from "./style";
+import { box, cardWidth, pad as padCells, wrap } from "./tui";
 
 /**
  * All user-facing output goes through here so `--json` can guarantee exactly
@@ -32,8 +33,41 @@ export type Ui = {
   result(data: unknown): void;
 };
 
+const INDENT = "  ";
+
 function pad(text: string, size: number): string {
-  return text + " ".repeat(Math.max(0, size - width(text)));
+  return padCells(text, size);
+}
+
+const MARK: Record<"ok" | "info" | "warn" | "err" | "step", string> = {
+  err: c.red("✗"),
+  info: c.teal("●"),
+  ok: c.teal("✓"),
+  step: c.gold("·"),
+  warn: c.orange("!"),
+};
+
+function say(
+  kind: "ok" | "info" | "warn" | "err" | "step",
+  message: string
+): void {
+  const mark = MARK[kind];
+  for (const line of message.split("\n")) {
+    console.log(`${INDENT}${mark}  ${line}`);
+  }
+}
+
+function printCard(title: string, body: string): void {
+  const w = cardWidth();
+  const inner = w - 4;
+  const lines = body
+    .split("\n")
+    .flatMap((line) => (width(line) <= inner ? [line] : wrap(line, inner)));
+  console.log(
+    box({ title }, lines, w)
+      .map((line) => `${INDENT}${line}`)
+      .join("\n")
+  );
 }
 
 export function renderTable(rows: string[][], header?: string[]): string {
@@ -80,21 +114,22 @@ export function uiFor(ctx: CliContext): Ui {
     }
     process.stderr.write(`${message}\n`);
   };
-  // Content goes through clack's gutter so tables and notes line up with
-  // intro/outro instead of floating outside the frame.
   const out = (message: string) => {
     if (quiet) {
       err(message);
-    } else {
-      log.message(message);
+      return;
+    }
+    for (const line of message.split("\n")) {
+      console.log(line ? `${INDENT}${line}` : "");
     }
   };
   return {
-    celebrate: (message) =>
-      quiet ? err(message) : log.success(`${message} 🎉`),
-    info: (message) => (quiet ? err(message) : log.info(message)),
+    celebrate: (message) => (quiet ? err(message) : say("ok", `${message} 🎉`)),
+    info: (message) => (quiet ? err(message) : say("info", message)),
     intro: (title) =>
-      quiet ? err(title) : intro(`${BRAND} ${c.dim("·")} ${title}`),
+      quiet
+        ? err(title)
+        : console.log(`\n${INDENT}${BRAND} ${c.dim("·")} ${c.gold(title)}`),
     json: ctx.json,
     kv: (rows) => out(renderKv(rows)),
     line: out,
@@ -106,9 +141,11 @@ export function uiFor(ctx: CliContext): Ui {
     next: (steps) =>
       quiet
         ? err(steps.map(([command]) => command).join("\n"))
-        : note(renderNext(steps), "Next"),
-    note: (body, title) => (quiet ? err(body) : note(body, title)),
-    outro: (message) => (quiet ? err(message) : outro(message)),
+        : printCard("Next", renderNext(steps)),
+    note: (body, title) =>
+      quiet ? err(body) : printCard(title ?? "note", body),
+    outro: (message) =>
+      quiet ? err(message) : console.log(`\n${INDENT}${message}\n`),
     result: (data) => {
       if (!quiet) {
         return;
@@ -130,10 +167,10 @@ export function uiFor(ctx: CliContext): Ui {
         throw error;
       }
     },
-    step: (message) => (quiet ? err(message) : log.step(message)),
-    success: (message) => (quiet ? err(message) : log.success(message)),
+    step: (message) => (quiet ? err(message) : say("step", message)),
+    success: (message) => (quiet ? err(message) : say("ok", message)),
     table: (rows, header) => out(renderTable(rows, header)),
-    warn: (message) => (quiet ? err(message) : log.warn(message)),
+    warn: (message) => (quiet ? err(message) : say("warn", message)),
   };
 }
 

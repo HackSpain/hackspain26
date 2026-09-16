@@ -118,6 +118,34 @@ export type TvSponsor = {
   tier: TvSponsorTier;
 };
 
+const DEFAULT_TV_SPONSORS: TvSponsor[] = [
+  { name: "Cursor", logoUrl: "/sponsors/cursor.svg", href: "https://cursor.com", tier: "gold" },
+  { name: "fal.ai", logoUrl: "/sponsors/fal.svg", href: "https://fal.ai", tier: "gold" },
+  { name: "Cognition", logoUrl: "/sponsors/cognition.svg", href: "https://cognition.ai", tier: "gold" },
+  { name: "HappyRobot", logoUrl: "/sponsors/happyrobot.png", href: "https://www.happyrobot.ai", tier: "gold" },
+  { name: "Exa", logoUrl: "/sponsors/exa.svg", href: "https://exa.ai", tier: "silver" },
+  { name: "Convex", logoUrl: "/sponsors/convex.svg", href: "https://www.convex.dev", tier: "silver" },
+  { name: "Vercel", logoUrl: "/sponsors/vercel.svg", href: "https://vercel.com", tier: "silver" },
+  { name: "QuiverAI", logoUrl: "/sponsors/quiver_ai.svg", href: "https://quiver.ai", tier: "silver" },
+  { name: "Cloudflare", logoUrl: "/sponsors/cloudflare.svg", href: "https://www.cloudflare.com", tier: "silver" },
+  { name: "Tinybird", logoUrl: "/sponsors/tinybird.svg", href: "https://www.tinybird.co", tier: "silver" },
+  { name: "Helmcode", logoUrl: "/sponsors/helmcode.svg", href: "https://helmcode.com", tier: "silver" },
+  { name: "OneCoWork", logoUrl: "/sponsors/onecowork.svg", href: "https://www.onecowork.com", tier: "community" },
+  { name: "Embat", logoUrl: "/sponsors/embat.png", href: "https://www.embat.io", tier: "gold" },
+  { name: "THEKER", logoUrl: "/sponsors/theker.svg", href: "https://www.theker.ai", tier: "gold" },
+  { name: "Prosper AI", logoUrl: "/sponsors/prosper_ai.svg", href: "https://www.getprosper.ai", tier: "gold" },
+  { name: "Maisa", logoUrl: "/sponsors/maisa.png", href: "https://maisa.ai", tier: "gold" },
+];
+
+export function resolveTvSponsors(sponsors?: TvSponsor[]): TvSponsor[] {
+  const custom = (sponsors ?? []).filter((row) => row.name.trim());
+  return custom.length > 0 ? custom : DEFAULT_TV_SPONSORS;
+}
+
+export function usingDefaultTvSponsors(sponsors?: TvSponsor[]): boolean {
+  return (sponsors ?? []).every((row) => !row.name.trim());
+}
+
 export function sponsorSiteOrigin(href: string): string | null {
   const raw = href.trim();
   if (!raw) {

@@ -200,7 +200,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {askGithub ? <GithubLinkBanner /> : null}
       <main
         className={cn(
-          bleed ? "w-full pt-6 sm:pt-8" : cn(contentWidth(pathname), "py-6 sm:py-8"),
+          bleed ? "w-full pt-6 sm:pt-8" : cn(contentWidth(pathname), "min-w-0 py-6 sm:py-8"),
         )}
       >
         <div className={cn(bleed && contentWidth(pathname))}>
