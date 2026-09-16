@@ -97,7 +97,7 @@ const GATE_MESSAGES: {
     explained: {
       code: "NOT_REGISTERED",
       exitCode: EXIT.INELIGIBLE,
-      hint: "Log in with the email you applied with, or sign up at https://hackspain.com/signup.",
+      hint: "Log in with the email you applied with. Signups are closed; if your application is missing, contact the organisers.",
       message: "This email has no HackSpain signup.",
     },
     needle: "No hay inscripción a la hackathon con este email",
@@ -143,22 +143,37 @@ const GATE_MESSAGES: {
 const CODED_EXIT: Record<string, ExitCode> = {
   ALREADY_IN_TEAM: EXIT.ERROR,
   BAD_CODE: EXIT.ERROR,
+  BAD_OTP: EXIT.ERROR,
   EVENT_CLOSED: EXIT.INELIGIBLE,
   NOT_FOUND: EXIT.ERROR,
   NOT_MEMBER: EXIT.ERROR,
   NOT_OWNER: EXIT.ERROR,
   NO_TEAM: EXIT.ERROR,
+  OTP_EXPIRED: EXIT.ERROR,
+  SEND_FAILED: EXIT.ERROR,
+  TOO_MANY_ATTEMPTS: EXIT.ERROR,
   UNAUTHENTICATED: EXIT.AUTH,
+  UNREGISTERED: EXIT.INELIGIBLE,
   VALIDATION: EXIT.USAGE,
 };
 
 const CODED_HINT: Record<string, string> = {
   ALREADY_IN_TEAM: "Leave it first with `hackspain team leave`.",
   BAD_CODE: "Ask the team owner for the code shown by `hackspain team show`.",
+  BAD_OTP:
+    "Check the digits in the email, or run `hackspain auth login` for a new one.",
   EVENT_CLOSED:
     "Only `hackspain profile` works outside the hackathon window; `hackspain auth status` shows the dates.",
   NO_TEAM:
     "Create one with `hackspain team create <name>` or join with `hackspain team join <code>`.",
+  OTP_EXPIRED:
+    "Codes last 15 minutes. Run `hackspain auth login` to get a new one.",
+  SEND_FAILED:
+    "Try again in a minute. If it keeps failing, tell the organisers.",
+  TOO_MANY_ATTEMPTS:
+    "Wait a few minutes, then run `hackspain auth login` for a new code.",
+  UNREGISTERED:
+    "Log in with the email you applied with. Signups are closed; if your application is missing, contact the organisers.",
 };
 
 /**
@@ -166,7 +181,12 @@ const CODED_HINT: Record<string, string> = {
  * English, so codes listed here replace the relayed message.
  */
 const CODED_MESSAGE: Record<string, string> = {
+  BAD_OTP: "That code is not right.",
   EVENT_CLOSED: "The hackathon is not running right now.",
+  OTP_EXPIRED: "That code is no longer valid.",
+  SEND_FAILED: "The sign-in email could not be sent.",
+  TOO_MANY_ATTEMPTS: "Too many wrong codes for this email.",
+  UNREGISTERED: "This email has no HackSpain signup.",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

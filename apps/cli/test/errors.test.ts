@@ -80,6 +80,31 @@ describe("explainError", () => {
     expect(e.hint).toContain("hackspain profile");
   });
 
+  test("email OTP codes get English copy and a hint", () => {
+    const unregistered = explainError(
+      new RemoteError({
+        code: "UNREGISTERED",
+        message: "No hay inscripción a la hackathon con este email",
+      })
+    );
+    expect(unregistered.exitCode).toBe(EXIT.INELIGIBLE);
+    expect(unregistered.message).toBe("This email has no HackSpain signup.");
+    expect(unregistered.hint).toContain("contact the organisers");
+
+    for (const code of [
+      "BAD_OTP",
+      "OTP_EXPIRED",
+      "TOO_MANY_ATTEMPTS",
+      "SEND_FAILED",
+    ]) {
+      const e = explainError(new RemoteError({ code, message: "es" }));
+      expect(e.code).toBe(code);
+      expect(e.exitCode).toBe(EXIT.ERROR);
+      expect(e.message).not.toBe("es");
+      expect(e.hint).toBeTruthy();
+    }
+  });
+
   test("strips the Convex wrapper from unknown server errors", () => {
     const e = explainError(convexWrapped("El dueño no puede salir del equipo"));
     expect(e).toMatchObject({

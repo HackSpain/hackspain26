@@ -5,6 +5,7 @@ import { Resend as ResendAPI } from "resend";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
+import { fail } from "./lib/errors";
 
 function randomDigits(length: number): string {
   const random: RandomReader = {
@@ -59,7 +60,14 @@ async function sendVerificationRequest(
     to: [email],
   });
   if (error) {
-    throw new Error(JSON.stringify(error));
+    // One line, no stack: the Resend error name is what an operator needs
+    // (invalid key, unverified domain, quota), and the recipient stays out
+    // of the log. The client only gets the coded error.
+    console.warn(`[auth] Resend rejected the code email: ${error.name}: ${error.message}`);
+    fail(
+      "SEND_FAILED",
+      "No hemos podido enviar el código ahora mismo. Inténtalo en un minuto."
+    );
   }
 }
 

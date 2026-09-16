@@ -89,7 +89,7 @@ export function EmptyState({
   );
 }
 
-export function FormError({ message }: { message: string | null }) {
+export function FormError({ message }: { message: ReactNode | null }) {
   if (!message) {
     return null;
   }

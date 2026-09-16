@@ -1,10 +1,12 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
+import { ConvexError } from "convex/values";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import type { LoginErrorCode } from "@/app/api/login/otp/route";
 import { AuthScreen, Field, FormError, FormNotice } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +21,71 @@ import {
 const CODE_LENGTH = 8;
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 const SLIDE_PX = 24;
+/** Seconds before "Reenviar" works again, so a nervous tap does not queue emails. */
+const RESEND_COOLDOWN_S = 30;
+
+const NETWORK_MESSAGE = "No hay conexión. Comprueba tu red e inténtalo otra vez.";
+
+/**
+ * Copy for every way the send step can fail. `code` comes from
+ * /api/login/otp; NETWORK is the fetch itself failing, UNKNOWN an answer
+ * the page does not understand. Signups are closed, so the unregistered
+ * copy points at the organisers rather than at the form.
+ */
+const SEND_ERROR_MESSAGE: Record<LoginErrorCode | "NETWORK" | "UNKNOWN", string> = {
+  BOT: "No hemos podido comprobar que eres una persona. Recarga la página e inténtalo otra vez.",
+  INVALID_EMAIL: "Ese email no parece válido. Revísalo e inténtalo otra vez.",
+  NETWORK: NETWORK_MESSAGE,
+  SEND_FAILED: "No hemos podido enviar el código ahora mismo. Inténtalo en un minuto.",
+  UNKNOWN: "No hemos podido enviar el código. Inténtalo otra vez.",
+  UNREGISTERED:
+    "No encontramos ninguna inscripción con ese email. Prueba con el email que usaste al apuntarte; si crees que falta tu solicitud, escribe a la organización.",
+};
+
+/** Swallow a rejection so the caller can branch on it without a catch parameter. */
+async function attempt(run: () => Promise<unknown>): Promise<unknown> {
+  try {
+    await run();
+    return null;
+  } catch (error) {
+    return error;
+  }
+}
+
+/**
+ * Copy for a rejected code. `auth:signIn` (convex/auth.ts) throws a
+ * ConvexError whose data carries one of these codes and Spanish copy; the
+ * copy is used as is so the server stays the single source of wording.
+ */
+function verifyErrorMessage(error: unknown): string {
+  if (error instanceof ConvexError) {
+    const data: unknown = error.data;
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "message" in data &&
+      typeof data.message === "string"
+    ) {
+      return data.message;
+    }
+  }
+  if (error instanceof TypeError) {
+    return NETWORK_MESSAGE;
+  }
+  return "No hemos podido comprobar el código. Inténtalo otra vez.";
+}
+
+function useCountdown(): [number, (seconds: number) => void] {
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  useEffect(() => {
+    if (secondsLeft <= 0) {
+      return;
+    }
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [secondsLeft]);
+  return [secondsLeft, setSecondsLeft];
+}
 
 type Step = "email" | "code";
 type Direction = 1 | -1;
@@ -58,16 +125,19 @@ function useMeasuredHeight(): [
 
 function TextLink({
   onClick,
+  disabled = false,
   children,
 }: {
   onClick: () => void;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline font-medium text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px] outline-none motion-safe:transition-[text-decoration-color] motion-safe:duration-[var(--duration-press)] hover:decoration-hs-navy focus-visible:decoration-hs-navy"
+      disabled={disabled}
+      className="inline font-medium text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px] outline-none motion-safe:transition-[text-decoration-color] motion-safe:duration-[var(--duration-press)] hover:decoration-hs-navy focus-visible:decoration-hs-navy disabled:cursor-default disabled:text-hs-brown disabled:no-underline"
     >
       {children}
     </button>
@@ -84,6 +154,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [resendIn, startResendCooldown] = useCountdown();
   const [bodyRef, bodyHeight] = useMeasuredHeight();
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -101,17 +172,31 @@ export default function LoginPage() {
     setNotice(null);
     setPending(true);
     try {
-      const response = await fetch("/api/login/otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail }),
-      });
-      if (!response.ok) {
-        throw new Error("otp send failed");
+      let response: Response;
+      try {
+        response = await fetch("/api/login/otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: normalizedEmail }),
+        });
+      } catch {
+        setError(SEND_ERROR_MESSAGE.NETWORK);
+        return false;
       }
-      return true;
-    } catch {
-      setError("No hemos podido enviar el código. Inténtalo otra vez.");
+      const body: unknown = await response.json().catch(() => null);
+      const failure =
+        typeof body === "object" &&
+        body !== null &&
+        "code" in body &&
+        typeof body.code === "string" &&
+        body.code in SEND_ERROR_MESSAGE
+          ? (body.code as LoginErrorCode)
+          : null;
+      if (response.ok && failure === null) {
+        startResendCooldown(RESEND_COOLDOWN_S);
+        return true;
+      }
+      setError(SEND_ERROR_MESSAGE[failure ?? "UNKNOWN"]);
       return false;
     } finally {
       setPending(false);
@@ -126,9 +211,12 @@ export default function LoginPage() {
   }
 
   async function resendCode() {
+    if (resendIn > 0 || pending) {
+      return;
+    }
     setCode("");
     if (await requestCode()) {
-      setNotice("Código nuevo enviado.");
+      setNotice("Código nuevo enviado. El anterior ya no vale.");
     }
   }
 
@@ -139,14 +227,14 @@ export default function LoginPage() {
     setError(null);
     setNotice(null);
     setPending(true);
-    try {
-      await signIn("resend-otp", { code: value, email: normalizedEmail });
-    } catch {
-      setError("Ese código no es válido.");
+    const failure = await attempt(() =>
+      signIn("resend-otp", { code: value, email: normalizedEmail })
+    );
+    if (failure !== null) {
+      setError(verifyErrorMessage(failure));
       setCode("");
-    } finally {
-      setPending(false);
     }
+    setPending(false);
   }
 
   const transition = reducedMotion
@@ -202,8 +290,11 @@ export default function LoginPage() {
                         <TextLink onClick={() => goTo("email")}>
                           Cambiar email
                         </TextLink>
-                        <TextLink onClick={() => void resendCode()}>
-                          Reenviar
+                        <TextLink
+                          onClick={() => void resendCode()}
+                          disabled={resendIn > 0 || pending}
+                        >
+                          {resendIn > 0 ? `Reenviar (${resendIn}s)` : "Reenviar"}
                         </TextLink>
                       </p>
                     </div>
