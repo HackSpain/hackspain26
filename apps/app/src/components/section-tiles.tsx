@@ -8,7 +8,6 @@ import {
   Network,
   Terminal,
   Trophy,
-  Tv,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -32,8 +31,9 @@ const CLOSED_SECTIONS: ReadonlySet<SectionKey> = new Set(["participantes"]);
 
 /**
  * The launcher on the home page: one tile per section the user can open,
- * plus the profile and the venue screen. Replaces the old tab bar; every
- * destination shows a "Volver al inicio" button (app-shell.tsx).
+ * plus the profile. Replaces the old tab bar; every destination shows a
+ * "Volver al inicio" button (app-shell.tsx). The venue screen (/tv) is
+ * deliberately absent: only admins reach it, from /admin/tv.
  */
 export function SectionTiles({
   sections,
@@ -53,7 +53,6 @@ export function SectionTiles({
       icon: SECTION_ICONS[key],
     })),
     { href: "/profile", label: "Perfil", hint: "Nombre, foto y teléfono.", icon: CircleUserRound },
-    { href: "/tv?from=app", label: "TV en vivo", hint: "La pantalla del venue.", icon: Tv },
   ];
 
   return (
