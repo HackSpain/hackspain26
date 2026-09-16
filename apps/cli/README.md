@@ -79,7 +79,9 @@ terminals, a small mark elsewhere.
 screen with that wordmark on top, a short "Keep this open" note on why it matters, a panel for you and your team, a table of the AI
 harnesses it found (with the real logo beside each name where the terminal draws images, a
 brand glyph elsewhere: ✻ Claude Code, ⬡ Codex, ▍ Cursor, ◆ OpenCode, ▣ Cline, ◉ Copilot;
-status, requests, tokens, last request), organiser announcements as they
+status, requests, tokens, cached, last request; "Tokens" is input + output, while prompt-cache
+reads and writes sit in their own column because a long session re-reads hundreds of thousands
+of cached tokens per turn), organiser announcements as they
 arrive, a table of the most recent requests it reported, the feed across the bottom (posts from
 everyone plus GitHub activity from every team repo, with pictures inline where the terminal can
 draw them and links elsewhere; `↑`/`↓` scroll it, `g` returns to live), and a status bar with the

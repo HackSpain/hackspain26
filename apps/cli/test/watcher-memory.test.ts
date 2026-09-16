@@ -102,8 +102,8 @@ describe("replaySpool", () => {
       uploadEnabled: false,
     });
     state.harnesses = [
-      { found: true, id: "claude-code", requests: 0, tokens: 0 },
-      { found: true, id: "codex", requests: 0, tokens: 0 },
+      { cached: 0, found: true, id: "claude-code", requests: 0, tokens: 0 },
+      { cached: 0, found: true, id: "codex", requests: 0, tokens: 0 },
     ];
     const events = Array.from({ length: 70 }, (_, i) => ({
       ...validEvent,
@@ -119,6 +119,17 @@ describe("replaySpool", () => {
     expect(state.recent[0]?.at).toBeGreaterThan(state.recent[59]?.at ?? 0);
     expect(state.harnesses[1]?.requests).toBe(10);
     expect(state.harnesses[0]?.requests).toBe(60);
+    // Fresh tokens and cache traffic are kept apart per harness.
+    const tok = validEvent.tokens ?? {
+      cacheRead: 0,
+      cacheWrite: 0,
+      input: 0,
+      output: 0,
+    };
+    const fresh = tok.input + tok.output;
+    const cached = tok.cacheRead + tok.cacheWrite;
+    expect(state.harnesses[0]?.tokens).toBe(60 * fresh);
+    expect(state.harnesses[0]?.cached).toBe(60 * cached);
     const summary = summaryLines(state, NOW).join("\n");
     expect(summary).toContain("Since ");
     expect(summary).toContain("(this run ");

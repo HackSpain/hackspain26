@@ -316,6 +316,7 @@ function harnessesBox(
           harnessStatus(harness.lastEventAt, now),
           compactNumber(harness.requests),
           compactNumber(harness.tokens),
+          c.dim(compactNumber(harness.cached)),
           harness.lastEventAt
             ? c.dim(formatAgo(harness.lastEventAt, now))
             : c.dim("–"),
@@ -326,14 +327,19 @@ function harnessesBox(
           c.dim("–"),
           c.dim("–"),
           c.dim("–"),
+          c.dim("–"),
         ]
   );
   const t = state.totals;
+  // "Tokens" is what the model actually read fresh and wrote back. Cache
+  // reads run to hundreds of thousands per turn on long sessions and would
+  // dwarf everything else, so they get their own dim column.
   rows.push([
     c.bold("Total"),
     c.dim(`${t.sessions.size} session${t.sessions.size === 1 ? "" : "s"}`),
     c.bold(compactNumber(t.requests)),
-    c.bold(compactNumber(t.input + t.output + t.cached)),
+    c.bold(compactNumber(t.input + t.output)),
+    c.dim(compactNumber(t.cached)),
     "",
   ]);
   const table = renderTable(rows, [
@@ -341,9 +347,10 @@ function harnessesBox(
     "Status",
     "Requests",
     "Tokens",
+    "Cached",
     "Last",
   ]).split("\n");
-  const breakdown = `${c.dim("tokens:")} ${compactNumber(t.input)} ${c.dim("in")} · ${compactNumber(t.output)} ${c.dim("out")} · ${compactNumber(t.cached)} ${c.dim("cached")}`;
+  const breakdown = `${c.dim("tokens:")} ${compactNumber(t.input)} ${c.dim("in")} · ${compactNumber(t.output)} ${c.dim("out")} · ${c.dim(`${compactNumber(t.cached)} cached, not counted above`)}`;
   return {
     lines: box(
       {

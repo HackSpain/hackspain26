@@ -20,7 +20,10 @@ export type WatchState = {
     id: HarnessId;
     found: boolean;
     requests: number;
+    /** Fresh tokens: input + output. Cache traffic is counted apart. */
     tokens: number;
+    /** Prompt-cache reads and writes; large on long sessions, not "burned". */
+    cached: number;
     lastEventAt?: number;
   }[];
   /** Newest first, capped; what the "Recent requests" table shows. */
@@ -184,7 +187,8 @@ export function recordEvent(state: WatchState, event: TelemetryEvent): void {
   const cached = event.tokens.cacheRead + event.tokens.cacheWrite;
   if (harness) {
     harness.requests++;
-    harness.tokens += event.tokens.input + event.tokens.output + cached;
+    harness.tokens += event.tokens.input + event.tokens.output;
+    harness.cached += cached;
   }
   // Backfill reads newest files first, so events do not arrive in time
   // order; keep the list sorted newest first regardless.

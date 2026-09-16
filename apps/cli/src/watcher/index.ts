@@ -308,6 +308,7 @@ export async function runWatch(
   }
   if (state) {
     state.harnesses = collectors.map((c) => ({
+      cached: 0,
       found: discovered.includes(c.id),
       id: c.id,
       requests: 0,

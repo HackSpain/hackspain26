@@ -46,7 +46,9 @@ function stateFor(imageProtocol: "kitty" | "iterm" | null) {
     me: { email: "d@example.com", name: "Domènec" },
     uploadEnabled: false,
   });
-  s.harnesses = [{ found: true, id: "claude-code", requests: 0, tokens: 0 }];
+  s.harnesses = [
+    { cached: 0, found: true, id: "claude-code", requests: 0, tokens: 0 },
+  ];
   return s;
 }
 
@@ -119,7 +121,9 @@ describe("feed pictures in the watcher frame", () => {
       me: { email: "d@example.com", name: "Domènec" },
       uploadEnabled: false,
     });
-    s.harnesses = [{ found: true, id: "claude-code", requests: 0, tokens: 0 }];
+    s.harnesses = [
+      { cached: 0, found: true, id: "claude-code", requests: 0, tokens: 0 },
+    ];
     mergeNewerFeed(s, [
       post(0, {
         imagePath: "/api/files/x",
@@ -227,8 +231,8 @@ describe("watcher header and branding", () => {
     ]) {
       const s = stateFor("kitty");
       s.harnesses = [
-        { found: true, id: "claude-code", requests: 3, tokens: 100 },
-        { found: false, id: "codex", requests: 0, tokens: 0 },
+        { cached: 0, found: true, id: "claude-code", requests: 3, tokens: 100 },
+        { cached: 0, found: false, id: "codex", requests: 0, tokens: 0 },
       ];
       const { lines, slots } = frameWithSlots(s, size, { now: NOW });
       const claude = slots.find((x) => x.key === harnessLogoKey("claude-code"));
@@ -246,8 +250,8 @@ describe("watcher header and branding", () => {
   test("harness rows carry a brand glyph before the name", () => {
     const s = stateFor(null);
     s.harnesses = [
-      { found: true, id: "claude-code", requests: 3, tokens: 100 },
-      { found: false, id: "codex", requests: 0, tokens: 0 },
+      { cached: 0, found: true, id: "claude-code", requests: 3, tokens: 100 },
+      { cached: 0, found: false, id: "codex", requests: 0, tokens: 0 },
     ];
     const text = frameWithSlots(s, { columns: 120, rows: 40 }, { now: NOW })
       .lines.map(stripAnsi)
