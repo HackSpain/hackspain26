@@ -133,6 +133,7 @@ export const GENERAL_JUDGES: Judge[] = [
     photoSrc: alejandroCanadaPhoto.src,
   },
   {
+    company: "Kipchats.com",
     id: "gigi-alcaraz",
     name: "Gigi Alcaraz",
     photoSrc: gigiAlcarazPhoto.src,
