@@ -7,9 +7,10 @@ import { usageError } from "../lib/errors";
 import { requireOnboarded } from "../lib/me";
 import { firstName, uiFor } from "../lib/output";
 import { c } from "../lib/style";
+import { detectImageProtocol } from "../lib/term-images";
 import { acquireWatchLock, runWatch } from "../watcher";
 import { startScreen, summaryLines } from "../watcher/screen";
-import { createState } from "../watcher/state";
+import { createState, feedLive, scrollFeed } from "../watcher/state";
 
 type WatchFlags = {
   once?: boolean;
@@ -20,6 +21,7 @@ type WatchFlags = {
   sinkUrl?: string;
   verbose?: boolean;
   plain?: boolean;
+  images: boolean;
 };
 
 function positiveNumber(flag: string, raw: string): number {
@@ -49,6 +51,7 @@ export function registerWatch(program: Command): void {
       "upload NDJSON batches here instead of the dashboard (config telemetry.url also works)"
     )
     .option("--plain", "line-by-line output instead of the full-screen view")
+    .option("--no-images", "links instead of inline pictures in the feed band")
     .option("--verbose", "log every scan, even empty ones")
     .action(async (flags: WatchFlags, command: Command) => {
       const ctx = contextFor(command);
@@ -85,6 +88,9 @@ export function registerWatch(program: Command): void {
 
       if (fullScreen) {
         const state = createState({
+          imageProtocol: flags.images
+            ? detectImageProtocol(process.env, true)
+            : null,
           me: { email: me.email, name: firstName(me.name, me.email) },
           project: submission
             ? {
@@ -109,6 +115,13 @@ export function registerWatch(program: Command): void {
           onQuit: () => {
             state.stopRequested = true;
             state.wake?.();
+          },
+          onFeedLive: () => feedLive(state),
+          onFeedScroll: (delta) => {
+            scrollFeed(state, delta);
+            if (state.feedNeedOlder) {
+              state.wake?.();
+            }
           },
           onTogglePause: () => {
             state.paused = !state.paused;

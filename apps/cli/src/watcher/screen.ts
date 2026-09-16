@@ -1,8 +1,15 @@
+import { harnessLogo, harnessLogoIds } from "../assets/harness-logos";
+import { LOGO_HEIGHT, LOGO_WIDTH, logoPng } from "../assets/logo";
 import { WORDMARK_WIDTH, wordmarkRows } from "../lib/banner";
+import type { FeedItem } from "../lib/feed-format";
 import { postLines } from "../lib/feed-format";
 import { compactNumber, formatAgo, renderTable } from "../lib/output";
 import { c, colorEnabled, stripAnsi, width } from "../lib/style";
+import { imageCells } from "../lib/term-images";
+import type { ImageSlot } from "./images";
+import { ScreenImages } from "./images";
 import type { WatchState } from "./state";
+import { WATCH_IMAGE_BOUNDS } from "./state";
 
 /**
  * Full-terminal live view for `hackspain watch`: a grid of rounded boxes
@@ -14,6 +21,19 @@ import type { WatchState } from "./state";
  */
 const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const MIN_WIDTH = 40;
+const ESC = String.fromCodePoint(27);
+/** Column of post text inside the feed box: border, space, three-space indent. */
+const FEED_TEXT_COL = 5;
+/** Keys that move the feed view, and by how many posts. */
+const FEED_SCROLL_KEYS: Record<string, number> = {
+  j: 1,
+  k: -1,
+  [`${ESC}[B`]: 1,
+  [`${ESC}[A`]: -1,
+  [`${ESC}[6~`]: 5,
+  [`${ESC}[5~`]: -5,
+};
+const FEED_LIVE_KEYS = new Set(["g", `${ESC}[H`]);
 
 const HARNESS_NAMES: Record<string, string> = {
   "claude-code": "Claude Code",
@@ -29,11 +49,54 @@ const GOLD: Rgb = [234, 182, 25];
 const ORANGE: Rgb = [217, 107, 42];
 const TEAL: Rgb = [53, 133, 138];
 
+/**
+ * One glyph per harness, in a colour close to its brand, so the tables scan
+ * at a glance. Single-cell symbols only; the names stay as the label.
+ */
+const HARNESS_BRAND: Record<string, { glyph: string; color: Rgb }> = {
+  "claude-code": { color: [217, 119, 87], glyph: "✻" },
+  cline: { color: [99, 102, 241], glyph: "▣" },
+  codex: { color: [16, 163, 127], glyph: "⬡" },
+  copilot: { color: [139, 92, 246], glyph: "◉" },
+  cursor: { color: [160, 166, 176], glyph: "▍" },
+  opencode: { color: [34, 197, 94], glyph: "◆" },
+};
+const UNKNOWN_BRAND = { color: TEAL, glyph: "●" } as const;
+
+/** "✻ Claude Code": brand glyph plus name; dimmed as a whole when `muted`. */
+export function harnessLabel(id: string, muted = false): string {
+  const brand = HARNESS_BRAND[id] ?? UNKNOWN_BRAND;
+  const name = HARNESS_NAMES[id] ?? id;
+  return muted
+    ? c.dim(`${brand.glyph} ${name}`)
+    : `${rgb(brand.color, brand.glyph)} ${name}`;
+}
+
+/** Cells the real logo takes in a table row: one row high, square on a 2:1 grid. */
+const HARNESS_LOGO_CELLS = { columns: 2, rows: 1 } as const;
+/** Slot key for a harness logo picture. */
+export function harnessLogoKey(id: string): string {
+  return `harness:${id}`;
+}
+
+/**
+ * Label with room for the real logo instead of the glyph: two blank cells
+ * the screen covers with the picture. Only when the terminal draws images
+ * and a logo exists for the harness; otherwise the glyph label.
+ */
+function harnessLabelForLogo(id: string, muted: boolean): string {
+  const name = HARNESS_NAMES[id] ?? id;
+  return muted ? c.dim(`   ${name}`) : `   ${name}`;
+}
+
+/** Header picture: the wordmark over the rows the ASCII version would take. */
+export const LOGO_ROWS = 6;
+
 function rgb(color: Rgb, text: string): string {
   if (!colorEnabled) {
     return text;
   }
-  return `\x1B[38;2;${color[0]};${color[1]};${color[2]}m${text}\x1B[39m`;
+  return `${ESC}[38;2;${color[0]};${color[1]};${color[2]}m${text}${ESC}[39m`;
 }
 
 function mix(a: Rgb, b: Rgb, t: number): Rgb {
@@ -198,33 +261,70 @@ function harnessStatus(lastEventAt: number | undefined, now: number): string {
   return rgb(TEAL, "● idle");
 }
 
+/** A picture slot relative to a box body; `frame` makes it absolute. */
+type BodySlot = Omit<ImageSlot, "row"> & { bodyRow: number };
+
+/** Rows in the harness table body before the first harness: header and rule. */
+const HARNESS_TABLE_HEAD_ROWS = 2;
+/** Column of the logo inside the box: border plus one space. */
+const HARNESS_LOGO_COL = 2;
+/** With logos, one blank row between harnesses so the pictures do not touch. */
+const HARNESS_LOGO_GAP = 1;
+
+/** Extra body rows the harness table needs when logos are drawn. */
+export function harnessLogoGapRows(state: WatchState): number {
+  return state.imageProtocol
+    ? Math.max(0, state.harnesses.length - 1) * HARNESS_LOGO_GAP
+    : 0;
+}
+
 function harnessesBox(
   state: WatchState,
   now: number,
   w: number,
   h: number
-): string[] {
-  const rows: string[][] = state.harnesses.map((harness) => {
-    const name = HARNESS_NAMES[harness.id] ?? harness.id;
-    if (!harness.found) {
-      return [
-        c.dim(name),
-        c.dim("○ not on this machine"),
-        c.dim("–"),
-        c.dim("–"),
-        c.dim("–"),
-      ];
+): { lines: string[]; slots: BodySlot[] } {
+  const slots: BodySlot[] = [];
+  const withLogos = Boolean(state.imageProtocol);
+  const label = (id: string, muted: boolean, index: number) => {
+    if (withLogos && harnessLogo(id)) {
+      slots.push({
+        bodyRow: HARNESS_TABLE_HEAD_ROWS + index * (1 + HARNESS_LOGO_GAP),
+        col: HARNESS_LOGO_COL,
+        columns: HARNESS_LOGO_CELLS.columns,
+        key: harnessLogoKey(id),
+        rows: HARNESS_LOGO_CELLS.rows,
+      });
+      return harnessLabelForLogo(id, muted);
     }
-    return [
-      name,
-      harnessStatus(harness.lastEventAt, now),
-      compactNumber(harness.requests),
-      compactNumber(harness.tokens),
-      harness.lastEventAt
-        ? c.dim(formatAgo(harness.lastEventAt, now))
-        : c.dim("–"),
-    ];
-  });
+    return harnessLabel(id, muted);
+  };
+  const rows: string[][] = [];
+  for (const [index, harness] of state.harnesses.entries()) {
+    if (withLogos && index > 0) {
+      // Breathing room between one-row logos.
+      rows.push(["", "", "", "", ""]);
+    }
+    rows.push(
+      harness.found
+        ? [
+            label(harness.id, false, index),
+            harnessStatus(harness.lastEventAt, now),
+            compactNumber(harness.requests),
+            compactNumber(harness.tokens),
+            harness.lastEventAt
+              ? c.dim(formatAgo(harness.lastEventAt, now))
+              : c.dim("–"),
+          ]
+        : [
+            label(harness.id, true, index),
+            c.dim("○ not on this machine"),
+            c.dim("–"),
+            c.dim("–"),
+            c.dim("–"),
+          ]
+    );
+  }
   const t = state.totals;
   rows.push([
     c.bold("Total"),
@@ -241,11 +341,15 @@ function harnessesBox(
     "Last",
   ]).split("\n");
   const breakdown = `${c.dim("tokens:")} ${compactNumber(t.input)} ${c.dim("in")} · ${compactNumber(t.output)} ${c.dim("out")} · ${compactNumber(t.cached)} ${c.dim("cached")}`;
-  return box(
-    { height: h, subtitle: "what is being reported", title: "Harnesses" },
-    [...table, "", breakdown],
-    w
-  );
+  return {
+    lines: box(
+      { height: h, subtitle: "what is being reported", title: "Harnesses" },
+      [...table, "", breakdown],
+      w
+    ),
+    // Only rows the box actually shows.
+    slots: slots.filter((slot) => slot.bodyRow < h),
+  };
 }
 
 function recentBox(state: WatchState, w: number, h: number): string[] {
@@ -264,7 +368,7 @@ function recentBox(state: WatchState, w: number, h: number): string[] {
       ? cells
       : [
           cells[0] ?? "",
-          HARNESS_NAMES[r.harness] ?? r.harness,
+          harnessLabel(r.harness),
           ...cells.slice(1),
           c.dim(r.sessionId.slice(0, 8)),
         ];
@@ -327,14 +431,31 @@ function organisersBox(
   );
 }
 
+function postBlock(post: FeedItem, now: number, inner: number): string[] {
+  const [head, ...rest] = postLines(post, now);
+  return [
+    ...(head ? [fit(head, inner)] : []),
+    ...rest.flatMap((line) =>
+      wrap(line.trim(), inner - 3).map((l) => `   ${l}`)
+    ),
+  ];
+}
+
+/**
+ * The feed band. Posts from `feedOffset` down; a post with a fetched
+ * thumbnail reserves blank rows for it (the screen draws the picture there)
+ * and drops its link. When the picture does not fit, the link comes back.
+ */
 function feedBox(
   state: WatchState,
   now: number,
   w: number,
   h: number
-): string[] {
+): { lines: string[]; slots: BodySlot[] } {
   const inner = w - 4;
   const lines: string[] = [];
+  const slots: BodySlot[] = [];
+  const visible = state.feed.slice(state.feedOffset);
   if (state.feed.length === 0) {
     lines.push(c.dim("Quiet so far."));
     lines.push(
@@ -343,32 +464,61 @@ function feedBox(
         inner
       ).map((l) => c.dim(l))
     );
+  } else if (visible.length === 0) {
+    lines.push(c.dim("Nothing older loaded. ↑ or g goes back to live."));
   }
-  for (const post of state.feed) {
-    const [head, ...rest] = postLines(post, now);
-    const block = [
-      ...(head ? [fit(head, inner)] : []),
-      ...rest.flatMap((line) =>
-        wrap(line.trim(), inner - 3).map((l) => `   ${l}`)
-      ),
-    ];
+  const bounds = {
+    maxColumns: Math.min(WATCH_IMAGE_BOUNDS.maxColumns, Math.max(1, inner - 3)),
+    maxRows: WATCH_IMAGE_BOUNDS.maxRows,
+  };
+  for (const post of visible) {
+    const image = state.imageProtocol
+      ? state.feedImages.get(post._id)
+      : undefined;
+    const cells = image ? imageCells(image.width, image.height, bounds) : null;
+    let block = cells
+      ? postBlock({ ...post, imageUrl: undefined }, now, inner)
+      : postBlock(post, now, inner);
+    let slot: BodySlot | null = null;
+    if (cells && lines.length + block.length + cells.rows <= h) {
+      slot = {
+        bodyRow: lines.length + block.length,
+        col: FEED_TEXT_COL,
+        columns: cells.columns,
+        key: post._id,
+        rows: cells.rows,
+      };
+      block = [...block, ...Array.from({ length: cells.rows }, () => "")];
+    } else if (cells) {
+      block = postBlock(post, now, inner);
+    }
     // Whole posts only: a header with its text cut off reads as a bug.
     if (lines.length > 0 && lines.length + block.length > h) {
       break;
     }
+    if (slot) {
+      slots.push(slot);
+    }
     lines.push(...block);
   }
   const fresh = state.feed[0] && now - state.feed[0].createdAt < 60 * 1000;
-  return box(
-    {
-      accent: fresh ? GOLD : TEAL,
-      height: h,
-      subtitle: "everyone · newest first",
-      title: "Feed",
-    },
-    lines,
-    w
-  );
+  const subtitle =
+    state.feedOffset > 0
+      ? `${state.feedOffset} newer above · ↑ back${state.feedNeedOlder ? " · loading older…" : ""}`
+      : "everyone · newest first · ↓ older";
+  return {
+    lines: box(
+      {
+        accent: fresh && state.feedOffset === 0 ? GOLD : TEAL,
+        height: h,
+        subtitle,
+        title: "Feed",
+      },
+      lines,
+      w
+    ),
+    slots,
+  };
 }
 
 function statusLine(
@@ -405,7 +555,7 @@ function statusLine(
   } else {
     parts.push(c.dim("upload off"));
   }
-  const right = `${rgb(GOLD, "q")} quit ${c.dim("·")} ${rgb(GOLD, "p")} ${state.paused ? "resume" : "pause"}`;
+  const right = `${rgb(GOLD, "q")} quit ${c.dim("·")} ${rgb(GOLD, "p")} ${state.paused ? "resume" : "pause"} ${c.dim("·")} ${rgb(GOLD, "↑↓")} feed`;
   const left = fit(
     parts.join(c.dim("  ·  ")),
     Math.max(0, w - width(right) - 1)
@@ -413,27 +563,48 @@ function statusLine(
   return `${left}${" ".repeat(Math.max(1, w - width(left) - width(right)))}${right}`;
 }
 
+/**
+ * Top of the board. Tall terminals get the wordmark: the real PNG when the
+ * terminal draws images (blank rows reserved, the picture placed after the
+ * text), the ASCII version otherwise. Short terminals get one line.
+ */
 function header(
   state: WatchState,
   now: number,
   w: number,
   tall: boolean
-): string[] {
+): { lines: string[]; slot?: ImageSlot } {
   const right = c.dim(`${clock(now)} · up ${elapsed(state.startedAt, now)}`);
   if (tall) {
+    const tag = c.dim("live usage board · HackSpain 2026 · Madrid");
+    const tagLine = `${tag}${" ".repeat(Math.max(1, w - width(tag) - width(right)))}${right}`;
+    if (state.imageProtocol) {
+      const cells = imageCells(LOGO_WIDTH, LOGO_HEIGHT, {
+        maxColumns: w,
+        maxRows: LOGO_ROWS,
+      });
+      return {
+        lines: [...Array.from({ length: LOGO_ROWS }, () => ""), tagLine],
+        slot: {
+          col: 0,
+          columns: cells.columns,
+          key: "logo",
+          row: 0,
+          rows: cells.rows,
+        },
+      };
+    }
     const rows = wordmarkRows().map((row, i) =>
       rgb(mix(GOLD, ORANGE, i / 5), row)
     );
-    const tag = c.dim("live usage board · HackSpain 2026 · Madrid");
-    rows.push(
-      `${tag}${" ".repeat(Math.max(1, w - width(tag) - width(right)))}${right}`
-    );
-    return rows;
+    return { lines: [...rows, tagLine] };
   }
   const left = `${rgb(GOLD, "⚡")} ${c.bold("HACKSPAIN")} ${c.dim("· live usage board")}`;
-  return [
-    `${left}${" ".repeat(Math.max(1, w - width(left) - width(right)))}${right}`,
-  ];
+  return {
+    lines: [
+      `${left}${" ".repeat(Math.max(1, w - width(left) - width(right)))}${right}`,
+    ],
+  };
 }
 
 /** Place two column blocks side by side; the shorter one is padded. */
@@ -448,11 +619,23 @@ function columns(left: string[], leftWidth: number, right: string[]): string[] {
 
 export type FrameOptions = { now?: number; tick?: number; intervalMs?: number };
 
+export type Frame = { lines: string[]; slots: ImageSlot[] };
+
+/** Text rows only; what the tests and the diff work on. */
 export function frame(
   state: WatchState,
   size: { columns: number; rows: number },
   options: FrameOptions = {}
 ): string[] {
+  return frameWithSlots(state, size, options).lines;
+}
+
+/** Text rows plus where the feed pictures go, in absolute screen cells. */
+export function frameWithSlots(
+  state: WatchState,
+  size: { columns: number; rows: number },
+  options: FrameOptions = {}
+): Frame {
   const now = options.now ?? Date.now();
   const tick = options.tick ?? 0;
   const intervalMs = options.intervalMs ?? 30_000;
@@ -462,14 +645,35 @@ export function frame(
   const tall = h >= 44 && w >= WORDMARK_WIDTH + 2;
   const head = header(state, now, w, tall);
   const status = statusLine(state, now, tick, w, intervalMs);
-  const lines: string[] = [...head];
-  const available = h - head.length - 1;
+  const lines: string[] = [...head.lines];
+  const available = h - head.lines.length - 1;
+  const slots: ImageSlot[] = head.slot ? [head.slot] : [];
+  /** Body slots of a box whose top border sits on screen row `top`. */
+  const place = (top: number, bodySlots: BodySlot[]) => {
+    slots.push(
+      ...bodySlots.map((slot) => ({
+        col: slot.col,
+        columns: slot.columns,
+        key: slot.key,
+        row: top + 1 + slot.bodyRow,
+        rows: slot.rows,
+      }))
+    );
+  };
+  const pushFeed = (feedH: number) => {
+    const feed = feedBox(state, now, w, feedH);
+    place(lines.length, feed.slots);
+    lines.push(...feed.lines);
+  };
 
-  const harnessRows = state.harnesses.length + 5; // header, rule, per harness, total, blank, breakdown
+  // header, rule, per harness (plus gaps between logos), total, blank, breakdown
+  const harnessRows = state.harnesses.length + 5 + harnessLogoGapRows(state);
   if (available < 14) {
     // Tiny terminal: the two things that matter.
     const feedH = Math.max(1, available - harnessRows - 4);
-    lines.push(...harnessesBox(state, now, w, harnessRows));
+    const harnesses = harnessesBox(state, now, w, harnessRows);
+    place(lines.length, harnesses.slots);
+    lines.push(...harnesses.lines);
     lines.push(...organisersBox(state, now, w, feedH));
   } else if (w < 96) {
     // Narrow: one column. The explainer shrinks and the profile box goes
@@ -477,17 +681,20 @@ export function frame(
     const explainer = explainerBox(state, w, available < 34);
     const harnesses = harnessesBox(state, now, w, harnessRows);
     let you = youBox(state, w);
-    let rest = available - explainer.length - harnesses.length - you.length;
+    let rest =
+      available - explainer.length - harnesses.lines.length - you.length;
     if (rest < 5) {
       you = [];
-      rest = available - explainer.length - harnesses.length;
+      rest = available - explainer.length - harnesses.lines.length;
     }
     // Announcements get a few rows; the feed takes what is left.
     const announceH = Math.max(1, Math.min(5, Math.floor((rest - 4) / 3)));
     const feedH = Math.max(1, rest - announceH - 4);
-    lines.push(...explainer, ...you, ...harnesses);
+    lines.push(...explainer, ...you);
+    place(lines.length, harnesses.slots);
+    lines.push(...harnesses.lines);
     lines.push(...organisersBox(state, now, w, announceH));
-    lines.push(...feedBox(state, now, w, feedH));
+    pushFeed(feedH);
   } else {
     // Wide: explainer across the top; you + harnesses on the left beside
     // announcements + recent requests; the feed across the bottom so links
@@ -505,7 +712,10 @@ export function frame(
       columnsH = lower;
     }
     const harnessH = Math.max(harnessRows, columnsH - you.length - 2);
-    const left = [...you, ...harnessesBox(state, now, leftW, harnessH)];
+    const harnesses = harnessesBox(state, now, leftW, harnessH);
+    // The left column starts at screen column 0, right after the explainer.
+    place(lines.length + explainer.length + you.length, harnesses.slots);
+    const left = [...you, ...harnesses.lines];
     const rightRows = left.length;
     const announceH = Math.max(2, Math.min(6, Math.floor(rightRows / 3)));
     const recentH = Math.max(1, rightRows - announceH - 4);
@@ -516,7 +726,7 @@ export function frame(
     lines.push(...explainer, ...columns(left, leftW, right));
     const feedH = lower - left.length - 2;
     if (feedH >= 2) {
-      lines.push(...feedBox(state, now, w, feedH));
+      pushFeed(feedH);
     }
   }
 
@@ -524,7 +734,11 @@ export function frame(
   while (body.length < h - 1) {
     body.push("");
   }
-  return [...body, status].map((l) => fit(l, w));
+  return {
+    lines: [...body, status].map((l) => fit(l, w)),
+    // Only pictures that fit fully above the status line.
+    slots: slots.filter((slot) => slot.row + slot.rows <= h - 1),
+  };
 }
 
 export type ScreenHandle = { stop: () => void; redraw: () => void };
@@ -551,6 +765,10 @@ export function startScreen(
   handlers: {
     onQuit: () => void;
     onTogglePause: () => void;
+    /** Move the feed view by `delta` posts (↓/j older, ↑/k newer, PgUp/PgDn by five). */
+    onFeedScroll?: (delta: number) => void;
+    /** Back to the newest posts (g or Home). */
+    onFeedLive?: () => void;
     intervalMs: number;
   }
 ): ScreenHandle {
@@ -558,28 +776,52 @@ export function startScreen(
   const size = () => ({ columns: out.columns ?? 80, rows: out.rows ?? 24 });
   let ticks = 0;
   let previous: string[] | undefined;
+  const images = state.imageProtocol
+    ? new ScreenImages(state.imageProtocol, (text) => out.write(text))
+    : null;
   // Once a second, and only the rows that changed: an idle board costs the
   // terminal a couple of short lines per second instead of a full repaint.
+  // Pictures are reconciled after the text, against the slots the frame
+  // reserved for them.
   const draw = (force = false) => {
     ticks++;
-    const lines = frame(state, size(), {
+    const { lines, slots } = frameWithSlots(state, size(), {
       intervalMs: handlers.intervalMs,
       tick: ticks,
     });
     const changes = force ? undefined : diffFrame(previous, lines);
     if (changes === undefined) {
-      out.write(`\x1B[H${lines.map((l) => `${l}\x1B[K`).join("\n")}\x1B[J`);
+      out.write(
+        `${ESC}[H${lines.map((l) => `${l}${ESC}[K`).join("\n")}${ESC}[J`
+      );
     } else if (changes.length > 0) {
       out.write(
         changes
-          .map(({ row, line }) => `\x1B[${row + 1};1H${line}\x1B[K`)
+          .map(({ row, line }) => `${ESC}[${row + 1};1H${line}${ESC}[K`)
           .join("")
+      );
+    }
+    if (images) {
+      const pngs = new Map<string, Uint8Array>([["logo", logoPng()]]);
+      for (const id of harnessLogoIds()) {
+        const png = harnessLogo(id);
+        if (png) {
+          pngs.set(harnessLogoKey(id), png);
+        }
+      }
+      for (const [key, image] of state.feedImages) {
+        pngs.set(key, image.png);
+      }
+      images.sync(
+        slots,
+        pngs,
+        changes === undefined ? "all" : new Set(changes.map((x) => x.row))
       );
     }
     previous = lines;
   };
 
-  out.write("\x1B[?1049h\x1B[?25l\x1B[2J");
+  out.write(`${ESC}[?1049h${ESC}[?25l${ESC}[2J`);
   const timer = setInterval(() => draw(), 1000);
   const onResize = () => draw(true);
   out.on("resize", onResize);
@@ -592,6 +834,12 @@ export function startScreen(
       handlers.onQuit();
     } else if (key === "p") {
       handlers.onTogglePause();
+      draw();
+    } else if (key in FEED_SCROLL_KEYS) {
+      handlers.onFeedScroll?.(FEED_SCROLL_KEYS[key] ?? 0);
+      draw();
+    } else if (FEED_LIVE_KEYS.has(key)) {
+      handlers.onFeedLive?.();
       draw();
     }
   };
@@ -612,7 +860,8 @@ export function startScreen(
         stdin.setRawMode(false);
         stdin.pause();
       }
-      out.write("\x1B[?25h\x1B[?1049l");
+      images?.clear();
+      out.write(`${ESC}[?25h${ESC}[?1049l`);
     },
   };
 }

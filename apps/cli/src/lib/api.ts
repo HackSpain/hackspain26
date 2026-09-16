@@ -307,6 +307,56 @@ export async function uploadImage(
   return envelope.value.imageId;
 }
 
+const IMAGE_TIMEOUT_MS = 8000;
+
+/**
+ * Fetch a feed image as a PNG resized to `width` px through
+ * `/api/files/<id>?w=`, with the session's bearer token. Best effort: any
+ * failure returns null and the caller prints the link instead. Retries once
+ * with a refreshed token on 401, like the rpc client.
+ */
+export async function fetchImage(
+  session: Session,
+  imagePath: string,
+  width: number,
+  fetchImpl: FetchLike = fetch
+): Promise<Uint8Array | null> {
+  const url = new URL(imagePath, session.url);
+  url.searchParams.set("w", String(width));
+  const attempt = async (bearer: string | null): Promise<Response | null> => {
+    try {
+      return await fetchImpl(url, {
+        headers: {
+          accept: "image/png",
+          "user-agent": `hackspain-cli/${VERSION}`,
+          ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
+        },
+        redirect: "manual",
+        signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+      });
+    } catch {
+      return null;
+    }
+  };
+  let response = await attempt(await session.token());
+  if (response?.status === 401) {
+    response = await attempt(await session.token(true));
+  }
+  if (
+    !(
+      response?.ok &&
+      (response.headers.get("content-type") ?? "").startsWith("image/png")
+    )
+  ) {
+    return null;
+  }
+  try {
+    return new Uint8Array(await response.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Open a session against the dashboard. With `requireAuth` a missing or
  * expired session is a hard error; otherwise calls go out anonymously.

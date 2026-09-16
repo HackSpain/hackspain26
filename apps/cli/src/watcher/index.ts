@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Session } from "../lib/api";
-import { api } from "../lib/api";
+import { api, fetchImage } from "../lib/api";
 import {
   ensureDir,
   readJsonFile,
@@ -11,6 +11,7 @@ import {
 import { CliError, EXIT } from "../lib/errors";
 import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
+import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
 import { createBatcher } from "./batcher";
@@ -27,7 +28,15 @@ import { httpSink } from "./sinks/http";
 import type { Sink } from "./sinks/spool";
 import { spoolSink } from "./sinks/spool";
 import type { WatchState } from "./state";
-import { recordEvent, recordLog, recordNotification } from "./state";
+import {
+  appendOlderFeed,
+  FEED_PAGE,
+  mergeNewerFeed,
+  recordEvent,
+  recordLog,
+  recordNotification,
+  WATCH_IMAGE_BOUNDS,
+} from "./state";
 import type { Collector, CollectorContext } from "./types";
 
 export const COLLECTORS: Collector[] = [
@@ -63,6 +72,8 @@ export type WatchDeps = {
 };
 
 const RECENT_IDS_CAP = 5000;
+/** Thumbnails fetched per loop iteration, so a burst of images never stalls a scan. */
+const FEED_IMAGES_PER_TURN = 4;
 const TEAM_REFRESH_MS = 5 * 60 * 1000;
 /** After this long without a usage event, scans slow down to save battery. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000;
@@ -339,19 +350,86 @@ export async function runWatch(
     }
   };
 
-  /** Latest feed posts for the board; nothing to do in line mode. */
+  /**
+   * Thumbnails for loaded posts that do not have one yet, a few per call.
+   * Only when the terminal can draw them; failures turn into links.
+   */
+  const loadFeedImages = async (): Promise<void> => {
+    if (!state?.imageProtocol) {
+      return;
+    }
+    const width = WATCH_IMAGE_BOUNDS.maxColumns * PIXELS_PER_COLUMN;
+    let budget = FEED_IMAGES_PER_TURN;
+    for (const post of state.feed) {
+      if (budget === 0) {
+        return;
+      }
+      if (
+        !post.imagePath ||
+        state.feedImages.has(post._id) ||
+        state.feedImageFailed.has(post._id)
+      ) {
+        continue;
+      }
+      budget--;
+      const png = await fetchImage(session, post.imagePath, width);
+      const size = png ? pngSize(png) : null;
+      if (png && size) {
+        state.feedImages.set(post._id, { png, ...size });
+      } else {
+        state.feedImageFailed.add(post._id);
+      }
+    }
+  };
+
+  /** Latest feed page for the board; nothing to do in line mode. */
   const pollFeed = async (): Promise<void> => {
     if (!state) {
       return;
     }
     try {
-      state.feed = withImageUrls(
-        await session.client.query(api.feed.list, { limit: 15 }),
-        session.url
+      mergeNewerFeed(
+        state,
+        withImageUrls(
+          await session.client.query(api.feed.list, { limit: FEED_PAGE }),
+          session.url
+        )
       );
     } catch (error) {
       log(`feed: ${String(error)}`);
+      return;
     }
+    await loadFeedImages();
+  };
+
+  /** The next older page, when scrolling asked for it. */
+  const fetchOlderFeed = async (): Promise<void> => {
+    if (!state?.feedNeedOlder) {
+      return;
+    }
+    const oldest = state.feed.at(-1);
+    if (!oldest) {
+      state.feedNeedOlder = false;
+      return;
+    }
+    try {
+      appendOlderFeed(
+        state,
+        withImageUrls(
+          await session.client.query(api.feed.list, {
+            before: oldest.createdAt,
+            limit: FEED_PAGE,
+          }),
+          session.url
+        ),
+        FEED_PAGE
+      );
+    } catch (error) {
+      state.feedNeedOlder = false;
+      log(`feed: ${String(error)}`);
+      return;
+    }
+    await loadFeedImages();
   };
 
   let stopping = false;
@@ -446,6 +524,10 @@ export async function runWatch(
       }
       // One wakeup per second at most; a key press wakes it immediately.
       await sleepOrWake(state, state?.paused ? 5000 : 1000);
+      // Scrolling past the loaded posts asks for an older page; pictures
+      // for anything loaded trickle in a few per turn.
+      await fetchOlderFeed();
+      await loadFeedImages();
     }
     say("Stopping, flushing…");
     await batcher.flush();

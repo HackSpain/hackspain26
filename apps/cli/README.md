@@ -46,10 +46,13 @@ hackspain perk list
 hackspain milestone add firstCommit|firstBuild|firstDemo|custom [--label …] [--at ISO]
 hackspain milestone list [--all]
 
-hackspain feed [-n 20]          # posts from everyone + pushes and PRs from every team repo
+hackspain feed [-n 20] [--no-images] [--before <cursor>]
+                                # posts from everyone + pushes and PRs from every team repo;
+                                # pictures inline in Kitty/Ghostty/WezTerm/iTerm2/VS Code, links elsewhere;
+                                # on a TTY it offers the next older page, scripts get a --before cursor
 hackspain post "text" [--image photo.jpg]   # ≤500 chars; jpeg/png/webp/gif ≤5 MB
 
-hackspain watch [--interval 30] [--backfill <hours>] [--no-toast] [--no-upload] [--once]
+hackspain watch [--interval 30] [--backfill <hours>] [--no-toast] [--no-upload] [--no-images] [--once]
 hackspain telemetry stats       # what the watcher recorded on this machine
 
 hackspain --json <command>      # one JSON object on stdout, prompts disabled
@@ -68,11 +71,18 @@ nobody has to type a second email code on the web.
 
 ## Watcher
 
+Every screen that opens with the brand (`hackspain`, the menu, `--help`, the watcher) shows
+the HackSpain wordmark: the real PNG in terminals that draw images, block letters on wide text
+terminals, a small mark elsewhere.
+
 `hackspain watch` is meant to stay open in its own terminal all weekend. It takes over the
-screen with a short "Keep this open" note on why it matters, a panel for you and your team, a table of the AI
-harnesses it found (status, requests, tokens, last request), organiser announcements as they
+screen with that wordmark on top, a short "Keep this open" note on why it matters, a panel for you and your team, a table of the AI
+harnesses it found (with the real logo beside each name, one blank row apart, where the
+terminal draws images; a brand glyph elsewhere: ✻ Claude Code, ⬡ Codex, ▍ Cursor, ◆ OpenCode, ▣ Cline, ◉ Copilot;
+status, requests, tokens, last request), organiser announcements as they
 arrive, a table of the most recent requests it reported, the feed across the bottom (posts from
-everyone plus GitHub activity from every team repo, links included), and a status bar with the
+everyone plus GitHub activity from every team repo, with pictures inline where the terminal can
+draw them and links elsewhere; `↑`/`↓` scroll it, `g` returns to live), and a status bar with the
 next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
 `--plain` use the line-by-line mode instead.
 
@@ -103,9 +113,20 @@ One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.
 ## Feed
 
 `hackspain feed` and `hackspain post` share one feed with the dashboard's `/feed` page: short
-messages, an optional image (uploaded through `/api/cli/upload`, shown as a link in the terminal
-and inline on the web; links are `https://app.hackspain.com/api/files/<id>` and need a dashboard
-login), and GitHub activity. The server polls the public Events API of every
+messages, an optional image, and GitHub activity. Images are uploaded through `/api/cli/upload`
+and served from `https://app.hackspain.com/api/files/<id>` (needs a dashboard login; `hackspain
+open feed` gets you one). In terminals that speak the Kitty graphics protocol (kitty, Ghostty,
+WezTerm, Konsole 22.04+) or the iTerm2 inline-image protocol (iTerm2, Warp, VS Code) the picture
+is drawn inline: the CLI asks the server for a PNG thumbnail (`?w=576`) and hands the bytes to
+the terminal, so it ships no image decoders. Everywhere else, in tmux, when piped, with `--json`,
+`--no-images` or `HACKSPAIN_NO_IMAGES=1`, you get the link. Pictures are capped at 36 columns by
+12 rows in `hackspain feed` and 30 by 6 in the watcher band; tall photos shrink to fit the row cap.
+
+Pages are 20 posts by default (`-n`). On a TTY the feed asks "Show older posts?" after a full
+page; piped or `--json` it prints the cursor to pass as `--before` (the oldest post's `createdAt`,
+or any ISO date). In the watcher, `↓`/`j` and `↑`/`k` move one post, `PgDn`/`PgUp` five, `g` or
+`Home` jumps back to live; older pages load as you approach the end, and new posts do not yank
+the view while you are scrolled down. The server polls the public Events API of every
 team repo (`hackspain team repo <url>`) every three minutes from a Convex cron and posts pushes,
 opened and merged pull requests, releases and tags. Nothing is read from the hacker's machine:
 push often and it shows up.
