@@ -268,15 +268,6 @@ type BodySlot = Omit<ImageSlot, "row"> & { bodyRow: number };
 const HARNESS_TABLE_HEAD_ROWS = 2;
 /** Column of the logo inside the box: border plus one space. */
 const HARNESS_LOGO_COL = 2;
-/** With logos, one blank row between harnesses so the pictures do not touch. */
-const HARNESS_LOGO_GAP = 1;
-
-/** Extra body rows the harness table needs when logos are drawn. */
-export function harnessLogoGapRows(state: WatchState): number {
-  return state.imageProtocol
-    ? Math.max(0, state.harnesses.length - 1) * HARNESS_LOGO_GAP
-    : 0;
-}
 
 function harnessesBox(
   state: WatchState,
@@ -289,7 +280,7 @@ function harnessesBox(
   const label = (id: string, muted: boolean, index: number) => {
     if (withLogos && harnessLogo(id)) {
       slots.push({
-        bodyRow: HARNESS_TABLE_HEAD_ROWS + index * (1 + HARNESS_LOGO_GAP),
+        bodyRow: HARNESS_TABLE_HEAD_ROWS + index,
         col: HARNESS_LOGO_COL,
         columns: HARNESS_LOGO_CELLS.columns,
         key: harnessLogoKey(id),
@@ -299,32 +290,25 @@ function harnessesBox(
     }
     return harnessLabel(id, muted);
   };
-  const rows: string[][] = [];
-  for (const [index, harness] of state.harnesses.entries()) {
-    if (withLogos && index > 0) {
-      // Breathing room between one-row logos.
-      rows.push(["", "", "", "", ""]);
-    }
-    rows.push(
-      harness.found
-        ? [
-            label(harness.id, false, index),
-            harnessStatus(harness.lastEventAt, now),
-            compactNumber(harness.requests),
-            compactNumber(harness.tokens),
-            harness.lastEventAt
-              ? c.dim(formatAgo(harness.lastEventAt, now))
-              : c.dim("–"),
-          ]
-        : [
-            label(harness.id, true, index),
-            c.dim("○ not on this machine"),
-            c.dim("–"),
-            c.dim("–"),
-            c.dim("–"),
-          ]
-    );
-  }
+  const rows: string[][] = state.harnesses.map((harness, index) =>
+    harness.found
+      ? [
+          label(harness.id, false, index),
+          harnessStatus(harness.lastEventAt, now),
+          compactNumber(harness.requests),
+          compactNumber(harness.tokens),
+          harness.lastEventAt
+            ? c.dim(formatAgo(harness.lastEventAt, now))
+            : c.dim("–"),
+        ]
+      : [
+          label(harness.id, true, index),
+          c.dim("○ not on this machine"),
+          c.dim("–"),
+          c.dim("–"),
+          c.dim("–"),
+        ]
+  );
   const t = state.totals;
   rows.push([
     c.bold("Total"),
@@ -666,8 +650,7 @@ export function frameWithSlots(
     lines.push(...feed.lines);
   };
 
-  // header, rule, per harness (plus gaps between logos), total, blank, breakdown
-  const harnessRows = state.harnesses.length + 5 + harnessLogoGapRows(state);
+  const harnessRows = state.harnesses.length + 5; // header, rule, per harness, total, blank, breakdown
   if (available < 14) {
     // Tiny terminal: the two things that matter.
     const feedH = Math.max(1, available - harnessRows - 4);

@@ -235,11 +235,7 @@ describe("watcher header and branding", () => {
       const codex = slots.find((x) => x.key === harnessLogoKey("codex"));
       expect(claude).toMatchObject({ col: 2, columns: 2, rows: 1 });
       expect(codex).toMatchObject({ col: 2, columns: 2, rows: 1 });
-      // One blank row between logos so the pictures do not touch.
-      expect((codex?.row ?? 0) - (claude?.row ?? 0)).toBe(2);
-      // Only the left column: in the wide layout another box shares the line.
-      const gap = stripAnsi(lines[(claude?.row ?? 0) + 1] ?? "").slice(0, 40);
-      expect(gap.replaceAll("│", "").trim()).toBe("");
+      expect((codex?.row ?? 0) - (claude?.row ?? 0)).toBe(1);
       // The logo row shows the name after two blank cells, no glyph.
       const row = stripAnsi(lines[claude?.row ?? 0] ?? "");
       expect(row.startsWith("│    Claude Code")).toBe(true);

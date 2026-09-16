@@ -77,8 +77,8 @@ terminals, a small mark elsewhere.
 
 `hackspain watch` is meant to stay open in its own terminal all weekend. It takes over the
 screen with that wordmark on top, a short "Keep this open" note on why it matters, a panel for you and your team, a table of the AI
-harnesses it found (with the real logo beside each name, one blank row apart, where the
-terminal draws images; a brand glyph elsewhere: ✻ Claude Code, ⬡ Codex, ▍ Cursor, ◆ OpenCode, ▣ Cline, ◉ Copilot;
+harnesses it found (with the real logo beside each name where the terminal draws images, a
+brand glyph elsewhere: ✻ Claude Code, ⬡ Codex, ▍ Cursor, ◆ OpenCode, ▣ Cline, ◉ Copilot;
 status, requests, tokens, last request), organiser announcements as they
 arrive, a table of the most recent requests it reported, the feed across the bottom (posts from
 everyone plus GitHub activity from every team repo, with pictures inline where the terminal can
