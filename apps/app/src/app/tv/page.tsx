@@ -1,7 +1,5 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import type { TvSnapshot } from "@convex/tvPlayback";
@@ -52,7 +50,7 @@ function Column({ title, items }: { title: string; items: TvMessage[] }) {
   );
 }
 
-function TvMessagesBoard({ showBackLink, messages }: { showBackLink: boolean; messages: TvSnapshot["messages"] | undefined }) {
+function TvMessagesBoard({ messages }: { messages: TvSnapshot["messages"] | undefined }) {
   const now = useClock();
 
   const banner = zoneMessages(messages, "banner");
@@ -67,17 +65,6 @@ function TvMessagesBoard({ showBackLink, messages }: { showBackLink: boolean; me
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-hs-ink text-hs-paper">
-      {showBackLink ? (
-        <div className="px-6 pt-3 lg:px-10">
-          <Link
-            href="/"
-            className="inline-flex min-h-11 min-w-11 items-center gap-2 text-sm font-medium text-hs-gold underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-gold motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out motion-safe:active:scale-[0.96]"
-          >
-            <ArrowLeft className="size-4" aria-hidden />
-            Volver al dashboard
-          </Link>
-        </div>
-      ) : null}
       <header className="flex items-baseline justify-between gap-4 border-b-[3px] border-hs-gold px-6 py-4 lg:px-10">
         <p className="font-bungee text-2xl uppercase text-hs-gold lg:text-4xl">
           HackSpain <span className="text-hs-paper">2026</span>
@@ -149,23 +136,9 @@ function TvMessagesBoard({ showBackLink, messages }: { showBackLink: boolean; me
   );
 }
 
-function TvBackLink() {
-  return (
-    <Link
-      href="/"
-      className="absolute top-3 left-3 z-50 inline-flex min-h-11 min-w-11 items-center gap-2 text-sm font-medium text-hs-gold underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-gold motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out motion-safe:active:scale-[0.96]"
-    >
-      <ArrowLeft className="size-4" aria-hidden />
-      Volver al dashboard
-    </Link>
-  );
-}
-
-function TvComposition({ showBackLink, widgets }: { showBackLink: boolean; widgets: TvSnapshot["widgets"] | undefined }) {
-
+function TvComposition({ widgets }: { widgets: TvSnapshot["widgets"] | undefined }) {
   return (
     <div className="relative h-dvh overflow-hidden bg-hs-ink">
-      {showBackLink ? <TvBackLink /> : null}
       {widgets === undefined ? (
         <div className="h-full bg-hs-ink" />
       ) : (
@@ -178,13 +151,12 @@ function TvComposition({ showBackLink, widgets }: { showBackLink: boolean; widge
 function TvScreen({ snapshot }: { snapshot: TvSnapshot | undefined }) {
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
-  const fromApp = searchParams.get("from") === "app";
 
   if (view === "messages") {
-    return <TvMessagesBoard showBackLink={fromApp} messages={snapshot?.messages} />;
+    return <TvMessagesBoard messages={snapshot?.messages} />;
   }
 
-  return <TvComposition showBackLink={fromApp} widgets={snapshot?.widgets} />;
+  return <TvComposition widgets={snapshot?.widgets} />;
 }
 
 export default function TvPage() {
