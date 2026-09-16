@@ -59,7 +59,14 @@ const rule = {
   },
 };
 
-const TILES = [
+type TileSpec = {
+  area: string;
+  clip?: string;
+  origin: "top" | "bottom";
+  tone: string;
+};
+
+const TILES: readonly TileSpec[] = [
   {
     area: "a",
     clip: "[clip-path:polygon(0_0,100%_0,0_100%)]",
@@ -88,7 +95,7 @@ const TILES = [
   { area: "p", origin: "bottom", tone: "bg-hs-orange" },
   { area: "q", origin: "bottom", tone: "bg-hs-paper" },
   { area: "r", origin: "bottom", tone: "bg-hs-red" },
-] as const;
+];
 
 function Tile({
   area,
@@ -96,7 +103,7 @@ function Tile({
   origin,
   reduced,
   tone,
-}: (typeof TILES)[number] & { reduced: boolean }) {
+}: TileSpec & { reduced: boolean }) {
   return (
     <motion.div
       className={cn("min-h-0 min-w-0", tone, clip)}
