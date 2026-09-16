@@ -25,6 +25,7 @@ import type * as lib_customFunctions from "../lib/customFunctions.js";
 import type * as lib_dietary from "../lib/dietary.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_eventDetails from "../lib/eventDetails.js";
+import type * as lib_files from "../lib/files.js";
 import type * as lib_github from "../lib/github.js";
 import type * as lib_judging from "../lib/judging.js";
 import type * as lib_normalize from "../lib/normalize.js";
@@ -33,12 +34,14 @@ import type * as lib_stack from "../lib/stack.js";
 import type * as lib_team from "../lib/team.js";
 import type * as lib_tvLayouts from "../lib/tvLayouts.js";
 import type * as lib_urls from "../lib/urls.js";
+import type * as lib_userTypes from "../lib/userTypes.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as migrations from "../migrations.js";
 import type * as milestones from "../milestones.js";
 import type * as notifications from "../notifications.js";
 import type * as onboarding from "../onboarding.js";
 import type * as perks from "../perks.js";
+import type * as seed from "../seed.js";
 import type * as stack from "../stack.js";
 import type * as stackDetect from "../stackDetect.js";
 import type * as submissions from "../submissions.js";
@@ -46,6 +49,7 @@ import type * as teams from "../teams.js";
 import type * as tracks from "../tracks.js";
 import type * as tv from "../tv.js";
 import type * as tvPlayback from "../tvPlayback.js";
+import type * as userTypes from "../userTypes.js";
 import type * as users from "../users.js";
 
 import type {
@@ -72,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   "lib/dietary": typeof lib_dietary;
   "lib/errors": typeof lib_errors;
   "lib/eventDetails": typeof lib_eventDetails;
+  "lib/files": typeof lib_files;
   "lib/github": typeof lib_github;
   "lib/judging": typeof lib_judging;
   "lib/normalize": typeof lib_normalize;
@@ -80,12 +85,14 @@ declare const fullApi: ApiFromModules<{
   "lib/team": typeof lib_team;
   "lib/tvLayouts": typeof lib_tvLayouts;
   "lib/urls": typeof lib_urls;
+  "lib/userTypes": typeof lib_userTypes;
   "lib/validators": typeof lib_validators;
   migrations: typeof migrations;
   milestones: typeof milestones;
   notifications: typeof notifications;
   onboarding: typeof onboarding;
   perks: typeof perks;
+  seed: typeof seed;
   stack: typeof stack;
   stackDetect: typeof stackDetect;
   submissions: typeof submissions;
@@ -93,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   tracks: typeof tracks;
   tv: typeof tv;
   tvPlayback: typeof tvPlayback;
+  userTypes: typeof userTypes;
   users: typeof users;
 }>;
 

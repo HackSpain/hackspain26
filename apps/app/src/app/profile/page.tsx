@@ -4,23 +4,21 @@ import { api } from "@convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import {
-  ArrowLeft,
   ArrowUpRight,
   Bell,
-  Check,
   CheckCircle2,
-  CircleUserRound,
   Github,
-  MapPin,
+  ImagePlus,
   Phone,
   Save,
-  Utensils,
-  X,
+  Trash2,
+  UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
+import type { Id } from "@convex/_generated/dataModel";
+import { Avatar } from "@/components/avatar";
 import { useGithubLink } from "@/components/github-link-banner";
 import {
   errorMessage,
@@ -33,7 +31,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { cn, phoneVerifyMessage } from "@/lib/utils";
 
 type Profile = NonNullable<FunctionReturnType<typeof api.users.me>>;
@@ -129,77 +126,140 @@ function ProfileSection({
   );
 }
 
-function AttendanceCard({ status }: { status: Profile["attendanceStatus"] }) {
-  const setAttendance = useMutation(api.users.setAttendance);
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+
+function storageIdFromUpload(value: unknown): Id<"_storage"> {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "storageId" in value &&
+    typeof value.storageId === "string"
+  ) {
+    return value.storageId as Id<"_storage">;
+  }
+  throw new Error("No se pudo subir la foto");
+}
+
+function IdentityCard({ me }: { me: Profile }) {
+  const setName = useMutation(api.users.setName);
+  const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const setAvatar = useMutation(api.users.setAvatar);
+  const removeAvatar = useMutation(api.users.removeAvatar);
   const action = useProfileAction();
-  const attending = status === "attending";
-  const cancelled = status === "cancelled";
+  const [nameDraft, setNameDraft] = useState<string | undefined>();
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const name = nameDraft ?? me.name ?? "";
+  const nameChanged = name.trim() !== (me.name ?? "");
+
+  async function upload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Solo se admiten imágenes");
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      throw new Error("La foto no puede superar 2 MB.");
+    }
+    const uploadUrl = await generateUploadUrl();
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!response.ok) {throw new Error("No se pudo subir la foto");}
+    await setAvatar({ imageId: storageIdFromUpload(await response.json()) });
+  }
 
   return (
     <ProfileSection
-      id="attendance-heading"
-      title="Tu asistencia"
-      description="Mantén al equipo al día sobre tus planes."
-      icon={CheckCircle2}
+      id="identity-heading"
+      title="Nombre y foto"
+      description="Así te ven los demás en el feed y en el directorio."
+      icon={UserRound}
     >
-      <div
-        className={cn(
-          "border-l-[3px] p-3",
-          attending
-            ? "border-hs-teal bg-hs-teal/10"
-            : "border-hs-orange bg-hs-orange/10"
-        )}
-      >
-        <p className="font-semibold">
-          {attending
-            ? "¡Contamos contigo!"
-            : cancelled
-              ? "Has cancelado tu asistencia"
-              : "Confirma si vas a venir"}
-        </p>
-        <p className="mt-1 text-sm text-hs-brown">
-          {attending
-            ? "Nos vemos en HackSpain."
-            : "Puedes actualizar tu asistencia aquí."}
-        </p>
+      <div className="flex flex-wrap items-center gap-4">
+        <Avatar
+          name={me.name}
+          src={me.avatarUrl}
+          className="size-20 text-2xl shadow-[4px_4px_0_var(--color-hs-ink)]"
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border-[3px] border-hs-ink bg-hs-gold px-5 font-bungee text-sm text-hs-ink hs-hover-bright">
+            <ImagePlus className="size-4" aria-hidden />
+            {action.pending ? "Subiendo…" : "Cambiar foto"}
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              disabled={action.pending}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (!file) {return;}
+                void action.run(async () => {
+                  try {
+                    await upload(file);
+                  } finally {
+                    if (fileInput.current) {fileInput.current.value = "";}
+                  }
+                  return "Foto actualizada.";
+                });
+              }}
+            />
+          </label>
+          {me.avatarUrl ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={action.pending}
+              onClick={() =>
+                void action.run(async () => {
+                  await removeAvatar({});
+                  return "Foto eliminada.";
+                })
+              }
+            >
+              <Trash2 aria-hidden /> Quitar foto
+            </Button>
+          ) : null}
+        </div>
       </div>
-      <div
-        className="grid grid-cols-2 gap-2"
-        role="group"
-        aria-label="Asistencia a HackSpain"
+      <p className="text-xs text-hs-brown">
+        JPG, PNG, WebP o GIF de hasta 2 MB.
+        {!me.avatarUrl && me.githubLinked
+          ? " Vincula GitHub para usar tu avatar de allí."
+          : ""}
+      </p>
+      <form
+        className="space-y-3 border-t border-hs-ink/15 pt-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void action.run(async () => {
+            await setName({ name });
+            setNameDraft(undefined);
+            return "Nombre guardado.";
+          });
+        }}
       >
+        <Field label="Nombre" htmlFor="display-name">
+          <Input
+            id="display-name"
+            required
+            minLength={2}
+            maxLength={80}
+            autoComplete="name"
+            value={name}
+            disabled={action.pending}
+            onChange={(event) => setNameDraft(event.target.value)}
+          />
+        </Field>
         <Button
-          type="button"
-          size="sm"
-          variant={attending ? "teal" : "outline"}
-          aria-pressed={attending}
-          disabled={action.pending}
-          onClick={() =>
-            void action.run(async () => {
-              await setAttendance({ attendanceStatus: "attending" });
-              return "Asistencia confirmada.";
-            })
-          }
-        >
-          <Check aria-hidden /> Asistiré
-        </Button>
-        <Button
-          type="button"
-          size="sm"
+          type="submit"
           variant="outline"
-          className={cn(cancelled && "bg-hs-sand")}
-          aria-pressed={cancelled}
-          disabled={action.pending}
-          onClick={() =>
-            void action.run(async () => {
-              await setAttendance({ attendanceStatus: "cancelled" });
-              return "Asistencia cancelada.";
-            })
-          }
+          className="w-full sm:w-auto"
+          disabled={action.pending || !nameChanged}
         >
-          <X aria-hidden /> No podré ir
+          <Save aria-hidden /> Guardar nombre
         </Button>
-      </div>
+      </form>
       <Feedback action={action} />
     </ProfileSection>
   );
@@ -267,106 +327,6 @@ function GithubCard({
         </button>
       ) : null}
       <Feedback action={action} />
-    </ProfileSection>
-  );
-}
-
-function EventDetailsCard({ me }: { me: Profile }) {
-  const updateEventDetails = useMutation(api.users.updateEventDetails);
-  const action = useProfileAction();
-  const [dietaryDraft, setDietaryDraft] = useState<string | undefined>();
-  const [dietaryDetailsDraft, setDietaryDetailsDraft] = useState<
-    string | undefined
-  >();
-  const [travelDraft, setTravelDraft] = useState<string | undefined>();
-  const dietaryRestrictions = dietaryDraft ?? me.dietaryRestrictions ?? "";
-  const dietaryDetails = dietaryDetailsDraft ?? me.dietaryDetails ?? "";
-  const travelOrigin = travelDraft ?? me.travelOrigin ?? "";
-  const hasChanges =
-    dietaryRestrictions !== (me.dietaryRestrictions ?? "") ||
-    dietaryDetails !== (me.dietaryDetails ?? "") ||
-    travelOrigin !== (me.travelOrigin ?? "");
-
-  return (
-    <ProfileSection
-      id="event-details-heading"
-      title="Dieta y viaje"
-      description="Los pequeños detalles para preparar tu llegada."
-      icon={Utensils}
-    >
-      <form
-        className="space-y-5"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void action.run(async () => {
-            await updateEventDetails({
-              dietaryDetails: dietaryDetails || undefined,
-              dietaryRestrictions,
-              travelOrigin,
-            });
-            setDietaryDraft(undefined);
-            setDietaryDetailsDraft(undefined);
-            setTravelDraft(undefined);
-            return "Dieta y viaje guardados.";
-          });
-        }}
-      >
-        <fieldset className="min-w-0 space-y-5" disabled={action.pending}>
-          <Field label="Restricciones alimentarias" htmlFor="dietary">
-            <Input
-              id="dietary"
-              required
-              placeholder="Ninguna, vegetariano, vegano, alergias…"
-              value={dietaryRestrictions}
-              onChange={(event) => setDietaryDraft(event.target.value)}
-            />
-          </Field>
-          <Field label="Detalles de dieta (opcional)" htmlFor="dietary-details">
-            <Textarea
-              id="dietary-details"
-              rows={3}
-              placeholder="Cuéntanos si hay algo más que debamos tener en cuenta."
-              value={dietaryDetails}
-              onChange={(event) => setDietaryDetailsDraft(event.target.value)}
-            />
-          </Field>
-          <div className="border-t border-hs-ink/15 pt-5">
-            <Field label="¿Desde dónde viajas?" htmlFor="travel-origin">
-              <div className="relative">
-                <MapPin
-                  className="pointer-events-none absolute top-3.5 left-3 size-4 text-hs-brown"
-                  aria-hidden
-                />
-                <Input
-                  id="travel-origin"
-                  className="pl-10"
-                  required
-                  autoComplete="address-level2"
-                  placeholder="Ciudad o región"
-                  value={travelOrigin}
-                  onChange={(event) => setTravelDraft(event.target.value)}
-                />
-              </div>
-            </Field>
-          </div>
-        </fieldset>
-        <div className="flex flex-col gap-3 border-t border-hs-ink/15 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-hs-brown">
-            {hasChanges
-              ? "Tienes cambios sin guardar."
-              : "Sin cambios pendientes."}
-          </p>
-          <Button
-            type="submit"
-            disabled={action.pending || !hasChanges}
-            className="w-full sm:w-auto"
-          >
-            <Save aria-hidden />{" "}
-            {action.pending ? "Guardando…" : "Guardar cambios"}
-          </Button>
-        </div>
-        <Feedback action={action} hideMessage={hasChanges} />
-      </form>
     </ProfileSection>
   );
 }
@@ -609,34 +569,19 @@ export default function ProfilePage() {
     return <LoadingText />;
   }
 
-  const initials = me.name
-    ?.trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-
   return (
     <Page className="[&_button]:focus-visible:outline-2 [&_button]:focus-visible:outline-offset-4 [&_button]:focus-visible:outline-hs-navy">
-      <Link
-        href="/"
-        className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-hs-brown underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-navy"
-      >
-        <ArrowLeft className="size-4" aria-hidden /> Volver al inicio
-      </Link>
       <div className="overflow-hidden border-[3px] border-hs-ink">
         <div className="flex items-center justify-between gap-4 bg-hs-navy px-5 py-3 text-hs-paper sm:px-7">
           <h1 className="text-lg sm:text-xl">Mi perfil</h1>
           <span className="font-bungee text-xs text-hs-gold">HackSpain</span>
         </div>
         <div className="flex flex-col gap-5 bg-hs-sand/50 p-5 sm:flex-row sm:items-center sm:p-7">
-          <div
-            className="flex size-16 shrink-0 items-center justify-center border-[3px] border-hs-ink bg-hs-gold font-bungee text-2xl shadow-[4px_4px_0_var(--color-hs-ink)] sm:size-20"
-            aria-hidden
-          >
-            {initials || <CircleUserRound className="size-8" />}
-          </div>
+          <Avatar
+            name={me.name}
+            src={me.avatarUrl}
+            className="size-16 text-2xl shadow-[4px_4px_0_var(--color-hs-ink)] sm:size-20"
+          />
           <div className="min-w-0 flex-1">
             <p className="font-bungee text-xl leading-tight break-words sm:text-2xl">
               {me.name || "Tu cuenta"}
@@ -645,18 +590,19 @@ export default function ProfilePage() {
               <p className="mt-2 text-sm break-all text-hs-brown">{me.email}</p>
             ) : null}
             <p className="mt-3 text-sm text-hs-brown">
-              Tu asistencia, tus preferencias y todo listo para el evento.
+              {me.userType
+                ? `${me.userType.label} · tu cuenta y tus preferencias.`
+                : "Tu cuenta y tus preferencias para el evento."}
             </p>
           </div>
         </div>
       </div>
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-6">
         <div className="min-w-0 space-y-5 lg:space-y-6">
-          <EventDetailsCard me={me} />
+          <IdentityCard me={me} />
           <PhoneCard me={me} />
         </div>
         <div className="min-w-0 space-y-5 lg:space-y-6">
-          <AttendanceCard status={me.attendanceStatus} />
           <GithubCard linked={me.githubLinked} username={me.githubUsername} />
           <NotificationsCard consent={me.notificationConsent} />
         </div>

@@ -1,5 +1,13 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { imagePathFor } from "./files";
+
+/** Same-origin path for the team logo, if the owner uploaded one. */
+export function teamLogoUrlFor(
+  team: Pick<Doc<"teams">, "logoId"> | null | undefined
+): string | undefined {
+  return team?.logoId ? imagePathFor(team.logoId) : undefined;
+}
 
 export async function membershipForUser(
   ctx: QueryCtx | MutationCtx,

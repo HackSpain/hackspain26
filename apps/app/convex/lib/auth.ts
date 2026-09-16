@@ -1,16 +1,13 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { canJudge } from "./userTypes";
 import type { Role } from "./validators";
 
 type Ctx = QueryCtx | MutationCtx;
 
 export function isAdmin(user: Pick<Doc<"users">, "role">): boolean {
   return user.role === "admin";
-}
-
-export function isJudge(user: Pick<Doc<"users">, "role">): boolean {
-  return user.role === "judge" || user.role === "admin";
 }
 
 export function resolvedLoginRole(
@@ -20,10 +17,8 @@ export function resolvedLoginRole(
   if (allowlisted || existing === "admin") {
     return "admin";
   }
-  if (existing === "judge") {
-    return "judge";
-  }
-  return "user";
+  // "judge" is a legacy value; userTypes.ensureDefaults moves it to a type.
+  return existing ?? "user";
 }
 
 export async function getCurrentUser(ctx: Ctx): Promise<Doc<"users">> {
@@ -48,7 +43,7 @@ export async function requireAdmin(ctx: Ctx): Promise<Doc<"users">> {
 
 export async function requireJudge(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
-  if (!isJudge(user)) {
+  if (!(await canJudge(ctx, user))) {
     throw new Error("Se necesita acceso de juez");
   }
   return user;
@@ -89,6 +84,17 @@ export async function requireOnboarded(ctx: Ctx): Promise<Doc<"users">> {
     throw new Error("Confirma tus datos primero");
   }
   return user;
+}
+
+/** Boolean form of `requireOnboarded` for callers that degrade instead of throwing. */
+export async function isOnboarded(ctx: Ctx, user: Doc<"users">): Promise<boolean> {
+  if (user.role === "admin") {
+    return true;
+  }
+  if (!user.onboardingComplete) {
+    return false;
+  }
+  return signupIsAccepted(await getSignupForUser(ctx, user));
 }
 
 export async function getSignupForUser(

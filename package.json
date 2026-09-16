@@ -27,6 +27,9 @@
     "db:push": "pnpm --filter web db:push",
     "astro": "pnpm --filter web astro",
     "migrate:convex": "pnpm --filter app migrate",
+    "seed:convex": "pnpm --filter app seed",
+    "seed:convex:reset": "pnpm --filter app seed:reset",
+    "seed:convex:clear": "pnpm --filter app seed:clear",
     "dev:cli": "pnpm --filter cli dev",
     "build:cli": "pnpm --filter cli build:bin",
     "test:cli": "pnpm --filter cli test"

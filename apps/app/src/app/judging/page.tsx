@@ -9,6 +9,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { JudgingContext } from "@convex/lib/validators";
 import { ScoreSlider } from "@/components/judging/score-slider";
+import { TrackTag } from "@/components/track-tag";
 import { VideoFrame } from "@/components/judging/video-frame";
 import {
   EmptyState,
@@ -253,7 +254,7 @@ function JudgingFallback() {
 
 function JudgingPanel() {
   const me = useQuery(api.users.me);
-  const allowed = me?.role === "judge" || me?.role === "admin";
+  const allowed = me?.canJudge === true;
   const meta = useQuery(api.judging.meta, allowed ? {} : "skip");
   const ensureGroups = useMutation(api.judging.ensureGeneralGroups);
   const ensureAssignments = useMutation(api.judging.ensureAssignmentShape);
@@ -1384,7 +1385,7 @@ function ProjectDetails({ item }: { item: SheetItem }) {
       {item.challenges.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {item.challenges.map((challenge) => (
-            <Badge key={challenge._id}>{challenge.label}</Badge>
+            <TrackTag key={challenge._id} track={challenge} />
           ))}
         </div>
       ) : null}

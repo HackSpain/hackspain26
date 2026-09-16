@@ -214,7 +214,8 @@ export const confirmDetails = acceptedMutation({
   args: {
     consent: v.boolean(),
     termsAccepted: v.boolean(),
-    travelOrigin: v.string(),
+    /** Pre-event logistics; the dashboard no longer asks, the CLI still may. */
+    travelOrigin: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (!ctx.user.phoneConfirmed) {
@@ -223,10 +224,8 @@ export const confirmDetails = acceptedMutation({
     if (!args.termsAccepted) {
       throw new Error("Acepta los términos para continuar");
     }
-    const travelOrigin = args.travelOrigin.trim();
-    if (!travelOrigin) {
-      throw new Error("Dinos desde dónde viajas");
-    }
+    const travelOrigin =
+      args.travelOrigin?.trim() || ctx.user.travelOrigin?.trim() || undefined;
     const signup = await getSignupForUser(ctx, ctx.user);
     const dietaryRestrictions =
       ctx.user.dietaryRestrictions?.trim() ||

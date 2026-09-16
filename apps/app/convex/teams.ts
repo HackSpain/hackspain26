@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { imagePathFor } from "./lib/files";
+import { avatarUrlFor } from "./users";
 import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
 import {
   identifierTypeValidator,
@@ -11,7 +13,7 @@ import {
 } from "./lib/normalize";
 import { canonicalRepoUrl } from "./lib/github";
 import { MAX_TECH_LENGTH, MAX_TECH_STACK } from "./lib/stack";
-import { membershipForUser } from "./lib/team";
+import { membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { fail } from "./lib/errors";
 import { scheduleStackScan, teamRepoList } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -107,6 +109,8 @@ const teamReturn = v.object({
   createdAt: v.number(),
   isOwner: v.boolean(),
   joinCode: v.optional(v.string()),
+  /** /api/files/<id> when the owner uploaded a logo. */
+  logoUrl: v.optional(v.string()),
   members: v.array(memberReturn),
   name: v.string(),
   ownerId: v.id("users"),
@@ -118,16 +122,30 @@ const teamReturn = v.object({
 const teamSummaryReturn = v.object({
   _id: v.id("teams"),
   isMine: v.boolean(),
+  logoUrl: v.optional(v.string()),
   memberCount: v.number(),
+  /** Confirmed members with a display name, owner first. */
+  members: v.array(
+    v.object({
+      _id: v.id("teamMembers"),
+      avatarUrl: v.optional(v.string()),
+      isOwner: v.boolean(),
+      name: v.string(),
+      userId: v.optional(v.id("users")),
+    })
+  ),
   name: v.string(),
   pendingCount: v.number(),
+  projectName: v.optional(v.string()),
   repoUrl: v.optional(v.string()),
   repoUrls: v.array(v.string()),
   submissionStatus: v.optional(
     v.union(v.literal("draft"), v.literal("submitted"))
   ),
   techStack: v.array(v.string()),
-  tracks: v.array(v.object({ slug: v.string(), label: v.string() })),
+  tracks: v.array(
+    v.object({ label: v.string(), logoUrl: v.optional(v.string()), slug: v.string() })
+  ),
 });
 
 async function hydrateMember(
@@ -239,6 +257,7 @@ export const mine = onboardedQuery({
       name: team.name,
       ownerId: team.ownerId,
       isOwner,
+      logoUrl: teamLogoUrlFor(team),
       createdAt: team.createdAt,
       joinCode: isOwner ? team.joinCode : undefined,
       repoUrl: team.repoUrl,
@@ -286,15 +305,33 @@ export const list = onboardedQuery({
       for (const trackId of submission?.challengeIds ?? []) {
         const track = await ctx.db.get(trackId);
         if (track) {
-          tracks.push({ slug: track.slug, label: track.label });
+          tracks.push({ label: track.label, logoUrl: track.logoUrl, slug: track.slug });
         }
+      }
+      const people = [];
+      for (const member of members) {
+        if (member.status !== "member") {
+          continue;
+        }
+        const user = member.userId ? await ctx.db.get(member.userId) : null;
+        const signup = member.signupId ? await ctx.db.get(member.signupId) : null;
+        people.push({
+          _id: member._id,
+          avatarUrl: user ? avatarUrlFor(user) : undefined,
+          isOwner: member.userId === team.ownerId,
+          name: user?.name ?? signup?.fullName ?? member.identifier,
+          userId: member.userId,
+        });
       }
       result.push({
         _id: team._id,
         name: team.name,
         isMine: membership?.teamId === team._id,
-        memberCount: members.filter((m) => m.status === "member").length,
+        logoUrl: teamLogoUrlFor(team),
+        memberCount: people.length,
+        members: people.toSorted((a, b) => Number(b.isOwner) - Number(a.isOwner)),
         pendingCount: members.filter((m) => m.status === "pending").length,
+        projectName: submission?.name?.trim() || undefined,
         repoUrl: team.repoUrl,
         repoUrls: teamRepoList(team),
         techStack: team.techStack ?? [],
@@ -305,6 +342,68 @@ export const list = onboardedQuery({
     return result.toSorted((a, b) => a.name.localeCompare(b.name, "es"));
   },
   returns: v.array(teamSummaryReturn),
+});
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+async function ownedTeam(ctx: MutationCtx, userId: Id<"users">): Promise<Doc<"teams">> {
+  const membership = await membershipForUser(ctx, userId);
+  const team = membership ? await ctx.db.get(membership.teamId) : null;
+  if (!team) {
+    fail("NO_TEAM", "No tienes equipo");
+  }
+  if (team.ownerId !== userId) {
+    fail("NOT_OWNER", "Solo el dueño del equipo puede cambiar el logo");
+  }
+  return team;
+}
+
+/** Upload target for the team logo. POST the file there, then call setLogo. */
+export const generateLogoUploadUrl = onboardedMutation({
+  args: {},
+  handler: async (ctx) => {
+    await ownedTeam(ctx, ctx.user._id);
+    return await ctx.storage.generateUploadUrl();
+  },
+  returns: v.string(),
+});
+
+export const setLogo = onboardedMutation({
+  args: { imageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const team = await ownedTeam(ctx, ctx.user._id);
+    const meta = await ctx.db.system.get(args.imageId);
+    if (!meta) {
+      fail("NOT_FOUND", "La imagen no se ha subido");
+    }
+    if (!meta.contentType?.startsWith("image/")) {
+      fail("VALIDATION", "Solo se admiten imágenes");
+    }
+    if (meta.size > MAX_LOGO_BYTES) {
+      fail("VALIDATION", "El logo no puede superar 2 MB");
+    }
+    const previous = team.logoId;
+    await ctx.db.patch(team._id, { logoId: args.imageId, updatedAt: Date.now() });
+    if (previous && previous !== args.imageId) {
+      await ctx.storage.delete(previous);
+    }
+    return imagePathFor(args.imageId);
+  },
+  returns: v.string(),
+});
+
+export const removeLogo = onboardedMutation({
+  args: {},
+  handler: async (ctx) => {
+    const team = await ownedTeam(ctx, ctx.user._id);
+    if (!team.logoId) {
+      return null;
+    }
+    await ctx.db.patch(team._id, { logoId: undefined, updatedAt: Date.now() });
+    await ctx.storage.delete(team.logoId);
+    return null;
+  },
+  returns: v.null(),
 });
 
 const memberInputValidator = v.object({

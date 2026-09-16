@@ -1,7 +1,12 @@
 import type { Infer } from "convex/values";
 import { v } from "convex/values";
 import { urlsValidator } from "./urls";
+import { sectionsValidator } from "./userTypes";
 
+/**
+ * Access level. "judge" is legacy: judging now comes from user types
+ * (convex/lib/userTypes.ts) and `userTypes.ensureDefaults` migrates it.
+ */
 export const roleValidator = v.union(
   v.literal("user"),
   v.literal("judge"),
@@ -118,6 +123,10 @@ export const meValidator = v.object({
   _id: v.id("users"),
   accepted: v.boolean(),
   attendanceStatus: attendanceValidator,
+  /** Same-origin path for an uploaded picture, else the GitHub avatar URL. */
+  avatarUrl: v.optional(v.string()),
+  /** Judging access: admin, judge role, or a user type that grants it. */
+  canJudge: v.boolean(),
   dietaryDetails: v.optional(v.string()),
   dietaryRestrictions: v.optional(v.string()),
   email: v.optional(v.string()),
@@ -132,6 +141,9 @@ export const meValidator = v.object({
   phone: v.optional(v.string()),
   phoneConfirmed: v.boolean(),
   role: roleValidator,
+  /** Dashboard sections this user may open. Feed and profile are always on. */
+  sections: sectionsValidator,
   signupId: v.optional(v.id("signups")),
   travelOrigin: v.optional(v.string()),
+  userType: v.optional(v.object({ label: v.string(), slug: v.string() })),
 });

@@ -16,7 +16,10 @@
     "convex:dev": "convex dev",
     "convex:codegen": "convex codegen",
     "vercel-build": "convex deploy --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'pnpm run build'",
-    "migrate": "tsx scripts/migrate-from-postgres.ts"
+    "migrate": "tsx scripts/migrate-from-postgres.ts",
+    "seed": "convex run seed:run",
+    "seed:reset": "convex run seed:run '{\"reset\":true}'",
+    "seed:clear": "convex run seed:clear"
   },
   "dependencies": {
     "@auth/core": "0.37.0",
