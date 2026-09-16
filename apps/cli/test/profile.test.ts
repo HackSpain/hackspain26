@@ -12,6 +12,12 @@ const base: Me = {
   dietaryDetails: undefined,
   dietaryRestrictions: "Vegetarian",
   email: "ana@example.com",
+  event: {
+    endsAt: undefined,
+    open: true,
+    phase: "unscheduled",
+    startsAt: undefined,
+  },
   githubCanReadRepos: true,
   githubLinked: true,
   githubUsername: "ana",

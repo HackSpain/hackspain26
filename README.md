@@ -96,7 +96,7 @@ Two Vercel projects, both linked to this repo. Set **Root Directory** before the
 | Project | Root Directory | Domain | Build |
 | --- | --- | --- | --- |
 | Landing (existing) | `apps/web` | hackspain.com | `pnpm run build` |
-| Dashboard (new) | `apps/app` | e.g. app.hackspain.com | `pnpm run vercel-build` — deploys Convex, then Next.js |
+| Dashboard (new) | `apps/app` | e.g. hackspain.app | `pnpm run vercel-build` — deploys Convex, then Next.js |
 
 Vercel reads `pnpm-lock.yaml` and `pnpm-workspace.yaml` from the repo root (`installCommand` is `cd ../.. && pnpm install --frozen-lockfile`). A change that only touches the other app is skipped (`scripts/vercel-ignore.sh`).
 
@@ -112,7 +112,7 @@ Vercel reads `pnpm-lock.yaml` and `pnpm-workspace.yaml` from the repo root (`ins
 4. On the Convex **production** deployment (`pnpm exec convex env set` from `apps/app` after `pnpm exec convex deploy` once, or the dashboard Env vars UI):
 
 ```sh
-pnpm exec convex env set SITE_URL https://app.hackspain.com
+pnpm exec convex env set SITE_URL https://hackspain.app
 pnpm exec convex env set ADMIN_EMAILS you@example.com
 pnpm exec convex env set AUTH_RESEND_KEY re_...
 pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"

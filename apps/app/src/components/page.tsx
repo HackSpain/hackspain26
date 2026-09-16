@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 import type { ReactNode } from "react";
 import type { UrlEntry } from "@/lib/urls";
 import { urlDisplay, urlLabel, urlOf } from "@/lib/urls";
@@ -255,6 +256,12 @@ export function SocialMeta({
 }
 
 export function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ConvexError) {
+    const data = err.data as { message?: unknown } | null;
+    if (typeof data?.message === "string" && data.message) {
+      return data.message;
+    }
+  }
   if (!(err instanceof Error)) {
     return fallback;
   }

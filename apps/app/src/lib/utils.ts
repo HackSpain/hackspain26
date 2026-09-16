@@ -152,3 +152,39 @@ export function notificationStatusLabel(status: string): string {
   }
   return status;
 }
+
+/**
+ * Epoch ms ⇄ the value of an `<input type="datetime-local">`, which is the
+ * browser's local wall-clock time with no zone. Admins edit the window from
+ * Spain, so the stored instant matches what they typed.
+ */
+export function toDatetimeLocal(ms: number | undefined): string {
+  if (ms === undefined) {
+    return "";
+  }
+  const date = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function fromDatetimeLocal(value: string): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? undefined : ms;
+}
+
+const EVENT_DATE = new Intl.DateTimeFormat("es-ES", {
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  month: "long",
+  timeZone: "Europe/Madrid",
+  weekday: "long",
+});
+
+/** "sábado, 3 de octubre, 10:00" in Madrid time, matching the server copy. */
+export function formatEventDate(ms: number): string {
+  return EVENT_DATE.format(new Date(ms));
+}

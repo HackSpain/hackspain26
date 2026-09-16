@@ -40,6 +40,8 @@ export type MenuProject = {
 export type MenuStatus = {
   loggedIn: boolean;
   gate?: GateState;
+  /** Human line for a gated state (describeGate), shown instead of the board. */
+  gateMessage?: string;
   email?: string;
   name?: string;
   team?: MenuTeam | null;
@@ -362,6 +364,30 @@ export function buildMainMenu(status: MenuStatus): MenuItem[] {
       EXIT_ITEM,
     ];
   }
+  if (status.gate === "closed") {
+    // Outside the hackathon window only the profile still works; the
+    // directory lives on the dashboard.
+    return [
+      {
+        value: "profile",
+        label: "My profile",
+        hint: "the only thing open right now",
+        preview: [["profile", "show"]],
+        submenu: buildProfileMenu(),
+      },
+      {
+        ...OPEN_ITEM,
+        hint: "profile and participant directory, already signed in",
+      },
+      {
+        value: "account",
+        label: "Account",
+        hint: "session, log out, update",
+        submenu: buildAccountMenu(),
+      },
+      EXIT_ITEM,
+    ];
+  }
   if (!isReady(status)) {
     return [
       {
@@ -389,7 +415,7 @@ export function statusLine(status: MenuStatus): string {
   }
   if (!isReady(status)) {
     return c.dim(
-      `Signed in as ${status.email ?? "?"} · ${status.gate ?? "checking"}`
+      `Signed in as ${status.email ?? "?"} · ${status.gateMessage ?? status.gate ?? "checking"}`
     );
   }
   const team = status.team ? teamHint(status.team) : "no team yet";
@@ -415,6 +441,7 @@ export function menuStatusFrom(
   return {
     loggedIn: true,
     gate: gate.state,
+    gateMessage: gate.message,
     email: me.email ?? undefined,
     name: me.name ?? undefined,
     team: team
@@ -453,6 +480,7 @@ export async function fetchMenuStatus(ctx: CliContext): Promise<MenuStatus> {
     return {
       loggedIn: true,
       gate: gate.state,
+      gateMessage: gate.message,
       email: me.email ?? creds.email,
       name: me.name ?? undefined,
     };
@@ -488,7 +516,7 @@ function renderHome(status: MenuStatus): void {
   if (!(ready || status.loggedIn)) {
     message = "Signed out.";
   } else if (!ready) {
-    message = `Signed in as ${status.email ?? "?"} · ${status.gate ?? "checking"}`;
+    message = `Signed in as ${status.email ?? "?"} · ${status.gateMessage ?? status.gate ?? "checking"}`;
   }
   console.log(`\n${banner()}\n`);
   console.log(

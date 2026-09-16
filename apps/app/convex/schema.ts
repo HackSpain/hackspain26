@@ -159,6 +159,9 @@ export default defineSchema({
   settings: defineTable({
     key: v.string(),
     submissionsOpen: v.boolean(),
+    /** Hackathon window (epoch ms). Both unset means no restriction. */
+    eventStartsAt: v.optional(v.number()),
+    eventEndsAt: v.optional(v.number()),
   }).index("by_key", ["key"]),
 
   signups: defineTable({

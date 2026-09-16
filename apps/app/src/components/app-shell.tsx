@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { api } from "@convex/_generated/api";
+import { EventClosedBanner } from "@/components/event-closed-banner";
 import { GithubLinkBanner, GithubLinkResult } from "@/components/github-link-banner";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ const ADMIN_NAV = [
   { href: "/admin/perks", label: "Perks" },
   { href: "/admin/applications", label: "Solicitudes" },
   { href: "/admin/tracks", label: "Retos" },
+  { href: "/admin/evento", label: "Evento" },
   { href: "/admin/notifications", label: "Avisos" },
   { href: "/admin/tv", label: "TV" },
   { href: "/judging", label: "Jueces" },
@@ -197,6 +199,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {isAdmin && (pathname.startsWith("/admin") || pathname.startsWith("/judging")) ? (
         <AdminStrip pathname={pathname} />
       ) : null}
+      {me && !me.event.open ? <EventClosedBanner event={me.event} /> : null}
       {askGithub ? <GithubLinkBanner /> : null}
       <main
         className={cn(

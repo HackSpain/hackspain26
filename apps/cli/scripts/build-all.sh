@@ -3,7 +3,7 @@
 #   scripts/build-all.sh --host        one binary for this machine -> dist/hackspain
 #   scripts/build-all.sh               full matrix                  -> dist/hackspain-<target>
 # Env: HACKSPAIN_VERSION (default: package.json version),
-#      HACKSPAIN_APP_URL_DEFAULT (dashboard URL to bake; default https://app.hackspain.com).
+#      HACKSPAIN_APP_URL_DEFAULT (dashboard URL to bake; default https://hackspain.app).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

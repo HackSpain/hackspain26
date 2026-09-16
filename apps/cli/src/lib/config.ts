@@ -106,13 +106,13 @@ export function resolveAppUrl(override?: string): {
     if (!HTTP_URL_PATTERN.test(url)) {
       throw usageError(
         `Invalid server URL "${url}" (from ${source}).`,
-        "It should look like https://app.hackspain.com or http://localhost:3000"
+        "It should look like https://hackspain.app or http://localhost:3000"
       );
     }
     return { source, url: url.replace(TRAILING_SLASHES, "") };
   }
   throw usageError(
     "No HackSpain server configured.",
-    "Pass --url <https://app.hackspain.com> or set HACKSPAIN_APP_URL."
+    "Pass --url <https://hackspain.app> or set HACKSPAIN_APP_URL."
   );
 }

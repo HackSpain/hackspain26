@@ -1,4 +1,5 @@
 import { api } from "@convex/_generated/api";
+import { closedMessage } from "@convex/lib/eventWindow";
 import { RawTreeError } from "@rawtree/sdk";
 import { fetchQuery } from "convex/nextjs";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
@@ -59,21 +60,22 @@ export async function POST(request: Request) {
     return fail("Batch too large", 413);
   }
 
-  let authContext: [
-    Awaited<ReturnType<typeof fetchQuery<typeof api.users.me>>>,
-    Awaited<ReturnType<typeof fetchQuery<typeof api.teams.mineId>>>,
-  ];
+  let me: Awaited<ReturnType<typeof fetchQuery<typeof api.users.me>>>;
+  let teamId: Awaited<ReturnType<typeof fetchQuery<typeof api.teams.mineId>>>;
   try {
-    authContext = await Promise.all([
-      fetchQuery(api.users.me, {}, { token }),
-      fetchQuery(api.teams.mineId, {}, { token }),
-    ]);
+    me = await fetchQuery(api.users.me, {}, { token });
+    if (!me) {
+      return fail("No has iniciado sesión", 401);
+    }
+    if (!me.event.open) {
+      // Same rule as the Convex wrappers: nothing but the profile runs
+      // outside the hackathon window. teams.mineId would throw the same
+      // error; short-circuit so the watcher sees a clear 403.
+      return fail(closedMessage(me.event.phase, me.event), 403);
+    }
+    teamId = await fetchQuery(api.teams.mineId, {}, { token });
   } catch (error) {
     return fromError(error);
-  }
-  const [me, teamId] = authContext;
-  if (!me) {
-    return fail("No has iniciado sesión", 401);
   }
 
   const text = await request.text();
