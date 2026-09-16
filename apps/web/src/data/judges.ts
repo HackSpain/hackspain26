@@ -2,6 +2,7 @@ import adriaBlancafortPhoto from "../assets/judges/adria-blancafort.jpg";
 import alejandroBujanPhoto from "../assets/judges/alejandro-bujan.jpg";
 import alejandroCanadaPhoto from "../assets/judges/alejandro-canada.jpg";
 import felixGilPhoto from "../assets/judges/felix-gil.jpg";
+import gigiAlcarazPhoto from "../assets/judges/gigi-alcaraz.jpg";
 import ignacioAlfeiranPhoto from "../assets/judges/ignacio-alfeiran.jpg";
 import ivanFernandezPhoto from "../assets/judges/ivan-fernandez.jpg";
 import ivanLandabasoPhoto from "../assets/judges/ivan-landabaso.jpg";
@@ -129,5 +130,11 @@ export const GENERAL_JUDGES: Judge[] = [
     id: "alejandro-canada",
     name: "Alejandro Cañada Hinojosa",
     photoSrc: alejandroCanadaPhoto.src,
+  },
+  {
+    company: "Mira",
+    id: "gigi-alcaraz",
+    name: "Gigi Alcaraz",
+    photoSrc: gigiAlcarazPhoto.src,
   },
 ];
