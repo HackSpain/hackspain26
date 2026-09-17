@@ -183,7 +183,7 @@ export async function savePhone(
       message: "Your mobile number, with the country code",
       placeholder: "+34 600 111 222",
       validate: validatePhone,
-    }),
+    })
   );
   return await ui.spin(
     "Saving…",

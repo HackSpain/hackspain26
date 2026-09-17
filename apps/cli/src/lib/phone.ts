@@ -15,16 +15,15 @@ export function validatePhone(value: string): string | undefined {
     return "Enter your number.";
   }
   if (normalizePhone(trimmed)) {
-    return undefined;
+    return;
   }
   const hasPrefix = trimmed.startsWith("+") || trimmed.startsWith("00");
   if (!hasPrefix) {
     return "Start with your country code, like +34 600 111 222.";
   }
-  const digits = (trimmed.startsWith("00") ? trimmed.slice(2) : trimmed).replaceAll(
-    /\D/g,
-    "",
-  );
+  const digits = (
+    trimmed.startsWith("00") ? trimmed.slice(2) : trimmed
+  ).replaceAll(/\D/g, "");
   const split = splitPhone(`+${digits}`);
   if (!split) {
     return "That does not look like a phone number.";
@@ -33,9 +32,9 @@ export function validatePhone(value: string): string | undefined {
     return "Add the number after the country code.";
   }
   const countries = countriesForCode(split.code);
-  const lengths = [...new Set(countries.flatMap((country) => country.lengths))].toSorted(
-    (a, b) => a - b,
-  );
+  const lengths = [
+    ...new Set(countries.flatMap((country) => country.lengths)),
+  ].toSorted((a, b) => a - b);
   if (!lengths.includes(split.national.length)) {
     const expected =
       lengths.length === 1
