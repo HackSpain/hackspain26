@@ -137,6 +137,39 @@
   animation: hs-enter var(--duration-enter) var(--ease-out) both;
 }
 
+/* "Are you sure?" nudge: a quick horizontal shake that settles. */
+@keyframes hs-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-6px);
+  }
+  30% {
+    transform: translateX(5px);
+  }
+  45% {
+    transform: translateX(-4px);
+  }
+  60% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-1px);
+  }
+}
+
+.hs-shake {
+  animation: hs-shake 420ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-shake {
+    animation: none;
+  }
+}
+
 .hs-stagger > * {
   animation: hs-enter var(--duration-enter) var(--ease-out) both;
 }

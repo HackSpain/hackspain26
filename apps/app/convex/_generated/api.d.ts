@@ -35,6 +35,7 @@ import type * as lib_judging from "../lib/judging.js";
 import type * as lib_normalize from "../lib/normalize.js";
 import type * as lib_otpEmail from "../lib/otpEmail.js";
 import type * as lib_perkInputs from "../lib/perkInputs.js";
+import type * as lib_phone from "../lib/phone.js";
 import type * as lib_profile from "../lib/profile.js";
 import type * as lib_resend from "../lib/resend.js";
 import type * as lib_stack from "../lib/stack.js";
@@ -97,6 +98,7 @@ declare const fullApi: ApiFromModules<{
   "lib/normalize": typeof lib_normalize;
   "lib/otpEmail": typeof lib_otpEmail;
   "lib/perkInputs": typeof lib_perkInputs;
+  "lib/phone": typeof lib_phone;
   "lib/profile": typeof lib_profile;
   "lib/resend": typeof lib_resend;
   "lib/stack": typeof lib_stack;

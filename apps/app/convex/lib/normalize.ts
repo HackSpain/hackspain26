@@ -67,21 +67,7 @@ export function normalizeTwitter(input: string): string {
   );
 }
 
-export const PHONE_ERROR =
-  "Introduce un teléfono válido en formato internacional, como +34600111222";
-
-/** Digits only, 8 to 15 of them, with a leading "+" (loose E.164). */
-export function normalizePhone(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const digits = trimmed.replaceAll(/\D/g, "");
-  if (digits.length < 8 || digits.length > 15) {
-    return null;
-  }
-  return `+${digits}`;
-}
+export { normalizePhone, PHONE_ERROR } from "./phone";
 
 export function adminEmailAllowlist(): Set<string> {
   const raw = process.env.ADMIN_EMAILS ?? "";

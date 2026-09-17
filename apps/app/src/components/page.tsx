@@ -121,17 +121,27 @@ export function Field({
   label,
   htmlFor,
   hint,
+  meta,
   children,
 }: {
   label: string;
   htmlFor?: string;
   hint?: ReactNode;
+  /** Small text on the label row's right edge (a counter, "opcional"). */
+  meta?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {hint ? <p className="text-sm text-hs-brown">{hint}</p> : null}
+      <div className="space-y-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <Label htmlFor={htmlFor}>{label}</Label>
+          {meta ? (
+            <span className="shrink-0 text-xs tabular-nums text-hs-brown">{meta}</span>
+          ) : null}
+        </div>
+        {hint ? <p className="text-sm text-hs-brown">{hint}</p> : null}
+      </div>
       {children}
     </div>
   );

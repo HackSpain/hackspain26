@@ -62,14 +62,18 @@ export const confirmDetails = acceptedMutation({
       ctx.user.dietaryDetails?.trim() ||
       signup?.dietaryDetails?.trim() ||
       undefined;
+    // Revisiting the step from the wizard's "Atrás" keeps the original stamps.
+    const consentChanged = ctx.user.notificationConsent !== args.consent;
     await ctx.db.patch(ctx.user._id, {
       phone,
       dietaryRestrictions,
       dietaryDetails,
       travelOrigin,
       notificationConsent: args.consent,
-      notificationConsentAt: Date.now(),
-      termsAcceptedAt: Date.now(),
+      notificationConsentAt: consentChanged
+        ? Date.now()
+        : (ctx.user.notificationConsentAt ?? Date.now()),
+      termsAcceptedAt: ctx.user.termsAcceptedAt ?? Date.now(),
       attendanceStatus: "attending",
       onboardingComplete: true,
     });
