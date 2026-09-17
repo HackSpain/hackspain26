@@ -19,7 +19,8 @@
     "migrate": "tsx scripts/migrate-from-postgres.ts",
     "seed": "convex run seed:run",
     "seed:reset": "convex run seed:run '{\"reset\":true}'",
-    "seed:clear": "convex run seed:clear"
+    "seed:clear": "convex run seed:clear",
+    "import:accreditations": "tsx scripts/import-accreditations.ts"
   },
   "dependencies": {
     "@auth/core": "0.37.0",
