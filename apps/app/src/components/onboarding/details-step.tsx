@@ -1,13 +1,16 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { ArrowRight } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import { errorMessage, Field, FormError, LoadingText } from "@/components/page";
+import type { PhoneState } from "@/components/phone-input";
+import { PhoneInput } from "@/components/phone-input";
+import { StepNav } from "./step-nav";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 
 const SHAKE = [0, -7, 7, -5, 5, 0] as const;
 
@@ -16,21 +19,31 @@ const SHAKE = [0, -7, 7, -5, 5, 0] as const;
  * `users.onboardingComplete`. The number is stored as typed, not verified. Its functions are `accepted*`, so the wizard
  * only mounts this for users with an accepted signup.
  */
-export function DetailsStep({ onDone }: { onDone: () => void }) {
+export function DetailsStep({
+  onDone,
+  onBack,
+}: {
+  onDone: () => void;
+  onBack?: () => void;
+}) {
   const reduceMotion = useReducedMotion();
   const status = useQuery(api.onboarding.status);
   const confirmDetails = useMutation(api.onboarding.confirmDetails);
 
-  const [phoneDraft, setPhoneDraft] = useState<string | undefined>();
+  const [phoneDraft, setPhoneDraft] = useState<PhoneState | undefined>();
   const [consentDraft, setConsentDraft] = useState<boolean | undefined>();
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsDraft, setTermsDraft] = useState<boolean | undefined>();
   const [consentWarned, setConsentWarned] = useState(false);
   const [consentShake, setConsentShake] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const phone = phoneDraft ?? status?.phone ?? "";
+  // Until the field is touched, the stored number (already E.164) stands.
+  const phone = phoneDraft?.e164 ?? status?.phone ?? "";
+  const phoneError = phoneDraft ? phoneDraft.error : phone ? null : "Escribe tu número.";
   const consent = consentDraft ?? status?.notificationConsent ?? false;
+  // Coming back to this step after finishing it, the terms are already accepted.
+  const termsAccepted = termsDraft ?? status?.onboardingComplete ?? false;
 
   if (status === undefined) {
     return <LoadingText />;
@@ -58,27 +71,24 @@ export function DetailsStep({ onDone }: { onDone: () => void }) {
     <div className="space-y-6">
       <FormError message={error} />
 
-      <Field label="Teléfono de contacto" htmlFor="phone">
-        <Input
+      <Field
+        label="Teléfono de contacto"
+        htmlFor="phone"
+        hint="Solo para localizarte en el evento."
+      >
+        <PhoneInput
           id="phone"
-          type="tel"
-          autoComplete="tel"
-          placeholder="+34 600 111 222"
-          aria-describedby="phone-hint"
-          value={phone}
-          onChange={(event) => setPhoneDraft(event.target.value)}
+          value={status.phone}
+          disabled={pending}
+          onChange={setPhoneDraft}
         />
-        <p id="phone-hint" className="text-xs text-hs-brown">
-          Con el prefijo de tu país, por ejemplo +34. Solo para localizarte
-          en el evento.
-        </p>
       </Field>
 
       <div className="space-y-3">
         <label className="flex items-start gap-3 text-sm">
           <Checkbox
             checked={termsAccepted}
-            onCheckedChange={(value) => setTermsAccepted(value === true)}
+            onCheckedChange={(value) => setTermsDraft(value === true)}
           />
           <span>
             Acepto los{" "}
@@ -145,13 +155,15 @@ export function DetailsStep({ onDone }: { onDone: () => void }) {
         </motion.label>
       </div>
 
-      <Button
-        className="w-full sm:w-auto"
-        disabled={pending || !termsAccepted || !phone.trim()}
-        onClick={() => void finish()}
-      >
-        {pending ? "Guardando…" : "Confirmar"}
-      </Button>
+      <StepNav onBack={onBack} disabled={pending}>
+        <Button
+          disabled={pending || !termsAccepted || phoneError !== null}
+          onClick={() => void finish()}
+        >
+          {pending ? "Guardando…" : status.onboardingComplete ? "Continuar" : "Confirmar"}
+          <ArrowRight aria-hidden />
+        </Button>
+      </StepNav>
     </div>
   );
 }

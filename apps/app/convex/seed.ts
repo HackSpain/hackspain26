@@ -536,11 +536,48 @@ async function clearSeed(ctx: MutationCtx): Promise<Record<string, number>> {
     await del("userTypes", type._id);
   }
   for (const userId of userIds) {
+    // Convex Auth rows from logging in as a seeded account: left behind, they
+    // point at a deleted user and the next login fails with "Usuario no encontrado".
+    for (const account of await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
+      .collect()) {
+      for (const code of await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", account._id))
+        .collect()) {
+        await del("authVerificationCodes", code._id);
+      }
+      await del("authAccounts", account._id);
+    }
+    for (const session of await ctx.db
+      .query("authSessions")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .collect()) {
+      for (const token of await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+        .collect()) {
+        await del("authRefreshTokens", token._id);
+      }
+      await del("authSessions", session._id);
+    }
     const user = await ctx.db.get(userId);
     if (user?.avatarId) {
       await ctx.storage.delete(user.avatarId);
     }
     await del("users", userId);
+  }
+  // Orphans from before this cleanup existed (auth rows whose user is gone).
+  for (const account of await ctx.db.query("authAccounts").collect()) {
+    if ((await ctx.db.get(account.userId)) === null) {
+      await del("authAccounts", account._id);
+    }
+  }
+  for (const session of await ctx.db.query("authSessions").collect()) {
+    if ((await ctx.db.get(session.userId)) === null) {
+      await del("authSessions", session._id);
+    }
   }
   return deleted;
 }

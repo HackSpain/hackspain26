@@ -3,7 +3,7 @@ import type { api } from "@convex/_generated/api";
 
 export type Me = NonNullable<FunctionReturnType<typeof api.users.me>>;
 
-export type StepId = "details" | "identity" | "links" | "directory";
+export type StepId = "details" | "identity" | "links" | "directory" | "skills";
 
 export const STEP_COPY: Record<StepId, { title: string; description: string }> = {
   details: {
@@ -23,31 +23,46 @@ export const STEP_COPY: Record<StepId, { title: string; description: string }> =
   directory: {
     title: "Tu ficha de participante",
     description:
-      "El grafo de participantes conecta a la gente por ciudad, universidad o empresa, habilidades e intereses.",
+      "Rol, ciudad y universidad o empresa: por eso agrupa el grafo a la gente.",
+  },
+  skills: {
+    title: "Con qué construyes",
+    description: "Habilidades, intereses y una frase sobre ti.",
   },
 };
 
+export type StepPlan = {
+  steps: StepId[];
+  /** Where the wizard opens: the first step that is still pending. */
+  start: number;
+};
+
 /**
- * Which steps this account still needs, in order. Phone and terms only for
- * an accepted signup (their functions are `accepted*`); the rest follows
- * `users.me.profileMissing` (convex/lib/profile.ts) plus the optional links.
+ * The wizard's steps, in order, and where to open it. Phone and terms only
+ * for an accepted signup (their functions are `accepted*`). That step and
+ * name + photo stay in the plan once done, so "Atrás" can reach them for a
+ * review; the rest follows `users.me.profileMissing` (convex/lib/profile.ts)
+ * plus the optional links.
  */
-export function planSteps(me: Me): StepId[] {
-  const steps: StepId[] = [];
-  if (me.accepted && !me.onboardingComplete) {
-    steps.push("details");
+export function planSteps(me: Me): StepPlan {
+  const plan: { id: StepId; pending: boolean }[] = [];
+  if (me.accepted) {
+    plan.push({ id: "details", pending: !me.onboardingComplete });
   }
-  if (
-    me.profileMissing.includes("name") ||
-    me.profileMissing.includes("photo")
-  ) {
-    steps.push("identity");
-  }
+  plan.push({
+    id: "identity",
+    pending: me.profileMissing.includes("name") || me.profileMissing.includes("photo"),
+  });
   if (!me.githubLinked || !me.twitterHandle) {
-    steps.push("links");
+    plan.push({ id: "links", pending: true });
   }
   if (me.profileMissing.includes("directory")) {
-    steps.push("directory");
+    // One draft across two steps: DirectoryStep stays mounted for both.
+    plan.push({ id: "directory", pending: true }, { id: "skills", pending: true });
   }
-  return steps;
+  const start = plan.findIndex((step) => step.pending);
+  return {
+    steps: plan.map((step) => step.id),
+    start: start === -1 ? plan.length : start,
+  };
 }

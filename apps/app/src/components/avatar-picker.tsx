@@ -74,49 +74,49 @@ export function AvatarPicker({
   const fileInput = useRef<HTMLInputElement | null>(null);
 
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-4">
-        <Avatar
-          name={name}
-          src={avatarUrl}
-          className="size-20 text-2xl shadow-[4px_4px_0_var(--color-hs-ink)]"
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border-[3px] border-hs-ink bg-hs-gold px-5 font-bungee text-sm text-hs-ink hs-hover-bright">
-            <ImagePlus className="size-4" aria-hidden />
-            {action.pending
-              ? "Subiendo…"
-              : avatarUrl
-                ? "Cambiar foto"
-                : "Subir foto"}
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="sr-only"
-              disabled={action.pending}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (!file) {
-                  return;
-                }
-                void action.run(async () => {
-                  try {
-                    await upload(file);
-                  } finally {
-                    if (fileInput.current) {
-                      fileInput.current.value = "";
-                    }
+    <div className="flex items-center gap-4">
+      <Avatar
+        name={name}
+        src={avatarUrl}
+        className="size-20 shrink-0 text-xl shadow-[4px_4px_0_var(--color-hs-ink)]"
+      />
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" className="min-h-8 cursor-pointer px-3 text-xs">
+            <label>
+              <ImagePlus className="size-3.5" aria-hidden />
+              {action.pending ? "Subiendo…" : avatarUrl ? "Cambiar foto" : "Subir foto"}
+              <input
+                ref={fileInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="sr-only"
+                disabled={action.pending}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) {
+                    return;
                   }
-                  return "Foto actualizada.";
-                });
-              }}
-            />
-          </label>
+                  void action.run(async () => {
+                    try {
+                      await upload(file);
+                    } finally {
+                      if (fileInput.current) {
+                        fileInput.current.value = "";
+                      }
+                    }
+                    return "Foto actualizada.";
+                  });
+                }}
+              />
+            </label>
+          </Button>
           {avatarUrl && canRemove ? (
             <Button
               type="button"
               variant="outline"
+              size="sm"
+              className="min-h-8 px-3 text-xs"
               disabled={action.pending}
               onClick={() =>
                 void action.run(async () => {
@@ -125,13 +125,13 @@ export function AvatarPicker({
                 })
               }
             >
-              <Trash2 aria-hidden /> Quitar foto
+              <Trash2 className="size-3.5" aria-hidden /> Quitar foto
             </Button>
           ) : null}
           {children}
         </div>
+        <p className="text-xs text-hs-brown">JPG, PNG, WebP o GIF de hasta 2 MB.</p>
       </div>
-      <p className="text-xs text-hs-brown">JPG, PNG, WebP o GIF de hasta 2 MB.</p>
-    </>
+    </div>
   );
 }

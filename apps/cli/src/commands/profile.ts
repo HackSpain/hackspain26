@@ -8,6 +8,7 @@ import type { Me } from "../lib/me";
 import type { Ui } from "../lib/output";
 import { uiFor } from "../lib/output";
 import { openProfile } from "../lib/participant";
+import { formatPhone, validatePhone } from "../lib/phone";
 import { confirmOrFlag, textOrFlag } from "../lib/prompts";
 import { c, cmd, highlight } from "../lib/style";
 
@@ -17,15 +18,6 @@ import { c, cmd, highlight } from "../lib/style";
  * the terminal to keep organisers informed. Attendance is deliberately not
  * here: this tool is used at the venue.
  */
-const E164 = /^\+[1-9]\d{6,14}$/;
-const PHONE_NOISE = /[\s()-]/g;
-
-function validatePhone(value: string): string | undefined {
-  return E164.test(value.replace(PHONE_NOISE, ""))
-    ? undefined
-    : "Use the international format, like +34600111222.";
-}
-
 function githubLabel(me: Me): string {
   if (me.githubLinked && me.githubUsername) {
     return `${me.githubUsername} ${c.dim("· linked")}`;
@@ -184,15 +176,15 @@ export async function savePhone(
   me: Me,
   number: string | undefined
 ): Promise<string> {
-  const phone = (
+  const phone = formatPhone(
     await textOrFlag(ctx, number, {
       flag: "<number>",
       initialValue: me.phone ?? "",
-      message: "Your mobile number, international format",
+      message: "Your mobile number, with the country code",
       placeholder: "+34 600 111 222",
       validate: validatePhone,
-    })
-  ).replace(PHONE_NOISE, "");
+    }),
+  );
   return await ui.spin(
     "Saving…",
     () => session.client.mutation(api.users.setPhone, { phone }),
@@ -362,7 +354,7 @@ export async function completeProfile(
     });
     if (phone.trim()) {
       const saved = await session.client.mutation(api.users.setPhone, {
-        phone: phone.replace(PHONE_NOISE, ""),
+        phone: formatPhone(phone),
       });
       current = { ...current, phone: saved };
       ui.success(`${saved} saved.`);

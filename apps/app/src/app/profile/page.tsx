@@ -22,6 +22,8 @@ import { AvatarPicker } from "@/components/avatar-picker";
 import { useGithubLink } from "@/components/github-link-banner";
 import { Field, FormError, LoadingText, Page } from "@/components/page";
 import { DirectoryForm } from "@/components/participant-directory/directory-form";
+import type { PhoneState } from "@/components/phone-input";
+import { PhoneInput } from "@/components/phone-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -266,9 +268,10 @@ function DirectoryCard() {
 function PhoneCard({ phone }: { phone: string | undefined }) {
   const setPhone = useMutation(api.users.setPhone);
   const action = useActionFeedback();
-  const [draft, setDraft] = useState<string | undefined>();
-  const value = draft ?? phone ?? "";
-  const dirty = value.trim() !== (phone ?? "");
+  const [draft, setDraft] = useState<PhoneState | undefined>();
+  const value = draft?.e164 ?? phone ?? "";
+  const dirty = value !== (phone ?? "");
+  const valid = draft ? draft.error === null : value !== "";
 
   return (
     <ProfileSection
@@ -289,25 +292,17 @@ function PhoneCard({ phone }: { phone: string | undefined }) {
         }}
       >
         <Field label="Número de teléfono" htmlFor="phone">
-          <Input
+          <PhoneInput
             id="phone"
-            type="tel"
-            autoComplete="tel"
-            required
-            placeholder="+34 600 111 222"
-            aria-describedby="phone-hint"
-            value={value}
+            value={phone}
             disabled={action.pending}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={setDraft}
           />
-          <p id="phone-hint" className="text-xs text-hs-brown">
-            Incluye el prefijo de tu país, por ejemplo +34.
-          </p>
         </Field>
         <Button
           type="submit"
           variant="outline"
-          disabled={action.pending || !dirty || !value.trim()}
+          disabled={action.pending || !dirty || !valid}
         >
           <Save aria-hidden />{" "}
           {action.pending ? "Guardando…" : "Guardar teléfono"}

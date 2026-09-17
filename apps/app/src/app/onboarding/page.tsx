@@ -19,6 +19,7 @@ import {
   stepVariants,
   useMeasuredHeight,
 } from "@/components/step-motion";
+import type { Direction } from "@/components/step-motion";
 import {
   Card,
   CardContent,
@@ -40,10 +41,14 @@ export default function OnboardingPage() {
   const me = useQuery(api.users.me);
   const [steps, setSteps] = useState<StepId[] | null>(null);
   const [index, setIndex] = useState(0);
+  // Which way the next step slides in: forward on advance, back on "Atrás".
+  const [direction, setDirection] = useState<Direction>(1);
   const [bodyRef, bodyHeight] = useMeasuredHeight();
 
   if (me && steps === null) {
-    setSteps(planSteps(me));
+    const plan = planSteps(me);
+    setSteps(plan.steps);
+    setIndex(plan.start);
   }
 
   const done = steps !== null && index >= steps.length;
@@ -63,7 +68,19 @@ export default function OnboardingPage() {
   }
 
   const copy = STEP_COPY[step];
-  const advance = () => setIndex((n) => n + 1);
+  // "directory" and "skills" share one DirectoryStep so its draft survives.
+  const panelKey = step === "skills" ? "directory" : step;
+  const advance = () => {
+    setDirection(1);
+    setIndex((n) => n + 1);
+  };
+  const back =
+    index > 0
+      ? () => {
+          setDirection(-1);
+          setIndex((n) => Math.max(n - 1, 0));
+        }
+      : undefined;
   const transition = reducedMotion
     ? { duration: 0.16 }
     : { duration: 0.24, ease: EASE_OUT };
@@ -91,10 +108,10 @@ export default function OnboardingPage() {
             }
           >
             <div ref={bodyRef}>
-              <AnimatePresence mode="popLayout" initial={false} custom={1}>
+              <AnimatePresence mode="popLayout" initial={false} custom={direction}>
                 <motion.div
-                  key={step}
-                  custom={1}
+                  key={panelKey}
+                  custom={direction}
                   variants={reducedMotion ? reducedStepVariants : stepVariants}
                   initial="initial"
                   animate="active"
@@ -103,13 +120,18 @@ export default function OnboardingPage() {
                 >
                   <CardContent>
                     {step === "details" ? (
-                      <DetailsStep onDone={advance} />
+                      <DetailsStep onDone={advance} onBack={back} />
                     ) : step === "identity" ? (
-                      <IdentityStep me={me} onDone={advance} />
+                      <IdentityStep me={me} onDone={advance} onBack={back} />
                     ) : step === "links" ? (
-                      <LinksStep me={me} onDone={advance} />
+                      <LinksStep me={me} onDone={advance} onBack={back} />
                     ) : (
-                      <DirectoryStep onDone={advance} />
+                      <DirectoryStep
+                        page={step === "skills" ? 1 : 0}
+                        onNext={advance}
+                        onDone={advance}
+                        onBack={back}
+                      />
                     )}
                   </CardContent>
                 </motion.div>
