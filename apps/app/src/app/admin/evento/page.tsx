@@ -25,8 +25,8 @@ const PHASE_LABEL: Record<EventPhase, string> = {
 };
 
 /**
- * The hackathon window. Outside it participants only keep the profile and
- * the directory, on the web and in the CLI (convex/lib/eventWindow.ts).
+ * The hackathon window. Outside it participants keep the profile, directory
+ * and perks, on the web and in the CLI (convex/lib/eventWindow.ts).
  * Admins are never restricted.
  */
 type Window = { startsAt?: number; endsAt?: number };
@@ -104,7 +104,7 @@ function WindowForm({
   return (
     <Page
       title="Evento"
-      description="Mientras la hackathon no esté en marcha, los participantes solo pueden editar su perfil y ver el directorio. Nada más funciona, tampoco desde la CLI. Los admins no tienen restricciones."
+      description="Mientras la hackathon no esté en marcha, los participantes pueden editar su perfil, ver el directorio y acceder a los perks. El resto tampoco funciona desde la CLI. Los admins no tienen restricciones."
     >
       <Card>
         <CardHeader>
@@ -144,7 +144,7 @@ function WindowForm({
             <Field
               label="Termina"
               htmlFor="event-ends"
-              hint="A partir de esta hora se cierra todo salvo el perfil y el directorio."
+              hint="A partir de esta hora se cierra todo salvo el perfil, el directorio y los perks."
             >
               <Input
                 id="event-ends"

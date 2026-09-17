@@ -34,7 +34,7 @@ type Tile = {
 };
 
 /** Sections that stay open outside the hackathon window (src/lib/sections.ts). */
-const CLOSED_SECTIONS: ReadonlySet<SectionKey> = new Set(["participantes"]);
+const CLOSED_SECTIONS: ReadonlySet<SectionKey> = new Set(["participantes", "perks"]);
 
 /**
  * The launcher on the home page: one tile per section the user can open,
@@ -48,7 +48,7 @@ export function SectionTiles({
   className,
 }: {
   sections?: readonly SectionKey[];
-  /** False outside the hackathon window: only the directory tile survives. */
+  /** False outside the hackathon window: only the directory and perks survive. */
   eventOpen?: boolean;
   className?: string;
 }) {

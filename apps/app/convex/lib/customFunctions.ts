@@ -42,11 +42,14 @@ export const acceptedQuery = wrapQuery(requireAccepted);
 export const acceptedMutation = wrapMutation(requireAccepted);
 /**
  * Onboarded participants inside the hackathon window (convex/lib/eventWindow.ts).
- * Outside it only profile edits and the directory work; use `profileMutation`
- * for a write that must survive a closed window. Admins are never gated.
+ * Outside it only explicitly exempt features work; use the anytime wrappers
+ * for one that must survive a closed window. Admins are never gated.
  */
 export const onboardedQuery = wrapQuery(requireInEvent);
 export const onboardedMutation = wrapMutation(requireInEvent);
+/** Onboarded, no window check: features that remain available at any time. */
+export const anytimeOnboardedQuery = wrapQuery(requireOnboarded);
+export const anytimeOnboardedMutation = wrapMutation(requireOnboarded);
 /** Onboarded, no window check: profile fields the participant may always edit. */
 export const profileMutation = wrapMutation(requireOnboarded);
 export const adminQuery = wrapQuery(requireAdmin);

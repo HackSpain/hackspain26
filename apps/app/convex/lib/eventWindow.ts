@@ -76,12 +76,12 @@ export function formatEventDate(ms: number): string {
 /** Spanish copy for a closed window; the CLI swaps it for English by code. */
 export function closedMessage(phase: EventPhase, window: EventWindow): string {
   if (phase === "before" && window.startsAt !== undefined) {
-    return `La hackathon empieza el ${formatEventDate(window.startsAt)}. Hasta entonces solo puedes editar tu perfil y ver el directorio.`;
+    return `La hackathon empieza el ${formatEventDate(window.startsAt)}. Hasta entonces puedes editar tu perfil, ver el directorio y acceder a los perks.`;
   }
   if (phase === "after" && window.endsAt !== undefined) {
-    return `La hackathon terminó el ${formatEventDate(window.endsAt)}. Solo puedes editar tu perfil y ver el directorio.`;
+    return `La hackathon terminó el ${formatEventDate(window.endsAt)}. Puedes editar tu perfil, ver el directorio y acceder a los perks.`;
   }
-  return "La hackathon no está en marcha. Solo puedes editar tu perfil y ver el directorio.";
+  return "La hackathon no está en marcha. Puedes editar tu perfil, ver el directorio y acceder a los perks.";
 }
 
 /**

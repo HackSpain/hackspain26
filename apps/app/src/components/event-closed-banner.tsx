@@ -23,18 +23,18 @@ export function isEventOpen(event: EventInfo | null | undefined): boolean {
 export function eventClosedCopy(event: EventInfo): { title: string; body: string } {
   if (event.phase === "before" && event.startsAt !== undefined) {
     return {
-      body: "Hasta entonces solo puedes editar tu perfil y ver el directorio de participantes.",
+      body: "Hasta entonces puedes editar tu perfil, ver el directorio y acceder a los perks.",
       title: `La hackathon empieza el ${formatEventDate(event.startsAt)}`,
     };
   }
   if (event.phase === "after" && event.endsAt !== undefined) {
     return {
-      body: "Gracias por participar. Tu perfil y el directorio siguen abiertos.",
+      body: "Gracias por participar. Tu perfil, el directorio y los perks siguen abiertos.",
       title: `La hackathon terminó el ${formatEventDate(event.endsAt)}`,
     };
   }
   return {
-    body: "Solo puedes editar tu perfil y ver el directorio de participantes.",
+    body: "Puedes editar tu perfil, ver el directorio y acceder a los perks.",
     title: "La hackathon no está en marcha",
   };
 }
