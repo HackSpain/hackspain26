@@ -5,24 +5,12 @@ import { ImagePlus, Trash2 } from "lucide-react";
 import { useRef } from "react";
 import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 import type { ActionFeedback } from "@/components/action-feedback";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
+import { uploadToConvex } from "@/lib/upload";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-
-function storageIdFromUpload(value: unknown): Id<"_storage"> {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "storageId" in value &&
-    typeof value.storageId === "string"
-  ) {
-    return value.storageId as Id<"_storage">;
-  }
-  throw new Error("No se pudo subir la foto");
-}
 
 /** Uploads a picture to Convex storage and makes it the profile photo. */
 export function useAvatarUpload(): (file: File) => Promise<void> {
@@ -37,15 +25,9 @@ export function useAvatarUpload(): (file: File) => Promise<void> {
       throw new Error("La foto no puede superar 2 MB.");
     }
     const uploadUrl = await generateUploadUrl();
-    const response = await fetch(uploadUrl, {
-      method: "POST",
-      headers: { "Content-Type": file.type },
-      body: file,
+    await setAvatar({
+      imageId: await uploadToConvex(uploadUrl, file, "No se pudo subir la foto"),
     });
-    if (!response.ok) {
-      throw new Error("No se pudo subir la foto");
-    }
-    await setAvatar({ imageId: storageIdFromUpload(await response.json()) });
   };
 }
 

@@ -1,7 +1,7 @@
 import { spinner } from "@clack/prompts";
 import type { CliContext } from "./context";
 import { BRAND, c, cmd, width } from "./style";
-import { box, cardWidth, pad as padCells, wrap } from "./tui";
+import { box, cardWidth, pad, wrap } from "./tui";
 
 /**
  * All user-facing output goes through here so `--json` can guarantee exactly
@@ -34,10 +34,6 @@ export type Ui = {
 };
 
 const INDENT = "  ";
-
-function pad(text: string, size: number): string {
-  return padCells(text, size);
-}
 
 const MARK: Record<"ok" | "info" | "warn" | "err" | "step", string> = {
   err: c.red("✗"),

@@ -52,15 +52,11 @@ async function uniqueJoinCode(ctx: MutationCtx): Promise<string> {
   throw new Error("No se pudo generar un código de equipo");
 }
 
-export function normalizeRepoUrl(raw: string): string | null {
-  return canonicalRepoUrl(raw);
-}
-
 function normalizeRepoUrls(raw: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const entry of raw) {
-    const url = normalizeRepoUrl(entry);
+    const url = canonicalRepoUrl(entry);
     if (!url || seen.has(url)) {
       continue;
     }
@@ -524,51 +520,6 @@ export const create = onboardedMutation({
   returns: v.id("teams"),
 });
 
-export const rename = onboardedMutation({
-  args: { name: v.string(), teamId: v.id("teams") },
-  handler: async (ctx, args) => {
-    const team = await ctx.db.get(args.teamId);
-    if (!team) {
-      throw new Error("Equipo no encontrado");
-    }
-    if (team.ownerId !== ctx.user._id) {
-      throw new Error("Solo el dueño puede cambiar el nombre");
-    }
-    const name = args.name.trim();
-    if (name.length < 2) {
-      throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
-    }
-    await ctx.db.patch(team._id, { name, updatedAt: Date.now() });
-    return null;
-  },
-  returns: v.null(),
-});
-
-export const addMember = onboardedMutation({
-  args: {
-    identifier: v.string(),
-    identifierType: identifierTypeValidator,
-    teamId: v.id("teams"),
-  },
-  handler: async (ctx, args) => {
-    const team = await ctx.db.get(args.teamId);
-    if (!team) {
-      throw new Error("Equipo no encontrado");
-    }
-    if (team.ownerId !== ctx.user._id) {
-      throw new Error("Solo el dueño puede añadir miembros");
-    }
-    return await insertMember(
-      ctx,
-      team,
-      ctx.user._id,
-      args.identifierType,
-      args.identifier
-    );
-  },
-  returns: v.id("teamMembers"),
-});
-
 export const leave = onboardedMutation({
   args: {},
   handler: async (ctx) => {
@@ -581,29 +532,6 @@ export const leave = onboardedMutation({
       throw new Error("El dueño no puede salir del equipo");
     }
     await ctx.db.delete(membership._id);
-    return null;
-  },
-  returns: v.null(),
-});
-
-export const removeMember = onboardedMutation({
-  args: { memberId: v.id("teamMembers") },
-  handler: async (ctx, args) => {
-    const member = await ctx.db.get(args.memberId);
-    if (!member) {
-      throw new Error("Miembro no encontrado");
-    }
-    const team = await ctx.db.get(member.teamId);
-    if (!team) {
-      throw new Error("Equipo no encontrado");
-    }
-    if (team.ownerId !== ctx.user._id) {
-      throw new Error("Solo el dueño puede quitar miembros");
-    }
-    if (member.userId === team.ownerId) {
-      throw new Error("No se puede quitar al dueño");
-    }
-    await ctx.db.delete(member._id);
     return null;
   },
   returns: v.null(),
@@ -770,7 +698,7 @@ export const setRepoUrl = onboardedMutation({
       });
       return null;
     }
-    const repoUrl = normalizeRepoUrl(args.url);
+    const repoUrl = canonicalRepoUrl(args.url);
     if (!repoUrl) {
       fail(
         "VALIDATION",

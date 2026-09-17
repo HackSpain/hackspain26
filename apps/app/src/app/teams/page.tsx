@@ -4,7 +4,6 @@ import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { ImagePlus, Trash2, Users } from "lucide-react";
 import { useRef, useState } from "react";
-import type { Id } from "@convex/_generated/dataModel";
 import { api } from "@convex/_generated/api";
 import { Avatar } from "@/components/avatar";
 import { TrackTag } from "@/components/track-tag";
@@ -21,23 +20,12 @@ import {
   Frame,
 } from "@/components/ui/card";
 import { cn, identifierTypeLabel, teamMemberStatusLabel } from "@/lib/utils";
+import { uploadToConvex } from "@/lib/upload";
 
 type TeamSummary = FunctionReturnType<typeof api.teams.list>[number];
 type MyTeam = NonNullable<FunctionReturnType<typeof api.teams.mine>>;
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
-
-function storageIdFromUpload(value: unknown): Id<"_storage"> {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "storageId" in value &&
-    typeof value.storageId === "string"
-  ) {
-    return value.storageId as Id<"_storage">;
-  }
-  throw new Error("No se pudo subir el logo");
-}
 
 /** Owner-only: upload or remove the team logo. Members just see it. */
 function TeamLogo({ team }: { team: MyTeam }) {
@@ -61,15 +49,9 @@ function TeamLogo({ team }: { team: MyTeam }) {
     setBusy(true);
     try {
       const uploadUrl = await generateUploadUrl();
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
+      await setLogo({
+        imageId: await uploadToConvex(uploadUrl, file, "No se pudo subir el logo"),
       });
-      if (!response.ok) {
-        throw new Error("No se pudo subir el logo");
-      }
-      await setLogo({ imageId: storageIdFromUpload(await response.json()) });
     } catch (caughtError: unknown) {
       setError(errorMessage(caughtError, "No se pudo subir el logo"));
     } finally {

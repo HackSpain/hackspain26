@@ -158,24 +158,6 @@ export const listCatalog = onboardedQuery({
   },
 });
 
-export const myClaims = onboardedQuery({
-  args: {},
-  returns: v.array(claimReturn),
-  handler: async (ctx) => {
-    const claims = await ctx.db
-      .query("perkClaims")
-      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
-      .collect();
-    const rows = [];
-    for (const claim of claims) {
-      const perk = await ctx.db.get(claim.perkId);
-      if (!perk) continue;
-      rows.push(await claimWithCode(ctx, claim, perk));
-    }
-    return rows;
-  },
-});
-
 export const claim = onboardedMutation({
   args: {
     perkId: v.id("perks"),

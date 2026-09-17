@@ -1,35 +1,25 @@
+import type { Infer } from "convex/values";
+import type {
+  tvFeedModeValidator,
+  tvFeedSourceValidator,
+  tvFontWeightValidator,
+  tvSponsorValidator,
+  tvTickerSpeedValidator,
+  tvWidgetKindValidator,
+  tvWidgetValidator,
+} from "@convex/lib/tvValidators";
+
 export { layoutTvBox } from "../../convex/lib/tvLayout";
 
-export const TV_WIDGET_KINDS = [
-  "banner",
-  "ticker",
-  "clock",
-  "message",
-  "insightsStats",
-  "insightsActivity",
-  "insightsHarness",
-  "insightsStacks",
-  "insightsScatter",
-  "insightsLeaderboard",
-  "insightsEvolution",
-  "liveCommits",
-  "liveAgents",
-  "liveTokens",
-  "liveLeaderboard",
-  "feed",
-  "sponsorGrid",
-  "sponsorTicker",
-] as const;
-
-export type TvWidgetKind = (typeof TV_WIDGET_KINDS)[number];
-
-export type TvSponsorTier = "gold" | "silver" | "community";
-export type TvTickerSpeed = "slow" | "normal" | "fast";
-export type TvFeedMode = "latest" | "rotate";
-export type TvFeedSource = "all" | "participants" | "github";
+export type TvWidgetKind = Infer<typeof tvWidgetKindValidator>;
+export type TvSponsor = Infer<typeof tvSponsorValidator>;
+export type TvSponsorTier = TvSponsor["tier"];
+export type TvTickerSpeed = Infer<typeof tvTickerSpeedValidator>;
+export type TvFeedMode = Infer<typeof tvFeedModeValidator>;
+export type TvFeedSource = Infer<typeof tvFeedSourceValidator>;
 export const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
 export type TvFontSize = (typeof TV_FONT_SIZES)[number];
-export type TvFontWeight = "normal" | "medium" | "semibold" | "bold";
+export type TvFontWeight = Infer<typeof tvFontWeightValidator>;
 
 export const TV_FONT_WEIGHT_OPTIONS: readonly {
   value: TvFontWeight;
@@ -111,13 +101,6 @@ export function tvFontWeightClass(fontWeight?: TvFontWeight): string | undefined
   return fontWeight ? TV_FONT_WEIGHT_CLASS[fontWeight] : undefined;
 }
 
-export type TvSponsor = {
-  name: string;
-  logoUrl: string;
-  href: string;
-  tier: TvSponsorTier;
-};
-
 const DEFAULT_TV_SPONSORS: TvSponsor[] = [
   { name: "Cursor", logoUrl: "/sponsors/cursor.svg", href: "https://cursor.com", tier: "gold" },
   { name: "fal.ai", logoUrl: "/sponsors/fal.svg", href: "https://fal.ai", tier: "gold" },
@@ -180,23 +163,7 @@ export function sponsorLogoSources(sponsor: {
   return [`${origin}/logo.svg`, `${origin}/favicon.ico`];
 }
 
-export type TvWidget = {
-  _id: string;
-  kind: TvWidgetKind;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  z: number;
-  text: string;
-  sponsors?: TvSponsor[];
-  tickerSpeed?: TvTickerSpeed;
-  feedMode?: TvFeedMode;
-  feedSource?: TvFeedSource;
-  fontSize?: number;
-  fontWeight?: TvFontWeight;
-  background?: boolean;
-};
+export type TvWidget = Infer<typeof tvWidgetValidator> & { _id: string };
 
 export const TV_PALETTE: readonly {
   kind: TvWidgetKind;
