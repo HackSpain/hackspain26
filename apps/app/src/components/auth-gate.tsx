@@ -336,7 +336,10 @@ function resolveView({
     if (section && !me.sections.includes(section)) {
       return "blank";
     }
-    if (!me.profileComplete) {
+    const next = destination(me);
+    const isRequiredStatusPage =
+      pathname === next && (next === "/unregistered" || next === "/pending");
+    if (!me.profileComplete && !isRequiredStatusPage) {
       if (pathname !== "/onboarding") {
         return "blank";
       }
@@ -348,7 +351,6 @@ function resolveView({
     }
     const judgingAllowed = me.canJudge && pathname.startsWith("/judging");
     if (!judgingAllowed) {
-      const next = destination(me);
       if (
         me.canJudge &&
         next &&
