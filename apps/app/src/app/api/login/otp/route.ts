@@ -1,5 +1,4 @@
 import { api } from "@convex/_generated/api";
-import { checkBotId } from "botid/server";
 import { fetchAction } from "convex/nextjs";
 import { ConvexError } from "convex/values";
 import { NextResponse } from "next/server";
@@ -15,7 +14,6 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * The page maps `code` to copy; the status is informational.
  */
 export type LoginErrorCode =
-  | "BOT"
   | "INVALID_EMAIL"
   | "UNREGISTERED"
   | "SEND_FAILED";
@@ -37,19 +35,7 @@ function describe(error: unknown): string {
 }
 
 export async function POST(request: Request) {
-  try {
-    const verification = await checkBotId();
-    if (verification.isBot) {
-      return refuse("BOT", 403);
-    }
-  } catch (error) {
-    await reportServerEvent(
-      "warn",
-      "BotID check failed; login request allowed",
-      { reason: describe(error) }
-    );
-  }
-
+  // Browser challenges are enforced by Vercel's managed firewall rules.
   let email = "";
   try {
     const body: unknown = await request.json();

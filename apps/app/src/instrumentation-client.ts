@@ -3,17 +3,7 @@ import {
   init,
   replayIntegration,
 } from "@sentry/nextjs";
-import { initBotId } from "botid/client/core";
 import { sanitizeTelemetryEvent } from "@/lib/telemetry-sanitize";
-
-initBotId({
-  protect: [
-    {
-      method: "POST",
-      path: "/api/login/otp",
-    },
-  ],
-});
 
 const dsn = process.env.NEXT_PUBLIC_BETTER_STACK_ERRORS_DSN;
 

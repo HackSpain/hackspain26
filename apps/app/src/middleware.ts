@@ -4,11 +4,6 @@ import {
   nextjsMiddlewareRedirect,
 } from "@convex-dev/auth/nextjs/server";
 
-// BotID challenge/proxy paths have no file extension, so the matcher below
-// would otherwise send them to /login and classification would fail.
-const BOTID_PREFIX =
-  "/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3";
-
 // /api/cli/* authenticates with a bearer token, not the cookie session.
 // /api/files/* accepts either and does its own redirect, so image links from
 // the CLI work in a browser.
@@ -32,9 +27,6 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
-  if (new URL(request.url).pathname.startsWith(BOTID_PREFIX)) {
-    return undefined;
-  }
   const authenticated = await convexAuth.isAuthenticated();
   if (!isPublicRoute(request) && !authenticated) {
     return nextjsMiddlewareRedirect(request, "/login");

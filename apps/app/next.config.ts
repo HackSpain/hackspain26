@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 import { withBetterStack } from "@logtail/next";
 import { withSentryConfig } from "@sentry/nextjs/config";
-import { withBotId } from "botid/next/config";
 
 const nextConfig: NextConfig = {
   agentRules: false,
@@ -17,7 +16,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-const configuredApp = withBetterStack(withBotId(nextConfig));
+const configuredApp = withBetterStack(nextConfig);
 const errorsDsn = process.env.NEXT_PUBLIC_BETTER_STACK_ERRORS_DSN;
 const sourceMapsConfigured = Boolean(
   process.env.BETTER_STACK_API_TOKEN &&

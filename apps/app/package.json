@@ -29,7 +29,6 @@
     "@oslojs/crypto": "^1.0.1",
     "@rawtree/sdk": "^0.2.0",
     "@sentry/nextjs": "^10.75.0",
-    "botid": "^1.5.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.25.4",
