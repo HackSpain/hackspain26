@@ -35,7 +35,7 @@ export function PerkCard({
 
   return (
     <Card className="gap-0 py-0">
-      <div className="flex flex-1 flex-col gap-1.5 px-4 pt-4 pb-5">
+      <div className="flex flex-1 flex-col gap-2 px-5 pt-5 pb-6">
         <h3 className="font-bungee text-xl leading-none text-balance">
           {perk.sponsorUrl ? (
             <a
@@ -54,10 +54,20 @@ export function PerkCard({
         </h3>
         {offer ? <p className="text-base leading-snug font-medium">{offer}</p> : null}
         {description ? (
-          <p className="mt-1.5 text-sm leading-relaxed text-hs-brown/80">{description}</p>
+          <p className="mt-2 text-sm leading-relaxed text-hs-brown/80">{description}</p>
+        ) : null}
+        {perk.type === "external" && perk.instructions ? (
+          <div className="mt-3 border-t border-hs-ink/20 pt-4">
+            <p className="font-bungee text-[11px] leading-none tracking-[0.06em] uppercase text-hs-brown">
+              Cómo canjearlo
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-pretty text-hs-brown/80">
+              {perk.instructions}
+            </p>
+          </div>
         ) : null}
         {answered.length > 0 ? (
-          <dl className="mt-3 grid gap-2 border-t border-hs-ink/20 pt-3">
+          <dl className="mt-3 grid gap-3 border-t border-hs-ink/20 pt-4">
             {answered.map((entry) => (
               <div key={entry.label} className="min-w-0">
                 <dt className="font-bungee text-[11px] leading-none tracking-[0.06em] uppercase text-hs-brown">
@@ -69,7 +79,7 @@ export function PerkCard({
           </dl>
         ) : null}
       </div>
-      <div className="mt-auto flex min-h-[4.5rem] items-center justify-between gap-4 border-t-[3px] border-hs-ink bg-hs-sand px-4 py-3">
+      <div className="mt-auto flex min-h-[4.5rem] items-center justify-between gap-4 border-t-[3px] border-hs-ink bg-hs-sand px-5 py-4">
         <PerkFooter perk={perk} claim={claim} onClaim={onClaim} />
       </div>
     </Card>
@@ -87,12 +97,40 @@ function PerkFooter({
 }) {
   const kind = perkTypeLabel(perk.type);
 
+  if (perk.type === "external") {
+    if (!perk.sponsorUrl) {
+      return (
+        <div className="min-w-0">
+          <MetaLabel>{kind}</MetaLabel>
+          <StatusLine status="No disponible" detail="Falta el enlace del partner." muted />
+        </div>
+      );
+    }
+    return (
+      <>
+        <div className="min-w-0">
+          <MetaLabel>{kind}</MetaLabel>
+          <p className="mt-1 text-sm leading-snug text-hs-brown">
+            Se reclama en la web del partner.
+          </p>
+        </div>
+        <Button asChild size="sm" className="shrink-0">
+          <a href={perk.sponsorUrl} target="_blank" rel="noopener noreferrer">
+            Ir al partner
+            <ArrowUpRightIcon aria-hidden />
+            <span className="sr-only"> (se abre en una pestaña nueva)</span>
+          </a>
+        </Button>
+      </>
+    );
+  }
+
   if (claim?.code) {
     return (
       <>
         <div className="min-w-0">
           <MetaLabel>{kind}</MetaLabel>
-          <p className="mt-0.5 font-mono text-lg leading-tight tracking-wide break-all select-all">
+          <p className="mt-1 font-mono text-lg leading-tight tracking-wide break-all select-all">
             {claim.code}
           </p>
         </div>
@@ -119,34 +157,62 @@ function PerkFooter({
     );
   }
 
-  const isCode = perk.type === "code";
-  return (
-    <>
-      <div className="min-w-0">
-        <MetaLabel>{kind}</MetaLabel>
-        <p className="mt-0.5 text-sm leading-snug text-hs-brown">
-          {isCode ? "Te asignamos un código único." : "La organización revisa tu solicitud."}
-        </p>
-      </div>
-      <Button size="sm" className="shrink-0" onClick={onClaim}>
-        {isCode ? "Reclamar" : "Solicitar"}
-      </Button>
-    </>
-  );
+  switch (perk.type) {
+    case "code": {
+      return (
+        <>
+          <div className="min-w-0">
+            <MetaLabel>{kind}</MetaLabel>
+            <p className="mt-1 text-sm leading-snug text-hs-brown">
+              Te asignamos un código único.
+            </p>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={onClaim}>
+            Reclamar
+          </Button>
+        </>
+      );
+    }
+    case "email": {
+      return (
+        <>
+          <div className="min-w-0">
+            <MetaLabel>{kind}</MetaLabel>
+            <p className="mt-1 text-sm leading-snug text-hs-brown">
+              La organización revisa tu solicitud.
+            </p>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={onClaim}>
+            Solicitar
+          </Button>
+        </>
+      );
+    }
+    default: {
+      const _exhaustive: never = perk.type;
+      return _exhaustive;
+    }
+  }
 }
 
-function claimDetail(status: string): string {
+function claimDetail(status: NonNullable<PerkCardClaim>["status"]): string {
   switch (status) {
-    case "pending":
+    case "pending": {
       return "Tu solicitud está con la organización.";
-    case "added":
+    }
+    case "added": {
       return "Ya tienes acceso. Revisa tu email.";
-    case "rejected":
+    }
+    case "rejected": {
       return "La organización no ha aprobado la solicitud.";
-    case "assigned":
+    }
+    case "assigned": {
       return "Tu código está de camino.";
-    default:
-      return "";
+    }
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
   }
 }
 
@@ -168,7 +234,7 @@ function StatusLine({
   muted?: boolean;
 }) {
   return (
-    <p className={cn("mt-0.5 text-sm leading-snug", muted ? "text-hs-brown/70" : "text-hs-ink")}>
+    <p className={cn("mt-1 text-sm leading-snug", muted ? "text-hs-brown/70" : "text-hs-ink")}>
       <span className="font-bungee text-xs uppercase">{status}</span>
       {detail ? <span className={cn(!muted && "text-hs-brown")}> · {detail}</span> : null}
     </p>

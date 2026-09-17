@@ -6,9 +6,11 @@ import { directoryValidator } from "./lib/directory";
 import { sectionsValidator } from "./lib/userTypes";
 import { tvWidgetFields, tvWidgetValidator } from "./lib/tvValidators";
 import {
+  claimTypeValidator,
   milestoneKindValidator,
   perkAnswerValidator,
   perkInputValidator,
+  perkTypeValidator,
   roleValidator,
 } from "./lib/validators";
 
@@ -83,7 +85,7 @@ export default defineSchema({
   perkClaims: defineTable({
     perkId: v.id("perks"),
     userId: v.id("users"),
-    type: v.union(v.literal("email"), v.literal("code")),
+    type: claimTypeValidator,
     status: v.union(
       v.literal("pending"),
       v.literal("added"),
@@ -116,8 +118,10 @@ export default defineSchema({
     title: v.string(),
     value: v.string(),
     description: v.string(),
-    type: v.union(v.literal("email"), v.literal("code")),
+    type: perkTypeValidator,
     sponsorUrl: v.optional(v.string()),
+    /** How to claim on the partner site. Required when type is `external`. */
+    instructions: v.optional(v.string()),
     inputs: v.optional(v.array(perkInputValidator)),
     active: v.boolean(),
     createdBy: v.id("users"),
@@ -143,6 +147,8 @@ export default defineSchema({
     ),
     /** GitHub event id, so polling never inserts the same event twice. */
     externalId: v.optional(v.string()),
+    /** Client nonce so an optimistic row and its server row share one React key. */
+    clientId: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_created", ["createdAt"])

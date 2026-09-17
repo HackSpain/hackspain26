@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Role } from "@convex/lib/validators";
 import { api } from "@convex/_generated/api";
+import { isEventOpen } from "@/components/event-closed-banner";
 import { HomeSplash } from "@/components/home-splash";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -150,7 +151,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     // Outside the hackathon window only the profile and the directory stay.
-    if (!me.event.open && !isPathAllowedWhenClosed(pathname)) {
+    if (!isEventOpen(me.event) && !isPathAllowedWhenClosed(pathname)) {
       router.replace("/");
       return;
     }
@@ -255,7 +256,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith("/admin")) {
       return null;
     }
-    if (!me.event.open && !isPathAllowedWhenClosed(pathname)) {
+    if (!isEventOpen(me.event) && !isPathAllowedWhenClosed(pathname)) {
       return null;
     }
     const section = sectionForPath(pathname);

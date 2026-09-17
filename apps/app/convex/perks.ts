@@ -15,6 +15,7 @@ import {
 import { membershipForUser } from "./lib/team";
 import {
   claimStatusValidator,
+  claimTypeValidator,
   perkAnswerValidator,
   perkInputValidator,
   perkTypeValidator,
@@ -31,6 +32,7 @@ function perkFields(perk: Doc<"perks">) {
     description: perk.description,
     type: perk.type,
     sponsorUrl: perk.sponsorUrl,
+    instructions: perk.instructions,
     inputs: perk.inputs ?? [],
     active: perk.active,
   };
@@ -59,11 +61,29 @@ async function claimWithCode(
   };
 }
 
-function cleanSponsorUrl(raw: string): string | undefined {
+function cleanSponsorUrl(raw: string, required = false): string | undefined {
   const url = raw.trim();
-  if (!url) return undefined;
-  if (!isHttpUrl(url)) throw new Error("La URL del sponsor debe empezar por http:// o https://");
+  if (!url) {
+    if (required) {
+      throw new Error("La URL es obligatoria");
+    }
+    return undefined;
+  }
+  if (!isHttpUrl(url)) {
+    throw new Error("La URL debe empezar por http:// o https://");
+  }
   return url;
+}
+
+function cleanInstructions(raw: string, required = false): string | undefined {
+  const text = raw.trim();
+  if (!text) {
+    if (required) {
+      throw new Error("Las instrucciones son obligatorias");
+    }
+    return undefined;
+  }
+  return text;
 }
 
 function cleanInputs(raw: PerkInput[]): PerkInput[] {
@@ -80,6 +100,7 @@ const perkReturn = v.object({
   description: v.string(),
   type: perkTypeValidator,
   sponsorUrl: v.optional(v.string()),
+  instructions: v.optional(v.string()),
   inputs: v.array(perkInputValidator),
   active: v.boolean(),
   availableCodes: v.optional(v.number()),
@@ -90,7 +111,7 @@ const claimReturn = v.object({
   perkId: v.id("perks"),
   title: v.string(),
   company: v.string(),
-  type: perkTypeValidator,
+  type: claimTypeValidator,
   status: claimStatusValidator,
   code: v.optional(v.string()),
   answers: v.array(perkAnswerValidator),
@@ -172,6 +193,20 @@ export const claim = onboardedMutation({
       .unique();
     if (existing) throw new Error("Ya has reclamado este perk");
 
+    switch (perk.type) {
+      case "external": {
+        throw new Error("Este perk se reclama en la web del partner");
+      }
+      case "code":
+      case "email": {
+        break;
+      }
+      default: {
+        const _exhaustive: never = perk.type;
+        throw new Error(_exhaustive);
+      }
+    }
+
     const checked = validateAnswers(perk.inputs ?? [], args.answers);
     if (!checked.ok) fail("VALIDATION", checked.message);
     const answers = checked.answers.length > 0 ? checked.answers : undefined;
@@ -225,6 +260,7 @@ export const adminList = adminQuery({
       description: v.string(),
       type: perkTypeValidator,
       sponsorUrl: v.optional(v.string()),
+      instructions: v.optional(v.string()),
       inputs: v.array(perkInputValidator),
       active: v.boolean(),
       codeCount: v.number(),
@@ -263,6 +299,7 @@ export const adminCreate = adminMutation({
     description: v.string(),
     type: perkTypeValidator,
     sponsorUrl: v.optional(v.string()),
+    instructions: v.optional(v.string()),
     inputs: v.optional(v.array(perkInputValidator)),
     codes: v.optional(v.array(v.string())),
   },
@@ -273,8 +310,10 @@ export const adminCreate = adminMutation({
     if (!company || !title) {
       throw new Error("La empresa y el título son obligatorios");
     }
-    const sponsorUrl = cleanSponsorUrl(args.sponsorUrl ?? "");
-    const inputs = cleanInputs(args.inputs ?? []);
+    const external = args.type === "external";
+    const sponsorUrl = cleanSponsorUrl(args.sponsorUrl ?? "", external);
+    const instructions = cleanInstructions(args.instructions ?? "", external);
+    const inputs = external ? [] : cleanInputs(args.inputs ?? []);
     const now = Date.now();
     const perkId = await ctx.db.insert("perks", {
       company,
@@ -283,6 +322,7 @@ export const adminCreate = adminMutation({
       description: args.description.trim(),
       type: args.type,
       sponsorUrl,
+      instructions,
       inputs: inputs.length > 0 ? inputs : undefined,
       active: true,
       createdBy: ctx.user._id,
@@ -314,8 +354,9 @@ export const adminUpdate = adminMutation({
     title: v.optional(v.string()),
     value: v.optional(v.string()),
     description: v.optional(v.string()),
-    /** Empty string clears the link. */
+    /** Empty string clears the link. External perks cannot clear it. */
     sponsorUrl: v.optional(v.string()),
+    instructions: v.optional(v.string()),
     inputs: v.optional(v.array(perkInputValidator)),
     active: v.optional(v.boolean()),
     codesToAdd: v.optional(v.array(v.string())),
@@ -324,6 +365,7 @@ export const adminUpdate = adminMutation({
   handler: async (ctx, args) => {
     const perk = await ctx.db.get(args.perkId);
     if (!perk) throw new Error("Perk no encontrado");
+    const external = perk.type === "external";
     const patch: Partial<Doc<"perks">> = { updatedAt: Date.now() };
     if (args.company !== undefined) {
       const company = args.company.trim();
@@ -337,8 +379,13 @@ export const adminUpdate = adminMutation({
     }
     if (args.value !== undefined) patch.value = args.value.trim();
     if (args.description !== undefined) patch.description = args.description.trim();
-    if (args.sponsorUrl !== undefined) patch.sponsorUrl = cleanSponsorUrl(args.sponsorUrl);
-    if (args.inputs !== undefined) {
+    if (args.sponsorUrl !== undefined) {
+      patch.sponsorUrl = cleanSponsorUrl(args.sponsorUrl, external);
+    }
+    if (args.instructions !== undefined) {
+      patch.instructions = cleanInstructions(args.instructions, external);
+    }
+    if (args.inputs !== undefined && !external) {
       const inputs = cleanInputs(args.inputs);
       patch.inputs = inputs.length > 0 ? inputs : undefined;
     }

@@ -94,6 +94,7 @@ type Draft = {
   description: string;
   type: PerkType;
   sponsorUrl: string;
+  instructions: string;
   codes: string;
   inputs: DraftInput[];
 };
@@ -105,6 +106,7 @@ const emptyDraft: Draft = {
   description: "",
   type: "email",
   sponsorUrl: "",
+  instructions: "",
   codes: "",
   inputs: [],
 };
@@ -129,6 +131,7 @@ function draftFromPerk(perk: AdminPerk): Draft {
     description: perk.description,
     type: perk.type,
     sponsorUrl: perk.sponsorUrl ?? "",
+    instructions: perk.instructions ?? "",
     codes: "",
     inputs: perk.inputs.map((input) => ({
       id: crypto.randomUUID(),
@@ -169,8 +172,20 @@ function draftProblem(draft: Draft): string | null {
   if (!draft.company.trim() || !draft.title.trim()) {
     return "La empresa y el título son obligatorios";
   }
+  if (draft.type === "external") {
+    if (!draft.sponsorUrl.trim()) {
+      return "La URL es obligatoria";
+    }
+    if (!isHttpUrl(draft.sponsorUrl.trim())) {
+      return "La URL debe empezar por http:// o https://";
+    }
+    if (!draft.instructions.trim()) {
+      return "Las instrucciones son obligatorias";
+    }
+    return null;
+  }
   if (draft.sponsorUrl.trim() && !isHttpUrl(draft.sponsorUrl.trim())) {
-    return "La URL del sponsor debe empezar por http:// o https://";
+    return "La URL debe empezar por http:// o https://";
   }
   for (const input of draft.inputs) {
     if (!input.label.trim()) return "Cada campo necesita una etiqueta";
@@ -214,7 +229,8 @@ export default function AdminPerksPage() {
         description: draft.description,
         type: draft.type,
         sponsorUrl: draft.sponsorUrl.trim() || undefined,
-        inputs: inputsFromDraft(draft.inputs),
+        instructions: draft.instructions.trim() || undefined,
+        inputs: draft.type === "external" ? undefined : inputsFromDraft(draft.inputs),
         codes: draft.type === "code" ? lines(draft.codes) : undefined,
       });
       setDraft(emptyDraft);
@@ -264,13 +280,19 @@ export default function AdminPerksPage() {
                   <p className="min-w-0 break-words">{perk.description}</p>
                 ) : null}
                 <p className="text-hs-brown tabular-nums">
-                  {perk.claimCount} {perk.claimCount === 1 ? "solicitud" : "solicitudes"}
-                  {perk.type === "code"
-                    ? ` · ${perk.availableCodes}/${perk.codeCount} códigos libres`
-                    : ""}
-                  {perk.inputs.length > 0
-                    ? ` · ${perk.inputs.length} ${perk.inputs.length === 1 ? "campo" : "campos"}: ${perk.inputs.map((input) => input.label).join(", ")}`
-                    : ""}
+                  {perk.type === "external" ? (
+                    "Se reclama en la web del partner"
+                  ) : (
+                    <>
+                      {perk.claimCount} {perk.claimCount === 1 ? "solicitud" : "solicitudes"}
+                      {perk.type === "code"
+                        ? ` · ${perk.availableCodes}/${perk.codeCount} códigos libres`
+                        : ""}
+                      {perk.inputs.length > 0
+                        ? ` · ${perk.inputs.length} ${perk.inputs.length === 1 ? "campo" : "campos"}: ${perk.inputs.map((input) => input.label).join(", ")}`
+                        : ""}
+                    </>
+                  )}
                   {perk.sponsorUrl ? (
                     <>
                       {" · "}
@@ -280,16 +302,18 @@ export default function AdminPerksPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-0.5 text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
                       >
-                        Web del sponsor
+                        {perk.type === "external" ? "Enlace para reclamar" : "Web del sponsor"}
                         <ArrowUpRightIcon className="size-3.5" aria-hidden />
                       </a>
                     </>
                   ) : null}
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Button variant="teal" onClick={() => setViewing(perk)}>
-                    Solicitudes ({perk.claimCount})
-                  </Button>
+                  {perk.type === "external" ? null : (
+                    <Button variant="teal" onClick={() => setViewing(perk)}>
+                      Solicitudes ({perk.claimCount})
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={() => setEditing(perk)}>
                     Editar
                   </Button>
@@ -358,7 +382,7 @@ export default function AdminPerksPage() {
             <DialogHeader>
               <DialogTitle>Crear perk</DialogTitle>
               <DialogDescription>
-                Aparece en el catálogo. Los campos se rellenan al reclamar.
+                Aparece en el catálogo. Elige si se reclama en la app o con un enlace al partner.
               </DialogDescription>
             </DialogHeader>
             <FormError message={createError} />
@@ -433,7 +457,8 @@ function EditPerkForm({ perk, onDone }: { perk: AdminPerk; onDone: () => void })
         value: draft.value,
         description: draft.description,
         sponsorUrl: draft.sponsorUrl.trim(),
-        inputs: inputsFromDraft(draft.inputs),
+        instructions: draft.instructions.trim(),
+        inputs: perk.type === "external" ? undefined : inputsFromDraft(draft.inputs),
       });
       onDone();
     } catch (err: unknown) {
@@ -455,9 +480,11 @@ function EditPerkForm({ perk, onDone }: { perk: AdminPerk; onDone: () => void })
       <DialogHeader>
         <DialogTitle>Editar perk</DialogTitle>
         <DialogDescription>
-          {perk.claimCount > 0
-            ? "Cambiar los campos no borra respuestas ya enviadas; las columnas se emparejan por clave."
-            : "Los participantes rellenan los campos al reclamar."}
+          {perk.type === "external"
+            ? "Los participantes no reclaman aquí: ven las instrucciones y el enlace."
+            : perk.claimCount > 0
+              ? "Cambiar los campos no borra respuestas ya enviadas; las columnas se emparejan por clave."
+              : "Los participantes rellenan los campos al reclamar."}
         </DialogDescription>
       </DialogHeader>
       <FormError message={error} />
@@ -514,13 +541,21 @@ function PerkFields({
         </Field>
         {mode === "create" ? (
           <Field label="Tipo" htmlFor={`${ids}-type`}>
-            <Select value={draft.type} onValueChange={(next) => set("type", next as PerkType)}>
+            <Select
+              value={draft.type}
+              onValueChange={(next) => {
+                if (next === "email" || next === "code" || next === "external") {
+                  set("type", next);
+                }
+              }}
+            >
               <SelectTrigger id={`${ids}-type`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="email">Solicitud por email</SelectItem>
                 <SelectItem value="code">Bolsa de códigos</SelectItem>
+                <SelectItem value="external">Enlace externo</SelectItem>
               </SelectContent>
             </Select>
           </Field>
@@ -532,15 +567,20 @@ function PerkFields({
           </Field>
         )}
         <Field
-          label="URL del sponsor"
+          label={draft.type === "external" ? "URL para reclamar" : "URL del sponsor"}
           htmlFor={`${ids}-sponsor`}
-          hint="Se enlaza desde la tarjeta del perk."
+          hint={
+            draft.type === "external"
+              ? "Obligatoria. El participante la abre en una pestaña nueva."
+              : "Se enlaza desde la tarjeta del perk."
+          }
         >
           <Input
             id={`${ids}-sponsor`}
             type="url"
             inputMode="url"
             placeholder="https://"
+            required={draft.type === "external"}
             value={draft.sponsorUrl}
             onChange={(event) => set("sponsorUrl", event.target.value)}
           />
@@ -553,6 +593,20 @@ function PerkFields({
           onChange={(event) => set("description", event.target.value)}
         />
       </Field>
+      {draft.type === "external" ? (
+        <Field
+          label="Instrucciones"
+          htmlFor={`${ids}-instructions`}
+          hint="Cómo canjearlo en la web del partner. Se muestra en la tarjeta."
+        >
+          <Textarea
+            id={`${ids}-instructions`}
+            value={draft.instructions}
+            onChange={(event) => set("instructions", event.target.value)}
+            placeholder="Entra con el email del equipo y activa el plan desde Billing."
+          />
+        </Field>
+      ) : null}
       {mode === "create" && draft.type === "code" ? (
         <Field label="Códigos (uno por línea)" htmlFor={`${ids}-codes`}>
           <Textarea
@@ -563,7 +617,9 @@ function PerkFields({
           />
         </Field>
       ) : null}
-      <InputsEditor inputs={draft.inputs} onChange={(inputs) => set("inputs", inputs)} />
+      {draft.type === "external" ? null : (
+        <InputsEditor inputs={draft.inputs} onChange={(inputs) => set("inputs", inputs)} />
+      )}
     </>
   );
 }
