@@ -117,7 +117,7 @@ describe("describeGate outside the hackathon window", () => {
     await expect(requireOnboarded(sessionFor(ready))).resolves.toBe(ready);
   });
 
-  test("profile commands opt into the closed window but not the other gates", async () => {
+  test("anytime commands opt into the closed window but not the other gates", async () => {
     await expect(
       requireOnboarded(sessionFor(after), { allowClosed: true })
     ).resolves.toBe(after);

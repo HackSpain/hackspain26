@@ -41,13 +41,14 @@ export function sectionForPath(pathname: string): SectionKey | null {
 
 /**
  * Outside the hackathon window (convex/lib/eventWindow.ts) participants keep
- * only the profile and the directory. Mirrors the server: everything else
- * throws EVENT_CLOSED, so AuthGate bounces these paths home before they mount.
+ * the profile, directory and perks. Mirrors the server: gated features throw
+ * EVENT_CLOSED, so AuthGate bounces those paths home before they mount.
  */
 const OPEN_WHEN_CLOSED = [
   "/",
   "/profile",
   "/participantes",
+  "/perks",
   "/tv",
   "/cli-auth",
   "/login",

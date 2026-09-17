@@ -3,7 +3,7 @@ import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { uiFor } from "../lib/output";
 import type { PerkEntry } from "../lib/participant";
-import { openParticipant } from "../lib/participant";
+import { openAnytimeParticipant } from "../lib/participant";
 import { c } from "../lib/style";
 
 function perkStatus(
@@ -39,7 +39,7 @@ export function registerPerk(program: Command): void {
     .action(async (_opts: unknown, command: Command) => {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
-      const { session } = await openParticipant(ctx);
+      const { session } = await openAnytimeParticipant(ctx);
       const entries = await ui.spin(
         "Fetching perks…",
         () => session.client.query(api.perks.listCatalog, {}),

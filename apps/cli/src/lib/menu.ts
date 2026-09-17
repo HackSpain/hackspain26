@@ -365,19 +365,20 @@ export function buildMainMenu(status: MenuStatus): MenuItem[] {
     ];
   }
   if (status.gate === "closed") {
-    // Outside the hackathon window only the profile still works; the
-    // directory lives on the dashboard.
+    // Outside the hackathon window the profile and perks still work; the
+    // participant directory lives on the dashboard.
     return [
       {
         value: "profile",
         label: "My profile",
-        hint: "the only thing open right now",
+        hint: "available at any time",
         preview: [["profile", "show"]],
         submenu: buildProfileMenu(),
       },
+      { value: "perks", label: "Perks", argv: ["perk", "list"] },
       {
         ...OPEN_ITEM,
-        hint: "profile and participant directory, already signed in",
+        hint: "profile, perks and participant directory, already signed in",
       },
       {
         value: "account",

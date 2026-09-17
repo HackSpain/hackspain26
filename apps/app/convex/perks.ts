@@ -2,8 +2,8 @@ import { v } from "convex/values";
 import {
   adminMutation,
   adminQuery,
-  onboardedMutation,
-  onboardedQuery,
+  anytimeOnboardedMutation,
+  anytimeOnboardedQuery,
 } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
 import {
@@ -118,7 +118,7 @@ const claimReturn = v.object({
   createdAt: v.number(),
 });
 
-export const listCatalog = onboardedQuery({
+export const listCatalog = anytimeOnboardedQuery({
   args: {},
   returns: v.array(
     v.object({
@@ -158,7 +158,7 @@ export const listCatalog = onboardedQuery({
   },
 });
 
-export const claim = onboardedMutation({
+export const claim = anytimeOnboardedMutation({
   args: {
     perkId: v.id("perks"),
     answers: v.optional(v.array(perkAnswerValidator)),

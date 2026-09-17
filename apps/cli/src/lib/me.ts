@@ -35,7 +35,7 @@ export function formatEventDate(ms: number): string {
 }
 
 export const EVENT_CLOSED_HINT =
-  "Until then only `hackspain profile` works; the directory is on the dashboard (`hackspain open participantes`).";
+  "You can still use `hackspain profile`, list perks with `hackspain perk list`, and open the participant directory with `hackspain open participantes`.";
 
 /** English copy for a closed window; the server sends the Spanish version by code. */
 export function closedEventMessage(event: Me["event"]): string {
@@ -111,7 +111,7 @@ export async function requireOnboarded(
   if (gate.state === "admin" || gate.state === "ready") {
     return me;
   }
-  // Profile commands keep working outside the hackathon window.
+  // Selected participant features keep working outside the hackathon window.
   if (gate.state === "closed" && options.allowClosed) {
     return me;
   }

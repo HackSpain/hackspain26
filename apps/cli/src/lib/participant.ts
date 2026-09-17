@@ -28,9 +28,16 @@ export async function openParticipant(ctx: CliContext): Promise<Participant> {
   return { me, session };
 }
 
-/** Same ladder minus the window: `hackspain profile` works while closed. */
-export async function openProfile(ctx: CliContext): Promise<Participant> {
+/** Same participant ladder without the event-window restriction. */
+export async function openAnytimeParticipant(
+  ctx: CliContext
+): Promise<Participant> {
   const session = await openSession(ctx, { requireAuth: true });
   const me = await requireOnboarded(session, { allowClosed: true });
   return { me, session };
+}
+
+/** Same ladder minus the window: `hackspain profile` works while closed. */
+export async function openProfile(ctx: CliContext): Promise<Participant> {
+  return await openAnytimeParticipant(ctx);
 }

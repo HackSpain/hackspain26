@@ -182,7 +182,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Outside the hackathon window only the profile and the directory stay.
+    // Outside the hackathon window only the profile, directory and perks stay.
     if (!isEventOpen(me.event) && !isPathAllowedWhenClosed(pathname)) {
       router.replace("/");
       return;

@@ -106,10 +106,17 @@ describe("buildMainMenu", () => {
     expect(itemOf(items, "open").argv).toEqual(["open"]);
   });
 
-  test("outside the hackathon window: profile only, no team or project entries", () => {
+  test("outside the hackathon window: profile and perks, no team or project entries", () => {
     const items = buildMainMenu(CLOSED);
-    expect(values(items)).toEqual(["profile", "open", "account", "exit"]);
+    expect(values(items)).toEqual([
+      "profile",
+      "perks",
+      "open",
+      "account",
+      "exit",
+    ]);
     expect(itemOf(items, "profile").preview).toEqual([["profile", "show"]]);
+    expect(itemOf(items, "perks").argv).toEqual(["perk", "list"]);
     const argvs = allArgvs(items).map((argv) => argv[0]);
     expect(argvs).not.toContain("team");
     expect(argvs).not.toContain("submit");
