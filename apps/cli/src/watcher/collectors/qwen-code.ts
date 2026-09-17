@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { Glob } from "bun";
 import { projectRef } from "../project";
 import type { RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
@@ -107,26 +108,16 @@ export function qwenHome(): string {
 
 /** `<home>/projects/<slug>/chats/*.jsonl`. */
 export function listQwenChats(root: string): string[] {
-  const projects = join(root, "projects");
-  if (!existsSync(projects)) {
+  if (!existsSync(root)) {
     return [];
   }
-  const out: string[] = [];
-  for (const project of readdirSync(projects, { withFileTypes: true })) {
-    if (!project.isDirectory()) {
-      continue;
-    }
-    const chats = join(projects, project.name, "chats");
-    if (!existsSync(chats)) {
-      continue;
-    }
-    for (const entry of readdirSync(chats)) {
-      if (entry.endsWith(".jsonl")) {
-        out.push(join(chats, entry));
-      }
-    }
-  }
-  return out;
+  return [
+    ...new Glob("projects/*/chats/*.jsonl").scanSync({
+      absolute: true,
+      cwd: root,
+      dot: true,
+    }),
+  ];
 }
 
 export async function* collectQwenCode(

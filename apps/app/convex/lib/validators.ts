@@ -22,6 +22,19 @@ export const submissionStatusValidator = v.union(
   v.literal("submitted")
 );
 
+export const challengeSummaryValidator = v.object({
+  _id: v.id("tracks"),
+  label: v.string(),
+  logoUrl: v.optional(v.string()),
+  slug: v.string(),
+});
+
+export const perkSummaryValidator = v.object({
+  _id: v.id("perks"),
+  company: v.string(),
+  title: v.string(),
+});
+
 export const judgingContextValidator = v.union(
   v.object({
     group: v.number(),

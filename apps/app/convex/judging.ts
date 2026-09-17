@@ -23,35 +23,24 @@ import {
   visibleGeneralGroups,
 } from "./lib/judging";
 import { urlsValidator } from "./lib/urls";
+import type { JudgingContext } from "./lib/validators";
 import {
+  challengeSummaryValidator,
   judgingContextValidator,
+  perkSummaryValidator,
   roleValidator,
-  type JudgingContext,
 } from "./lib/validators";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
-const challengeSummary = v.object({
-  _id: v.id("tracks"),
-  label: v.string(),
-  logoUrl: v.optional(v.string()),
-  slug: v.string(),
-});
-
-const perkSummary = v.object({
-  _id: v.id("perks"),
-  company: v.string(),
-  title: v.string(),
-});
-
 const projectMeta = {
   _id: v.id("submissions"),
-  challenges: v.array(challengeSummary),
+  challenges: v.array(challengeSummaryValidator),
   description: v.string(),
   generalGroup: v.optional(v.number()),
   members: v.array(v.string()),
   name: v.string(),
-  perks: v.array(perkSummary),
+  perks: v.array(perkSummaryValidator),
   teamLogoUrl: v.optional(v.string()),
   teamName: v.optional(v.string()),
   techStack: v.array(v.string()),
@@ -495,7 +484,7 @@ export const meta = judgeQuery({
     isAdmin: v.boolean(),
     myAssignments: v.array(assignmentSummary),
     submittedMissingGroup: v.boolean(),
-    tracks: v.array(challengeSummary),
+    tracks: v.array(challengeSummaryValidator),
   }),
 });
 

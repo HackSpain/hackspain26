@@ -39,17 +39,10 @@ export function highlight(text: string): string {
 export const BRAND = `${c.gold("⚡")} ${c.bold("hackspain")}`;
 
 export function stripAnsi(text: string): string {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escapes are control chars by definition
-  return text.replaceAll(/\x1B\[[0-9;]*m/g, "");
+  return Bun.stripANSI(text);
 }
 
-const WIDE = /\p{Extended_Pictographic}/u;
-
-/** Visible width: colour codes ignored, emoji counted as two cells. */
+/** Visible terminal width, including ANSI sequences and wide characters. */
 export function width(text: string): number {
-  let cells = 0;
-  for (const ch of stripAnsi(text)) {
-    cells += WIDE.test(ch) ? 2 : 1;
-  }
-  return cells;
+  return Bun.stringWidth(text);
 }

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import type { TvFeedMode, TvFeedSource } from "@/lib/tv";
-import { cn } from "@/lib/utils";
+import { cn, relativeTime } from "@/lib/utils";
 import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
 
 function useNow(ms: number) {
@@ -22,21 +22,6 @@ function useNow(ms: number) {
     };
   }, [ms, visible]);
   return now;
-}
-
-function timeAgo(at: number, now: number): string {
-  if (now === 0) return "";
-  const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
-  const seconds = Math.round((at - now) / 1000);
-  if (Math.abs(seconds) < 60) return "ahora mismo";
-  const minutes = Math.round(seconds / 60);
-  if (Math.abs(minutes) < 60) return rtf.format(minutes, "minute");
-  const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) return rtf.format(hours, "hour");
-  return new Date(at).toLocaleString("es-ES", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }
 
 type FeedPost = {
@@ -70,7 +55,7 @@ function FeedCard({
       <p className="font-bungee text-[10px] uppercase">{post.authorName}</p>
       <p className="text-[11px] text-hs-brown">
         {post.teamName ? `${post.teamName} · ` : ""}
-        {timeAgo(post.createdAt, now)}
+        {now === 0 ? "" : relativeTime(post.createdAt, now)}
       </p>
       {post.text ? (
         <p

@@ -10,7 +10,11 @@ import {
   JUDGING_SETTINGS_KEY,
   pickBalancedGroup,
 } from "./lib/judging";
-import { submissionStatusValidator } from "./lib/validators";
+import {
+  challengeSummaryValidator,
+  perkSummaryValidator,
+  submissionStatusValidator,
+} from "./lib/validators";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import { submissionsAreOpen } from "./tracks";
 import { findOwnedSubmission, membershipForUser, teamLogoUrlFor } from "./lib/team";
@@ -18,28 +22,15 @@ import { scheduleStackScan } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
-const challengeSummary = v.object({
-  _id: v.id("tracks"),
-  label: v.string(),
-  logoUrl: v.optional(v.string()),
-  slug: v.string(),
-});
-
-const perkSummary = v.object({
-  _id: v.id("perks"),
-  company: v.string(),
-  title: v.string(),
-});
-
 const submissionReturn = v.object({
   _id: v.id("submissions"),
   challengeIds: v.array(v.id("tracks")),
-  challenges: v.array(challengeSummary),
+  challenges: v.array(challengeSummaryValidator),
   createdAt: v.number(),
   description: v.string(),
   name: v.string(),
   perkIds: v.array(v.id("perks")),
-  perks: v.array(perkSummary),
+  perks: v.array(perkSummaryValidator),
   status: submissionStatusValidator,
   submittedAt: v.optional(v.number()),
   submittedBy: v.id("users"),
@@ -283,7 +274,7 @@ export const submit = onboardedMutation({
 
 const publicSubmissionReturn = v.object({
   _id: v.id("submissions"),
-  challenges: v.array(challengeSummary),
+  challenges: v.array(challengeSummaryValidator),
   description: v.string(),
   name: v.string(),
   status: submissionStatusValidator,

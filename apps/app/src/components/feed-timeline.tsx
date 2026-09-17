@@ -9,26 +9,12 @@ import { Avatar } from "@/components/avatar";
 import { LoadingText } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, relativeTime } from "@/lib/utils";
 
 export type FeedPost = FunctionReturnType<typeof api.feed.list>[number] & {
   /** Set on optimistic rows inserted by the composer before the server confirms. */
   pending?: boolean;
 };
-
-function timeAgo(at: number, now = Date.now()): string {
-  const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
-  const seconds = Math.round((at - now) / 1000);
-  if (Math.abs(seconds) < 60) {return "ahora mismo";}
-  const minutes = Math.round(seconds / 60);
-  if (Math.abs(minutes) < 60) {return rtf.format(minutes, "minute");}
-  const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) {return rtf.format(hours, "hour");}
-  return new Date(at).toLocaleString("es-ES", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
 
 function hasPostContext(post: FeedPost): boolean {
   const repo = post.kind === "github" ? post.github?.repo : undefined;
@@ -137,7 +123,7 @@ function PostCard({ post, fresh }: { post: FeedPost; fresh: boolean }) {
                 <span className="text-hs-brown">· {post.github.actor}</span>
               ) : null}
               <span className="text-hs-brown">
-                · {post.pending ? "publicando…" : timeAgo(post.createdAt)}
+                · {post.pending ? "publicando…" : relativeTime(post.createdAt)}
               </span>
             </div>
             <PostContext post={post} />

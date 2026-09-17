@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { Glob } from "bun";
 import { projectRef } from "../project";
 import type { RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
@@ -92,23 +93,16 @@ export function claudeConfigDir(): string {
 }
 
 function listTranscripts(root: string): string[] {
-  const projects = join(root, "projects");
-  if (!existsSync(projects)) {
+  if (!existsSync(root)) {
     return [];
   }
-  const files: string[] = [];
-  for (const dir of readdirSync(projects, { withFileTypes: true })) {
-    if (!dir.isDirectory()) {
-      continue;
-    }
-    const full = join(projects, dir.name);
-    for (const entry of readdirSync(full)) {
-      if (entry.endsWith(".jsonl")) {
-        files.push(join(full, entry));
-      }
-    }
-  }
-  return files;
+  return [
+    ...new Glob("projects/*/*.jsonl").scanSync({
+      absolute: true,
+      cwd: root,
+      dot: true,
+    }),
+  ];
 }
 
 /**

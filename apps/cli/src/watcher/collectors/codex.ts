@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
+import { Glob } from "bun";
 import { projectRef } from "../project";
 import type { RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
@@ -179,32 +180,18 @@ export function codexHome(): string {
   return process.env.CODEX_HOME?.trim() || join(homedir(), ".codex");
 }
 
-function walkRollouts(dir: string, out: string[]): void {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkRollouts(full, out);
-    } else if (
-      entry.name.startsWith("rollout-") &&
-      entry.name.endsWith(".jsonl")
-    ) {
-      out.push(full);
-    }
-  }
-}
-
 export async function* collectCodex(
   roots: string[],
   ctx: CollectorContext
 ): AsyncIterable<RawEvent> {
   for (const root of roots) {
-    const files: string[] = [];
-    for (const sub of ["sessions", "archived_sessions"]) {
-      const dir = join(root, sub);
-      if (existsSync(dir)) {
-        walkRollouts(dir, files);
-      }
-    }
+    const files = existsSync(root)
+      ? [
+          ...new Glob(
+            "{sessions,archived_sessions}/**/rollout-*.jsonl"
+          ).scanSync({ absolute: true, cwd: root, dot: true }),
+        ]
+      : [];
     const recent = files
       .map((path) => ({ mtimeMs: statSync(path).mtimeMs, path }))
       .filter(

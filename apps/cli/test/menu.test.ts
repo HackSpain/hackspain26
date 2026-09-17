@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { MenuItem, MenuStatus } from "../src/lib/menu";
-import { buildMainMenu, statusLine } from "../src/lib/menu";
+import { buildMainMenu } from "../src/lib/menu";
 import { buildProgram } from "../src/lib/program";
 
 const LOGGED_OUT: MenuStatus = { loggedIn: false };
@@ -116,7 +116,6 @@ describe("buildMainMenu", () => {
     expect(argvs).not.toContain("feed");
     expect(argvs).not.toContain("watch");
     expect(values(submenuOf(items, "account"))).toContain("auth-logout");
-    expect(statusLine(CLOSED)).toContain("The hackathon ended on");
   });
 
   test("ready without a team: join and create come first, exit last", () => {
@@ -278,24 +277,5 @@ describe("buildMainMenu", () => {
         }
       }
     }
-  });
-});
-
-describe("statusLine", () => {
-  test("signed out", () => {
-    expect(statusLine(LOGGED_OUT)).toContain("Signed out");
-  });
-
-  test("gated shows the email and the gate", () => {
-    const line = statusLine(PENDING);
-    expect(line).toContain("ana@example.com");
-    expect(line).toContain("pending");
-  });
-
-  test("ready shows team and project state", () => {
-    const line = statusLine(READY_OWNER);
-    expect(line).toContain("Los Increíbles");
-    expect(line).toContain("draft");
-    expect(statusLine(READY_NO_TEAM)).toContain("no team yet");
   });
 });

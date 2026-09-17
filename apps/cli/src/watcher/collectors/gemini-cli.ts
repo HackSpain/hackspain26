@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
+import { Glob } from "bun";
 import { projectRef } from "../project";
 import type { RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
@@ -145,33 +146,13 @@ export function geminiHome(): string {
 
 /** `<home>/tmp/<project>/chats/*.jsonl` plus subagent files one level down. */
 export function listGeminiChats(root: string): string[] {
-  const tmp = join(root, "tmp");
-  if (!existsSync(tmp)) {
+  if (!existsSync(root)) {
     return [];
   }
-  const out: string[] = [];
-  for (const project of readdirSync(tmp, { withFileTypes: true })) {
-    if (!project.isDirectory()) {
-      continue;
-    }
-    const chats = join(tmp, project.name, "chats");
-    if (!existsSync(chats)) {
-      continue;
-    }
-    for (const entry of readdirSync(chats, { withFileTypes: true })) {
-      const full = join(chats, entry.name);
-      if (entry.isFile() && entry.name.endsWith(".jsonl")) {
-        out.push(full);
-      } else if (entry.isDirectory()) {
-        for (const sub of readdirSync(full)) {
-          if (sub.endsWith(".jsonl")) {
-            out.push(join(full, sub));
-          }
-        }
-      }
-    }
-  }
-  return out;
+  const options = { absolute: true, cwd: root, dot: true } as const;
+  return ["tmp/*/chats/*.jsonl", "tmp/*/chats/*/*.jsonl"].flatMap((pattern) => [
+    ...new Glob(pattern).scanSync(options),
+  ]);
 }
 
 export async function* collectGeminiCli(

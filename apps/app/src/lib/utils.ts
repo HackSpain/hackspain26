@@ -7,6 +7,26 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function relativeTime(at: number, now = Date.now()): string {
+  const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+  const seconds = Math.round((at - now) / 1000);
+  if (Math.abs(seconds) < 60) {
+    return "ahora mismo";
+  }
+  const minutes = Math.round(seconds / 60);
+  if (Math.abs(minutes) < 60) {
+    return rtf.format(minutes, "minute");
+  }
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) {
+    return rtf.format(hours, "hour");
+  }
+  return new Date(at).toLocaleString("es-ES", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 export function displayedAttendance(
   status: string | null | undefined,
   onboarded = false

@@ -408,20 +408,6 @@ export function buildMainMenu(status: MenuStatus): MenuItem[] {
   return buildReadyMenu(status);
 }
 
-/** One-line summary for states without a full status block. */
-export function statusLine(status: MenuStatus): string {
-  if (!status.loggedIn) {
-    return c.dim("Signed out.");
-  }
-  if (!isReady(status)) {
-    return c.dim(
-      `Signed in as ${status.email ?? "?"} · ${status.gateMessage ?? status.gate ?? "checking"}`
-    );
-  }
-  const team = status.team ? teamHint(status.team) : "no team yet";
-  return `${c.dim("You:")} ${team} ${c.dim("·")} ${projectHint(status.project)}`;
-}
-
 /** Build a menu status from the objects the home command already fetched. */
 export function menuStatusFrom(
   me: { email?: string | null; name?: string | null },
