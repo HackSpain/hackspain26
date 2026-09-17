@@ -1,423 +1,376 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { ArrowUpRight, Move, Search, X } from "lucide-react";
+import { TrackTag } from "@/components/track-tag";
 import {
-	ArrowUpRight,
-	LocateFixed,
-	Minus,
-	Plus,
-	Scan,
-	Search,
-	X,
-} from "lucide-react";
-import { initialsOf } from "@/components/avatar";
-import { contentWidth } from "@/lib/layout";
-import { cn } from "@/lib/utils";
-import { normalize, valuesFor } from "./affinities";
-import type { AffinityKind } from "./affinities";
-import {
-	LENS_LABELS,
-	LENSES,
-	linksFor,
-	uniqueParticipants,
+  HUB_KINDS,
+  HUB_STYLES,
+  buildNetwork,
+  normalize,
 } from "./network-model";
-import type { Lens, Link } from "./network-model";
-import { CONNECTION_STYLES, NetworkCanvas } from "./network-canvas";
+import type { HubKind } from "./network-model";
+import { NetworkCanvas } from "./network-canvas";
 import type { NetworkHandle } from "./network-canvas";
 import type { DirectoryParticipant } from "./types";
 import "./connection-graph.css";
 
-const PANEL_WIDTH = 340;
-/** `contentWidth` is max-w-6xl with px-4: the overlays sit inside that box. */
-const CONTAINER_MAX = 1152;
-const CONTAINER_PAD = 16;
-const CONTAINER = contentWidth("/participantes");
-
-/** Left edge of the profile panel for a viewport width, or null when it is a sheet. */
-function panelLeft(viewportWidth: number): number | null {
-	if (viewportWidth < 900) {
-		return null;
-	}
-	const box = Math.min(CONTAINER_MAX, viewportWidth);
-	return (viewportWidth - box) / 2 + box - CONTAINER_PAD - PANEL_WIDTH;
-}
-const SEARCH_KINDS: AffinityKind[] = [
-	"city",
-	"university",
-	"company",
-	"team",
-	"skills",
-	"interests",
-];
-
-function Portrait({ person }: { person: DirectoryParticipant }) {
-	return person.photoUrl ? (
-		// eslint-disable-next-line @next/next/no-img-element -- profile images may use authenticated app URLs or GitHub avatars.
-		<img className="pg-portrait" src={person.photoUrl} alt="" />
-	) : (
-		<span className="pg-portrait" aria-hidden="true">
-			{initialsOf(person.displayName)}
-		</span>
-	);
-}
-
-function ProfilePanel({
-	person,
-	links,
-	onClose,
-	onFocus,
-}: {
-	person: DirectoryParticipant;
-	links: Link[];
-	onClose: () => void;
-	onFocus: (id: string) => void;
-}) {
-	const facts = [
-		person.city,
-		person.university,
-		person.company,
-		person.degree,
-	].filter(Boolean);
-	return (
-		<aside className="pg-panel" aria-label={`Perfil de ${person.displayName}`}>
-			<div className="pg-panel-head">
-				<Portrait person={person} />
-				<div className="pg-panel-identity">
-					<h2>
-						{person.displayName}
-						{person.isMe ? <span className="pg-me-chip">Tú</span> : null}
-					</h2>
-					<p>{person.role}</p>
-				</div>
-				<button type="button" aria-label="Cerrar perfil" onClick={onClose}>
-					<X size={18} />
-				</button>
-			</div>
-			{facts.length ? (
-				<p className="pg-panel-facts">{facts.join(" · ")}</p>
-			) : null}
-			{person.team ? (
-				<p className="pg-panel-team">
-					<span style={{ background: CONNECTION_STYLES.team.color }} />
-					{person.team.name}
-				</p>
-			) : null}
-			{person.bio ? <p className="pg-panel-bio">{person.bio}</p> : null}
-			{person.skills.length ? (
-				<ul className="pg-chips" aria-label="Habilidades">
-					{person.skills.slice(0, 8).map((skill) => (
-						<li key={skill}>{skill}</li>
-					))}
-				</ul>
-			) : null}
-			<div className="pg-panel-section">
-				<h3>En común</h3>
-				<span>{links.length}</span>
-			</div>
-			{links.length ? (
-				<ul className="pg-links-list">
-					{links.map((link) => (
-						<li key={link.participant.id}>
-							<button
-								type="button"
-								onClick={() => onFocus(link.participant.id)}
-							>
-								<Portrait person={link.participant} />
-								<span className="pg-link-body">
-									<span className="pg-link-name">
-										{link.participant.displayName}
-										<ArrowUpRight size={14} aria-hidden="true" />
-									</span>
-									<span className="pg-link-reasons">
-										{link.affinities.slice(0, 4).map((affinity) => (
-											<span
-												key={`${affinity.kind}:${affinity.value}`}
-												style={{
-													color: CONNECTION_STYLES[affinity.kind].color,
-												}}
-											>
-												{affinity.value}
-											</span>
-										))}
-										{link.affinities.length > 4 ? (
-											<span className="pg-link-more">
-												+{link.affinities.length - 4}
-											</span>
-										) : null}
-									</span>
-								</span>
-							</button>
-						</li>
-					))}
-				</ul>
-			) : (
-				<p className="pg-panel-empty">
-					Todavía no comparte ciudad, estudios, empresa, equipo, habilidades ni
-					intereses con nadie.
-				</p>
-			)}
-		</aside>
-	);
-}
-
 export function ConnectionGraph({
-	participants: input,
+  participants,
 }: {
-	participants: DirectoryParticipant[];
+  participants: DirectoryParticipant[];
 }) {
-	const participants = useMemo(() => uniqueParticipants(input), [input]);
-	const [lens, setLens] = useState<Lens>("team");
-	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [query, setQuery] = useState("");
-	const [searchOpen, setSearchOpen] = useState(false);
-	const canvas = useRef<NetworkHandle>(null);
-	const searchInput = useRef<HTMLInputElement>(null);
+  const network = useMemo(() => buildNetwork(participants), [participants]);
+  const [visibleKinds, setVisibleKinds] = useState(
+    () => new Set<HubKind>(HUB_KINDS)
+  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const mapRef = useRef<NetworkHandle>(null);
+  const profileRef = useRef<HTMLElement>(null);
 
-	// Links are computed lazily per person and remembered until the data changes.
-	const linksOf = useMemo(() => {
-		const cache = new Map<string, Link[]>();
-		return (id: string) => {
-			const cached = cache.get(id);
-			if (cached) {
-				return cached;
-			}
-			const person = participants.find((item) => item.id === id);
-			const links = person ? linksFor(person, participants) : [];
-			// oxlint-disable-next-line react/immutability -- the cache is private to this closure and reset with the data.
-			cache.set(id, links);
-			return links;
-		};
-	}, [participants]);
+  const personById = new Map(
+    network.participants.map((person) => [person.id, person])
+  );
+  const hubById = new Map(network.hubs.map((hub) => [hub.id, hub]));
+  const hubsOf = (personId: string) =>
+    network.hubs.filter(
+      (hub) => visibleKinds.has(hub.kind) && hub.members.includes(personId)
+    );
 
-	const me = useMemo(
-		() => participants.find((person) => person.isMe),
-		[participants],
-	);
-	const selected = useMemo(
-		() => participants.find((person) => person.id === selectedId) ?? null,
-		[participants, selectedId],
-	);
-	const searchIndex = useMemo(
-		() =>
-			new Map(
-				participants.map((person) => [
-					person.id,
-					normalize(
-						[
-							person.displayName,
-							person.role,
-							...SEARCH_KINDS.flatMap((kind) => valuesFor(person, kind)),
-						].join(" "),
-					),
-				]),
-			),
-		[participants],
-	);
-	const search = normalize(query);
-	const matches = useMemo(
-		() =>
-			search
-				? new Set(
-						participants
-							.filter((person) => searchIndex.get(person.id)?.includes(search))
-							.map((person) => person.id),
-					)
-				: null,
-		[participants, searchIndex, search],
-	);
-	const results = useMemo(
-		() =>
-			matches
-				? participants
-						.filter((person) => matches.has(person.id))
-						.toSorted((a, b) => {
-							const aName = normalize(a.displayName).startsWith(search);
-							const bName = normalize(b.displayName).startsWith(search);
-							return (
-								Number(bName) - Number(aName) ||
-								a.displayName.localeCompare(b.displayName, "es")
-							);
-						})
-						.slice(0, 8)
-				: [],
-		[participants, matches, search],
-	);
+  const selectedPerson = selectedId ? personById.get(selectedId) : undefined;
+  const selectedHub = selectedId ? hubById.get(selectedId) : undefined;
 
-	const select = useCallback((id: string | null) => {
-		setSelectedId(id);
-		if (id) {
-			setQuery("");
-			setSearchOpen(false);
-		}
-	}, []);
-	function focus(id: string) {
-		canvas.current?.focus(id);
-	}
-	function changeLens(next: Lens) {
-		setLens(next);
-		if (selectedId) {
-			// The clusters move under the selection; keep it in view once they settle.
-			requestAnimationFrame(() =>
-				setTimeout(() => canvas.current?.focus(selectedId), 500),
-			);
-		}
-	}
+  const search = normalize(query);
+  const matchedPeople = search
+    ? network.participants.filter((person) =>
+        normalize(
+          [
+            person.displayName,
+            person.role,
+            person.city,
+            person.university,
+            person.company,
+            person.degree,
+            ...(person.tracks?.map((track) => track.label) ?? []),
+            ...hubsOf(person.id).map((hub) => hub.label),
+          ]
+            .filter(Boolean)
+            .join(" ")
+        ).includes(search)
+      )
+    : [];
+  const matchedHubs = search
+    ? network.hubs.filter(
+        (hub) =>
+          visibleKinds.has(hub.kind) && normalize(hub.label).includes(search)
+      )
+    : [];
+  const matches = new Set([
+    ...matchedPeople.map((person) => person.id),
+    ...matchedHubs.map((hub) => hub.id),
+  ]);
 
-	return (
-		<section
-			className="pg-stage"
-			id="participantes"
-			aria-label="Mapa de participantes"
-			style={{ "--pg-panel-width": `${PANEL_WIDTH}px` } as React.CSSProperties}
-		>
-			<NetworkCanvas
-				ref={canvas}
-				participants={participants}
-				lens={lens}
-				selectedId={selected ? selected.id : null}
-				matches={matches}
-				linksOf={linksOf}
-				panelLeft={panelLeft}
-				onSelect={select}
-			/>
+  function toggleKind(kind: HubKind) {
+    setVisibleKinds((previous) => {
+      const next = new Set(previous);
+      if (next.has(kind)) {
+        next.delete(kind);
+      } else {
+        next.add(kind);
+      }
+      return next;
+    });
+  }
+  function select(id: string | null) {
+    setSelectedId(id);
+    setQuery("");
+    if (id && window.matchMedia("(max-width: 700px)").matches) {
+      requestAnimationFrame(() =>
+        profileRef.current?.scrollIntoView({ block: "start" })
+      );
+    }
+  }
 
-			<div className={cn("pg-overlay", CONTAINER)}>
-				<div className="pg-lenses" role="group" aria-label="Agrupar por">
-					{LENSES.map((item) => (
-						<button
-							key={item}
-							type="button"
-							aria-pressed={lens === item}
-							onClick={() => changeLens(item)}
-						>
-							{LENS_LABELS[item].label}
-						</button>
-					))}
-				</div>
-
-				<div className="pg-tools">
-					{me ? (
-						<button
-							type="button"
-							className="pg-tool"
-							aria-label="Ir a mi ficha"
-							title="Ir a mi ficha"
-							onClick={() => focus(me.id)}
-						>
-							<LocateFixed size={17} aria-hidden="true" />
-							<span>Tú</span>
-						</button>
-					) : null}
-					<div
-						className="pg-search"
-						data-open={searchOpen || query ? "" : undefined}
-					>
-						<Search size={17} aria-hidden="true" />
-						<input
-							ref={searchInput}
-							type="search"
-							aria-label="Buscar participantes"
-							placeholder="Buscar…"
-							value={query}
-							onChange={(event) => setQuery(event.target.value)}
-							onFocus={() => setSearchOpen(true)}
-							onBlur={() => setSearchOpen(false)}
-							onKeyDown={(event) => {
-								if (event.key === "Enter" && results[0]) {
-									event.preventDefault();
-									focus(results[0].id);
-									searchInput.current?.blur();
-								}
-								if (event.key === "Escape") {
-									setQuery("");
-									searchInput.current?.blur();
-								}
-							}}
-						/>
-						{query ? (
-							<button
-								type="button"
-								aria-label="Limpiar búsqueda"
-								onMouseDown={(event) => event.preventDefault()}
-								onClick={() => {
-									setQuery("");
-									searchInput.current?.focus();
-								}}
-							>
-								<X size={15} />
-							</button>
-						) : null}
-						{search ? (
-							<div className="pg-results" aria-label="Resultados">
-								<p aria-live="polite">
-									{matches?.size
-										? `${matches.size} ${matches.size === 1 ? "persona" : "personas"}`
-										: "Sin resultados"}
-								</p>
-								{results.map((person) => (
-									<button
-										key={person.id}
-										type="button"
-										onMouseDown={(event) => event.preventDefault()}
-										onClick={() => focus(person.id)}
-									>
-										<Portrait person={person} />
-										<span>
-											<strong>{person.displayName}</strong>
-											<small>
-												{person.role} · {person.city}
-											</small>
-										</span>
-									</button>
-								))}
-							</div>
-						) : null}
-					</div>
-				</div>
-
-				{selected ? (
-					<ProfilePanel
-						key={selected.id}
-						person={selected}
-						links={linksOf(selected.id)}
-						onClose={() => canvas.current?.clear()}
-						onFocus={focus}
-					/>
-				) : null}
-
-				<div className="pg-hint" aria-hidden="true">
-					Arrastra para moverte · Rueda para ampliar
-				</div>
-				<div className="pg-zoom" role="group" aria-label="Zoom">
-					<button
-						type="button"
-						onClick={() => canvas.current?.zoom(1 / 1.3)}
-						aria-label="Alejar"
-					>
-						<Minus size={18} />
-					</button>
-					<button
-						type="button"
-						onClick={() => canvas.current?.fit()}
-						aria-label="Encajar todo"
-					>
-						<Scan size={18} />
-					</button>
-					<button
-						type="button"
-						onClick={() => canvas.current?.zoom(1.3)}
-						aria-label="Acercar"
-					>
-						<Plus size={18} />
-					</button>
-				</div>
-
-				{!participants.length ? (
-					<p className="pg-empty" role="status">
-						El mapa se llenará cuando haya fichas completas.
-					</p>
-				) : null}
-			</div>
-		</section>
-	);
+  return (
+    <section
+      className="connection-graph"
+      id="participantes"
+      aria-label="Grafo de participantes"
+    >
+      <div className="ng-toolbar">
+        <div className="ng-search-wrap">
+          <div className="ng-search">
+            <Search size={18} strokeWidth={2.5} aria-hidden="true" />
+            <input
+              aria-label="Buscar en el grafo"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Busca persona, equipo, universidad o empresa"
+            />
+            {query && (
+              <button
+                type="button"
+                aria-label="Limpiar búsqueda"
+                onClick={() => setQuery("")}
+              >
+                <X size={16} strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
+          {search && (
+            <div className="ng-search-results" aria-label="Resultados de búsqueda">
+              <p aria-live="polite">
+                {matches.size
+                  ? `${matches.size} resultados`
+                  : "Nada que coincida"}
+              </p>
+              {matchedHubs.map((hub) => (
+                <button
+                  key={hub.id}
+                  type="button"
+                  onClick={() => mapRef.current?.focus(hub.id)}
+                >
+                  <span
+                    className="ng-swatch"
+                    style={{ background: HUB_STYLES[hub.kind].color }}
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <strong>{hub.label}</strong>
+                    <small>
+                      {HUB_STYLES[hub.kind].label} · {hub.members.length} personas
+                    </small>
+                  </span>
+                  <ArrowUpRight size={15} strokeWidth={2.5} />
+                </button>
+              ))}
+              {matchedPeople.map((person) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  onClick={() => mapRef.current?.focus(person.id)}
+                >
+                  <span className="ng-swatch ng-swatch-person" aria-hidden="true" />
+                  <span>
+                    <strong>{person.displayName}</strong>
+                    <small>
+                      {person.role} · {person.city}
+                    </small>
+                  </span>
+                  <ArrowUpRight size={15} strokeWidth={2.5} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="ng-kinds" role="group" aria-label="Tipos de nodo">
+          {HUB_KINDS.map((kind) => {
+            const count = network.hubs.filter((hub) => hub.kind === kind).length;
+            return (
+              <button
+                key={kind}
+                type="button"
+                className="ng-kind"
+                aria-pressed={visibleKinds.has(kind)}
+                onClick={() => toggleKind(kind)}
+              >
+                <span
+                  className="ng-swatch"
+                  style={{ background: HUB_STYLES[kind].color }}
+                  aria-hidden="true"
+                />
+                {HUB_STYLES[kind].plural}
+                <span className="ng-kind-count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="ng-stage">
+        <NetworkCanvas
+          key={network.participants.map((person) => person.id).join("|")}
+          ref={mapRef}
+          network={network}
+          visibleKinds={visibleKinds}
+          selectedId={selectedPerson || selectedHub ? selectedId : null}
+          matches={matches}
+          queryActive={Boolean(search)}
+          onSelect={select}
+        />
+        <aside
+          ref={profileRef}
+          className="ng-panel"
+          aria-label={
+            selectedPerson
+              ? `Perfil de ${selectedPerson.displayName}`
+              : selectedHub
+                ? `${HUB_STYLES[selectedHub.kind].label} ${selectedHub.label}`
+                : "Cómo usar el grafo"
+          }
+        >
+          <div key={selectedId ?? "idle"} className="ng-panel-body">
+            {selectedPerson ? (
+              <>
+                <div className="ng-panel-top">
+                  <span className="ng-eyebrow">
+                    <span className="ng-swatch ng-swatch-person" aria-hidden="true" />
+                    Participante
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Cerrar perfil"
+                    onClick={() => mapRef.current?.clear()}
+                  >
+                    <X size={18} strokeWidth={2.5} />
+                  </button>
+                </div>
+                <h3>{selectedPerson.displayName}</h3>
+                <p className="ng-role">
+                  {selectedPerson.isMe ? "Tú · " : null}
+                  {selectedPerson.role} · {selectedPerson.city}
+                  {selectedPerson.degree ? ` · ${selectedPerson.degree}` : null}
+                </p>
+                {selectedPerson.tracks?.length ? (
+                  <div className="ng-tracks">
+                    {selectedPerson.tracks.map((track) => (
+                      <TrackTag key={track.id} track={track} />
+                    ))}
+                  </div>
+                ) : null}
+                {selectedPerson.bio && (
+                  <p className="ng-bio">{selectedPerson.bio}</p>
+                )}
+                <div className="ng-list-heading">
+                  <strong>Conectado a</strong>
+                  <span>{hubsOf(selectedPerson.id).length}</span>
+                </div>
+                <div className="ng-list">
+                  {hubsOf(selectedPerson.id).map((hub) => (
+                    <button
+                      key={hub.id}
+                      type="button"
+                      onClick={() => mapRef.current?.focus(hub.id)}
+                    >
+                      <span
+                        className="ng-swatch"
+                        style={{ background: HUB_STYLES[hub.kind].color }}
+                        aria-hidden="true"
+                      />
+                      <span className="ng-list-text">
+                        <small>{HUB_STYLES[hub.kind].label}</small>
+                        <strong>{hub.label}</strong>
+                      </span>
+                      <span className="ng-list-meta">
+                        {hub.members.length - 1 || "solo"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {hubsOf(selectedPerson.id).length ? (
+                  <p className="ng-list-note">
+                    El número es cuánta gente más comparte cada nodo.
+                  </p>
+                ) : (
+                  <p className="ng-list-empty">
+                    Sin nodos visibles. Activa otro tipo arriba.
+                  </p>
+                )}
+              </>
+            ) : selectedHub ? (
+              <>
+                <div className="ng-panel-top">
+                  <span className="ng-eyebrow">
+                    <span
+                      className="ng-swatch"
+                      style={{ background: HUB_STYLES[selectedHub.kind].color }}
+                      aria-hidden="true"
+                    />
+                    {HUB_STYLES[selectedHub.kind].label}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Cerrar"
+                    onClick={() => mapRef.current?.clear()}
+                  >
+                    <X size={18} strokeWidth={2.5} />
+                  </button>
+                </div>
+                <h3>{selectedHub.label}</h3>
+                <div className="ng-list-heading">
+                  <strong>Personas</strong>
+                  <span>{selectedHub.members.length}</span>
+                </div>
+                <div className="ng-list">
+                  {selectedHub.members
+                    .flatMap((id) => personById.get(id) ?? [])
+                    .toSorted((a, b) =>
+                      a.displayName.localeCompare(b.displayName, "es")
+                    )
+                    .map((person) => (
+                      <button
+                        key={person.id}
+                        type="button"
+                        onClick={() => mapRef.current?.focus(person.id)}
+                      >
+                        <span
+                          className="ng-swatch ng-swatch-person"
+                          aria-hidden="true"
+                        />
+                        <span className="ng-list-text">
+                          <strong>{person.displayName}</strong>
+                          <small>{person.role}</small>
+                        </span>
+                        <ArrowUpRight size={15} strokeWidth={2.5} />
+                      </button>
+                    ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="ng-eyebrow">Cómo funciona</span>
+                <ul className="ng-legend">
+                  <li>
+                    <span className="ng-swatch ng-swatch-person" aria-hidden="true" />
+                    <span>
+                      <strong>Los círculos son personas.</strong> Toca una para
+                      ver sus nodos y quién los comparte.
+                    </span>
+                  </li>
+                  <li>
+                    <span className="ng-swatch-stack" aria-hidden="true">
+                      {HUB_KINDS.map((kind) => (
+                        <span
+                          key={kind}
+                          className="ng-swatch"
+                          style={{ background: HUB_STYLES[kind].color }}
+                        />
+                      ))}
+                    </span>
+                    <span>
+                      <strong>Los cuadrados son nodos</strong>: equipos,
+                      universidades y empresas. El número es cuánta gente hay
+                      en cada uno.
+                    </span>
+                  </li>
+                  <li>
+                    <Move size={14} strokeWidth={2.5} aria-hidden="true" />
+                    <span>
+                      Arrastra para moverte o recolocar nodos. Doble clic,
+                      Ctrl / ⌘ + rueda o pinza para acercar.
+                    </span>
+                  </li>
+                </ul>
+              </>
+            )}
+          </div>
+        </aside>
+        {!participants.length && (
+          <p className="ng-empty">
+            Las conexiones aparecerán cuando haya perfiles disponibles.
+          </p>
+        )}
+      </div>
+    </section>
+  );
 }
