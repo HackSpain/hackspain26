@@ -1,8 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import type { TvSnapshot } from "@convex/tvPlayback";
+import { useClock } from "@/components/tv/motion";
 import { TvStage } from "@/components/tv/stage";
 import { PlaybackBoundary, useTvPlayback } from "@/components/tv/playback";
 
@@ -14,20 +15,6 @@ type TvMessage = {
   zone: Zone;
   order: number;
 };
-
-function useClock() {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    const tick = () => setNow(new Date());
-    const initial = setTimeout(tick, 0);
-    const timer = setInterval(tick, 1000);
-    return () => {
-      clearTimeout(initial);
-      clearInterval(timer);
-    };
-  }, []);
-  return now;
-}
 
 function zoneMessages(messages: TvMessage[] | undefined, zone: Zone) {
   return (messages ?? []).filter((message) => message.zone === zone);

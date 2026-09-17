@@ -7,18 +7,7 @@ import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import type { TvFeedMode, TvFeedSource } from "@/lib/tv";
 import { cn } from "@/lib/utils";
-import { usePageVisible, usePrefersReducedMotion } from "./motion";
-
-function useTick(ms: number) {
-  const visible = usePageVisible();
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!visible) return;
-    const timer = window.setInterval(() => setTick((value) => value + 1), ms);
-    return () => window.clearInterval(timer);
-  }, [ms, visible]);
-  return tick;
-}
+import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
 
 function useNow(ms: number) {
   const visible = usePageVisible();

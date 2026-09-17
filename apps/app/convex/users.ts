@@ -3,10 +3,9 @@ import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   authedMutation,
-  authedQuery,
   profileMutation,
 } from "./lib/customFunctions";
-import { meValidator, signupPublicValidator } from "./lib/validators";
+import { meValidator } from "./lib/validators";
 import { defaultedAttendance } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";
 import { fail } from "./lib/errors";
@@ -21,7 +20,7 @@ import {
   normalizeTwitter,
   PHONE_ERROR,
 } from "./lib/normalize";
-import { urlOf, urlsFromRecord } from "./lib/urls";
+import { urlOf } from "./lib/urls";
 import { membershipForUser } from "./lib/team";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -168,25 +167,6 @@ export const me = query({
     };
   },
   returns: v.union(meValidator, v.null()),
-});
-
-export const mySignup = authedQuery({
-  args: {},
-  handler: async (ctx) => {
-    const signup = await getSignupForUser(ctx, ctx.user);
-    if (!signup) {
-      return null;
-    }
-    return {
-      fullName: signup.fullName,
-      email: signup.email,
-      urls: urlsFromRecord(signup),
-      achievements: signup.achievements,
-      freeTime: signup.freeTime,
-      wantsAmbassador: signup.wantsAmbassador,
-    };
-  },
-  returns: v.union(signupPublicValidator, v.null()),
 });
 
 export const attachAfterLogin = authedMutation({

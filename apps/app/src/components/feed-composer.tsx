@@ -12,21 +12,10 @@ import type { FeedPost } from "@/components/feed-timeline";
 import { errorMessage } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadToConvex } from "@/lib/upload";
 
 const MAX_TEXT = 500;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-function storageIdFromUpload(value: unknown): Id<"_storage"> {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "storageId" in value &&
-    typeof value.storageId === "string"
-  ) {
-    return value.storageId as Id<"_storage">;
-  }
-  throw new Error("No se pudo subir la imagen");
-}
 
 type Me = FunctionReturnType<typeof api.users.me>;
 
@@ -122,15 +111,11 @@ export function FeedComposer() {
       if (attached) {
         setUploading(true);
         const uploadUrl = await generateUploadUrl();
-        const response = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": attached.type },
-          body: attached,
-        });
-        if (!response.ok) {
-          throw new Error("No se pudo subir la imagen");
-        }
-        imageId = storageIdFromUpload(await response.json());
+        imageId = await uploadToConvex(
+          uploadUrl,
+          attached,
+          "No se pudo subir la imagen",
+        );
         setUploading(false);
       }
       setText("");

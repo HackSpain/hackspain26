@@ -147,21 +147,6 @@ export function Field({
   );
 }
 
-export function RecordList({
-  desktop,
-  children,
-}: {
-  desktop: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <>
-      <div className="grid gap-3 md:hidden">{children}</div>
-      <div className="hidden md:block">{desktop}</div>
-    </>
-  );
-}
-
 export function RecordCard({
   title,
   subtitle,

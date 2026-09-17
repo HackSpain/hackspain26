@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { api } from "@convex/_generated/api";
 import { Sparkline } from "@/app/insights/charts";
 import {
@@ -14,7 +14,7 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
-import { usePageVisible, usePrefersReducedMotion } from "./motion";
+import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
 
 const MOCK_COMMITS = [
   {
@@ -48,17 +48,6 @@ const MOCK_COMMITS = [
     sha: "feedb0b",
   },
 ];
-
-function useTick(ms: number) {
-  const visible = usePageVisible();
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!visible) return;
-    const timer = window.setInterval(() => setTick((value) => value + 1), ms);
-    return () => window.clearInterval(timer);
-  }, [ms, visible]);
-  return tick;
-}
 
 type CommitRow = {
   instance: string;

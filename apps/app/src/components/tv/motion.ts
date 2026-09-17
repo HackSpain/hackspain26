@@ -24,3 +24,30 @@ export function usePageVisible() {
   }, []);
   return visible;
 }
+
+export function useTick(ms: number) {
+  const visible = usePageVisible();
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+    const timer = window.setInterval(() => setTick((value) => value + 1), ms);
+    return () => window.clearInterval(timer);
+  }, [ms, visible]);
+  return tick;
+}
+
+export function useClock() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    const initial = window.setTimeout(tick, 0);
+    const timer = window.setInterval(tick, 1000);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(timer);
+    };
+  }, []);
+  return now;
+}

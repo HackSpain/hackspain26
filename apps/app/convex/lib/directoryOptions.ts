@@ -14,9 +14,6 @@ export type Option = {
 
 export type OptionGroup = { label: string; options: readonly Option[] };
 
-/** The literal a select uses for "none of these, let me type it". */
-export const OTHER = "__other__";
-
 const o = (value: string, ...aliases: string[]): Option => ({ aliases, value });
 
 export const ROLE_OPTIONS: readonly Option[] = [
