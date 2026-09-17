@@ -18,6 +18,8 @@ const MAX_LIMIT = 100;
 
 export const postReturn = v.object({
   _id: v.id("posts"),
+  /** Echo of the composer's nonce; lets the dashboard keep one card across the optimistic swap. */
+  clientId: v.optional(v.string()),
   author: v.optional(
     v.object({
       _id: v.id("users"),
@@ -106,6 +108,7 @@ async function hydrate(
   const team = await teamForPost(ctx, post, author);
   return {
     _id: post._id,
+    clientId: post.clientId,
     author: author
       ? {
           _id: author._id,
@@ -160,9 +163,17 @@ export const list = onboardedQuery({
 });
 
 export const post = onboardedMutation({
-  args: { imageId: v.optional(v.id("_storage")), text: v.string() },
+  args: {
+    /** Optional nonce from the dashboard composer (≤ 64 chars); stored verbatim. */
+    clientId: v.optional(v.string()),
+    imageId: v.optional(v.id("_storage")),
+    text: v.string(),
+  },
   handler: async (ctx, args) => {
     const text = args.text.trim();
+    if (args.clientId !== undefined && args.clientId.length > 64) {
+      fail("VALIDATION", "clientId demasiado largo");
+    }
     if (!text && !args.imageId) {
       fail("VALIDATION", "Escribe algo o adjunta una imagen");
     }
@@ -185,6 +196,7 @@ export const post = onboardedMutation({
       teamId: membership?.teamId,
       text,
       imageId: args.imageId,
+      clientId: args.clientId,
       createdAt: Date.now(),
     });
   },

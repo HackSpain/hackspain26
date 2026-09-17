@@ -2,6 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { GitBranch } from "lucide-react";
+import { useState } from "react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import { Avatar } from "@/components/avatar";
@@ -29,13 +30,18 @@ function timeAgo(at: number, now = Date.now()): string {
   });
 }
 
+function hasPostContext(post: FeedPost): boolean {
+  const repo = post.kind === "github" ? post.github?.repo : undefined;
+  return Boolean(post.teamName || post.project || repo);
+}
+
 /** Team, project and challenges: the "who is building what" line under the author. */
 function PostContext({ post }: { post: FeedPost }) {
   const { project } = post;
   const repo = post.kind === "github" ? post.github?.repo : undefined;
-  if (!post.teamName && !project && !repo) {return null;}
+  if (!hasPostContext(post)) {return null;}
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-hs-brown">
+    <div className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-4 text-hs-brown">
       {post.teamName ? (
         <span className="inline-flex items-center gap-1.5">
           <Avatar name={post.teamName} src={post.teamLogoUrl} className="size-4 border text-[8px]" />
@@ -69,14 +75,31 @@ function PostContext({ post }: { post: FeedPost }) {
   );
 }
 
-function PostCard({ post }: { post: FeedPost }) {
+/**
+ * Optimistic rows and their confirmed twin share the composer's `clientId`, so
+ * React keeps the same card while `pending` flips and the opacity can ease
+ * instead of the node being replaced.
+ */
+function postKey(post: FeedPost): string {
+  return post.clientId ?? post._id;
+}
+
+function PostCard({ post, fresh }: { post: FeedPost; fresh: boolean }) {
   const isGithub = post.kind === "github";
   const who = isGithub
     ? (post.teamName ?? post.github?.repo ?? "GitHub")
     : (post.author?.name ?? post.author?.email ?? "Alguien");
 
+  // The enter animation lives on a wrapper: `hs-enter` fills `opacity` forwards
+  // and would otherwise override the pending dim on the card itself.
   return (
-    <Card className={cn("gap-0", post.pending && "opacity-60")}>
+    <div className={fresh ? "hs-enter" : undefined}>
+    <Card
+      className={cn(
+        "gap-0 motion-safe:transition-opacity motion-safe:duration-[var(--duration-enter)] motion-safe:ease-[var(--ease-out)]",
+        post.pending && "opacity-60",
+      )}
+    >
       <CardContent className="space-y-3">
         <div className="flex min-w-0 items-start gap-3">
           {isGithub ? (
@@ -93,8 +116,15 @@ function PostCard({ post }: { post: FeedPost }) {
               className="size-10 text-sm"
             />
           )}
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          {/* Two lines: pinned to the avatar's top and bottom edges. One line
+              (no team/project/repo): centred on the picture instead. */}
+          <div
+            className={cn(
+              "flex min-h-10 min-w-0 flex-col",
+              hasPostContext(post) ? "justify-between" : "justify-center",
+            )}
+          >
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-5">
               <span className="font-semibold break-words">{who}</span>
               {isGithub ? (
                 <Badge variant="gold" className="gap-1">
@@ -141,6 +171,7 @@ function PostCard({ post }: { post: FeedPost }) {
         ) : null}
       </CardContent>
     </Card>
+    </div>
   );
 }
 
@@ -156,6 +187,14 @@ export function FeedTimeline({
   empty?: "default" | "none";
 }) {
   const posts = useQuery(api.feed.list, { limit });
+  // Keys present when the list first loaded never animate in; only posts that
+  // arrive afterwards (yours, someone else's, GitHub) get the enter transition.
+  // The set is frozen on purpose: a later post keeps `hs-enter` for its whole
+  // life, so confirming the optimistic row ~100 ms later cannot cut the motion.
+  const [initial, setInitial] = useState<ReadonlySet<string> | null>(null);
+  if (posts && initial === null) {
+    setInitial(new Set(posts.map(postKey)));
+  }
 
   if (posts === undefined) {return <LoadingText />;}
   if (posts.length === 0) {
@@ -169,9 +208,16 @@ export function FeedTimeline({
 
   return (
     <div className={cn("space-y-3", className)}>
-      {posts.map((post) => (
-        <PostCard key={post._id} post={post} />
-      ))}
+      {posts.map((post) => {
+        const key = postKey(post);
+        return (
+          <PostCard
+            key={key}
+            post={post}
+            fresh={initial !== null && !initial.has(key)}
+          />
+        );
+      })}
     </div>
   );
 }

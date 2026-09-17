@@ -231,8 +231,9 @@ const PERKS: {
   title: string;
   value: string;
   description: string;
-  type: "email" | "code";
+  type: "email" | "code" | "external";
   sponsorUrl?: string;
+  instructions?: string;
   codes?: number;
 }[] = [
   { company: "Vercel", title: "Pro durante 3 meses", value: "60 $", description: "Despliega tu demo con Pro y previews ilimitadas.", type: "code", sponsorUrl: "https://vercel.com", codes: 20 },
@@ -243,6 +244,15 @@ const PERKS: {
   { company: "Supabase", title: "Pro un mes", value: "25 $", description: "Postgres, auth y storage sin límites de prueba.", type: "code", codes: 15 },
   { company: "Twilio", title: "Saldo para SMS y voz", value: "50 $", description: "Para los agentes que llaman por teléfono.", type: "email" },
   { company: "ElevenLabs", title: "Plan Creator", value: "1 mes", description: "Voces para tu demo.", type: "code", codes: 10 },
+  {
+    company: "Cursor",
+    title: "Pro para el hackathon",
+    value: "2 meses",
+    description: "El editor con agentes. Se activa en su web, no desde la app.",
+    type: "external",
+    sponsorUrl: "https://cursor.com",
+    instructions: "Entra con el email del equipo, abre Billing y aplica el plan Pro del evento.",
+  },
 ];
 
 const USER_TYPES: {
@@ -693,6 +703,7 @@ async function runSeed(
       createdAt: now - 14 * 24 * HOUR,
       createdBy: orgId,
       description: spec.description,
+      instructions: spec.instructions,
       inputs:
         spec.type === "email"
           ? [
@@ -934,37 +945,49 @@ async function runSeed(
       continue;
     }
     const at = now - between(1, 20) * HOUR;
-    if (spec.type === "code") {
-      const code = await ctx.db
-        .query("perkCodes")
-        .withIndex("by_perk_available", (q) => q.eq("perkId", perkId).eq("available", true))
-        .first();
-      if (!code) {
+    switch (spec.type) {
+      case "external": {
         continue;
       }
-      await ctx.db.patch(code._id, { assignedAt: at, assignedTo: hacker.userId, available: false });
-      await ctx.db.insert("perkClaims", {
-        codeId: code._id,
-        createdAt: at,
-        perkId,
-        status: "assigned",
-        type: "code",
-        updatedAt: at,
-        userId: hacker.userId,
-      });
-    } else {
-      await ctx.db.insert("perkClaims", {
-        answers: [
-          { key: "email", value: hacker.person.email },
-          { key: "team", value: pick(teams).name },
-        ],
-        createdAt: at,
-        perkId,
-        status: pick(["pending", "pending", "added", "rejected"]),
-        type: "email",
-        updatedAt: at,
-        userId: hacker.userId,
-      });
+      case "code": {
+        const code = await ctx.db
+          .query("perkCodes")
+          .withIndex("by_perk_available", (q) => q.eq("perkId", perkId).eq("available", true))
+          .first();
+        if (!code) {
+          continue;
+        }
+        await ctx.db.patch(code._id, { assignedAt: at, assignedTo: hacker.userId, available: false });
+        await ctx.db.insert("perkClaims", {
+          codeId: code._id,
+          createdAt: at,
+          perkId,
+          status: "assigned",
+          type: "code",
+          updatedAt: at,
+          userId: hacker.userId,
+        });
+        break;
+      }
+      case "email": {
+        await ctx.db.insert("perkClaims", {
+          answers: [
+            { key: "email", value: hacker.person.email },
+            { key: "team", value: pick(teams).name },
+          ],
+          createdAt: at,
+          perkId,
+          status: pick(["pending", "pending", "added", "rejected"]),
+          type: "email",
+          updatedAt: at,
+          userId: hacker.userId,
+        });
+        break;
+      }
+      default: {
+        const _exhaustive: never = spec.type;
+        throw new Error(_exhaustive);
+      }
     }
     count("perkClaims");
   }

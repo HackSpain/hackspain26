@@ -7,7 +7,7 @@ import type { SectionKey } from "@convex/lib/userTypes";
  */
 export const SECTION_NAV: Record<
   SectionKey,
-  { href: string; label: string; hint: string }
+  { href: string; label: string; hint: string; private?: boolean }
 > = {
   teams: { href: "/teams", label: "Equipo", hint: "Ver el equipo y su repo." },
   tracks: { href: "/tracks", label: "Retos", hint: "Proyecto y retos." },
@@ -15,9 +15,15 @@ export const SECTION_NAV: Record<
   participantes: {
     href: "/participantes",
     label: "Participantes",
-    hint: "Directorio de la comunidad.",
+    hint: "Directorio de la comunidad. Solo quien tiene acceso.",
+    private: true,
   },
-  judging: { href: "/judging", label: "Juzgar", hint: "Panel del jurado." },
+  judging: {
+    href: "/judging",
+    label: "Juzgar",
+    hint: "Panel del jurado. Solo jueces.",
+    private: true,
+  },
   cli: { href: "/cli", label: "CLI", hint: "Instalación y comandos." },
 };
 

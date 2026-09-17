@@ -11,6 +11,14 @@ export type EventInfo = {
   startsAt?: number;
 };
 
+/**
+ * `users.me` always returns `event` on current Convex. Older payloads omit
+ * it; treat that like an unscheduled window (open).
+ */
+export function isEventOpen(event: EventInfo | null | undefined): boolean {
+  return event?.open ?? true;
+}
+
 /** One line explaining why the dashboard is reduced. Mirrors convex/lib/eventWindow.ts. */
 export function eventClosedCopy(event: EventInfo): { title: string; body: string } {
   if (event.phase === "before" && event.startsAt !== undefined) {

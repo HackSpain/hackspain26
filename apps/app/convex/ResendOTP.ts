@@ -6,6 +6,12 @@ import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
 import { fail } from "./lib/errors";
+import {
+  OTP_EMAIL_SUBJECT,
+  otpEmailHtml,
+  otpEmailText,
+} from "./lib/otpEmail";
+import { resendApiKey, resendFrom } from "./lib/resend";
 
 function randomDigits(length: number): string {
   const random: RandomReader = {
@@ -45,18 +51,18 @@ async function sendVerificationRequest(
       );
     } else {
       console.log(
-        "[auth] AUTH_RESEND_KEY is not set. The code was logged instead of emailed."
+        "[auth] RESEND_API_KEY is not set. The code was logged instead of emailed."
       );
     }
     return;
   }
 
   const resend = new ResendAPI(provider.apiKey);
-  const from = process.env.AUTH_EMAIL ?? "HackSpain <onboarding@resend.dev>";
   const { error } = await resend.emails.send({
-    from,
-    subject: "Your HackSpain sign-in code",
-    text: `Your HackSpain dashboard code is ${token}. It expires in 15 minutes.`,
+    from: resendFrom(),
+    html: otpEmailHtml(token),
+    subject: OTP_EMAIL_SUBJECT,
+    text: otpEmailText(token),
     to: [email],
   });
   if (error) {
@@ -72,7 +78,7 @@ async function sendVerificationRequest(
 }
 
 export const ResendOTP = Email({
-  apiKey: process.env.AUTH_RESEND_KEY,
+  apiKey: resendApiKey(),
   generateVerificationToken() {
     return randomDigits(8);
   },

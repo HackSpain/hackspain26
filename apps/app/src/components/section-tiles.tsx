@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { SectionKey } from "@convex/lib/userTypes";
+import { Badge } from "@/components/ui/badge";
 import { SECTION_NAV, SECTION_ORDER } from "@/lib/sections";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +25,13 @@ const SECTION_ICONS: Record<SectionKey, LucideIcon> = {
   cli: Terminal,
 };
 
-type Tile = { href: string; label: string; hint: string; icon: LucideIcon; external?: boolean };
+type Tile = {
+  href: string;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  private?: boolean;
+};
 
 /** Sections that stay open outside the hackathon window (src/lib/sections.ts). */
 const CLOSED_SECTIONS: ReadonlySet<SectionKey> = new Set(["participantes"]);
@@ -66,15 +73,20 @@ export function SectionTiles({
                 href={tile.href}
                 title={tile.hint}
                 className={cn(
-                  "flex min-h-24 flex-col items-center justify-center gap-2 border border-hs-ink/30 bg-hs-sand px-2 py-3 text-center outline-none",
-                  "motion-safe:transition-[background-color,border-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
-                  "hover:border-hs-ink/30 hover:bg-hs-gold focus-visible:border-hs-navy/50 focus-visible:bg-hs-gold focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-paper",
+                  "flex min-h-24 flex-col items-center justify-center gap-1.5 border-[3px] border-hs-ink bg-hs-sand px-2 py-3 text-center outline-none",
+                  "motion-safe:transition-[transform,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.96]",
+                  "hover:bg-hs-gold focus-visible:bg-hs-gold focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-paper",
                 )}
               >
                 <Icon className="size-7 shrink-0" strokeWidth={1.75} aria-hidden />
                 <span className="w-full truncate font-bungee text-[11px] uppercase leading-tight sm:text-xs">
                   {tile.label}
                 </span>
+                {tile.private ? (
+                  <Badge className="border-hs-ink bg-hs-navy px-1 py-px text-[8px] leading-none text-hs-paper">
+                    Privada
+                  </Badge>
+                ) : null}
               </Link>
             </li>
           );

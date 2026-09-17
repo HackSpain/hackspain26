@@ -18,7 +18,7 @@ export default function PerksPage() {
   return (
     <Page
       title="Perks"
-      description="Reclama beneficios de partners. Los de email se convierten en solicitud. Los de código te dan uno único."
+      description="Beneficios de partners: códigos, solicitudes por email, o un enlace para canjearlos en su web."
     >
       <FormError message={error} />
       {catalog.length === 0 ? (
@@ -34,6 +34,9 @@ export default function PerksPage() {
               claim={existing}
               onClaim={() => {
                 setError(null);
+                if (perk.type === "external") {
+                  return;
+                }
                 if (perk.inputs.length > 0) {
                   setAsking(perk);
                   return;
