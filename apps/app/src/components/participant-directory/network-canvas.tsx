@@ -1,924 +1,770 @@
 "use client";
 
 import {
-	memo,
-	useCallback,
-	useEffect,
-	useImperativeHandle,
-	useLayoutEffect,
-	useMemo,
-	useRef,
-	useState,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
-import type { PointerEvent as ReactPointerEvent, Ref } from "react";
-import { gsap } from "gsap";
-import { initialsOf } from "@/components/avatar";
-import type { AffinityKind } from "./affinities";
+import type { KeyboardEvent, MouseEvent, PointerEvent, Ref } from "react";
+import { Minus, Plus, Scan, X } from "lucide-react";
 import {
-	clusterParticipants,
-	clustersOverlap,
-	createLayout,
-	initialPoints,
-	labelDirections,
-	layoutBounds,
-	NODE_RADIUS,
-	placeClusters,
-	wordmarkBox,
-	ZONE_HALO,
+  HUB_STYLES,
+  initialPoints,
+  networkSprings,
+  tickForces,
 } from "./network-model";
-import type { GraphPoint, Lens, Link } from "./network-model";
-import type { DirectoryParticipant } from "./types";
-
-export const CONNECTION_STYLES: Record<
-	AffinityKind,
-	{ label: string; color: string }
-> = {
-	city: { color: "#d96b2a", label: "Ciudad" },
-	company: { color: "#35858a", label: "Empresa" },
-	degree: { color: "#7a5ea7", label: "Grado" },
-	interests: { color: "#c2456c", label: "Intereses" },
-	skills: { color: "#4f86a8", label: "Habilidades" },
-	team: { color: "#b8860b", label: "Equipo" },
-	university: { color: "#1e3958", label: "Universidad" },
-};
+import type { GraphPoint, HubKind, Network } from "./network-model";
 
 export interface NetworkHandle {
-	focus: (id: string) => void;
-	clear: () => void;
-	fit: () => void;
-	zoom: (factor: number) => void;
+  focus: (id: string) => void;
+  clear: () => void;
 }
-
 type Camera = { x: number; y: number; scale: number };
-type NodeState = "" | "active" | "linked" | "match";
+type Simulation = {
+  points: GraphPoint[];
+  pinnedId?: string;
+  wake: () => void;
+};
 type Drag = {
-	id?: string;
-	startX: number;
-	startY: number;
-	originX: number;
-	originY: number;
-	moved: boolean;
+  id?: string;
+  x: number;
+  y: number;
+  originalX: number;
+  originalY: number;
+  camera: Camera;
 };
 
-const MIN_SCALE = 0.25;
-const MAX_SCALE = 4;
+const MIN_SCALE = 0.45;
+const MAX_SCALE = 6;
+const CAMERA_MS = 280;
+// Below this zoom people are anonymous dots until hovered, selected or matched.
+const NAMES_ZOOM = 0.85;
 
 function clampScale(scale: number) {
-	return Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+  return Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
 }
 
-function reducedMotion() {
-	return (
-		typeof window !== "undefined" &&
-		window.matchMedia("(prefers-reduced-motion: reduce)").matches
-	);
+function bounds(points: GraphPoint[]) {
+  const xs = points.map((p) => p.x),
+    ys = points.map((p) => p.y);
+  const left = Math.min(...xs) - 90,
+    right = Math.max(...xs) + 90;
+  // Extra room below for the two-line labels and the zoom controls.
+  const top = Math.min(...ys) - 70,
+    bottom = Math.max(...ys) + 150;
+  return {
+    height: bottom - top,
+    width: right - left,
+    x: (left + right) / 2,
+    y: (top + bottom) / 2,
+  };
 }
 
-function linkPath(a: GraphPoint, b: GraphPoint) {
-	const dx = b.x - a.x,
-		dy = b.y - a.y;
-	const distance = Math.hypot(dx, dy) || 1;
-	// A gentle, consistent bow keeps parallel links apart and reads as organic.
-	const bow = Math.min(60, distance * 0.14) * (a.id < b.id ? 1 : -1);
-	const cx = (a.x + b.x) / 2 - (dy / distance) * bow;
-	const cy = (a.y + b.y) / 2 + (dx / distance) * bow;
-	return `M ${a.x.toFixed(1)} ${a.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+/** Splits a long label at the space nearest its middle so hub names stay narrow. */
+function wrapLabel(label: string): string[] {
+  if (label.length <= 16 || !label.includes(" ")) {
+    return [label];
+  }
+  const middle = label.length / 2;
+  let cut = label.indexOf(" ");
+  for (const match of label.matchAll(/ /g)) {
+    if (Math.abs(match.index - middle) < Math.abs(cut - middle)) {
+      cut = match.index;
+    }
+  }
+  return [label.slice(0, cut), label.slice(cut + 1)];
 }
 
-const PersonNode = memo(function PersonNode({
-	person,
-	state,
-	register,
-	onPointerEnter,
-	onPointerLeave,
-	onActivate,
-}: {
-	person: DirectoryParticipant;
-	state: NodeState;
-	register: (id: string, element: SVGGElement | null) => void;
-	onPointerEnter: (id: string, pointerType: string) => void;
-	onPointerLeave: () => void;
-	onActivate: (id: string) => void;
-}) {
-	const initials = initialsOf(person.displayName);
-	return (
-		<g
-			ref={(element) => register(person.id, element)}
-			className="pg-node"
-			data-node={person.id}
-			data-state={state || undefined}
-			data-me={person.isMe ? "" : undefined}
-			role="button"
-			tabIndex={0}
-			aria-label={`${person.displayName}, ${person.role}, ${person.city}`}
-			aria-pressed={state === "active"}
-			onPointerEnter={(event) => onPointerEnter(person.id, event.pointerType)}
-			onPointerLeave={onPointerLeave}
-			onFocus={() => onPointerEnter(person.id, "keyboard")}
-			onBlur={onPointerLeave}
-			onKeyDown={(event) => {
-				if (event.key === "Enter" || event.key === " ") {
-					event.preventDefault();
-					event.stopPropagation();
-					onActivate(person.id);
-				}
-			}}
-		>
-			<g className="pg-node-body">
-				<circle className="pg-node-halo" r={NODE_RADIUS + 7} />
-				<circle className="pg-node-disc" r={NODE_RADIUS} />
-				{person.photoUrl ? (
-					<image
-						className="pg-node-photo"
-						href={person.photoUrl}
-						x={-NODE_RADIUS}
-						y={-NODE_RADIUS}
-						width={NODE_RADIUS * 2}
-						height={NODE_RADIUS * 2}
-						clipPath="url(#pg-clip)"
-						preserveAspectRatio="xMidYMid slice"
-					/>
-				) : (
-					<text
-						className="pg-node-initials"
-						textAnchor="middle"
-						dominantBaseline="central"
-						aria-hidden="true"
-					>
-						{initials}
-					</text>
-				)}
-				<circle className="pg-node-ring" r={NODE_RADIUS} />
-			</g>
-			<text
-				className="pg-node-name"
-				y={NODE_RADIUS + 16}
-				textAnchor="middle"
-				aria-hidden="true"
-			>
-				{person.displayName}
-			</text>
-		</g>
-	);
-});
+function fitScale(
+  extent: ReturnType<typeof bounds>,
+  size: { width: number; height: number }
+) {
+  return (
+    Math.min(size.width / extent.width, size.height / extent.height) * 0.88
+  );
+}
 
 export function NetworkCanvas({
-	participants,
-	lens,
-	selectedId,
-	matches,
-	linksOf,
-	panelLeft,
-	onSelect,
-	ref,
+  network,
+  visibleKinds,
+  selectedId,
+  matches,
+  queryActive,
+  onSelect,
+  ref,
 }: {
-	participants: DirectoryParticipant[];
-	lens: Lens;
-	selectedId: string | null;
-	/** People matching the search, or null when there is no query. */
-	matches: Set<string> | null;
-	linksOf: (id: string) => Link[];
-	/** Where the floating profile's left edge lands, so focus centres in the free area. */
-	panelLeft: (viewportWidth: number) => number | null;
-	onSelect: (id: string | null) => void;
-	ref?: Ref<NetworkHandle>;
+  network: Network;
+  visibleKinds: Set<HubKind>;
+  selectedId: string | null;
+  matches: Set<string>;
+  queryActive: boolean;
+  onSelect: (id: string | null) => void;
+  ref?: Ref<NetworkHandle>;
 }) {
-	const viewportRef = useRef<HTMLDivElement>(null);
-	const svgRef = useRef<SVGSVGElement>(null);
-	const worldRef = useRef<SVGGElement>(null);
-	const nodeElements = useRef(new Map<string, SVGGElement>());
-	const linkElements = useRef(
-		new Map<string, { element: SVGPathElement; a: string; b: string }>(),
-	);
-	const points = useRef(new Map<string, GraphPoint>());
-	const camera = useRef<Camera>({ scale: 1, x: 0, y: 0 });
-	const cameraTween = useRef<gsap.core.Tween | null>(null);
-	// Wheel zoom eases towards a target scale while the point under the pointer stays put.
-	const zoomTween = useRef<gsap.core.Tween | null>(null);
-	const zoomState = useRef({
-		anchorX: 0,
-		anchorY: 0,
-		dx: 0,
-		dy: 0,
-		proxy: { scale: 1 },
-		target: 1,
-	});
-	const zonesRef = useRef<SVGGElement>(null);
-	const nodesRef = useRef<SVGGElement>(null);
-	const introPlayed = useRef(false);
-	const alpha = useRef(0);
-	const frame = useRef(0);
-	const drag = useRef<Drag | null>(null);
-	const pointers = useRef(new Map<number, { x: number; y: number }>());
-	const pinch = useRef<{
-		distance: number;
-		scale: number;
-		worldX: number;
-		worldY: number;
-	} | null>(null);
-	const [size, setSize] = useState({ height: 0, width: 0 });
-	const [hoveredId, setHoveredId] = useState<string | null>(null);
-	const [fitted, setFitted] = useState(false);
+  const initial = useMemo(() => initialPoints(network), [network]);
+  const springs = useMemo(() => networkSprings(network), [network]);
+  const initialBounds = useMemo(() => bounds(initial), [initial]);
+  const [points, setPoints] = useState(initial);
+  const [size, setSize] = useState({ height: 700, width: 1000 });
+  const [camera, setCamera] = useState<Camera>({
+    scale: 1,
+    x: initialBounds.x,
+    y: initialBounds.y,
+  });
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const simulation = useRef<Simulation | null>(null);
+  const drag = useRef<Drag | null>(null);
+  const suppressClick = useRef(false);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{
+    distance: number;
+    camera: Camera;
+    worldX: number;
+    worldY: number;
+  } | null>(null);
+  const cameraFrame = useRef(0);
+  const fitZoom = fitScale(initialBounds, size);
+  const zoom = fitZoom * camera.scale;
+  // Glyphs and labels keep their on-screen size while positions zoom, so the
+  // map stays readable at fit and nodes do not balloon when zoomed in.
+  const k = 1 / Math.min(Math.max(zoom, 0.5), 2);
+  const personRadius = 7 * k;
+  const showNames = zoom >= NAMES_ZOOM;
 
-	const clusters = useMemo(
-		() => clusterParticipants(participants, lens),
-		[participants, lens],
-	);
-	const aspect = size.height
-		? Math.max(
-				0.6,
-				Math.min(2.4, Math.round((size.width / size.height) * 2) / 2),
-			)
-		: 1.6;
-	const places = useMemo(
-		() => placeClusters(clusters, aspect),
-		[clusters, aspect],
-	);
-	const bounds = useMemo(() => layoutBounds(places), [places]);
-	const venn = useMemo(() => clustersOverlap(clusters), [clusters]);
-	// Text labels sit just outside the halo, facing away from any overlap.
-	// Wordmarks are watermarked at the centre instead (see the zone markup).
-	const labelAt = useMemo(() => {
-		const directions = labelDirections(clusters, places);
-		return places.map((place, index) => {
-			const direction = directions[index];
-			const half =
-				(Math.abs(direction.x) * clusters[index].label.length * 7.5 +
-					Math.abs(direction.y) * 12) /
-				2;
-			const reach = place.r * ZONE_HALO + 10 + half;
-			return {
-				x: place.x + direction.x * reach,
-				y: place.y + direction.y * reach,
-			};
-		});
-	}, [clusters, places]);
-	const peopleById = useMemo(
-		() => new Map(participants.map((person) => [person.id, person])),
-		[participants],
-	);
-	const activeId = selectedId ?? hoveredId;
-	const activeLinks = useMemo(
-		() => (activeId && peopleById.has(activeId) ? linksOf(activeId) : []),
-		[activeId, peopleById, linksOf],
-	);
-	const linkedIds = useMemo(
-		() => new Set(activeLinks.map((link) => link.participant.id)),
-		[activeLinks],
-	);
-	const mode = selectedId
-		? "focus"
-		: hoveredId
-			? "peek"
-			: matches
-				? "search"
-				: "rest";
+  const hubs = useMemo(
+    () => network.hubs.filter((hub) => visibleKinds.has(hub.kind)),
+    [network, visibleKinds]
+  );
+  const edges = useMemo(
+    () => network.edges.filter((edge) => visibleKinds.has(edge.kind)),
+    [network, visibleKinds]
+  );
+  const pointById = new Map(points.map((point) => [point.id, point]));
+  const hubById = new Map(hubs.map((hub) => [hub.id, hub]));
+  const personById = new Map(
+    network.participants.map((person) => [person.id, person])
+  );
 
-	// --- camera -------------------------------------------------------------
-	const applyCamera = useCallback(() => {
-		const { x, y, scale } = camera.current;
-		const world = worldRef.current;
-		const svg = svgRef.current;
-		if (!world || !svg) {
-			return;
-		}
-		world.setAttribute(
-			"transform",
-			`translate(${size.width / 2} ${size.height / 2}) scale(${scale}) translate(${-x} ${-y})`,
-		);
-	}, [size]);
+  // Selection dims the rest of the map: a person lights its hubs and everyone
+  // on them, a hub lights its members. Hover only emphasises direct edges.
+  const selectedHub = selectedId ? hubById.get(selectedId) : undefined;
+  const litHubs = new Set<string>(
+    selectedHub
+      ? [selectedHub.id]
+      : edges
+          .filter((edge) => edge.person === selectedId)
+          .map((edge) => edge.hub)
+  );
+  const litPeople = new Set<string>(
+    hubs.filter((hub) => litHubs.has(hub.id)).flatMap((hub) => hub.members)
+  );
+  if (selectedId && personById.has(selectedId)) {
+    litPeople.add(selectedId);
+  }
+  const hoveredEdges = new Set(
+    edges
+      .filter((edge) => edge.person === hoveredId || edge.hub === hoveredId)
+      .map((edge) => edge.id)
+  );
+  const hoveredPeople = new Set(
+    hoveredId ? (hubById.get(hoveredId)?.members ?? [hoveredId]) : []
+  );
 
-	const stopTweens = useCallback(() => {
-		cameraTween.current?.kill();
-		zoomTween.current?.kill();
-		cameraTween.current = null;
-		zoomTween.current = null;
-	}, []);
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element) {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) =>
+      setSize({
+        height: entry.contentRect.height,
+        width: entry.contentRect.width,
+      })
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
-	const moveCamera = useCallback(
-		(target: Camera, animated: boolean) => {
-			stopTweens();
-			if (!animated || reducedMotion()) {
-				camera.current = target;
-				applyCamera();
-				return;
-			}
-			cameraTween.current = gsap.to(camera.current, {
-				...target,
-				duration: 0.75,
-				ease: "power3.out",
-				onUpdate: applyCamera,
-				overwrite: true,
-			});
-		},
-		[applyCamera, stopTweens],
-	);
+  useEffect(() => {
+    const model = initial.map((point) => ({ ...point }));
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let frame = 0,
+      heat = 0.18;
+    const publish = () => setPoints(model.map((point) => ({ ...point })));
+    const step = () => {
+      frame = 0;
+      tickForces(model, springs, heat, control.pinnedId);
+      publish();
+      heat *= 0.965;
+      if (heat > 0.008 && !preference.matches) {
+        frame = requestAnimationFrame(step);
+      }
+    };
+    const control: Simulation = {
+      points: model,
+      wake: () => {
+        if (preference.matches) {
+          publish();
+          return;
+        }
+        heat = Math.max(heat, 0.32);
+        if (!frame) {
+          frame = requestAnimationFrame(step);
+        }
+      },
+    };
+    const motionChanged = () => {
+      if (preference.matches) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      }
+    };
+    simulation.current = control;
+    if (!preference.matches) {
+      frame = requestAnimationFrame(step);
+    }
+    preference.addEventListener("change", motionChanged);
+    return () => {
+      cancelAnimationFrame(frame);
+      preference.removeEventListener("change", motionChanged);
+      simulation.current = null;
+    };
+  }, [initial, springs]);
 
-	const fitCamera = useCallback(
-		(animated: boolean) => {
-			if (!size.width || !size.height) {
-				return;
-			}
-			const scale = clampScale(
-				Math.min(
-					(size.width - 48) / bounds.width,
-					(size.height - 96) / bounds.height,
-				),
-			);
-			moveCamera({ scale, x: bounds.x, y: bounds.y }, animated);
-		},
-		[size, bounds, moveCamera],
-	);
+  useEffect(() => () => cancelAnimationFrame(cameraFrame.current), []);
 
-	/**
-	 * Zoom by a factor around a screen point. Successive calls (a wheel burst)
-	 * accumulate into one eased tween, so the zoom feels inertial rather than
-	 * stepped; the world point under the pointer never drifts.
-	 */
-	const zoomAt = useCallback(
-		(factor: number, screenX: number, screenY: number) => {
-			cameraTween.current?.kill();
-			cameraTween.current = null;
-			const zoom = zoomState.current;
-			const current = camera.current;
-			if (!zoomTween.current?.isActive()) {
-				zoom.target = current.scale;
-				zoom.proxy.scale = current.scale;
-			}
-			zoom.target = clampScale(zoom.target * factor);
-			zoom.dx = screenX - size.width / 2;
-			zoom.dy = screenY - size.height / 2;
-			zoom.anchorX = current.x + zoom.dx / current.scale;
-			zoom.anchorY = current.y + zoom.dy / current.scale;
-			const place = (scale: number) => {
-				camera.current = {
-					scale,
-					x: zoom.anchorX - zoom.dx / scale,
-					y: zoom.anchorY - zoom.dy / scale,
-				};
-				applyCamera();
-			};
-			if (reducedMotion()) {
-				zoom.proxy.scale = zoom.target;
-				place(zoom.target);
-				return;
-			}
-			zoomTween.current = gsap.to(zoom.proxy, {
-				duration: 0.5,
-				ease: "power2.out",
-				onUpdate: () => place(zoom.proxy.scale),
-				overwrite: true,
-				scale: zoom.target,
-			});
-		},
-		[size, applyCamera],
-	);
+  /** Eases the camera to `target` so the user keeps their bearings. */
+  function moveCamera(target: Camera) {
+    cancelAnimationFrame(cameraFrame.current);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setCamera(target);
+      return;
+    }
+    const from = camera;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / CAMERA_MS);
+      const e = 1 - (1 - t) ** 3;
+      setCamera({
+        scale: Math.exp(
+          Math.log(from.scale) + (Math.log(target.scale) - Math.log(from.scale)) * e
+        ),
+        x: from.x + (target.x - from.x) * e,
+        y: from.y + (target.y - from.y) * e,
+      });
+      if (t < 1) {
+        cameraFrame.current = requestAnimationFrame(step);
+      }
+    };
+    cameraFrame.current = requestAnimationFrame(step);
+  }
+  function stopCamera() {
+    cancelAnimationFrame(cameraFrame.current);
+  }
 
-	// --- simulation ---------------------------------------------------------
-	const paint = useCallback(() => {
-		for (const [id, element] of nodeElements.current) {
-			const point = points.current.get(id);
-			if (point) {
-				element.setAttribute(
-					"transform",
-					`translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
-				);
-			}
-		}
-		for (const { element, a, b } of linkElements.current.values()) {
-			const from = points.current.get(a),
-				to = points.current.get(b);
-			if (from && to) {
-				element.setAttribute("d", linkPath(from, to));
-			}
-		}
-	}, []);
+  function fit() {
+    const extent = bounds(simulation.current?.points ?? points);
+    moveCamera({
+      scale: fitScale(extent, size) / fitZoom,
+      x: extent.x,
+      y: extent.y,
+    });
+  }
+  function clear() {
+    onSelect(null);
+    setHoveredId(null);
+    fit();
+  }
+  /** Selects a node and frames everything it lights up. */
+  function focus(id: string) {
+    const current = simulation.current?.points ?? points;
+    const target = current.find((item) => item.id === id);
+    if (!target) {
+      return;
+    }
+    onSelect(id);
+    const hub = hubById.get(id);
+    const hubIds = hub
+      ? [hub.id]
+      : edges.filter((edge) => edge.person === id).map((edge) => edge.hub);
+    const around = new Set([
+      id,
+      ...hubIds,
+      ...hubs
+        .filter((item) => hubIds.includes(item.id))
+        .flatMap((item) => item.members),
+    ]);
+    const extent = bounds(current.filter((item) => around.has(item.id)));
+    moveCamera({
+      scale: Math.max(1, Math.min(2.6 / fitZoom, fitScale(extent, size) / fitZoom)),
+      x: extent.x,
+      y: extent.y,
+    });
+  }
+  useImperativeHandle(ref, () => ({ clear, focus }));
 
-	const layout = useMemo(() => {
-		const carried = points.current;
-		const fresh = initialPoints(clusters, places);
-		const next = new Map<string, GraphPoint>();
-		for (const point of fresh) {
-			// Members keep their spot across lens changes and flow to the new cluster.
-			next.set(point.id, carried.get(point.id) ?? point);
-		}
-		points.current = next;
-		return createLayout([...next.values()], clusters, places);
-	}, [clusters, places]);
+  function zoomAt(nextScale: number, x: number, y: number) {
+    const scale = clampScale(nextScale);
+    const dx = x - size.width / 2,
+      dy = y - size.height / 2;
+    moveCamera({
+      scale,
+      x: camera.x + dx / zoom - dx / (fitZoom * scale),
+      y: camera.y + dy / zoom - dy / (fitZoom * scale),
+    });
+  }
 
-	const wake = useCallback(
-		(target: number) => {
-			alpha.current = Math.max(alpha.current, target);
-			if (frame.current) {
-				return;
-			}
-			const step = () => {
-				frame.current = 0;
-				const dragging = drag.current?.moved ? drag.current.id : undefined;
-				if (dragging) {
-					alpha.current = Math.max(alpha.current, 0.25);
-				}
-				layout.tick(alpha.current, dragging);
-				paint();
-				alpha.current *= 0.97;
-				if (alpha.current > 0.004 || dragging) {
-					frame.current = requestAnimationFrame(step);
-				}
-			};
-			frame.current = requestAnimationFrame(step);
-		},
-		[layout, paint],
-	);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) {
+      return;
+    }
+    const wheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+      event.preventDefault();
+      cancelAnimationFrame(cameraFrame.current);
+      const rect = svg.getBoundingClientRect();
+      const x = event.clientX - rect.left - size.width / 2,
+        y = event.clientY - rect.top - size.height / 2;
+      setCamera((old) => {
+        const scale = clampScale(old.scale * Math.exp(-event.deltaY * 0.005));
+        return {
+          scale,
+          x: old.x + x / (fitZoom * old.scale) - x / (fitZoom * scale),
+          y: old.y + y / (fitZoom * old.scale) - y / (fitZoom * scale),
+        };
+      });
+    };
+    svg.addEventListener("wheel", wheel, { passive: false });
+    return () => svg.removeEventListener("wheel", wheel);
+  }, [size, fitZoom]);
 
-	useEffect(() => {
-		if (reducedMotion()) {
-			for (let i = 0; i < 260; i++) {
-				layout.tick(0.98 ** i);
-			}
-			paint();
-			return;
-		}
-		wake(1);
-		return () => {
-			cancelAnimationFrame(frame.current);
-			frame.current = 0;
-		};
-	}, [layout, paint, wake]);
+  function startDrag(event: PointerEvent<SVGSVGElement>) {
+    if (event.button !== 0) {
+      return;
+    }
+    stopCamera();
+    const svg = event.currentTarget;
+    svg.setPointerCapture(event.pointerId);
+    pointers.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      const rect = svg.getBoundingClientRect();
+      const dx = (a.x + b.x) / 2 - rect.left - size.width / 2,
+        dy = (a.y + b.y) / 2 - rect.top - size.height / 2;
+      pinch.current = {
+        camera,
+        distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        worldX: camera.x + dx / zoom,
+        worldY: camera.y + dy / zoom,
+      };
+      drag.current = null;
+      suppressClick.current = true;
+      if (simulation.current) {
+        simulation.current.pinnedId = undefined;
+      }
+      return;
+    }
+    const id = (event.target as Element).closest<SVGElement>("[data-node]")
+      ?.dataset.node;
+    const point = id
+      ? simulation.current?.points.find((item) => item.id === id)
+      : undefined;
+    drag.current = {
+      camera,
+      id,
+      originalX: point?.x ?? 0,
+      originalY: point?.y ?? 0,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    suppressClick.current = false;
+    if (simulation.current) {
+      simulation.current.pinnedId = id;
+    }
+  }
+  function moveDrag(event: PointerEvent<SVGSVGElement>) {
+    if (!pointers.current.has(event.pointerId)) {
+      return;
+    }
+    pointers.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+    if (pinch.current && pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      const rect = event.currentTarget.getBoundingClientRect();
+      const scale = clampScale(
+        (pinch.current.camera.scale * Math.hypot(a.x - b.x, a.y - b.y)) /
+          pinch.current.distance
+      );
+      const dx = (a.x + b.x) / 2 - rect.left - size.width / 2,
+        dy = (a.y + b.y) / 2 - rect.top - size.height / 2;
+      setCamera({
+        scale,
+        x: pinch.current.worldX - dx / (fitZoom * scale),
+        y: pinch.current.worldY - dy / (fitZoom * scale),
+      });
+      return;
+    }
+    if (!drag.current) {
+      return;
+    }
+    const dx = event.clientX - drag.current.x,
+      dy = event.clientY - drag.current.y;
+    if (Math.hypot(dx, dy) > 4) {
+      suppressClick.current = true;
+    }
+    if (!suppressClick.current) {
+      return;
+    }
+    if (drag.current.id) {
+      const point = simulation.current?.points.find(
+        (item) => item.id === drag.current?.id
+      );
+      if (point) {
+        point.x = drag.current.originalX + dx / zoom;
+        point.y = drag.current.originalY + dy / zoom;
+        simulation.current?.wake();
+      }
+    } else {
+      setCamera({
+        ...drag.current.camera,
+        x: drag.current.camera.x - dx / zoom,
+        y: drag.current.camera.y - dy / zoom,
+      });
+    }
+  }
+  function endDrag(event: PointerEvent<SVGSVGElement>) {
+    if (
+      event.type === "pointerup" &&
+      drag.current?.id &&
+      !suppressClick.current &&
+      !pinch.current
+    ) {
+      focus(drag.current.id);
+      suppressClick.current = true;
+    }
+    pointers.current.delete(event.pointerId);
+    if (!pointers.current.size) {
+      drag.current = null;
+      pinch.current = null;
+    }
+    if (simulation.current) {
+      simulation.current.pinnedId = undefined;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
 
-	// Links mount after the loop may have gone idle: give them geometry at once.
-	useLayoutEffect(paint, [activeLinks, paint]);
+  function nodeHandlers(id: string) {
+    return {
+      onBlur: () => setHoveredId(null),
+      onClick: (event: MouseEvent) => {
+        event.stopPropagation();
+        if (!suppressClick.current) {
+          focus(id);
+        }
+      },
+      onFocus: () => setHoveredId(id),
+      onKeyDown: (event: KeyboardEvent) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.stopPropagation();
+          focus(id);
+        }
+      },
+      onPointerEnter: (event: PointerEvent) => {
+        if (event.pointerType === "mouse" && !drag.current) {
+          setHoveredId(id);
+        }
+      },
+      onPointerLeave: () => setHoveredId(null),
+    };
+  }
 
-	useEffect(() => {
-		const element = viewportRef.current;
-		if (!element) {
-			return;
-		}
-		const observer = new ResizeObserver(([entry]) =>
-			setSize({
-				height: entry.contentRect.height,
-				width: entry.contentRect.width,
-			}),
-		);
-		observer.observe(element);
-		return () => observer.disconnect();
-	}, []);
+  function edgeOpacity(edge: (typeof edges)[number]) {
+    if (hoveredEdges.has(edge.id)) {
+      return 1;
+    }
+    if (selectedId) {
+      if (edge.person === selectedId || edge.hub === selectedId) {
+        return 1;
+      }
+      return litHubs.has(edge.hub) ? 0.6 : 0.06;
+    }
+    if (queryActive) {
+      return matches.has(edge.person) || matches.has(edge.hub) ? 0.7 : 0.06;
+    }
+    return 0.45;
+  }
 
-	useLayoutEffect(applyCamera, [applyCamera]);
-	useLayoutEffect(() => {
-		if (!size.width || !size.height) {
-			return;
-		}
-		fitCamera(fitted);
-		if (!fitted) {
-			// oxlint-disable-next-line react/set-state-in-effect -- the first fit depends on the measured size.
-			setFitted(true);
-		}
-		// Only refit when the layout itself changes, not on selection.
-		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, [bounds, size.width, size.height]);
-
-	// --- choreography -------------------------------------------------------
-	// Clusters bloom in whenever the lens changes; people only on the first visit,
-	// after which the simulation carries them between clusters.
-	useLayoutEffect(() => {
-		const zones = zonesRef.current;
-		if (!zones || reducedMotion()) {
-			introPlayed.current = true;
-			return;
-		}
-		const circles = zones.querySelectorAll(".pg-zone circle");
-		const labels = zones.querySelectorAll(".pg-zone-logo, .pg-zone-label");
-		const timeline = gsap.timeline({ defaults: { ease: "power3.out" } });
-		timeline.from(circles, {
-			duration: 0.8,
-			opacity: 0,
-			scale: 0.6,
-			stagger: { amount: 0.4, from: "center" },
-			transformOrigin: "50% 50%",
-		});
-		timeline.from(
-			labels,
-			{
-				clearProps: "all",
-				duration: 0.5,
-				opacity: 0,
-				stagger: { amount: 0.3 },
-				y: 6,
-			},
-			"-=0.5",
-		);
-		if (!introPlayed.current) {
-			introPlayed.current = true;
-			const bodies = nodesRef.current?.querySelectorAll(".pg-node-body") ?? [];
-			timeline.from(
-				bodies,
-				{
-					clearProps: "all",
-					duration: 0.6,
-					ease: "back.out(1.7)",
-					opacity: 0,
-					scale: 0,
-					stagger: { amount: 1, from: "random" },
-					transformOrigin: "50% 50%",
-				},
-				"-=0.4",
-			);
-		}
-		return () => {
-			// Interrupted (a lens change mid-intro, or React's dev double mount):
-			// put everything back and let the next run bloom the people again.
-			if (timeline.progress() < 1) {
-				introPlayed.current = false;
-			}
-			timeline.revert();
-		};
-	}, [clusters]);
-
-	useEffect(() => stopTweens, [stopTweens]);
-
-	// --- selection ----------------------------------------------------------
-	const focus = useCallback(
-		(id: string) => {
-			const point = points.current.get(id);
-			if (!point) {
-				return;
-			}
-			onSelect(id);
-			// Centre the person in whatever the panel leaves free.
-			const free = panelLeft(size.width);
-			const offset = free === null ? 0 : size.width / 2 - free / 2;
-			const scale = clampScale(Math.max(camera.current.scale, 0.9));
-			moveCamera({ scale, x: point.x + offset / scale, y: point.y }, true);
-		},
-		[onSelect, size.width, panelLeft, moveCamera],
-	);
-	const clear = useCallback(() => {
-		onSelect(null);
-		setHoveredId(null);
-		fitCamera(true);
-	}, [onSelect, fitCamera]);
-	useImperativeHandle(
-		ref,
-		() => ({
-			clear,
-			fit: () => fitCamera(true),
-			focus,
-			zoom: (factor: number) => zoomAt(factor, size.width / 2, size.height / 2),
-		}),
-		[clear, fitCamera, focus, size, zoomAt],
-	);
-
-	const register = useCallback((id: string, element: SVGGElement | null) => {
-		if (element) {
-			nodeElements.current.set(id, element);
-			const point = points.current.get(id);
-			if (point) {
-				element.setAttribute(
-					"transform",
-					`translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
-				);
-			}
-		} else {
-			nodeElements.current.delete(id);
-		}
-	}, []);
-	const enter = useCallback((id: string, pointerType: string) => {
-		if (pointerType !== "touch" && !drag.current?.moved) {
-			setHoveredId(id);
-		}
-	}, []);
-	const leave = useCallback(() => setHoveredId(null), []);
-
-	// --- gestures -----------------------------------------------------------
-	useEffect(() => {
-		const svg = svgRef.current;
-		if (!svg) {
-			return;
-		}
-		// Scrolling zooms around the pointer, like a map. Trackpad pinches arrive
-		// as ctrl+wheel with finer deltas, so they get a gentler curve.
-		// Scrolling zooms around the pointer, like a map. Trackpad pinches arrive
-		// as ctrl+wheel with finer deltas, so they get a gentler curve.
-		const wheel = (event: WheelEvent) => {
-			event.preventDefault();
-			const rect = svg.getBoundingClientRect();
-			zoomAt(
-				Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.0022)),
-				event.clientX - rect.left,
-				event.clientY - rect.top,
-			);
-		};
-		svg.addEventListener("wheel", wheel, { passive: false });
-		return () => svg.removeEventListener("wheel", wheel);
-	});
-
-	function screenToWorld(clientX: number, clientY: number) {
-		const rect = svgRef.current?.getBoundingClientRect();
-		const { x, y, scale } = camera.current;
-		return {
-			x: x + (clientX - (rect?.left ?? 0) - size.width / 2) / scale,
-			y: y + (clientY - (rect?.top ?? 0) - size.height / 2) / scale,
-		};
-	}
-
-	function onPointerDown(event: ReactPointerEvent<SVGSVGElement>) {
-		if (event.button !== 0) {
-			return;
-		}
-		stopTweens();
-		const svg = event.currentTarget;
-		svg.setPointerCapture(event.pointerId);
-		pointers.current.set(event.pointerId, {
-			x: event.clientX,
-			y: event.clientY,
-		});
-		if (pointers.current.size === 2) {
-			const [a, b] = [...pointers.current.values()];
-			const middle = screenToWorld((a.x + b.x) / 2, (a.y + b.y) / 2);
-			pinch.current = {
-				distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
-				scale: camera.current.scale,
-				worldX: middle.x,
-				worldY: middle.y,
-			};
-			drag.current = null;
-			return;
-		}
-		const id = (event.target as Element).closest<SVGElement>("[data-node]")
-			?.dataset.node;
-		const point = id ? points.current.get(id) : undefined;
-		drag.current = {
-			id,
-			moved: false,
-			originX: point?.x ?? camera.current.x,
-			originY: point?.y ?? camera.current.y,
-			startX: event.clientX,
-			startY: event.clientY,
-		};
-	}
-	function onPointerMove(event: ReactPointerEvent<SVGSVGElement>) {
-		if (!pointers.current.has(event.pointerId)) {
-			return;
-		}
-		pointers.current.set(event.pointerId, {
-			x: event.clientX,
-			y: event.clientY,
-		});
-		if (pinch.current && pointers.current.size === 2) {
-			const [a, b] = [...pointers.current.values()];
-			const scale = clampScale(
-				(pinch.current.scale * Math.hypot(a.x - b.x, a.y - b.y)) /
-					pinch.current.distance,
-			);
-			const rect = event.currentTarget.getBoundingClientRect();
-			const dx = (a.x + b.x) / 2 - rect.left - size.width / 2;
-			const dy = (a.y + b.y) / 2 - rect.top - size.height / 2;
-			camera.current = {
-				scale,
-				x: pinch.current.worldX - dx / scale,
-				y: pinch.current.worldY - dy / scale,
-			};
-			applyCamera();
-			return;
-		}
-		const current = drag.current;
-		if (!current) {
-			return;
-		}
-		const dx = event.clientX - current.startX,
-			dy = event.clientY - current.startY;
-		if (!current.moved && Math.hypot(dx, dy) < 4) {
-			return;
-		}
-		if (!current.moved) {
-			current.moved = true;
-			setHoveredId(null);
-			if (current.id) {
-				wake(0.25);
-			}
-		}
-		const { scale } = camera.current;
-		if (current.id) {
-			const point = points.current.get(current.id);
-			if (point) {
-				point.x = current.originX + dx / scale;
-				point.y = current.originY + dy / scale;
-			}
-		} else {
-			camera.current = {
-				scale,
-				x: current.originX - dx / scale,
-				y: current.originY - dy / scale,
-			};
-			applyCamera();
-		}
-	}
-	function onPointerUp(event: ReactPointerEvent<SVGSVGElement>) {
-		const current = drag.current;
-		if (
-			event.type === "pointerup" &&
-			current &&
-			!current.moved &&
-			!pinch.current
-		) {
-			if (current.id) {
-				focus(current.id);
-			} else {
-				onSelect(null);
-			}
-		}
-		pointers.current.delete(event.pointerId);
-		if (!pointers.current.size) {
-			drag.current = null;
-			pinch.current = null;
-		}
-		if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-			event.currentTarget.releasePointerCapture(event.pointerId);
-		}
-	}
-
-	const activeLinkList = useMemo(
-		() =>
-			activeId
-				? activeLinks.map((link) => ({
-						a: activeId,
-						b: link.participant.id,
-						kind: link.affinities[0]?.kind ?? "skills",
-					}))
-				: [],
-		[activeId, activeLinks],
-	);
-
-	return (
-		<div className="pg-viewport" ref={viewportRef}>
-			<svg
-				ref={svgRef}
-				className="pg-canvas"
-				data-mode={mode}
-				role="application"
-				tabIndex={0}
-				aria-label="Mapa de participantes. Arrastra para moverte, usa la rueda o pellizca para ampliar."
-				onPointerDown={onPointerDown}
-				onPointerMove={onPointerMove}
-				onPointerUp={onPointerUp}
-				onPointerCancel={onPointerUp}
-				onLostPointerCapture={onPointerUp}
-				onKeyDown={(event) => {
-					if (event.key === "Escape") {
-						clear();
-						return;
-					}
-					if (event.key === "+" || event.key === "=") {
-						zoomAt(1.3, size.width / 2, size.height / 2);
-						return;
-					}
-					if (event.key === "-") {
-						zoomAt(1 / 1.3, size.width / 2, size.height / 2);
-						return;
-					}
-					const direction = {
-						ArrowDown: [0, 80],
-						ArrowLeft: [-80, 0],
-						ArrowRight: [80, 0],
-						ArrowUp: [0, -80],
-					}[event.key];
-					if (direction) {
-						event.preventDefault();
-						const { scale, x, y } = camera.current;
-						moveCamera(
-							{
-								scale,
-								x: x + direction[0] / scale,
-								y: y + direction[1] / scale,
-							},
-							true,
-						);
-					}
-				}}
-			>
-				<defs>
-					<clipPath id="pg-clip">
-						<circle r={NODE_RADIUS} />
-					</clipPath>
-					<radialGradient id="pg-zone">
-						<stop offset="0%" stopColor="var(--pg-zone)" stopOpacity="0.9" />
-						<stop offset="62%" stopColor="var(--pg-zone)" stopOpacity="0.55" />
-						<stop offset="100%" stopColor="var(--pg-zone)" stopOpacity="0" />
-					</radialGradient>
-				</defs>
-				<g ref={worldRef}>
-					<g
-						ref={zonesRef}
-						className="pg-zones"
-						data-venn={venn ? "" : undefined}
-						aria-hidden="true"
-					>
-						{clusters.map((cluster, index) => {
-							const place = places[index];
-							const label = labelAt[index];
-							return (
-								<g
-									key={cluster.id}
-									className="pg-zone"
-									data-loose={cluster.loose ? "" : undefined}
-								>
-									<circle
-										cx={place.x}
-										cy={place.y}
-										r={place.r * ZONE_HALO}
-										fill="url(#pg-zone)"
-									/>
-									{cluster.logoUrl ? (
-										<>
-											<image
-												className="pg-zone-logo"
-												href={cluster.logoUrl}
-												x={
-													place.x -
-													wordmarkBox(cluster.memberIds.length).width / 2
-												}
-												y={
-													place.y -
-													wordmarkBox(cluster.memberIds.length).height / 2
-												}
-												width={wordmarkBox(cluster.memberIds.length).width}
-												height={wordmarkBox(cluster.memberIds.length).height}
-												preserveAspectRatio="xMidYMid meet"
-											/>
-											<text
-												className="pg-zone-label"
-												x={place.x}
-												y={
-													place.y +
-													wordmarkBox(cluster.memberIds.length).height / 2 +
-													13
-												}
-												textAnchor="middle"
-											>
-												<tspan className="pg-zone-count">
-													{cluster.memberIds.length}
-												</tspan>
-											</text>
-										</>
-									) : (
-										<text
-											className="pg-zone-label"
-											x={label.x}
-											y={label.y}
-											dominantBaseline="central"
-											textAnchor="middle"
-										>
-											{cluster.label}
-											<tspan className="pg-zone-count" dx="7">
-												{cluster.memberIds.length}
-											</tspan>
-										</text>
-									)}
-								</g>
-							);
-						})}
-					</g>
-					<g className="pg-links" aria-hidden="true">
-						{activeLinkList.map(({ a, b, kind }) => (
-							<path
-								key={`${a}|${b}`}
-								className="pg-link"
-								ref={(element) => {
-									const key = `${a}|${b}`;
-									if (element) {
-										linkElements.current.set(key, { a, b, element });
-									} else {
-										linkElements.current.delete(key);
-									}
-								}}
-								stroke={CONNECTION_STYLES[kind].color}
-								fill="none"
-							/>
-						))}
-					</g>
-					<g className="pg-nodes" ref={nodesRef}>
-						{participants.map((person) => (
-							<PersonNode
-								key={person.id}
-								person={person}
-								state={
-									activeId === person.id
-										? "active"
-										: linkedIds.has(person.id)
-											? "linked"
-											: matches?.has(person.id)
-												? "match"
-												: ""
-								}
-								register={register}
-								onPointerEnter={enter}
-								onPointerLeave={leave}
-								onActivate={focus}
-							/>
-						))}
-					</g>
-				</g>
-			</svg>
-		</div>
-	);
+  return (
+    <div className="ng-viewport" ref={viewportRef}>
+      <svg
+        ref={svgRef}
+        className="ng-canvas"
+        viewBox={`0 0 ${size.width} ${size.height}`}
+        role="application"
+        tabIndex={0}
+        aria-label="Grafo de participantes. Arrastra los nodos o el fondo. Usa los controles para ampliar."
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onLostPointerCapture={endDrag}
+        onClick={(event) => {
+          if (
+            !suppressClick.current &&
+            !(event.target as Element).closest("[data-node]")
+          ) {
+            onSelect(null);
+            setHoveredId(null);
+          }
+        }}
+        onDoubleClick={(event) => {
+          if ((event.target as Element).closest("[data-node]")) {
+            return;
+          }
+          const rect = event.currentTarget.getBoundingClientRect();
+          zoomAt(
+            camera.scale * 1.6,
+            event.clientX - rect.left,
+            event.clientY - rect.top
+          );
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            clear();
+            return;
+          }
+          const direction = {
+            ArrowDown: [0, 60],
+            ArrowLeft: [-60, 0],
+            ArrowRight: [60, 0],
+            ArrowUp: [0, -60],
+          }[event.key];
+          if (direction) {
+            event.preventDefault();
+            stopCamera();
+            setCamera((old) => ({
+              ...old,
+              x: old.x + direction[0] / zoom,
+              y: old.y + direction[1] / zoom,
+            }));
+          }
+        }}
+      >
+        <g
+          transform={`translate(${size.width / 2} ${size.height / 2}) scale(${zoom}) translate(${-camera.x} ${-camera.y})`}
+        >
+          {edges.map((edge) => {
+            const a = pointById.get(edge.person),
+              b = pointById.get(edge.hub);
+            if (!a || !b) {
+              return null;
+            }
+            const strong =
+              hoveredEdges.has(edge.id) ||
+              edge.person === selectedId ||
+              edge.hub === selectedId;
+            return (
+              <line
+                key={edge.id}
+                className="ng-edge"
+                aria-hidden="true"
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke={HUB_STYLES[edge.kind].color}
+                strokeWidth={strong ? 3 : 1.5}
+                vectorEffect="non-scaling-stroke"
+                opacity={edgeOpacity(edge)}
+              />
+            );
+          })}
+          {hubs.map((hub) => {
+            const point = pointById.get(hub.id);
+            if (!point) {
+              return null;
+            }
+            const side = (26 + Math.sqrt(hub.members.length) * 6) * k;
+            const dim = selectedId
+              ? !litHubs.has(hub.id)
+              : queryActive && !matches.has(hub.id);
+            return (
+              <g
+                key={hub.id}
+                data-node={hub.id}
+                className="ng-node ng-hub"
+                transform={`translate(${point.x} ${point.y})`}
+                role="button"
+                tabIndex={0}
+                aria-label={`${HUB_STYLES[hub.kind].label} ${hub.label}, ${hub.members.length} personas`}
+                aria-pressed={selectedId === hub.id}
+                opacity={dim ? 0.25 : 1}
+                {...nodeHandlers(hub.id)}
+              >
+                <rect
+                  x={-side / 2 + 4 * k}
+                  y={-side / 2 + 4 * k}
+                  width={side}
+                  height={side}
+                  fill="var(--color-hs-ink)"
+                />
+                <rect
+                  x={-side / 2}
+                  y={-side / 2}
+                  width={side}
+                  height={side}
+                  fill={HUB_STYLES[hub.kind].color}
+                  stroke={
+                    selectedId === hub.id
+                      ? "var(--color-hs-red)"
+                      : "var(--color-hs-ink)"
+                  }
+                  strokeWidth="3"
+                  vectorEffect="non-scaling-stroke"
+                />
+                <text
+                  className="ng-hub-count"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={14 * k}
+                  fill={
+                    hub.kind === "team"
+                      ? "var(--color-hs-ink)"
+                      : "var(--color-hs-paper)"
+                  }
+                >
+                  {hub.members.length}
+                </text>
+                <text
+                  className="ng-hub-name"
+                  y={side / 2 + 16 * k}
+                  textAnchor="middle"
+                  fontSize={10 * k}
+                  strokeWidth={4 * k}
+                >
+                  {wrapLabel(hub.label.toLocaleUpperCase("es")).map(
+                    (line, index) => (
+                      <tspan key={line} x="0" dy={index ? 12 * k : 0}>
+                        {line}
+                      </tspan>
+                    )
+                  )}
+                </text>
+              </g>
+            );
+          })}
+          {network.participants.map((person) => {
+            const point = pointById.get(person.id);
+            if (!point) {
+              return null;
+            }
+            const selected = selectedId === person.id;
+            const lit = litPeople.has(person.id) || hoveredPeople.has(person.id);
+            const matched = queryActive && matches.has(person.id);
+            const dim = selectedId
+              ? !litPeople.has(person.id) && !hoveredPeople.has(person.id)
+              : queryActive && !matched;
+            const named = showNames || lit || matched || hoveredId === person.id;
+            return (
+              <g
+                key={person.id}
+                data-node={person.id}
+                className="ng-node"
+                transform={`translate(${point.x} ${point.y})`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Ver perfil de ${person.displayName}`}
+                aria-pressed={selected}
+                opacity={dim ? 0.25 : 1}
+                {...nodeHandlers(person.id)}
+              >
+                <title>{`${person.displayName} · ${person.role}`}</title>
+                <circle r={Math.max(22 * k, personRadius * 2)} fill="transparent" />
+                <circle
+                  r={personRadius}
+                  fill={
+                    selected
+                      ? "var(--color-hs-red)"
+                      : lit
+                        ? "var(--color-hs-ink)"
+                        : "var(--color-hs-paper)"
+                  }
+                  stroke={
+                    selected ? "var(--color-hs-red)" : "var(--color-hs-ink)"
+                  }
+                  strokeWidth="2.5"
+                  vectorEffect="non-scaling-stroke"
+                />
+                {named && (
+                  <text
+                    className={
+                      selected
+                        ? "ng-person-name ng-person-name-active"
+                        : "ng-person-name"
+                    }
+                    y={personRadius + 15 * k}
+                    textAnchor="middle"
+                    fontSize={12 * k}
+                    strokeWidth={4 * k}
+                  >
+                    {person.displayName}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+      <div className="ng-map-controls">
+        {selectedId && (
+          <button type="button" onClick={clear} aria-label="Quitar selección">
+            <X size={18} strokeWidth={2.5} />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() =>
+            zoomAt(camera.scale / 1.4, size.width / 2, size.height / 2)
+          }
+          aria-label="Alejar grafo"
+          disabled={camera.scale <= MIN_SCALE}
+        >
+          <Minus size={18} strokeWidth={2.5} />
+        </button>
+        <button type="button" onClick={fit} aria-label="Encajar todo el grafo">
+          <Scan size={18} strokeWidth={2.5} />
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            zoomAt(camera.scale * 1.4, size.width / 2, size.height / 2)
+          }
+          aria-label="Acercar grafo"
+          disabled={camera.scale >= MAX_SCALE}
+        >
+          <Plus size={18} strokeWidth={2.5} />
+        </button>
+      </div>
+      {!hubs.length && (
+        <p className="ng-map-notice">
+          Activa algún tipo de nodo para ver conexiones.
+        </p>
+      )}
+    </div>
+  );
 }

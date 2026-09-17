@@ -1,3 +1,4 @@
+import type { PerkType } from "@convex/lib/validators";
 import { clsx } from "clsx";
 import type { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -99,14 +100,22 @@ export function submissionStatusLabel(status: string): string {
   return status;
 }
 
-export function perkTypeLabel(type: string): string {
-  if (type === "email") {
-    return "Solicitud por email";
+export function perkTypeLabel(type: PerkType): string {
+  switch (type) {
+    case "email": {
+      return "Solicitud por email";
+    }
+    case "code": {
+      return "Código";
+    }
+    case "external": {
+      return "Enlace externo";
+    }
+    default: {
+      const _exhaustive: never = type;
+      return _exhaustive;
+    }
   }
-  if (type === "code") {
-    return "Código";
-  }
-  return type;
 }
 
 export function joinDotLabel(...parts: (string | null | undefined)[]): string {

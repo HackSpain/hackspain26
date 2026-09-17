@@ -235,7 +235,7 @@ export function DirectoryForm({
         <CardTitle>{gate ? "Tu ficha para el grafo" : "Editar mi ficha"}</CardTitle>
         <CardDescription>
           {gate
-            ? `El grafo conecta a la gente por ciudad, universidad o empresa, habilidades e intereses. Nos falta ${
+            ? `El grafo conecta a la gente por equipo, universidad y empresa. Nos falta ${
                 missing.length > 1
                   ? `${missing.slice(0, -1).join(", ")} y ${missing.at(-1)}`
                   : missing[0]

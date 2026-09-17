@@ -6,6 +6,7 @@ import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import type { LoginErrorCode } from "@/app/api/login/otp/route";
 import { AuthScreen, Field, FormError, FormNotice } from "@/components/page";
 import {
@@ -202,7 +203,8 @@ export default function LoginPage() {
       signIn("resend-otp", { code: value, email: normalizedEmail })
     );
     if (failure !== null) {
-      setError(verifyErrorMessage(failure));
+      // One stable id so a second wrong code refreshes the toast instead of stacking.
+      toast.error(verifyErrorMessage(failure), { id: "login-otp" });
       setCode("");
     }
     setPending(false);

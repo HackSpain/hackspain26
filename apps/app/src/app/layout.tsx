@@ -5,6 +5,7 @@ import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -45,6 +46,7 @@ export default async function RootLayout({
             <AuthGate>
               <AppShell>{children}</AppShell>
             </AuthGate>
+            <Toaster />
           </ConvexClientProvider>
         </body>
       </html>
