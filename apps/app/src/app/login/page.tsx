@@ -8,6 +8,13 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { LoginErrorCode } from "@/app/api/login/otp/route";
 import { AuthScreen, Field, FormError, FormNotice } from "@/components/page";
+import {
+  EASE_OUT,
+  reducedStepVariants,
+  stepVariants,
+  useMeasuredHeight,
+} from "@/components/step-motion";
+import type { Direction } from "@/components/step-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,8 +26,6 @@ import {
 } from "@/components/ui/input-otp";
 
 const CODE_LENGTH = 8;
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-const SLIDE_PX = 24;
 /** Seconds before "Reenviar" works again, so a nervous tap does not queue emails. */
 const RESEND_COOLDOWN_S = 30;
 
@@ -88,40 +93,6 @@ function useCountdown(): [number, (seconds: number) => void] {
 }
 
 type Step = "email" | "code";
-type Direction = 1 | -1;
-
-const stepVariants = {
-  active: { opacity: 1, x: 0 },
-  exit: (direction: Direction) => ({ x: -direction * SLIDE_PX, opacity: 0 }),
-  initial: (direction: Direction) => ({ x: direction * SLIDE_PX, opacity: 0 }),
-};
-
-const reducedStepVariants = {
-  active: { opacity: 1 },
-  exit: { opacity: 0 },
-  initial: { opacity: 0 },
-};
-
-function useMeasuredHeight(): [
-  (node: HTMLElement | null) => void,
-  number | null,
-] {
-  const [node, setNode] = useState<HTMLElement | null>(null);
-  const [height, setHeight] = useState<number | null>(null);
-  useEffect(() => {
-    if (!node) {
-      return;
-    }
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) {
-        setHeight(entry.contentRect.height);
-      }
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [node]);
-  return [setNode, height];
-}
 
 function TextLink({
   onClick,

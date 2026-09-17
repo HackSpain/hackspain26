@@ -116,8 +116,8 @@ export default function CliPage() {
           <CommandRow command="hackspain profile notify on|off">
             Activa o desactiva los avisos.
           </CommandRow>
-          <CommandRow command="hackspain profile phone [+34…] [--code …]">
-            Verifica el teléfono por SMS, igual que en el dashboard.
+          <CommandRow command="hackspain profile phone [+34…]">
+            Guarda tu teléfono de contacto, igual que en el dashboard.
           </CommandRow>
           <CommandRow command="hackspain profile github [--unlink]">
             Imprime el enlace para autorizar GitHub en el navegador.

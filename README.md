@@ -50,8 +50,6 @@ pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
 # optional email delivery; without this, OTPs print in Convex logs
 pnpm exec convex env set AUTH_RESEND_KEY re_...
 pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
-# dev only: allow the phone-verification stub (no Twilio). Never set in production.
-pnpm exec convex env set ALLOW_PHONE_STUB true
 # dev only: 00000000 also works as the email sign-in code (ignored if AUTH_RESEND_KEY is set).
 pnpm exec convex env set ALLOW_EMAIL_OTP_STUB true
 # GitHub account linking (optional). Create a GitHub OAuth App whose callback URL is
@@ -72,7 +70,7 @@ pnpm dlx @convex-dev/auth
 
 ### Confirming details
 
-Accepted hackers confirm phone (E.164 + code), dietary restrictions, travel origin, and attend/cancel. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` on the Convex deployment to deliver codes via SMS (partial config fails loudly). Without Twilio, the phone code is only logged and returned as a stub when the Convex env `ALLOW_PHONE_STUB=true`; otherwise the request fails with "SMS is not configured". The number is not auto-confirmed. Import marks Neon `approval_status = confirmed` as accepted. Everyone else stays unaccepted until CRM.
+Accepted hackers give a contact phone (E.164, stored as typed and never verified by SMS), confirm terms and notification consent, dietary restrictions, travel origin, and attend/cancel. Import marks Neon `approval_status = confirmed` as accepted. Everyone else stays unaccepted until CRM.
 
 ## Migrating Neon to Convex
 
@@ -119,7 +117,7 @@ pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
 pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
 ```
 
-Do **not** set `ALLOW_PHONE_STUB` or `ALLOW_EMAIL_OTP_STUB` on production. Do **not** put `.env` / `.env.local` in git.
+Do **not** set `ALLOW_EMAIL_OTP_STUB` on production. Do **not** put `.env` / `.env.local` in git.
 
 `convex deploy --cmd` injects `NEXT_PUBLIC_CONVEX_URL` for the Next.js build. You do not need to paste the prod Convex URL into Vercel unless you skip the deploy-key flow.
 

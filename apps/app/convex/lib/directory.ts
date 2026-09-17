@@ -1,12 +1,22 @@
 import { v } from "convex/values";
 import type { Infer } from "convex/values";
+import {
+  canonicalOrText,
+  canonicalTags,
+  CITY_OPTIONS,
+  DEGREE_OPTIONS,
+  INTEREST_OPTIONS,
+  ROLE_OPTIONS,
+  SKILL_OPTIONS,
+  UNIVERSITY_OPTIONS,
+} from "./directoryOptions";
 
 /**
  * The participant directory card. These are the data points the connection
  * graph draws edges from (city, university, company, degree, skills,
  * interests) plus what the profile panel shows (role, bio). Stored on
- * `users.directory`; the page refuses to draw the graph until the viewer's
- * own card is complete (see `missingDirectoryFields`).
+ * `users.directory`; onboarding asks for it before the dashboard opens, and
+ * only complete cards (see `missingDirectoryFields`) appear in the graph.
  */
 export const directoryValidator = v.object({
   bio: v.optional(v.string()),
@@ -99,7 +109,12 @@ export function isDirectoryComplete(
   return missingDirectoryFields(card).length === 0;
 }
 
-/** Normalises a submitted card and throws (Spanish, user-facing) when invalid. */
+/**
+ * Normalises a submitted card and throws (Spanish, user-facing) when invalid.
+ * Every value the graph groups by is folded onto the curated vocabularies in
+ * directoryOptions.ts ("UPM" and "Technical University of Madrid" both become
+ * "Universidad Politécnica de Madrid"); unknown free text is kept as typed.
+ */
 export function parseDirectoryCard(input: {
   bio?: string;
   city: string;
@@ -112,13 +127,13 @@ export function parseDirectoryCard(input: {
 }): DirectoryCard {
   const card: DirectoryCard = {
     bio: cleanText(input.bio),
-    city: cleanText(input.city) ?? "",
+    city: canonicalOrText(CITY_OPTIONS, input.city) ?? "",
     company: cleanText(input.company),
-    degree: cleanText(input.degree),
-    interests: parseTags(input.interests),
-    role: cleanText(input.role) ?? "",
-    skills: parseTags(input.skills),
-    university: cleanText(input.university),
+    degree: canonicalOrText(DEGREE_OPTIONS, input.degree),
+    interests: canonicalTags(INTEREST_OPTIONS, parseTags(input.interests)),
+    role: canonicalOrText(ROLE_OPTIONS, input.role) ?? "",
+    skills: canonicalTags(SKILL_OPTIONS, parseTags(input.skills)),
+    university: canonicalOrText(UNIVERSITY_OPTIONS, input.university),
     updatedAt: Date.now(),
   };
   const missing = missingDirectoryFields(card);

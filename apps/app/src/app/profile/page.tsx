@@ -8,88 +8,27 @@ import {
   Bell,
   CheckCircle2,
   Github,
-  ImagePlus,
+  Network,
   Phone,
   Save,
-  Trash2,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
-import type { Id } from "@convex/_generated/dataModel";
+import { Feedback, useActionFeedback } from "@/components/action-feedback";
 import { Avatar } from "@/components/avatar";
+import { AvatarPicker } from "@/components/avatar-picker";
 import { useGithubLink } from "@/components/github-link-banner";
-import {
-  errorMessage,
-  Field,
-  FormError,
-  LoadingText,
-  Page,
-} from "@/components/page";
+import { Field, FormError, LoadingText, Page } from "@/components/page";
+import { DirectoryForm } from "@/components/participant-directory/directory-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { cn, phoneVerifyMessage } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Profile = NonNullable<FunctionReturnType<typeof api.users.me>>;
-
-function useProfileAction() {
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function run(action: () => Promise<string>) {
-    if (pending) {
-      return;
-    }
-    setPending(true);
-    setMessage(null);
-    setError(null);
-    try {
-      setMessage(await action());
-    } catch (caughtError: unknown) {
-      setError(
-        errorMessage(
-          caughtError,
-          "No hemos podido guardar el cambio. Inténtalo de nuevo."
-        )
-      );
-    } finally {
-      setPending(false);
-    }
-  }
-
-  function clearFeedback() {
-    setMessage(null);
-    setError(null);
-  }
-
-  return { clearFeedback, error, message, pending, run };
-}
-
-function Feedback({
-  action,
-  hideMessage = false,
-}: {
-  action: ReturnType<typeof useProfileAction>;
-  hideMessage?: boolean;
-}) {
-  return (
-    <>
-      <FormError message={action.error} />
-      <div role="status" aria-live="polite" aria-atomic="true">
-        {action.message && !hideMessage ? (
-          <p className="flex items-start gap-2 text-sm text-hs-navy">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
-            {action.message}
-          </p>
-        ) : null}
-      </div>
-    </>
-  );
-}
 
 function ProfileSection({
   id,
@@ -126,47 +65,12 @@ function ProfileSection({
   );
 }
 
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-
-function storageIdFromUpload(value: unknown): Id<"_storage"> {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "storageId" in value &&
-    typeof value.storageId === "string"
-  ) {
-    return value.storageId as Id<"_storage">;
-  }
-  throw new Error("No se pudo subir la foto");
-}
-
 function IdentityCard({ me }: { me: Profile }) {
   const setName = useMutation(api.users.setName);
-  const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
-  const setAvatar = useMutation(api.users.setAvatar);
-  const removeAvatar = useMutation(api.users.removeAvatar);
-  const action = useProfileAction();
+  const action = useActionFeedback();
   const [nameDraft, setNameDraft] = useState<string | undefined>();
-  const fileInput = useRef<HTMLInputElement | null>(null);
   const name = nameDraft ?? me.name ?? "";
   const nameChanged = name.trim() !== (me.name ?? "");
-
-  async function upload(file: File) {
-    if (!file.type.startsWith("image/")) {
-      throw new Error("Solo se admiten imágenes");
-    }
-    if (file.size > MAX_AVATAR_BYTES) {
-      throw new Error("La foto no puede superar 2 MB.");
-    }
-    const uploadUrl = await generateUploadUrl();
-    const response = await fetch(uploadUrl, {
-      method: "POST",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
-    if (!response.ok) {throw new Error("No se pudo subir la foto");}
-    await setAvatar({ imageId: storageIdFromUpload(await response.json()) });
-  }
 
   return (
     <ProfileSection
@@ -175,59 +79,12 @@ function IdentityCard({ me }: { me: Profile }) {
       description="Así te ven los demás en el feed y en el directorio."
       icon={UserRound}
     >
-      <div className="flex flex-wrap items-center gap-4">
-        <Avatar
-          name={me.name}
-          src={me.avatarUrl}
-          className="size-20 text-2xl shadow-[4px_4px_0_var(--color-hs-ink)]"
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border-[3px] border-hs-ink bg-hs-gold px-5 font-bungee text-sm text-hs-ink hs-hover-bright">
-            <ImagePlus className="size-4" aria-hidden />
-            {action.pending ? "Subiendo…" : "Cambiar foto"}
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="sr-only"
-              disabled={action.pending}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (!file) {return;}
-                void action.run(async () => {
-                  try {
-                    await upload(file);
-                  } finally {
-                    if (fileInput.current) {fileInput.current.value = "";}
-                  }
-                  return "Foto actualizada.";
-                });
-              }}
-            />
-          </label>
-          {me.avatarUrl ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={action.pending}
-              onClick={() =>
-                void action.run(async () => {
-                  await removeAvatar({});
-                  return "Foto eliminada.";
-                })
-              }
-            >
-              <Trash2 aria-hidden /> Quitar foto
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      <p className="text-xs text-hs-brown">
-        JPG, PNG, WebP o GIF de hasta 2 MB.
-        {!me.avatarUrl && me.githubLinked
-          ? " Vincula GitHub para usar tu avatar de allí."
-          : ""}
-      </p>
+      <AvatarPicker
+        name={me.name}
+        avatarUrl={me.avatarUrl}
+        action={action}
+        canRemove={me.canRemoveAvatar}
+      />
       <form
         className="space-y-3 border-t border-hs-ink/15 pt-4"
         onSubmit={(event) => {
@@ -268,19 +125,26 @@ function IdentityCard({ me }: { me: Profile }) {
 function GithubCard({
   linked,
   username,
+  twitterHandle,
 }: {
   linked: boolean;
   username?: string;
+  twitterHandle?: string;
 }) {
   const { link, pending, error } = useGithubLink();
   const unlink = useMutation(api.github.unlink);
-  const action = useProfileAction();
+  const setTwitterHandle = useMutation(api.users.setTwitterHandle);
+  const action = useActionFeedback();
+  const xAction = useActionFeedback();
+  const [handleDraft, setHandleDraft] = useState<string | undefined>();
+  const handle = handleDraft ?? twitterHandle ?? "";
+  const handleChanged = handle.trim() !== (twitterHandle ?? "");
 
   return (
     <ProfileSection
       id="github-heading"
-      title="GitHub"
-      description="Conecta tu cuenta para que tu equipo pueda encontrarte."
+      title="GitHub y X"
+      description="Conecta tus cuentas para que tu equipo pueda encontrarte."
       icon={Github}
     >
       <div className="flex min-w-0 items-center justify-between gap-3 border-b border-hs-ink/15 pb-4">
@@ -327,197 +191,128 @@ function GithubCard({
         </button>
       ) : null}
       <Feedback action={action} />
+      <form
+        className="space-y-3 border-t border-hs-ink/15 pt-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void xAction.run(async () => {
+            const saved = await setTwitterHandle({ handle });
+            setHandleDraft(undefined);
+            return saved ? `Usuario de X guardado: @${saved}.` : "Usuario de X eliminado.";
+          });
+        }}
+      >
+        <Field label="Usuario de X" htmlFor="twitter-handle" hint="Sin la @. Vacío si no tienes cuenta.">
+          <Input
+            id="twitter-handle"
+            autoComplete="off"
+            maxLength={80}
+            placeholder="hackspain"
+            value={handle}
+            disabled={xAction.pending}
+            onChange={(event) => setHandleDraft(event.target.value)}
+          />
+        </Field>
+        <Button
+          type="submit"
+          variant="outline"
+          className="w-full sm:w-auto"
+          disabled={xAction.pending || !handleChanged}
+        >
+          <Save aria-hidden /> Guardar usuario de X
+        </Button>
+        <Feedback action={xAction} />
+      </form>
     </ProfileSection>
   );
 }
 
-function PhoneCard({ me }: { me: Profile }) {
-  const requestPhoneCode = useMutation(api.onboarding.requestPhoneCode);
-  const verifyPhoneCode = useMutation(api.onboarding.verifyPhoneCode);
-  const action = useProfileAction();
-  const [editing, setEditing] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [sentPhone, setSentPhone] = useState<string | null>(null);
-  const [code, setCode] = useState("");
-  const [debugCode, setDebugCode] = useState<string | null>(null);
-  const showForm = editing || !me.phoneConfirmed;
+function DirectoryCard() {
+  const directory = useQuery(api.directory.me);
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <div id="ficha" className="scroll-mt-6">
+      <ProfileSection
+        id="directory-heading"
+        title="Mi ficha"
+        description="Lo que los demás ven de ti en el grafo de participantes y por dónde te conectamos."
+        icon={Network}
+      >
+        {directory === undefined ? (
+          <LoadingText />
+        ) : (
+          <>
+            <DirectoryForm
+              me={directory}
+              bare
+              onSaved={() => setSaved(true)}
+            />
+            <div role="status" aria-live="polite" aria-atomic="true">
+              {saved ? (
+                <p className="flex items-start gap-2 text-sm text-hs-navy">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  Ficha guardada.
+                </p>
+              ) : null}
+            </div>
+          </>
+        )}
+      </ProfileSection>
+    </div>
+  );
+}
+
+function PhoneCard({ phone }: { phone: string | undefined }) {
+  const setPhone = useMutation(api.users.setPhone);
+  const action = useActionFeedback();
+  const [draft, setDraft] = useState<string | undefined>();
+  const value = draft ?? phone ?? "";
+  const dirty = value.trim() !== (phone ?? "");
 
   return (
     <ProfileSection
       id="phone-heading"
       title="Teléfono"
-      description="Un número de contacto para el evento."
+      description="Un número de contacto para localizarte en el evento."
       icon={Phone}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-hs-sand/50 p-4">
-        <div className="min-w-0 space-y-1">
-          <p className="text-xs text-hs-brown">Número actual</p>
-          <p className="break-all text-base font-semibold tabular-nums">
-            {me.phone || "Sin número"}
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void action.run(async () => {
+            const saved = await setPhone({ phone: value });
+            setDraft(undefined);
+            return `Teléfono guardado: ${saved}.`;
+          });
+        }}
+      >
+        <Field label="Número de teléfono" htmlFor="phone">
+          <Input
+            id="phone"
+            type="tel"
+            autoComplete="tel"
+            required
+            placeholder="+34 600 111 222"
+            aria-describedby="phone-hint"
+            value={value}
+            disabled={action.pending}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <p id="phone-hint" className="text-xs text-hs-brown">
+            Incluye el prefijo de tu país, por ejemplo +34.
           </p>
-        </div>
-        <span
-          className={cn(
-            "flex items-center gap-1.5 text-xs font-semibold",
-            me.phoneConfirmed ? "text-hs-navy" : "text-hs-brown"
-          )}
-        >
-          {me.phoneConfirmed ? (
-            <CheckCircle2 className="size-4" aria-hidden />
-          ) : null}
-          {me.phoneConfirmed ? "Verificado" : "Sin verificar"}
-        </span>
-      </div>
-      {showForm ? (
-        <>
-          {sentPhone ? (
-            <form
-              className="space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void action.run(async () => {
-                  const result = await verifyPhoneCode({ code });
-                  if (!result.ok) {
-                    throw new Error(phoneVerifyMessage(result.reason));
-                  }
-                  setCode("");
-                  setPhone("");
-                  setSentPhone(null);
-                  setDebugCode(null);
-                  setEditing(false);
-                  return "Teléfono verificado y actualizado.";
-                });
-              }}
-            >
-              <p className="text-sm text-hs-brown">
-                Introduce el código para{" "}
-                <span className="font-semibold break-all text-hs-ink">
-                  {sentPhone}
-                </span>
-                . Caduca en 10 minutos.
-              </p>
-              {debugCode ? (
-                <p className="border border-hs-navy/30 bg-hs-slate/20 p-3 text-sm text-hs-navy">
-                  Código de prueba:{" "}
-                  <span className="font-mono font-bold">{debugCode}</span>
-                </p>
-              ) : null}
-              <Field label="Código de confirmación" htmlFor="phone-code">
-                <Input
-                  id="phone-code"
-                  className="max-w-60 font-mono text-lg tracking-[0.3em]"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                  autoFocus
-                  value={code}
-                  placeholder="000000"
-                  disabled={action.pending}
-                  onChange={(event) =>
-                    setCode(event.target.value.replaceAll(/\D/g, ""))
-                  }
-                />
-              </Field>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  type="submit"
-                  disabled={action.pending || code.length !== 6}
-                >
-                  {action.pending ? "Verificando…" : "Confirmar teléfono"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={action.pending}
-                  onClick={() => {
-                    action.clearFeedback();
-                    setSentPhone(null);
-                    setCode("");
-                    setDebugCode(null);
-                  }}
-                >
-                  Volver a enviar
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <form
-              className="space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void action.run(async () => {
-                  const result = await requestPhoneCode({ phone });
-                  setDebugCode(result.debugCode ?? null);
-                  setSentPhone(phone);
-                  setCode("");
-                  return result.delivery === "stub"
-                    ? "Código de prueba generado."
-                    : "Código de confirmación solicitado.";
-                });
-              }}
-            >
-              <Field
-                label={
-                  me.phoneConfirmed ? "Nuevo número" : "Número de teléfono"
-                }
-                htmlFor="phone"
-              >
-                <Input
-                  id="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  autoFocus={editing}
-                  required
-                  placeholder="+34 600 111 222"
-                  aria-describedby="phone-hint"
-                  value={phone}
-                  disabled={action.pending}
-                  onChange={(event) => setPhone(event.target.value)}
-                />
-                <p id="phone-hint" className="text-xs text-hs-brown">
-                  Incluye el prefijo de tu país, por ejemplo +34.
-                </p>
-              </Field>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  type="submit"
-                  variant="outline"
-                  disabled={action.pending || !phone.trim()}
-                >
-                  {action.pending ? "Solicitando código…" : "Enviar código"}
-                </Button>
-                {me.phoneConfirmed ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={action.pending}
-                    onClick={() => {
-                      action.clearFeedback();
-                      setEditing(false);
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </>
-      ) : (
+        </Field>
         <Button
-          type="button"
+          type="submit"
           variant="outline"
-          className="w-full sm:w-auto"
-          onClick={() => {
-            action.clearFeedback();
-            setEditing(true);
-          }}
+          disabled={action.pending || !dirty || !value.trim()}
         >
-          Cambiar número
+          <Save aria-hidden />{" "}
+          {action.pending ? "Guardando…" : "Guardar teléfono"}
         </Button>
-      )}
+      </form>
       <Feedback action={action} />
     </ProfileSection>
   );
@@ -525,7 +320,7 @@ function PhoneCard({ me }: { me: Profile }) {
 
 function NotificationsCard({ consent }: { consent: boolean }) {
   const setConsent = useMutation(api.users.setNotificationConsent);
-  const action = useProfileAction();
+  const action = useActionFeedback();
 
   return (
     <ProfileSection
@@ -600,10 +395,15 @@ export default function ProfilePage() {
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-6">
         <div className="min-w-0 space-y-5 lg:space-y-6">
           <IdentityCard me={me} />
-          <PhoneCard me={me} />
+          <DirectoryCard />
+          <PhoneCard phone={me.phone} />
         </div>
         <div className="min-w-0 space-y-5 lg:space-y-6">
-          <GithubCard linked={me.githubLinked} username={me.githubUsername} />
+          <GithubCard
+            linked={me.githubLinked}
+            username={me.githubUsername}
+            twitterHandle={me.twitterHandle}
+          />
           <NotificationsCard consent={me.notificationConsent} />
         </div>
       </div>

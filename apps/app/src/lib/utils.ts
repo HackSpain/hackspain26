@@ -6,29 +6,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export type PhoneVerifyFailure =
-  | "no_challenge"
-  | "expired"
-  | "too_many_attempts"
-  | "incorrect";
-
-export function phoneVerifyMessage(reason: PhoneVerifyFailure): string {
-  switch (reason) {
-    case "no_challenge": {
-      return "Pide primero un código al teléfono";
-    }
-    case "expired": {
-      return "Ese código ha caducado. Pide uno nuevo.";
-    }
-    case "too_many_attempts": {
-      return "Demasiados intentos. Pide un código nuevo.";
-    }
-    case "incorrect": {
-      return "Código incorrecto";
-    }
-  }
-}
-
 export function displayedAttendance(
   status: string | null | undefined,
   onboarded = false

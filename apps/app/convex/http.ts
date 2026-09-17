@@ -9,12 +9,13 @@ auth.addHttpRoutes(http);
 
 type GithubStatus = "linked" | "cancelled" | "expired" | "taken" | "error";
 
-function backToApp(status: GithubStatus): Response {
+/** Back to the dashboard with `?github=<status>`, on the page that started the link when it said so. */
+function backToApp(status: GithubStatus, returnTo?: string): Response {
   const site = (process.env.SITE_URL ?? "http://localhost:3000").replace(
     /\/$/,
     ""
   );
-  const url = new URL(site);
+  const url = new URL(returnTo ?? "/", `${site}/`);
   url.searchParams.set("github", status);
   return Response.redirect(url.toString(), 302);
 }
@@ -89,23 +90,24 @@ http.route({
       return backToApp("error");
     }
 
-    const userId = await ctx.runMutation(internal.github.consumeState, {
+    const consumed = await ctx.runMutation(internal.github.consumeState, {
       state,
     });
-    if (!userId) {
+    if (!consumed) {
       return backToApp("expired");
     }
+    const { returnTo, userId } = consumed;
     if (url.searchParams.get("error") || !code) {
-      return backToApp("cancelled");
+      return backToApp("cancelled", returnTo);
     }
 
     const token = await exchangeCode(code);
     if (!token) {
-      return backToApp("error");
+      return backToApp("error", returnTo);
     }
     const profile = await fetchGithubUser(token);
     if (!profile) {
-      return backToApp("error");
+      return backToApp("error", returnTo);
     }
 
     try {
@@ -118,9 +120,12 @@ http.route({
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
-      return backToApp(message.includes("otro usuario") ? "taken" : "error");
+      return backToApp(
+        message.includes("otro usuario") ? "taken" : "error",
+        returnTo
+      );
     }
-    return backToApp("linked");
+    return backToApp("linked", returnTo);
   }),
   method: "GET",
   path: "/github/callback",

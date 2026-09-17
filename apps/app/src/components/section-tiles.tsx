@@ -52,7 +52,7 @@ export function SectionTiles({
       ...SECTION_NAV[key],
       icon: SECTION_ICONS[key],
     })),
-    { href: "/profile", label: "Perfil", hint: "Nombre, foto y teléfono.", icon: CircleUserRound },
+    { href: "/profile", label: "Perfil", hint: "Nombre, foto, ficha y teléfono.", icon: CircleUserRound },
   ];
 
   return (

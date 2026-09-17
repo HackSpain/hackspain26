@@ -32,7 +32,13 @@ const RESULT_MESSAGES: Record<
   },
 };
 
-export function useGithubLink() {
+/**
+ * Starts the OAuth link. `returnTo` is the dashboard path the callback sends
+ * the browser back to (with `?github=<status>`); the current page by default,
+ * so the result shows where the user was.
+ */
+export function useGithubLink(returnTo?: string) {
+  const pathname = usePathname();
   const startLink = useMutation(api.github.startLink);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +47,7 @@ export function useGithubLink() {
     setError(null);
     setPending(true);
     try {
-      const { url } = await startLink({});
+      const { url } = await startLink({ returnTo: returnTo ?? pathname });
       window.location.assign(url);
     } catch (caughtError: unknown) {
       setError(

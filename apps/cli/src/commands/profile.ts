@@ -18,23 +18,12 @@ import { c, cmd, highlight } from "../lib/style";
  * here: this tool is used at the venue.
  */
 const E164 = /^\+[1-9]\d{6,14}$/;
-const PHONE_CODE = /^\d{4,8}$/;
 const PHONE_NOISE = /[\s()-]/g;
 
-const PHONE_FAILURES: Record<string, string> = {
-  expired: "That code has expired. Request a new one.",
-  incorrect: "That code is not right.",
-  no_challenge: "No code was requested. Run `hackspain profile phone` again.",
-  too_many_attempts: "Too many attempts. Request a new code.",
-};
-
-function phoneLabel(me: Me): string {
-  if (!me.phone) {
-    return c.dim("not set · hackspain profile phone <number>");
-  }
-  return me.phoneConfirmed
-    ? `${me.phone} ${c.dim("· confirmed")}`
-    : `${me.phone} ${c.dim("· not confirmed")}`;
+function validatePhone(value: string): string | undefined {
+  return E164.test(value.replace(PHONE_NOISE, ""))
+    ? undefined
+    : "Use the international format, like +34600111222.";
 }
 
 function githubLabel(me: Me): string {
@@ -62,7 +51,7 @@ export function profileRows(me: Me): [string, string][] {
       "Travelling from",
       me.travelOrigin ?? c.dim("not set · hackspain profile edit"),
     ],
-    ["Phone", phoneLabel(me)],
+    ["Phone", me.phone ?? c.dim("not set · hackspain profile phone <number>")],
     [
       "Event notices",
       me.notificationConsent
@@ -81,7 +70,6 @@ export function profileJson(me: Me) {
     dietaryDetails: me.dietaryDetails,
     travelOrigin: me.travelOrigin,
     phone: me.phone,
-    phoneConfirmed: me.phoneConfirmed,
     notificationConsent: me.notificationConsent,
     githubUsername: me.githubUsername,
     githubLinked: me.githubLinked,
@@ -183,19 +171,18 @@ async function setNotify(
   ui.result({ notificationConsent: consent });
   ui.success(
     consent
-      ? "Event notices on. Schedule changes and reminders reach you by email and phone."
+      ? "Event notices on. Schedule changes and reminders reach you by email."
       : "Event notices off. You still get announcements in `hackspain watch`."
   );
 }
 
-/** The SMS challenge, shared by `profile phone` and the post-login check. */
-export async function runPhoneConfirmation(
+/** Save the contact number; shared by `profile phone` and the post-login check. */
+export async function savePhone(
   ctx: CliContext,
   ui: Ui,
   session: Session,
   me: Me,
-  number: string | undefined,
-  code: string | undefined
+  number: string | undefined
 ): Promise<string> {
   const phone = (
     await textOrFlag(ctx, number, {
@@ -203,64 +190,28 @@ export async function runPhoneConfirmation(
       initialValue: me.phone ?? "",
       message: "Your mobile number, international format",
       placeholder: "+34 600 111 222",
-      validate: (v) =>
-        E164.test(v.replace(PHONE_NOISE, ""))
-          ? undefined
-          : "Use the international format, like +34600111222.",
+      validate: validatePhone,
     })
   ).replace(PHONE_NOISE, "");
-  const requested = await ui.spin(
-    "Sending a code…",
-    () => session.client.mutation(api.onboarding.requestPhoneCode, { phone }),
-    "Code sent"
+  return await ui.spin(
+    "Saving…",
+    () => session.client.mutation(api.users.setPhone, { phone }),
+    "Saved"
   );
-  if (requested.delivery === "stub") {
-    ui.warn(
-      `SMS is not configured on this server; the code is ${highlight(requested.debugCode ?? "?")}.`
-    );
-  }
-  const entered = await textOrFlag(ctx, code, {
-    flag: "--code",
-    message: `Enter the code we sent to ${phone}`,
-    placeholder: "000000",
-    validate: (v) => (PHONE_CODE.test(v.trim()) ? undefined : "Digits only."),
-  });
-  const verified = await ui.spin(
-    "Checking…",
-    () =>
-      session.client.mutation(api.onboarding.verifyPhoneCode, {
-        code: entered.trim(),
-      }),
-    "Checked"
-  );
-  if (!verified.ok) {
-    throw new CliError(
-      PHONE_FAILURES[verified.reason] ?? "Could not confirm the phone.",
-      { code: "BAD_OTP" }
-    );
-  }
-  return phone;
 }
 
-async function confirmPhone(
+async function setPhoneCommand(
   number: string | undefined,
-  opts: { code?: string },
+  _opts: unknown,
   command: Command
 ): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
   const { session, me } = await openProfile(ctx);
   ui.intro("profile · phone");
-  const phone = await runPhoneConfirmation(
-    ctx,
-    ui,
-    session,
-    me,
-    number,
-    opts.code
-  );
-  ui.result({ phone, phoneConfirmed: true });
-  ui.celebrate(`${phone} confirmed. Organisers can reach you at the venue.`);
+  const phone = await savePhone(ctx, ui, session, me, number);
+  ui.result({ phone });
+  ui.success(`${phone} saved. Organisers can reach you at the venue.`);
 }
 
 async function linkGithub(
@@ -345,7 +296,7 @@ function validateName(value: string): string | undefined {
 
 /**
  * Right after login: ask for whatever organisers need and the profile is
- * still missing (name, a confirmed phone, GitHub). Every step can be skipped
+ * still missing (name, phone, GitHub). Every step can be skipped
  * with Enter; nothing runs in --json or non-interactive mode.
  */
 export async function completeProfile(
@@ -369,11 +320,16 @@ export async function completeProfile(
     }
   }
   const askPhone =
-    !current.phoneConfirmed && (current.accepted || current.role === "admin");
+    !current.phone && (current.accepted || current.role === "admin");
+  // Photo and directory card are dashboard-only; the wizard there asks for them.
+  const dashboardMissing = current.profileMissing.filter(
+    (field) => field !== "name"
+  );
   const missing = [
     !current.name && "your name",
-    askPhone && "a confirmed phone",
+    askPhone && "a contact phone",
     githubUrl && "your GitHub",
+    dashboardMissing.length > 0 && "your dashboard profile",
   ].filter(Boolean) as string[];
   if (missing.length === 0) {
     return current;
@@ -396,35 +352,35 @@ export async function completeProfile(
     }
   }
   if (askPhone) {
-    const wants = await confirmOrFlag(ctx, undefined, {
+    const phone = await textOrFlag(ctx, undefined, {
       flag: "--phone",
-      initialValue: true,
-      message:
-        "Confirm your mobile now? Organisers use it to reach you at the venue.",
+      initialValue: "",
+      message: "Your mobile number, so organisers can reach you at the venue",
+      optional: true,
+      placeholder: "+34 600 111 222",
+      validate: validatePhone,
     });
-    if (wants) {
-      try {
-        const phone = await runPhoneConfirmation(
-          ctx,
-          ui,
-          session,
-          current,
-          undefined,
-          undefined
-        );
-        current = { ...current, phone, phoneConfirmed: true };
-        ui.success(`${phone} confirmed.`);
-      } catch (error) {
-        ui.warn(
-          `${error instanceof Error ? error.message : String(error)} Try again later with ${cmd("hackspain profile phone")}.`
-        );
-      }
+    if (phone.trim()) {
+      const saved = await session.client.mutation(api.users.setPhone, {
+        phone: phone.replace(PHONE_NOISE, ""),
+      });
+      current = { ...current, phone: saved };
+      ui.success(`${saved} saved.`);
     }
   }
   if (githubUrl) {
     ui.note(
       `${githubUrl}\n\nAuthorise HackSpain there and you are done; it is how your pushes show up on the feed.`,
       "Link your GitHub in the browser"
+    );
+  }
+  if (dashboardMissing.length > 0) {
+    const pieces = dashboardMissing.map((field) =>
+      field === "photo" ? "a photo" : "your participant card"
+    );
+    ui.note(
+      `The dashboard still needs ${pieces.join(" and ")}. ${cmd("hackspain open")} takes you straight to those steps.`,
+      "Finish on the dashboard"
     );
   }
   return current;
@@ -457,15 +413,14 @@ export function registerProfile(program: Command): void {
   profile
     .command("notify <on|off>")
     .description(
-      "Event notices by email and phone (announcements in `watch` are always on)"
+      "Event notices by email (announcements in `watch` are always on)"
     )
     .action(setNotify);
 
   profile
     .command("phone [number]")
-    .description("Confirm your mobile number with an SMS code")
-    .option("--code <digits>", "the code, for scripts")
-    .action(confirmPhone);
+    .description("Your contact number for the venue")
+    .action(setPhoneCommand);
 
   profile
     .command("github")

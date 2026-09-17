@@ -17,6 +17,7 @@ const ready: Me = {
   attendanceStatus: "attending",
   avatarUrl: undefined,
   canJudge: false,
+  canRemoveAvatar: false,
   dietaryDetails: undefined,
   dietaryRestrictions: "",
   email: "ana@example.com",
@@ -35,11 +36,14 @@ const ready: Me = {
   notificationConsentAt: undefined,
   onboardingComplete: true,
   phone: undefined,
-  phoneConfirmed: true,
+  profileComplete: true,
+  profileMissing: [],
   role: "user",
   sections: ["teams", "tracks", "perks", "participantes", "cli"],
   signupId: undefined,
+  suggestedTwitterHandle: undefined,
   travelOrigin: undefined,
+  twitterHandle: undefined,
   userType: undefined,
 };
 

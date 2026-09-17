@@ -27,7 +27,7 @@ hackspain open [feed|teams|tracks|perks|profile|/path] [--print]
 hackspain profile               # name, diet, travel, phone, notices, GitHub
 hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]
 hackspain profile notify on|off
-hackspain profile phone [+34…] [--code …]   # SMS code, same as the dashboard
+hackspain profile phone [+34…]  # contact number, same as the dashboard
 hackspain profile github [--unlink]         # prints the link to authorise in a browser
 
 hackspain team create <name> [-m github:x -m a@b.c]
