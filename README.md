@@ -22,6 +22,9 @@ Landing static pages run without a database. Signup and ambassador APIs need `DA
 
 The dashboard needs a Convex development deployment (`pnpm dev:convex` / `pnpm --filter app exec convex dev`). Do not use `pnpm --filter app exec convex deploy` unless you are shipping production. Dashboard env lives in `apps/app/.env.example`.
 
+Errors, logs, Web Vitals and uptime are consolidated in Better Stack. Resource
+and Vercel environment setup is documented in [OBSERVABILITY.md](OBSERVABILITY.md).
+
 ## Commands
 
 | Command | Description |
@@ -121,4 +124,4 @@ Do **not** set `ALLOW_EMAIL_OTP_STUB` on production. Do **not** put `.env` / `.e
 
 `convex deploy --cmd` injects `NEXT_PUBLIC_CONVEX_URL` for the Next.js build. You do not need to paste the prod Convex URL into Vercel unless you skip the deploy-key flow.
 
-Landing Vercel env stays as today (`DATABASE_URL`, `RESEND_*`, `SENTRY_*`, …). Those are not Convex.
+Landing Vercel env stays separate (`DATABASE_URL`, `RESEND_*`, `BETTER_STACK_*`, …). Those are not Convex.

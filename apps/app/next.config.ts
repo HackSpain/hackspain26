@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import { withBetterStack } from "@logtail/next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { withBotId } from "botid/next/config";
 
 const nextConfig: NextConfig = {
@@ -15,4 +17,23 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBotId(nextConfig);
+const configuredApp = withBetterStack(withBotId(nextConfig));
+const errorsDsn = process.env.NEXT_PUBLIC_BETTER_STACK_ERRORS_DSN;
+const sourceMapsConfigured = Boolean(
+  process.env.BETTER_STACK_API_TOKEN &&
+    process.env.BETTER_STACK_ERRORS_ORG &&
+    process.env.BETTER_STACK_ERRORS_PROJECT &&
+    process.env.BETTER_STACK_SOURCEMAPS_URL
+);
+
+export default errorsDsn
+  ? withSentryConfig(configuredApp, {
+      authToken: process.env.BETTER_STACK_API_TOKEN,
+      org: process.env.BETTER_STACK_ERRORS_ORG,
+      project: process.env.BETTER_STACK_ERRORS_PROJECT,
+      sentryUrl: process.env.BETTER_STACK_SOURCEMAPS_URL,
+      silent: true,
+      sourcemaps: { disable: !sourceMapsConfigured },
+      telemetry: false,
+    })
+  : configuredApp;

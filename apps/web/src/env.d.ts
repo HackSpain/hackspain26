@@ -6,8 +6,8 @@ interface Window {
 
 interface ImportMetaEnv {
   readonly DATABASE_URL?: string;
-  /** Sentry DSN (public; embedded in client bundle). */
-  readonly PUBLIC_SENTRY_DSN?: string;
+  /** Better Stack Errors DSN (public; embedded in client bundle). */
+  readonly PUBLIC_BETTER_STACK_ERRORS_DSN?: string;
   /** Server-only API key for transactional email delivery through Resend. */
   readonly RESEND_API_KEY?: string;
   /** Verified Resend sender, including its optional display name. */

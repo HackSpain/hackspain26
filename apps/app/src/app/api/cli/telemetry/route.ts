@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { closedMessage } from "@convex/lib/eventWindow";
 import { RawTreeError } from "@rawtree/sdk";
 import { fetchQuery } from "convex/nextjs";
+import { reportServerEvent } from "@/lib/server-observability";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
 import {
   parseTelemetryEvent,
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
   try {
     await storeTelemetryEvents(accepted);
   } catch (error) {
-    console.error("RawTree telemetry insert failed", {
+    await reportServerEvent("error", "RawTree telemetry insert failed", {
       batchSize: accepted.length,
       kind: error instanceof Error ? error.name : "unknown",
       ...(error instanceof RawTreeError
