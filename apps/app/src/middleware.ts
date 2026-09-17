@@ -17,9 +17,11 @@ const BOTID_PREFIX =
 // server-side redirect; AuthGate stashes it and routes visitors via /login.
 // /cli-auth/handoff signs the browser in from a CLI session, so it must be
 // reachable without one.
+// /github/callback relays GitHub's public callback to the Convex HTTP action.
 const isPublicRoute = createRouteMatcher([
   "/",
   "/login",
+  "/github/callback",
   "/cli-auth(.*)",
   "/api/login/otp",
   "/api/cli(.*)",
@@ -38,6 +40,9 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
     return nextjsMiddlewareRedirect(request, "/login");
   }
   return undefined;
+}, {
+  // This code belongs to GitHub account linking, not a Convex Auth sign-in.
+  shouldHandleCode: (request) => request.nextUrl.pathname !== "/github/callback",
 });
 
 export const config = {

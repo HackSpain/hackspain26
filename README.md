@@ -56,7 +56,7 @@ pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
 # dev only: 00000000 also works as the email sign-in code (ignored if AUTH_RESEND_KEY is set).
 pnpm exec convex env set ALLOW_EMAIL_OTP_STUB true
 # GitHub account linking (optional). Create a GitHub OAuth App whose callback URL is
-# <your deployment>.convex.site/github/callback, then:
+# <SITE_URL>/github/callback (locally: http://localhost:3000/github/callback), then:
 pnpm exec convex env set GITHUB_CLIENT_ID Iv1...
 pnpm exec convex env set GITHUB_CLIENT_SECRET ...
 ```
@@ -119,6 +119,13 @@ pnpm exec convex env set AUTH_RESEND_KEY re_...
 pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
 pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
 ```
+
+Set the production GitHub OAuth App callback URL to
+`https://hackspain.app/github/callback`. The dashboard relays it server-side to
+the production Convex HTTP action, so the authorization screen and browser stay
+on the HackSpain domain. `NEXT_PUBLIC_CONVEX_SITE_URL` is optional for standard
+Convex Cloud deployments and only needs to be set explicitly for local or custom
+deployment URLs.
 
 Do **not** set `ALLOW_EMAIL_OTP_STUB` on production. Do **not** put `.env` / `.env.local` in git.
 
