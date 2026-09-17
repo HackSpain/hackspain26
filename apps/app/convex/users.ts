@@ -13,8 +13,14 @@ import { fail } from "./lib/errors";
 import { parseEventDetails } from "./lib/eventDetails";
 import { eventIsOpen, eventPhase, getEventWindow } from "./lib/eventWindow";
 import { imagePathFor } from "./lib/files";
+import { missingProfileFields } from "./lib/profile";
 import { effectiveSections, userTypeFor } from "./lib/userTypes";
-import { normalizeGithub, normalizeTwitter } from "./lib/normalize";
+import {
+  normalizeGithub,
+  normalizePhone,
+  normalizeTwitter,
+  PHONE_ERROR,
+} from "./lib/normalize";
 import { urlOf, urlsFromRecord } from "./lib/urls";
 import { membershipForUser } from "./lib/team";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -117,6 +123,8 @@ export const me = query({
     const sections = effectiveSections(user, type);
     const window = await getEventWindow(ctx);
     const phase = eventPhase(window, Date.now());
+    const profileMissing = missingProfileFields(user);
+    const xUrl = urlOf(signup?.urls, "x");
     return {
       _id: user._id,
       email: user.email,
@@ -129,11 +137,11 @@ export const me = query({
       name: user.name ?? signup?.fullName,
       role: user.role,
       avatarUrl: avatarUrlFor(user),
+      canRemoveAvatar: Boolean(user.avatarId && user.image?.trim()),
       canJudge: sections.includes("judging"),
       sections,
       userType: type ? { label: type.label, slug: type.slug } : undefined,
       phone: user.phone,
-      phoneConfirmed: user.phoneConfirmed,
       notificationConsent: user.notificationConsent,
       notificationConsentAt: user.notificationConsentAt,
       attendanceStatus: defaultedAttendance(
@@ -150,6 +158,13 @@ export const me = query({
       githubUsername: user.githubUsername ?? signup?.githubUsername,
       githubLinked: user.githubLinkedAt !== undefined,
       githubCanReadRepos: Boolean(user.githubAccessToken),
+      profileComplete: profileMissing.length === 0,
+      profileMissing,
+      twitterHandle: user.twitterHandle,
+      suggestedTwitterHandle:
+        user.twitterHandle ??
+        signup?.twitterHandle ??
+        (xUrl ? normalizeTwitter(xUrl) || undefined : undefined),
     };
   },
   returns: v.union(meValidator, v.null()),
@@ -227,6 +242,49 @@ export const setName = authedMutation({
   returns: v.string(),
 });
 
+/** Contact number for the venue. Normalised to E.164, never verified. */
+export const setPhone = authedMutation({
+  args: { phone: v.string() },
+  handler: async (ctx, args) => {
+    const phone = normalizePhone(args.phone);
+    if (!phone) {
+      fail("VALIDATION", PHONE_ERROR);
+    }
+    await ctx.db.patch(ctx.user._id, { phone });
+    return phone;
+  },
+  returns: v.string(),
+});
+
+const TWITTER_HANDLE = /^[a-z0-9_]{1,15}$/;
+
+/** Empty clears the handle. Accepts "@ana", "ana" or an x.com / twitter.com URL. */
+export const setTwitterHandle = authedMutation({
+  args: { handle: v.string() },
+  handler: async (ctx, args) => {
+    const handle = normalizeTwitter(args.handle);
+    if (!handle) {
+      await ctx.db.patch(ctx.user._id, { twitterHandle: undefined });
+      return null;
+    }
+    if (!TWITTER_HANDLE.test(handle)) {
+      fail("VALIDATION", "Ese usuario de X no parece válido");
+    }
+    await ctx.db.patch(ctx.user._id, { twitterHandle: handle });
+    const signup = await getSignupForUser(ctx, ctx.user);
+    await resolvePendingInvites(
+      ctx,
+      ctx.user._id,
+      ctx.user.email,
+      signup?._id ?? ctx.user.signupId,
+      ctx.user.githubUsername ?? signup?.githubUsername,
+      handle
+    );
+    return handle;
+  },
+  returns: v.union(v.string(), v.null()),
+});
+
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
 /** Upload target for a profile picture. POST the file there, then call setAvatar. */
@@ -259,12 +317,19 @@ export const setAvatar = authedMutation({
   returns: v.string(),
 });
 
+/** Only while the GitHub avatar remains: a photo is required (convex/lib/profile.ts). */
 export const removeAvatar = authedMutation({
   args: {},
   handler: async (ctx) => {
     const previous = ctx.user.avatarId;
     if (!previous) {
       return null;
+    }
+    if (!ctx.user.image?.trim()) {
+      fail(
+        "VALIDATION",
+        "Sube otra foto antes de quitar esta: sin foto no puedes usar el panel"
+      );
     }
     await ctx.db.patch(ctx.user._id, { avatarId: undefined });
     await ctx.storage.delete(previous);

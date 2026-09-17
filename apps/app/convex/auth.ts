@@ -114,7 +114,6 @@ export const {
         signupId: signup?._id,
         dietaryRestrictions: signup?.dietaryRestrictions,
         dietaryDetails: signup?.dietaryDetails,
-        phoneConfirmed: false,
         notificationConsent: false,
         attendanceStatus: "attending",
         onboardingComplete: false,

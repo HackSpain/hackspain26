@@ -207,7 +207,7 @@ function buildProfileMenu(): MenuItem[] {
     },
     {
       value: "profile-phone",
-      label: "Confirm my phone",
+      label: "Set my phone",
       argv: ["profile", "phone"],
     },
     {

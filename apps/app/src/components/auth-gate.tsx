@@ -16,6 +16,7 @@ function destination(me: {
   isRegistered: boolean;
   accepted: boolean;
   onboardingComplete: boolean;
+  profileComplete: boolean;
 }): string | null {
   if (!me.isRegistered) {
     return "/unregistered";
@@ -24,6 +25,11 @@ function destination(me: {
     return "/pending";
   }
   if (!me.onboardingComplete) {
+    return "/onboarding";
+  }
+  // Name, photo and directory card (convex/lib/profile.ts). Every role,
+  // admins and judges included, fills these in the same wizard.
+  if (!me.profileComplete) {
     return "/onboarding";
   }
   return null;
@@ -120,12 +126,21 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     if (me.role === "admin") {
+      // Admins must fill their profile like everyone else; the phone step is
+      // only offered to those with an accepted signup, never forced.
+      const profileDue = !me.profileComplete;
+      const detailsDue = me.accepted && !me.onboardingComplete;
+      if (profileDue) {
+        if (pathname !== "/onboarding") {
+          router.replace("/onboarding");
+        }
+        return;
+      }
       if (pathname === "/login") {
         router.replace("/");
         return;
       }
-      const canConfirm = me.accepted && !me.onboardingComplete;
-      if (pathname === "/onboarding" && !canConfirm) {
+      if (pathname === "/onboarding" && !detailsDue) {
         router.replace("/");
       }
       if (pathname === "/pending" || pathname === "/unregistered") {
@@ -152,6 +167,14 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (me.canJudge) {
       if (pathname.startsWith("/admin")) {
         router.replace("/");
+        return;
+      }
+      // Name, photo and card come before the judging panel; a judge without
+      // a signup skips only the phone step inside the wizard.
+      if (!me.profileComplete) {
+        if (pathname !== "/onboarding") {
+          router.replace("/onboarding");
+        }
         return;
       }
       if (pathname === "/judging" || pathname.startsWith("/judging")) {
@@ -239,6 +262,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (section && !me.sections.includes(section)) {
       return null;
     }
+    if (!me.profileComplete) {
+      if (pathname !== "/onboarding") {
+        return null;
+      }
+      // The effect keeps a judge here even without a signup; everyone else
+      // still has to be registered and accepted first (ladder below).
+      if (me.canJudge) {
+        return <>{children}</>;
+      }
+    }
     const judgingAllowed = me.canJudge && pathname.startsWith("/judging");
     if (!judgingAllowed) {
       const next = destination(me);
@@ -259,8 +292,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (me?.role === "admin") {
-    const canConfirm = me.accepted && !me.onboardingComplete;
-    if (pathname === "/onboarding" && !canConfirm) {
+    const profileDue = !me.profileComplete;
+    const detailsDue = me.accepted && !me.onboardingComplete;
+    if (profileDue && pathname !== "/onboarding") {
+      return null;
+    }
+    if (pathname === "/onboarding" && !profileDue && !detailsDue) {
       return null;
     }
     if (pathname === "/pending" || pathname === "/unregistered") {

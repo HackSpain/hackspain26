@@ -9,6 +9,7 @@ const base: Me = {
   attendanceStatus: "attending",
   avatarUrl: undefined,
   canJudge: false,
+  canRemoveAvatar: false,
   dietaryDetails: undefined,
   dietaryRestrictions: "Vegetarian",
   email: "ana@example.com",
@@ -27,11 +28,14 @@ const base: Me = {
   notificationConsentAt: undefined,
   onboardingComplete: true,
   phone: "+34600111222",
-  phoneConfirmed: true,
+  profileComplete: true,
+  profileMissing: [],
   role: "user",
   sections: ["teams", "tracks", "perks", "participantes", "cli"],
   signupId: undefined,
+  suggestedTwitterHandle: undefined,
   travelOrigin: "Valencia",
+  twitterHandle: undefined,
   userType: undefined,
 };
 
@@ -42,7 +46,7 @@ function row(me: Me, label: string): string {
 describe("profile", () => {
   test("rows read like the dashboard's profile page", () => {
     expect(row(base, "Name")).toBe("Ana");
-    expect(row(base, "Phone")).toBe("+34600111222 · confirmed");
+    expect(row(base, "Phone")).toBe("+34600111222");
     expect(row(base, "GitHub")).toBe("ana · linked");
     expect(row(base, "Event notices")).toBe("on");
     expect(profileRows(base).map(([k]) => k)).not.toContain("Diet details");
@@ -57,7 +61,6 @@ describe("profile", () => {
       name: undefined,
       notificationConsent: false,
       phone: undefined,
-      phoneConfirmed: false,
     };
     expect(row(me, "Name")).toContain("hackspain profile edit");
     expect(row(me, "Phone")).toContain("hackspain profile phone");
@@ -75,7 +78,6 @@ describe("profile", () => {
       "dietaryDetails",
       "travelOrigin",
       "phone",
-      "phoneConfirmed",
       "notificationConsent",
       "githubUsername",
       "githubLinked",

@@ -1,3 +1,4 @@
+import type { AnyDataModel, GenericMutationCtx } from "convex/server";
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
@@ -279,5 +280,44 @@ export const rewriteLegacyUrls = mutation({
   returns: v.object({
     signupsRewritten: v.number(),
     ambassadorsRewritten: v.number(),
+  }),
+});
+
+/**
+ * SMS verification was removed; the phone itself stays. Clears the legacy
+ * `phoneConfirmed` and `phoneVerificationTime` fields on `users` and empties
+ * the old `phoneChallenges` table (no longer in the schema) so the two
+ * optional fields can be dropped from `schema.ts` afterwards.
+ */
+export const dropPhoneVerification = mutation({
+  args: { secret: v.string() },
+  handler: async (ctx, args) => {
+    assertMigrationSecret(args.secret);
+    let usersCleared = 0;
+    for (const user of await ctx.db.query("users").collect()) {
+      if (
+        user.phoneConfirmed === undefined &&
+        user.phoneVerificationTime === undefined
+      ) {
+        continue;
+      }
+      await ctx.db.patch(user._id, {
+        phoneConfirmed: undefined,
+        phoneVerificationTime: undefined,
+      });
+      usersCleared += 1;
+    }
+    // The table is gone from the schema, so it is queried untyped.
+    const untyped = ctx.db as unknown as GenericMutationCtx<AnyDataModel>["db"];
+    let challengesDeleted = 0;
+    for (const row of await untyped.query("phoneChallenges").collect()) {
+      await untyped.delete(row._id);
+      challengesDeleted += 1;
+    }
+    return { usersCleared, challengesDeleted };
+  },
+  returns: v.object({
+    usersCleared: v.number(),
+    challengesDeleted: v.number(),
   }),
 });

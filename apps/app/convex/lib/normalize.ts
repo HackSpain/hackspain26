@@ -67,6 +67,10 @@ export function normalizeTwitter(input: string): string {
   );
 }
 
+export const PHONE_ERROR =
+  "Introduce un teléfono válido en formato internacional, como +34600111222";
+
+/** Digits only, 8 to 15 of them, with a leading "+" (loose E.164). */
 export function normalizePhone(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) {
@@ -87,18 +91,4 @@ export function adminEmailAllowlist(): Set<string> {
       .map((value) => normalizeEmail(value))
       .filter((value) => value.length > 0)
   );
-}
-
-export async function sha256Hex(value: string): Promise<string> {
-  const data = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export function generateNumericCode(length: number): string {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => (byte % 10).toString()).join("");
 }

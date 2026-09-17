@@ -41,6 +41,8 @@ export default defineSchema({
     userId: v.id("users"),
     state: v.string(),
     expiresAt: v.number(),
+    /** Same-origin path the callback sends the browser back to; `/` when unset. */
+    returnTo: v.optional(v.string()),
   })
     .index("by_state", ["state"])
     .index("by_user", ["userId"]),
@@ -124,14 +126,6 @@ export default defineSchema({
   })
     .index("by_active", ["active"])
     .index("by_company", ["company"]),
-
-  phoneChallenges: defineTable({
-    userId: v.id("users"),
-    phone: v.string(),
-    codeHash: v.string(),
-    expiresAt: v.number(),
-    attempts: v.number(),
-  }).index("by_user", ["userId"]),
 
   posts: defineTable({
     kind: v.union(v.literal("post"), v.literal("github")),
@@ -290,12 +284,18 @@ export default defineSchema({
     directory: v.optional(directoryValidator),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
-    phone: v.optional(v.string()),
-    phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     role: roleValidator,
     signupId: v.optional(v.id("signups")),
-    phoneConfirmed: v.boolean(),
+    /** Contact number for the venue, E.164. Stored as typed (normalised), never verified. */
+    phone: v.optional(v.string()),
+    /**
+     * Legacy SMS verification (removed). Kept optional so existing rows still
+     * validate; `migrations.dropPhoneVerification` clears them, after which
+     * these two lines can go.
+     */
+    phoneVerificationTime: v.optional(v.number()),
+    phoneConfirmed: v.optional(v.boolean()),
     notificationConsent: v.boolean(),
     notificationConsentAt: v.optional(v.number()),
     termsAcceptedAt: v.optional(v.number()),
@@ -314,6 +314,8 @@ export default defineSchema({
     githubLinkedAt: v.optional(v.number()),
     /** User OAuth token from github.startLink. Never return from public queries. */
     githubAccessToken: v.optional(v.string()),
+    /** X handle, lowercase without the @. Optional in onboarding; see users.setTwitterHandle. */
+    twitterHandle: v.optional(v.string()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"])

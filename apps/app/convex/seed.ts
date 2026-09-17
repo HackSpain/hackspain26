@@ -3,6 +3,14 @@ import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id, TableNames } from "./_generated/dataModel";
+import {
+  canonicalTags,
+  DEGREE_OPTIONS,
+  INTEREST_OPTIONS,
+  ROLE_OPTIONS,
+  SKILL_OPTIONS,
+  UNIVERSITY_OPTIONS,
+} from "./lib/directoryOptions";
 import { JUDGING_SETTINGS_KEY } from "./lib/judging";
 import { PARTICIPANT_SECTIONS, slugify } from "./lib/userTypes";
 import type { Sections } from "./lib/userTypes";
@@ -28,6 +36,10 @@ import { seedDefaults as seedTracks } from "./tracks";
  *
  * With `ALLOW_EMAIL_OTP_STUB=true` on the deployment you can log in as any
  * seeded email with the code 00000000. Organiser: org@seed.hackspain.dev.
+ *
+ * Everyone has the name, photo and directory card the onboarding wizard
+ * asks for, except the few accounts `run` lists as `incompleteProfiles`:
+ * log in as one of those to see the wizard.
  */
 export const SEED_DOMAIN = "seed.hackspain.dev";
 const ORG_EMAIL = `org@${SEED_DOMAIN}`;
@@ -88,41 +100,30 @@ const LAST_NAMES = [
   "Domínguez", "Vázquez", "Serrano", "Molina", "Ortega", "Castro", "Rubio",
   "Puig", "Ferrer", "Roca", "Vidal", "Soler", "Bosch", "Iglesias", "Cano",
 ];
+// Card values come from the curated vocabularies the form offers
+// (convex/lib/directoryOptions.ts), so seeded people cluster like real ones.
 const CITIES = [
   "Madrid", "Barcelona", "Valencia", "Sevilla", "Bilbao", "Zaragoza",
-  "Málaga", "Murcia", "A Coruña", "Granada", "Alicante", "Donostia",
+  "Málaga", "Murcia", "A Coruña", "Granada", "Alicante", "Donostia / San Sebastián",
 ];
 const DIETS = ["Ninguna", "Ninguna", "Ninguna", "Vegetariana", "Vegana", "Sin gluten", "Sin lactosa"];
 
-const ROLES = [
-  "AI Engineer", "Backend Developer", "Frontend Developer", "Full-stack",
-  "Data Scientist", "Product Designer", "ML Engineer", "Mobile Developer",
-  "DevOps", "Product Manager",
-];
-const UNIVERSITIES = [
-  "Universidad Politécnica de Madrid", "Universitat Politècnica de Catalunya",
-  "Universitat Politècnica de València", "Universidad de Sevilla",
-  "Universidad del País Vasco", "Universidad de Zaragoza", "Universidad de Granada",
-  "Universidad Carlos III", "IE University", "Universitat de Barcelona",
-];
+const ROLES = ROLE_OPTIONS.filter((option) => option.value !== "Otro").map(
+  (option) => option.value
+);
+const UNIVERSITIES = UNIVERSITY_OPTIONS.slice(0, 24).map((option) => option.value);
 const COMPANIES = [
   "Nébula Labs", "Estudio Prisma", "Atlas Cloud", "Raíz Data", "Cabify",
   "Glovo", "Factorial", "Wallapop", "Idealista", "Freelance",
 ];
 const DEGREES = [
-  "Ingeniería Informática", "Ingeniería Informática", "Ciencia de Datos",
-  "Matemáticas", "Telecomunicaciones", "Diseño", "Física", "ADE",
+  "Ingeniería Informática",
+  ...DEGREE_OPTIONS.filter((option) => !["Otra", "Máster / Posgrado"].includes(option.value)).map(
+    (option) => option.value
+  ),
 ];
-const SKILLS = [
-  "Python", "TypeScript", "React", "Next.js", "Node.js", "Go", "Rust",
-  "PostgreSQL", "LLM", "Agents", "PyTorch", "SQL", "Docker", "Figma", "UX",
-  "Swift", "Kotlin", "ROS 2", "Machine Learning", "Convex",
-];
-const INTERESTS = [
-  "Agentes IA", "Open source", "Educación", "Herramientas dev", "Robótica",
-  "Fintech", "Salud", "Sostenibilidad", "Diseño accesible", "Música",
-  "Videojuegos", "Startups",
-];
+const SKILLS = SKILL_OPTIONS.map((option) => option.value);
+const INTERESTS = INTEREST_OPTIONS.map((option) => option.value);
 
 function directoryFor(city: string, stack: readonly string[]) {
   const student = chance(0.55);
@@ -154,7 +155,9 @@ function directoryFor(city: string, stack: readonly string[]) {
     degree: chance(0.8) ? pick(DEGREES) : undefined,
     interests: shuffle(INTERESTS).slice(0, between(1, 4)),
     role: pick(ROLES),
-    skills: shuffle([...new Set([...stack, ...shuffle(SKILLS).slice(0, 3)])]).slice(0, between(2, 6)),
+    skills: shuffle(
+      canonicalTags(SKILL_OPTIONS, [...stack, ...shuffle(SKILLS).slice(0, 3)])
+    ).slice(0, between(2, 6)),
     university,
     updatedAt: Date.now(),
   };
@@ -323,6 +326,13 @@ async function upsertUserType(
   });
 }
 
+/**
+ * Name, photo and directory card are what the onboarding wizard demands of
+ * every account (convex/lib/profile.ts), so seeded people have all three
+ * unless a loop asks for a gap to exercise the wizard with.
+ */
+type SeedProfile = "complete" | "noDirectory" | "noPhoto";
+
 async function insertUser(
   ctx: MutationCtx,
   person: Person,
@@ -332,28 +342,28 @@ async function insertUser(
     onboarded: boolean;
     userTypeId?: Id<"userTypes">;
     index: number;
+    profile?: SeedProfile;
   }
 ): Promise<Id<"users">> {
   const name = `${person.first} ${person.last}`;
   const travelOrigin = opts.onboarded ? pick(CITIES) : undefined;
+  const profile = opts.profile ?? "complete";
   return await ctx.db.insert("users", {
     attendanceStatus: "attending",
     dietaryRestrictions: opts.onboarded ? pick(DIETS) : undefined,
-    // Nine in ten onboarded hackers have filled their directory card.
     directory:
-      opts.onboarded && travelOrigin && chance(0.9)
-        ? directoryFor(travelOrigin, [])
-        : undefined,
+      profile === "noDirectory"
+        ? undefined
+        : directoryFor(travelOrigin ?? pick(CITIES), []),
     email: person.email,
     emailVerificationTime: Date.now() - between(1, 30) * 24 * HOUR,
     githubLinkedAt: chance(0.8) ? Date.now() - between(1, 20) * 24 * HOUR : undefined,
     githubUsername: person.github,
-    image: avatarFor(person.github),
+    image: profile === "noPhoto" ? undefined : avatarFor(person.github),
     name,
     notificationConsent: chance(0.85),
     onboardingComplete: opts.onboarded,
     phone: opts.onboarded ? phoneFor(opts.index) : undefined,
-    phoneConfirmed: opts.onboarded,
     role: opts.role,
     signupId: opts.signupId,
     termsAcceptedAt: opts.onboarded ? Date.now() - between(1, 10) * 24 * HOUR : undefined,
@@ -498,11 +508,6 @@ async function clearSeed(ctx: MutationCtx): Promise<Record<string, number>> {
       await del("tvMessages", row._id);
     }
   }
-  for (const row of await ctx.db.query("phoneChallenges").collect()) {
-    if (userIds.has(row.userId)) {
-      await del("phoneChallenges", row._id);
-    }
-  }
   for (const row of await ctx.db.query("signups").collect()) {
     if (row.email.endsWith(`@${SEED_DOMAIN}`)) {
       await del("signups", row._id);
@@ -532,11 +537,21 @@ async function clearSeed(ctx: MutationCtx): Promise<Record<string, number>> {
 
 // ---------- seed ----------
 
-async function runSeed(ctx: MutationCtx): Promise<Record<string, number>> {
+async function runSeed(
+  ctx: MutationCtx
+): Promise<{ created: Record<string, number>; incompleteProfiles: string[] }> {
   const now = Date.now();
   const created: Record<string, number> = {};
   const count = (table: string, n = 1) => {
     created[table] = (created[table] ?? 0) + n;
+  };
+  // Accounts left with a gap on purpose, to walk through the onboarding wizard.
+  const incompleteProfiles: string[] = [];
+  const gap = (person: Person, profile: SeedProfile | undefined) => {
+    if (profile && profile !== "complete") {
+      incompleteProfiles.push(`${person.email} (${profile})`);
+    }
+    return profile;
   };
 
   // Organiser (admin) who "creates" the shared config.
@@ -548,7 +563,6 @@ async function runSeed(ctx: MutationCtx): Promise<Record<string, number>> {
     name: "Organización HackSpain",
     notificationConsent: true,
     onboardingComplete: true,
-    phoneConfirmed: true,
     role: "admin",
   });
   count("users");
@@ -599,12 +613,15 @@ async function runSeed(ctx: MutationCtx): Promise<Record<string, number>> {
   let cursor = 0;
   const take = (n: number) => people.slice(cursor, (cursor += n));
 
+  // Two onboarded hackers without a card, one without a photo.
+  const hackerGaps: SeedProfile[] = ["noDirectory", "noDirectory", "noPhoto"];
   const hackers: { person: Person; userId: Id<"users"> }[] = [];
   for (const [index, person] of take(48).entries()) {
     const signupId = await insertSignup(ctx, person, true);
     const userId = await insertUser(ctx, person, {
       index,
       onboarded: true,
+      profile: gap(person, hackerGaps[index]),
       role: "user",
       signupId,
       userTypeId: chance(0.5) ? hackerType : undefined,
@@ -615,7 +632,14 @@ async function runSeed(ctx: MutationCtx): Promise<Record<string, number>> {
   }
   for (const [index, person] of take(6).entries()) {
     const signupId = await insertSignup(ctx, person, true);
-    await insertUser(ctx, person, { index: 100 + index, onboarded: false, role: "user", signupId });
+    await insertUser(ctx, person, {
+      index: 100 + index,
+      onboarded: false,
+      // One walks the whole wizard: phone and terms, then the card.
+      profile: gap(person, index === 0 ? "noDirectory" : undefined),
+      role: "user",
+      signupId,
+    });
     count("signups");
     count("users");
   }
@@ -633,6 +657,8 @@ async function runSeed(ctx: MutationCtx): Promise<Record<string, number>> {
       await insertUser(ctx, person, {
         index: 200 + index,
         onboarded: false,
+        // A judge without a signup: the wizard with no phone step.
+        profile: gap(person, index === 0 ? "noDirectory" : undefined),
         role: "user",
         userTypeId: juradoType,
       })
@@ -982,7 +1008,7 @@ async function runSeed(ctx: MutationCtx): Promise<Record<string, number>> {
     count("tvMessages");
   }
 
-  return created;
+  return { created, incompleteProfiles };
 }
 
 function assertNotProduction(): void {
@@ -1005,13 +1031,15 @@ export const run = internalMutation({
         "The seed is already loaded. Run seed:run with {\"reset\":true} to reload it, or seed:clear to remove it."
       );
     }
-    const created = await runSeed(ctx);
+    const { created, incompleteProfiles } = await runSeed(ctx);
     await ctx.scheduler.runAfter(0, internal.seed.logos, {});
-    return { cleared, created };
+    return { cleared, created, incompleteProfiles };
   },
   returns: v.object({
     cleared: v.record(v.string(), v.number()),
     created: v.record(v.string(), v.number()),
+    /** Seeded logins that still owe the onboarding wizard a step. */
+    incompleteProfiles: v.array(v.string()),
   }),
 });
 

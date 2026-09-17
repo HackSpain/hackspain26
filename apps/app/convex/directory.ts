@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internalMutation } from "./_generated/server";
 import { authedMutation, authedQuery } from "./lib/customFunctions";
 import {
 	directoryFieldValidator,
@@ -101,16 +102,53 @@ export const save = authedMutation({
 });
 
 /**
- * Everyone with a complete card. Only served once the viewer's own card is
- * complete: the page asks for that first, so nobody browses without
- * contributing their own data points.
+ * One-off after the vocabularies change: re-run every stored card through
+ * `parseDirectoryCard` so old free text ("UPM", "ReactJS") lands on the
+ * curated spellings the graph groups by. Incomplete cards are left alone.
+ *
+ *   pnpm --filter app exec convex run directory:normalizeCards
+ */
+export const normalizeCards = internalMutation({
+	args: {},
+	handler: async (ctx) => {
+		let changed = 0;
+		let skipped = 0;
+		const users = await ctx.db.query("users").collect();
+		for (const user of users) {
+			const card = user.directory;
+			if (!card) {
+				continue;
+			}
+			let next;
+			try {
+				next = parseDirectoryCard(card);
+			} catch {
+				skipped += 1;
+				continue;
+			}
+			const { updatedAt: _a, ...before } = card;
+			const { updatedAt: _b, ...after } = next;
+			if (JSON.stringify(before) === JSON.stringify(after)) {
+				continue;
+			}
+			await ctx.db.patch(user._id, {
+				directory: { ...next, updatedAt: card.updatedAt },
+			});
+			changed += 1;
+		}
+		return { changed, skipped };
+	},
+	returns: v.object({ changed: v.number(), skipped: v.number() }),
+});
+
+/**
+ * Everyone with a complete card. The viewer has one too: onboarding asks for
+ * it before the dashboard opens (convex/lib/profile.ts), so nobody browses
+ * without contributing their own data points.
  */
 export const list = authedQuery({
 	args: {},
 	handler: async (ctx) => {
-		if (!isDirectoryComplete(ctx.user.directory)) {
-			return [];
-		}
 		const [users, teams, submissions, tracks] = await Promise.all([
 			ctx.db.query("users").collect(),
 			ctx.db.query("teams").collect(),
