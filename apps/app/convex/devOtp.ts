@@ -1,13 +1,12 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { normalizeEmail } from "./lib/normalize";
+import { resendApiKey } from "./lib/resend";
 
 export const STUB_CODE = "00000000";
 
 export function emailOtpStubEnabled(): boolean {
-  return (
-    !process.env.AUTH_RESEND_KEY && process.env.ALLOW_EMAIL_OTP_STUB === "true"
-  );
+  return !resendApiKey() && process.env.ALLOW_EMAIL_OTP_STUB === "true";
 }
 
 export const remember = internalMutation({

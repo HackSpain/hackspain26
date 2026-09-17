@@ -94,7 +94,7 @@ Two Vercel projects, both linked to this repo. Set **Root Directory** before the
 | Project | Root Directory | Domain | Build |
 | --- | --- | --- | --- |
 | Landing (existing) | `apps/web` | hackspain.com | `pnpm run build` |
-| Dashboard (new) | `apps/app` | e.g. hackspain.app | `pnpm run vercel-build` — deploys Convex, then Next.js |
+| Dashboard (new) | `apps/app` | hackspain.app | `pnpm run vercel-build` — deploys Convex, then Next.js |
 
 Vercel reads `pnpm-lock.yaml` and `pnpm-workspace.yaml` from the repo root (`installCommand` is `cd ../.. && pnpm install --frozen-lockfile`). A change that only touches the other app is skipped (`scripts/vercel-ignore.sh`).
 

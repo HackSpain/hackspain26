@@ -41,7 +41,19 @@ export const attendanceValidator = v.union(
   v.literal("undecided")
 );
 
-export const perkTypeValidator = v.union(v.literal("email"), v.literal("code"));
+/** In-app claim (`email` / `code`) or a partner-site link (`external`). */
+export const perkTypeValidator = v.union(
+  v.literal("email"),
+  v.literal("code"),
+  v.literal("external"),
+);
+
+export type PerkType = Infer<typeof perkTypeValidator>;
+
+/** Claims are only created for in-app perks. */
+export const claimTypeValidator = v.union(v.literal("email"), v.literal("code"));
+
+export type ClaimType = Infer<typeof claimTypeValidator>;
 
 export const claimStatusValidator = v.union(
   v.literal("pending"),

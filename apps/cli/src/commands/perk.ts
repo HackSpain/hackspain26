@@ -13,10 +13,21 @@ function perkStatus(
   if (claim) {
     return claim.code ? `claimed: ${claim.code}` : `claimed (${claim.status})`;
   }
-  if (perk.type === "code") {
-    return `${perk.availableCodes ?? 0} codes left`;
+  switch (perk.type) {
+    case "code": {
+      return `${perk.availableCodes ?? 0} codes left`;
+    }
+    case "email": {
+      return "by email";
+    }
+    case "external": {
+      return "claim on partner site";
+    }
+    default: {
+      const _exhaustive: never = perk.type;
+      return _exhaustive;
+    }
   }
-  return "by email";
 }
 
 export function registerPerk(program: Command): void {

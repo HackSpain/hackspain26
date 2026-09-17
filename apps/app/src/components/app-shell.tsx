@@ -9,7 +9,7 @@ import { Suspense } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { api } from "@convex/_generated/api";
-import { EventClosedBanner } from "@/components/event-closed-banner";
+import { EventClosedBanner, isEventOpen } from "@/components/event-closed-banner";
 import { GithubLinkBanner, GithubLinkResult } from "@/components/github-link-banner";
 import { Button } from "@/components/ui/button";
 import {
@@ -199,7 +199,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {isAdmin && (pathname.startsWith("/admin") || pathname.startsWith("/judging")) ? (
         <AdminStrip pathname={pathname} />
       ) : null}
-      {me && !me.event.open ? <EventClosedBanner event={me.event} /> : null}
+      {me?.event && !isEventOpen(me.event) ? (
+        <EventClosedBanner event={me.event} />
+      ) : null}
       {askGithub ? <GithubLinkBanner /> : null}
       <main
         className={cn(
