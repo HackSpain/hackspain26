@@ -3,6 +3,7 @@ import { checkBotId } from "botid/server";
 import { fetchAction } from "convex/nextjs";
 import { ConvexError } from "convex/values";
 import { NextResponse } from "next/server";
+import { reportServerEvent } from "@/lib/server-observability";
 import { serverMessage } from "../../cli/_lib/respond";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,7 +43,11 @@ export async function POST(request: Request) {
       return refuse("BOT", 403);
     }
   } catch (error) {
-    console.warn(`[login] BotID check failed, letting the request through: ${describe(error)}`);
+    await reportServerEvent(
+      "warn",
+      "BotID check failed; login request allowed",
+      { reason: describe(error) }
+    );
   }
 
   let email = "";
@@ -68,12 +73,17 @@ export async function POST(request: Request) {
       return refuse("UNREGISTERED", 404);
     }
     if (!result.started) {
-      console.warn("[login] Convex Auth did not start an email sign-in");
+      await reportServerEvent(
+        "warn",
+        "Convex Auth did not start an email sign-in"
+      );
       return refuse("SEND_FAILED", 502);
     }
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.warn(`[login] code email failed: ${describe(error)}`);
+    await reportServerEvent("warn", "Login code email failed", {
+      reason: describe(error),
+    });
     return refuse("SEND_FAILED", 502);
   }
 }

@@ -5,14 +5,27 @@ import vercel from "@astrojs/vercel";
 import sentry from "@sentry/astro";
 import { defineConfig } from "astro/config";
 
+const sourceMapsConfigured = Boolean(
+  process.env.BETTER_STACK_API_TOKEN &&
+    process.env.BETTER_STACK_ERRORS_ORG &&
+    process.env.BETTER_STACK_ERRORS_PROJECT &&
+    process.env.BETTER_STACK_SOURCEMAPS_URL
+);
+
 export default defineConfig({
   adapter: vercel(),
   integrations: [
     react(),
     sentry({
-      project: "javascript",
-      org: "hackspain",
-      authToken: process.env.SENTRY_AUTH_TOKEN,
+      ...(sourceMapsConfigured
+        ? {
+            authToken: process.env.BETTER_STACK_API_TOKEN,
+            org: process.env.BETTER_STACK_ERRORS_ORG,
+            project: process.env.BETTER_STACK_ERRORS_PROJECT,
+            url: process.env.BETTER_STACK_SOURCEMAPS_URL,
+          }
+        : { sourcemaps: { disable: true } }),
+      telemetry: false,
     }),
   ],
   output: "server",

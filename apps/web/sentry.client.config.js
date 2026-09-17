@@ -3,8 +3,9 @@ import {
   init,
   replayIntegration,
 } from "@sentry/astro";
+import { sanitizeTelemetryEvent } from "./telemetry-sanitize.js";
 
-const dsn = import.meta.env.PUBLIC_SENTRY_DSN;
+const dsn = import.meta.env.PUBLIC_BETTER_STACK_ERRORS_DSN;
 const isDev = import.meta.env.DEV;
 
 if (dsn) {
@@ -30,6 +31,7 @@ if (dsn) {
   }
 
   init({
+    beforeSendTransaction: sanitizeTelemetryEvent,
     dsn,
     sendDefaultPii: false,
     integrations,
@@ -39,7 +41,7 @@ if (dsn) {
       if (ex instanceof Event) {
         return null;
       }
-      return event;
+      return sanitizeTelemetryEvent(event);
     },
     // Enable logs to be sent to Sentry
     enableLogs: true,

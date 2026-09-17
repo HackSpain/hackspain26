@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BetterStackWebVitals } from "@logtail/next/webVitals";
 import type { Metadata } from "next";
 import { Bungee, DM_Sans } from "next/font/google";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
@@ -42,6 +43,7 @@ export default async function RootLayout({
         className={`${dmSans.variable} ${bungee.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col bg-hs-paper text-hs-ink">
+          <BetterStackWebVitals />
           <ConvexClientProvider>
             <AuthGate>
               <AppShell>{children}</AppShell>
