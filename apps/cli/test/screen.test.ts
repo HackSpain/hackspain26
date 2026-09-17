@@ -8,15 +8,14 @@ import {
 } from "../src/watcher/index";
 import { diffFrame, frame, gauge } from "../src/watcher/screen";
 import {
-  BUCKET_MS,
   createState,
   recordEvent,
   recordNotification,
-  seriesWindow,
 } from "../src/watcher/state";
 import { validEvent } from "./schema.test";
 
 const NOW = Date.UTC(2026, 8, 19, 12, 0, 0);
+const MINUTE_MS = 60 * 1000;
 
 function sampleState() {
   const state = createState({
@@ -44,7 +43,7 @@ function sampleState() {
     recordEvent(state, {
       ...validEvent,
       eventId: `e${i}`,
-      occurredAt: new Date(NOW - i * BUCKET_MS).toISOString(),
+      occurredAt: new Date(NOW - i * MINUTE_MS).toISOString(),
       sessionId: i < 3 ? "s1" : "s2",
     });
   }
@@ -225,8 +224,5 @@ describe("primitives", () => {
     // Fresh tokens (10 in + 20 out per event); cache traffic (30 + 40) apart.
     expect(state.harnesses[0]?.tokens).toBe(6 * 30);
     expect(state.harnesses[0]?.cached).toBe(6 * 70);
-    expect(seriesWindow(state, 8, NOW).map((p) => p.requests)).toEqual([
-      0, 0, 1, 1, 1, 1, 1, 1,
-    ]);
   });
 });

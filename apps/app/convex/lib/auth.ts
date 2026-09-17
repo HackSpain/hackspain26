@@ -70,18 +70,8 @@ export async function requireAccepted(ctx: Ctx): Promise<Doc<"users">> {
 }
 
 export async function requireOnboarded(ctx: Ctx): Promise<Doc<"users">> {
-  const user = await getCurrentUser(ctx);
-  if (user.role === "admin") {
-    return user;
-  }
-  const signup = await getSignupForUser(ctx, user);
-  if (!signup) {
-    throw new Error("No hay inscripción a la hackathon con este email");
-  }
-  if (!signupIsAccepted(signup)) {
-    throw new Error("Aún no te han aceptado");
-  }
-  if (!user.onboardingComplete) {
+  const user = await requireAccepted(ctx);
+  if (user.role !== "admin" && !user.onboardingComplete) {
     throw new Error("Confirma tus datos primero");
   }
   return user;

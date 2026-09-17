@@ -538,11 +538,6 @@ function renderHome(status: MenuStatus): void {
   console.log();
 }
 
-/** After a menu action, every key (q, Esc, Ctrl+C, anything) resumes the menu. */
-export function isResumeKey(_data: Uint8Array): boolean {
-  return true;
-}
-
 /** Let the user finish reading, then return to the menu. Never process.exit. */
 function pressAnyKey(): Promise<void> {
   return new Promise((resolve) => {
@@ -555,14 +550,12 @@ function pressAnyKey(): Promise<void> {
       stdin.setRawMode(true);
     }
     stdin.resume();
-    stdin.once("data", (data: Buffer) => {
+    stdin.once("data", () => {
       if (raw) {
         stdin.setRawMode(false);
       }
       stdin.pause();
-      if (isResumeKey(data)) {
-        resolve();
-      }
+      resolve();
     });
   });
 }
