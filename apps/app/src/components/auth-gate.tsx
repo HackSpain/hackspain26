@@ -3,10 +3,14 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Role } from "@convex/lib/validators";
 import { api } from "@convex/_generated/api";
 import { HomeSplash } from "@/components/home-splash";
+import {
+  LoginTransition,
+  LoginTransitionProvider,
+} from "@/components/login-transition";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { isPathAllowedWhenClosed, sectionForPath } from "@/lib/sections";
@@ -83,12 +87,40 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
   const attachAfterLogin = useMutation(api.users.attachAfterLogin);
 
+  // Set by the login page once its code is accepted; the curtain stays up
+  // until the page the user lands on is rendered underneath (see below).
+  const [transition, setTransition] = useState<{
+    email: string | null;
+    startedAt: number;
+  } | null>(null);
+  const beginLoginTransition = useCallback((email: string | null) => {
+    setTransition({ email, startedAt: Date.now() });
+  }, []);
+  const endLoginTransition = useCallback(() => setTransition(null), []);
+
   useEffect(() => {
     if (!isAuthenticated || !me) {
       return;
     }
     void attachAfterLogin({});
   }, [attachAfterLogin, isAuthenticated, me]);
+
+  // Safety net for the curtain: if the session never materialises (a
+  // rejected token) or the redirect stalls, hand the screen back rather than
+  // leaving "Entrando…" up for good. The provider needs a moment to pick the
+  // new token up, hence the grace before trusting "not signed in".
+  useEffect(() => {
+    if (!transition) {
+      return;
+    }
+    const unauthenticated = !isLoading && !isAuthenticated;
+    const deadline = transition.startedAt + (unauthenticated ? 1500 : 12_000);
+    const timer = setTimeout(
+      () => setTransition(null),
+      Math.max(0, deadline - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, isLoading, transition]);
 
   useEffect(() => {
     if (pathname === "/tv" || pathname === CLI_HANDOFF_PATH) {
@@ -235,41 +267,82 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const view = resolveView({ isAuthenticated, isLoading, me, pathname });
+  // The curtain lifts only once the landing page itself is on screen, never
+  // over "Cargando…" or the login card the gate remounts on the way.
+  const revealReady =
+    transition !== null && pathname !== "/login" && view === "page";
+
+  return (
+    <LoginTransitionProvider value={beginLoginTransition}>
+      {view === "page" ? (
+        children
+      ) : view === "loading" ? (
+        <div className="flex min-h-screen items-center justify-center bg-hs-paper px-4">
+          <LoadingText />
+        </div>
+      ) : view === "splash" ? (
+        <HomeSplash />
+      ) : null}
+      {transition ? (
+        <LoginTransition
+          email={transition.email}
+          ready={revealReady}
+          onDone={endLoginTransition}
+        />
+      ) : null}
+    </LoginTransitionProvider>
+  );
+}
+
+type Me = NonNullable<ReturnType<typeof useQuery<typeof api.users.me>>>;
+
+/**
+ * What the gate shows at this path: the page itself, the loading screen,
+ * the public splash or nothing while the effect above redirects.
+ */
+function resolveView({
+  isAuthenticated,
+  isLoading,
+  me,
+  pathname,
+}: {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  me: Me | null | undefined;
+  pathname: string;
+}): "page" | "loading" | "splash" | "blank" {
   if (isLoading || (isAuthenticated && me === undefined)) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-hs-paper px-4">
-        <LoadingText />
-      </div>
-    );
+    return "loading";
   }
 
   if (!isAuthenticated && pathname === "/") {
-    return <HomeSplash />;
+    return "splash";
   }
 
   if (!isAuthenticated && pathname !== "/login") {
-    return null;
+    return "blank";
   }
 
   if (me && me.role !== "admin" && pathname !== CLI_AUTH_PATH) {
     if (pathname.startsWith("/admin")) {
-      return null;
+      return "blank";
     }
     if (!me.event.open && !isPathAllowedWhenClosed(pathname)) {
-      return null;
+      return "blank";
     }
     const section = sectionForPath(pathname);
     if (section && !me.sections.includes(section)) {
-      return null;
+      return "blank";
     }
     if (!me.profileComplete) {
       if (pathname !== "/onboarding") {
-        return null;
+        return "blank";
       }
       // The effect keeps a judge here even without a signup; everyone else
       // still has to be registered and accepted first (ladder below).
       if (me.canJudge) {
-        return <>{children}</>;
+        return "page";
       }
     }
     const judgingAllowed = me.canJudge && pathname.startsWith("/judging");
@@ -283,10 +356,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           next === "/onboarding")
       ) {
         if (pathname !== "/judging") {
-          return null;
+          return "blank";
         }
       } else if (next && pathname !== next) {
-        return null;
+        return "blank";
       }
     }
   }
@@ -295,17 +368,17 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     const profileDue = !me.profileComplete;
     const detailsDue = me.accepted && !me.onboardingComplete;
     if (profileDue && pathname !== "/onboarding") {
-      return null;
+      return "blank";
     }
     if (pathname === "/onboarding" && !profileDue && !detailsDue) {
-      return null;
+      return "blank";
     }
     if (pathname === "/pending" || pathname === "/unregistered") {
-      return null;
+      return "blank";
     }
   }
 
-  return <>{children}</>;
+  return "page";
 }
 
 export function SignOutButton({ className }: { className?: string }) {

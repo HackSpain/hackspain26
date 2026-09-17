@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { LoginErrorCode } from "@/app/api/login/otp/route";
+import { useBeginLoginTransition } from "@/components/login-transition";
 import { AuthScreen, Field, FormError, FormNotice } from "@/components/page";
 import {
   EASE_OUT,
@@ -117,6 +118,7 @@ function TextLink({
 
 export default function LoginPage() {
   const { signIn } = useAuthActions();
+  const beginLoginTransition = useBeginLoginTransition();
   const reducedMotion = useReducedMotion();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -204,8 +206,12 @@ export default function LoginPage() {
     if (failure !== null) {
       setError(verifyErrorMessage(failure));
       setCode("");
+      setPending(false);
+      return;
     }
-    setPending(false);
+    // Stay on "Comprobando…" with the form locked: the curtain covers the
+    // card from here until the landing page is on screen (auth-gate.tsx).
+    beginLoginTransition(normalizedEmail);
   }
 
   const transition = reducedMotion
