@@ -40,7 +40,6 @@ const NETWORK_MESSAGE = "No hay conexión. Comprueba tu red e inténtalo otra ve
  * copy points at the organisers rather than at the form.
  */
 const SEND_ERROR_MESSAGE: Record<LoginErrorCode | "NETWORK" | "UNKNOWN", string> = {
-  BOT: "No hemos podido comprobar que eres una persona. Recarga la página e inténtalo otra vez.",
   INVALID_EMAIL: "Ese email no parece válido. Revísalo e inténtalo otra vez.",
   NETWORK: NETWORK_MESSAGE,
   SEND_FAILED: "No hemos podido enviar el código ahora mismo. Inténtalo en un minuto.",
