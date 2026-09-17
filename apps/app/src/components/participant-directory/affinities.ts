@@ -10,7 +10,6 @@ export const AFFINITY_KINDS = [
   "interests",
 ] as const;
 export type AffinityKind = (typeof AFFINITY_KINDS)[number];
-export type AffinityFilter = "all" | AffinityKind;
 
 export interface Affinity {
   kind: AffinityKind;
@@ -91,27 +90,12 @@ export function sharedAffinities(
 
 export function connectionsFor(
   anchor: DirectoryParticipant,
-  participants: DirectoryParticipant[],
-  filter: AffinityFilter = "all",
-  query = ""
+  participants: DirectoryParticipant[]
 ): Connection[] {
-  const search = normalize(query);
   return participants
     .flatMap((participant) => {
-      const affinities = sharedAffinities(anchor, participant).filter(
-        (item) => filter === "all" || item.kind === filter
-      );
-      const searchable = normalize(
-        [
-          participant.displayName,
-          participant.role,
-          participant.city,
-          participant.university ?? "",
-          ...participant.skills,
-          ...(participant.interests ?? []),
-        ].join(" ")
-      );
-      if (!affinities.length || (search && !searchable.includes(search))) {
+      const affinities = sharedAffinities(anchor, participant);
+      if (!affinities.length) {
         return [];
       }
       return [

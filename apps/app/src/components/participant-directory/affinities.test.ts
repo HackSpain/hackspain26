@@ -59,13 +59,3 @@ test("ranks concrete shared categories and excludes unrelated people", () => {
     ["peer", "skills"]
   );
 });
-
-test("filters by relationship and searches university with accent-insensitive matching", () => {
-  const results = connectionsFor(anchor, [peer], "university", "MÁLAGA");
-  assert.equal(results.length, 1);
-  assert.deepEqual(
-    results[0].affinities.map((item) => item.kind),
-    ["university"]
-  );
-  assert.equal(connectionsFor(anchor, [peer], "all", "no existe").length, 0);
-});

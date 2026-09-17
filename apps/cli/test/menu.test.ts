@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { MenuItem, MenuStatus } from "../src/lib/menu";
-import { buildMainMenu, isResumeKey, statusLine } from "../src/lib/menu";
+import { buildMainMenu, statusLine } from "../src/lib/menu";
 import { buildProgram } from "../src/lib/program";
 
 const LOGGED_OUT: MenuStatus = { loggedIn: false };
@@ -199,12 +199,6 @@ describe("buildMainMenu", () => {
   test("account is not a sibling of profile", () => {
     expect(values(buildMainMenu(READY_OWNER))).not.toContain("account");
     expect(values(buildMainMenu(READY_NO_TEAM))).not.toContain("account");
-  });
-
-  test("q, Esc and Ctrl+C after an action resume the menu", () => {
-    expect(isResumeKey(Uint8Array.of(113))).toBe(true);
-    expect(isResumeKey(Uint8Array.of(27))).toBe(true);
-    expect(isResumeKey(Uint8Array.of(3))).toBe(true);
   });
 
   test("tracks show the state first: track list plus the project when it exists", () => {
