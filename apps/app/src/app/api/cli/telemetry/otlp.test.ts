@@ -5,6 +5,7 @@ import type { TelemetryEvent } from "./rawtree";
 const event: TelemetryEvent = {
   eventId: "claude-code:session-1:msg_1",
   harness: "claude-code",
+  harnessVersion: "2.1.261",
   identity: { clientVersion: "0.4.0", teamId: "team-1", userId: "user-1" },
   model: {
     family: "claude",
@@ -16,7 +17,11 @@ const event: TelemetryEvent = {
   // Read two days after it happened.
   observedAt: "2026-10-05T10:00:00.000Z",
   occurredAt: "2026-10-03T09:30:00.000Z",
-  project: { dirHash: "9f2c1a7b3e4d5c6a", name: "agentos" },
+  project: {
+    dirHash: "9f2c1a7b3e4d5c6a",
+    gitBranch: "main",
+    name: "agentos",
+  },
   schema: "hackspain.telemetry.v2",
   sessionId: "session-1",
   tokens: {
@@ -34,7 +39,6 @@ const ENV = [
   "RAWTREE_API_KEY",
   "RAWTREE_BASE_URL",
   "RAWTREE_DATABASE",
-  "RAWTREE_OTLP_LOGS_TABLE",
 ] as const;
 const original = Object.fromEntries(ENV.map((name) => [name, process.env[name]]));
 
@@ -60,11 +64,40 @@ describe("toOtlpLogs", () => {
     expect(record?.eventName).toBe("hackspain.usage");
   });
 
-  test("GenAI names where they exist, hackspain.* for the rest", () => {
-    const record = toOtlpLogs([event]).resourceLogs[0]?.scopeLogs[0]?.logRecords[0];
-    if (!record) {
+  test("maps every canonical field into the OTLP log", () => {
+    const resource = toOtlpLogs([event]).resourceLogs[0];
+    const record = resource?.scopeLogs[0]?.logRecords[0];
+    if (!(resource && record)) {
       throw new Error("no record");
     }
+    expect(resource.resource.attributes).toEqual([
+      { key: "service.name", value: { stringValue: "hackspain-cli" } },
+      { key: "service.version", value: { stringValue: "0.4.0" } },
+    ]);
+    expect(record.attributes.map(({ key }) => key)).toEqual([
+      "event.id",
+      "gen_ai.conversation.id",
+      "gen_ai.request.model",
+      "hackspain.model.raw",
+      "gen_ai.provider.name",
+      "gen_ai.usage.input_tokens",
+      "gen_ai.usage.output_tokens",
+      "hackspain.schema",
+      "hackspain.harness",
+      "hackspain.harness.version",
+      "hackspain.model.family",
+      "hackspain.usage.cache_read_tokens",
+      "hackspain.usage.cache_write_tokens",
+      "hackspain.usage.reasoning_tokens",
+      "hackspain.usage.total_tokens",
+      "hackspain.native.cost_usd",
+      "hackspain.user.id",
+      "hackspain.team.id",
+      "hackspain.project.dir_hash",
+      "hackspain.project.name",
+      "hackspain.project.git_branch",
+      "hackspain.native.request_id",
+    ]);
     expect(attribute(record, "gen_ai.request.model")).toEqual({
       stringValue: "claude-fable-5-1",
     });
@@ -115,21 +148,6 @@ describe("toOtlpLogs", () => {
 });
 
 describe("exportTelemetryAsOtlpLogs", () => {
-  test("uses RawTree's default logs table when no custom table is configured", async () => {
-    delete process.env.RAWTREE_OTLP_LOGS_TABLE;
-    process.env.RAWTREE_API_KEY = "key";
-    process.env.RAWTREE_DATABASE = "hackspain";
-    let headers: HeadersInit | undefined;
-    await exportTelemetryAsOtlpLogs(
-      [event],
-      ((_url: string, init: RequestInit) => {
-        headers = init.headers;
-        return Promise.resolve(new Response("{}"));
-      }) as unknown as typeof fetch
-    );
-    expect(new Headers(headers).get("x-rawtree-logs-table")).toBeNull();
-  });
-
   test("requires the RawTree API key and database", async () => {
     delete process.env.RAWTREE_API_KEY;
     delete process.env.RAWTREE_DATABASE;
@@ -139,7 +157,6 @@ describe("exportTelemetryAsOtlpLogs", () => {
   });
 
   test("posts OTLP/JSON to RawTree with the table and database headers", async () => {
-    process.env.RAWTREE_OTLP_LOGS_TABLE = "hackspain_otel_logs";
     process.env.RAWTREE_API_KEY = "key";
     process.env.RAWTREE_DATABASE = "hackspain";
     process.env.RAWTREE_BASE_URL = "https://rawtree.test/";
@@ -157,7 +174,6 @@ describe("exportTelemetryAsOtlpLogs", () => {
   });
 
   test("a partial success with rejected records is an error", async () => {
-    process.env.RAWTREE_OTLP_LOGS_TABLE = "hackspain_otel_logs";
     process.env.RAWTREE_API_KEY = "key";
     process.env.RAWTREE_DATABASE = "hackspain";
     const rejected = (() =>

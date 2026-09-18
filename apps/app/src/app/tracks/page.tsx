@@ -179,8 +179,8 @@ function NoProject({ submissionsOpen }: { submissionsOpen: boolean }) {
       <CardHeader>
         <CardTitle>Todavía no tienes proyecto</CardTitle>
         <CardDescription>
-          Entra en los retos y guarda el proyecto desde la CLI. Un proyecto
-          puede entrar en tantos retos como quieras.
+          Entra en un reto y guarda el proyecto desde la CLI. Un equipo entra
+          en un solo reto.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -338,7 +338,7 @@ export default function TracksPage() {
   return (
     <Page
       title="Retos"
-      description="Un proyecto, tantos retos como quieras. Se gestiona desde la CLI; aquí ves cómo va."
+      description="Un proyecto, un reto. Se gestiona desde la CLI; aquí ves cómo va."
     >
       {tracks.length === 0 ? (
         <p className="text-hs-brown">Cargando retos…</p>

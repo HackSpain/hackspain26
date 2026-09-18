@@ -125,6 +125,7 @@ export function toOtlpLogs(events: TelemetryEvent[]): OtlpLogsRequest {
 }
 
 const DEFAULT_BASE_URL = "https://api.rawtree.com";
+const OTLP_LOGS_TABLE = "hackspain_otel_logs";
 
 export class RawTreeOtlpConfigurationError extends Error {
   constructor(message: string) {
@@ -135,9 +136,9 @@ export class RawTreeOtlpConfigurationError extends Error {
 
 /**
  * The only server-side persistence path for CLI telemetry. RawTree's native
- * OTLP endpoint writes to `logs` unless RAWTREE_OTLP_LOGS_TABLE selects a
- * custom table. OTLP does not promise insert deduplication, so consumers
- * dedupe on (`hackspain.user.id`, `event.id`).
+ * OTLP endpoint writes every event to `hackspain_otel_logs`. OTLP does not
+ * promise insert deduplication, so consumers dedupe on
+ * (`hackspain.user.id`, `event.id`).
  */
 export async function exportTelemetryAsOtlpLogs(
   events: TelemetryEvent[],
@@ -153,7 +154,6 @@ export async function exportTelemetryAsOtlpLogs(
       "RAWTREE_API_KEY and RAWTREE_DATABASE are required"
     );
   }
-  const table = process.env.RAWTREE_OTLP_LOGS_TABLE;
   const base = (process.env.RAWTREE_BASE_URL ?? DEFAULT_BASE_URL).replace(
     /\/+$/,
     ""
@@ -165,7 +165,7 @@ export async function exportTelemetryAsOtlpLogs(
       "content-type": "application/json",
       "user-agent": "hackspain-dashboard/1.0",
       "x-rawtree-database": database,
-      ...(table ? { "x-rawtree-logs-table": table } : {}),
+      "x-rawtree-logs-table": OTLP_LOGS_TABLE,
     },
     method: "POST",
     signal: AbortSignal.timeout(10_000),

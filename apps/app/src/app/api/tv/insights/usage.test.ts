@@ -8,10 +8,9 @@ const window = {
 };
 
 const ENV = [
-  "RAWTREE_READ_API_KEY",
+  "RAWTREE_API_KEY",
   "RAWTREE_DATABASE",
   "RAWTREE_BASE_URL",
-  "RAWTREE_OTLP_LOGS_TABLE",
 ] as const;
 const original = Object.fromEntries(ENV.map((name) => [name, process.env[name]]));
 
@@ -87,8 +86,8 @@ test("parseUsageRows accepts numbers or numeric strings and drops junk", () => {
 });
 
 describe("fetchUsage", () => {
-  test("without a read key it says so instead of failing", async () => {
-    delete process.env.RAWTREE_READ_API_KEY;
+  test("without a RawTree key it says so instead of failing", async () => {
+    delete process.env.RAWTREE_API_KEY;
     process.env.RAWTREE_DATABASE = "hackspain";
     expect(await fetchUsage(window)).toEqual({
       rows: [],
@@ -96,11 +95,10 @@ describe("fetchUsage", () => {
     });
   });
 
-  test("queries RawTree with the read key and returns the rows", async () => {
-    process.env.RAWTREE_READ_API_KEY = "rt_read";
+  test("queries RawTree with the shared key and returns the rows", async () => {
+    process.env.RAWTREE_API_KEY = "rt_read_write";
     process.env.RAWTREE_DATABASE = "hackspain";
     process.env.RAWTREE_BASE_URL = "https://rawtree.test";
-    process.env.RAWTREE_OTLP_LOGS_TABLE = "hackspain_otel_logs";
     const calls: { url: string; auth: string | null; sql: string }[] = [];
     const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const headers = new Headers(init?.headers);
@@ -123,16 +121,16 @@ describe("fetchUsage", () => {
     expect(result.rows).toHaveLength(1);
     expect(calls[0]?.url).toContain("https://rawtree.test/v1/query");
     expect(calls[0]?.url).toContain("database=hackspain");
-    expect(calls[0]?.auth).toBe("Bearer rt_read");
+    expect(calls[0]?.auth).toBe("Bearer rt_read_write");
     expect(calls[0]?.sql).toContain("FROM hackspain_otel_logs");
   });
 
   test("no table yet (before the first event) is empty, not an error", async () => {
-    process.env.RAWTREE_READ_API_KEY = "rt_read";
+    process.env.RAWTREE_API_KEY = "rt_read_write";
     process.env.RAWTREE_DATABASE = "hackspain";
     const missing = (async () =>
       Response.json(
-        { error: "unknown_table", hint: "", message: "Table logs does not exist" },
+        { error: "unknown_table", hint: "", message: "Table hackspain_otel_logs does not exist" },
         { status: 404 }
       )) as unknown as typeof fetch;
     expect(await fetchUsage(window, missing)).toEqual({
@@ -142,7 +140,7 @@ describe("fetchUsage", () => {
   });
 
   test("any other failure is thrown for the route to report", async () => {
-    process.env.RAWTREE_READ_API_KEY = "rt_read";
+    process.env.RAWTREE_API_KEY = "rt_read_write";
     process.env.RAWTREE_DATABASE = "hackspain";
     const broken = (async () =>
       Response.json(

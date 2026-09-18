@@ -162,16 +162,13 @@ export default function CliPage() {
 
         <CommandCard
           title="Retos y entrega"
-          description="Un proyecto por equipo, tantos retos como quieras. La entrega congela todo; los borradores se pueden guardar antes."
+          description="Un proyecto por equipo, un reto. La entrega congela todo; los borradores se pueden guardar antes."
         >
           <CommandRow command="hackspain track list">
             Retos disponibles.
           </CommandRow>
-          <CommandRow command="hackspain track register <slug…> | unregister <slug…>">
-            Apúntate o bórrate de retos.
-          </CommandRow>
-          <CommandRow command="hackspain track move <from> <to>">
-            Cámbiate de reto.
+          <CommandRow command="hackspain track register [slug] | unregister">
+            Entra en un reto o salte. Cambiar de reto sustituye el anterior.
           </CommandRow>
           <CommandRow command="hackspain submit [--draft]">
             Formulario interactivo de entrega; flags para scripts.

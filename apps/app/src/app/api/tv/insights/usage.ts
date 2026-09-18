@@ -1,6 +1,6 @@
 import { RawTree, RawTreeError } from "@rawtree/sdk";
 
-const DEFAULT_OTLP_LOGS_TABLE = "logs";
+const OTLP_LOGS_TABLE = "hackspain_otel_logs";
 const TABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /** AI usage of one team on one harness in one bucket of the hackathon. */
@@ -105,26 +105,25 @@ export function parseUsageRows(data: unknown[]): UsageRow[] {
 
 export type UsageResult =
   | { status: "ok"; rows: UsageRow[] }
-  /** No read key on this deployment. */
+  /** No RawTree key on this deployment. */
   | { status: "unconfigured"; rows: [] }
   /** The table does not exist until the first event of the hackathon lands. */
   | { status: "empty"; rows: [] };
 
 /**
- * Reads need their own key: the dashboard's RAWTREE_API_KEY is `write_only`.
- * Set RAWTREE_READ_API_KEY to a `read_only` key. Throws on anything that is
- * neither "not configured" nor "no table yet", so the caller can report it.
+ * The dashboard uses one `read_write` RawTree key for ingestion and queries.
+ * Throws on anything that is neither "not configured" nor "no table yet", so
+ * the caller can report it.
  */
 export async function fetchUsage(
   window: UsageWindow,
   fetchImpl: typeof fetch = fetch
 ): Promise<UsageResult> {
-  const apiKey = process.env.RAWTREE_READ_API_KEY;
+  const apiKey = process.env.RAWTREE_API_KEY;
   const database = process.env.RAWTREE_DATABASE;
   if (!apiKey || !database) {
     return { rows: [], status: "unconfigured" };
   }
-  const table = process.env.RAWTREE_OTLP_LOGS_TABLE ?? DEFAULT_OTLP_LOGS_TABLE;
   const rawtree = new RawTree({
     apiKey,
     database,
@@ -137,7 +136,7 @@ export async function fetchUsage(
   try {
     const result = await rawtree.query({
       signal: AbortSignal.timeout(15_000),
-      sql: usageSql(table, window),
+      sql: usageSql(OTLP_LOGS_TABLE, window),
     });
     return { rows: parseUsageRows(result.data), status: "ok" };
   } catch (error) {

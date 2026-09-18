@@ -17,7 +17,7 @@ The watcher writes every event to a local spool
 is configured, POSTs the same lines as `application/x-ndjson` with
 `Authorization: Bearer <Convex JWT>`. The dashboard verifies the participant, converts accepted
 events to OTLP logs and sends them to RawTree's native `POST /otlp/v1/logs` endpoint. RawTree uses
-its `logs` table by default; `RAWTREE_OTLP_LOGS_TABLE` can select another one.
+the fixed `hackspain_otel_logs` table for both ingestion and Insights queries.
 
 Before an HTTP request, the CLI atomically saves the exact batch in a per-user pending-upload file.
 It removes that file only after a successful response, and retries it on the next flush or process
