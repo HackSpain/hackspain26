@@ -351,7 +351,7 @@ function Feed({ posts }: { posts: MarketPost[] | undefined }) {
 function SponsorStrip() {
   const sponsors = resolveTvSponsors();
   return (
-    <div className="grid h-[9%] shrink-0 grid-cols-[auto_minmax(0,1fr)_calc(var(--u)*9)] gap-[var(--line)]">
+    <div className="grid h-[9%] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-[var(--line)]">
       <p className="hsx-title hsx-sm flex items-center bg-hs-orange px-[calc(var(--u)*1.4)] text-hs-paper">Patrocinan</p>
       <div className="flex min-w-0 bg-hs-paper">
         <Marquee seconds={sponsors.length * 4.5}>
@@ -362,7 +362,10 @@ function SponsorStrip() {
           ))}
         </Marquee>
       </div>
-      <Diagonal bg="bg-hs-gold" tri="bg-hs-red" corner="br" />
+      <p className="flex flex-col items-center justify-center bg-hs-navy px-[calc(var(--u)*1.7)] leading-none text-hs-paper">
+        <span className="hsx-label">Powered by</span>
+        <span className="hsx-title hsx-sm mt-[calc(var(--u)*0.4)]">RawTree</span>
+      </p>
     </div>
   );
 }
@@ -373,7 +376,7 @@ function MarketStage({ data, posts, demo }: { data: LiveInsightData; posts: Mark
   const bucket = currentBucket(data.samples);
   return (
     <main className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
-      <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] p-[var(--line)]">
+      <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] px-[var(--line)] pt-[var(--line)] pb-[calc(var(--u)*1.2)]">
         <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1fr)_calc(var(--u)*7)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
           <Diagonal bg="bg-hs-paper" tri="bg-hs-orange" corner="tl" className="portrait:hidden" />
           <div className="flex items-center justify-center bg-hs-paper px-[calc(var(--u)*1.4)]">
