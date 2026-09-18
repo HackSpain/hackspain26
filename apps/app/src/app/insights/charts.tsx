@@ -149,7 +149,11 @@ export function ActivityChart({
   });
   const selected =
     rows.find((row) => row.bucket === selectedBucket) ?? rows.at(-1);
-  const unit = metric === "tokens" ? "tokens" : "commits";
+  const unit = {
+    commits: "pushes",
+    pullRequests: "pull requests",
+    tokens: "tokens",
+  }[metric];
   const activeTools = HARNESSES.filter((harness) =>
     samples.some(
       (sample) => sample.harness === harness.id && sample[metric] > 0
@@ -354,7 +358,7 @@ function TeamPoint({
       tabIndex={0}
       role="button"
       className="cursor-pointer outline-none hover:fill-opacity-100 focus-visible:stroke-hs-navy focus-visible:stroke-[3px]"
-      aria-label={`${team.name}: ${compact(team.tokens)} tokens, ${number(team.commits)} commits. Ver equipo.`}
+      aria-label={`${team.name}: ${compact(team.tokens)} tokens, ${number(team.commits)} pushes. Ver equipo.`}
       onClick={() => onSelect(team)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -382,14 +386,14 @@ export function TeamScatter({
     <div>
       <div className={STAGE}>
         <div className="mb-2 flex justify-between text-[11px] text-hs-brown">
-          <span>Commits</span>
+          <span>Pushes</span>
           <span>Tokens →</span>
         </div>
         <ResponsiveContainer width="100%" height={248} minWidth={0}>
           <ScatterChart
             margin={{ bottom: 0, left: -12, right: 14, top: 12 }}
             accessibilityLayer
-            aria-label="Consumo de tokens y commits por equipo"
+            aria-label="Consumo de tokens y pushes por equipo"
           >
             <CartesianGrid strokeDasharray="2 4" stroke={GRID} />
             <XAxis
@@ -406,7 +410,7 @@ export function TeamScatter({
             />
             <YAxis
               dataKey="commits"
-              name="Commits"
+              name="Pushes"
               type="number"
               tickLine={false}
               axisLine={false}

@@ -1,12 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { TvInsights } from "@/app/api/tv/insights/route";
-import {
-  filterSamples,
-  harnessRows,
-  sumSamples,
-  teamRows,
-} from "@/app/insights/mock-data";
-import { NO_TEAM_ID, toInsightData } from "./use-tv-insights";
+import { filterSamples, harnessRows, sumSamples, teamRows } from "./mock-data";
+import { NO_TEAM_ID, toInsightData } from "./use-live-insights";
 
 const payload: TvInsights = {
   activity: [

@@ -2,21 +2,21 @@
 
 import { useSyncExternalStore } from "react";
 import type { TvInsights } from "@/app/api/tv/insights/route";
-import { HARNESSES } from "@/app/insights/mock-data";
-import type { HarnessId, Sample, Team } from "@/app/insights/mock-data";
+import { HARNESSES } from "./mock-data";
+import type { HarnessId, Sample, Team } from "./mock-data";
 
 /**
- * Real data for the TV's insight boxes: AI usage from RawTree (what
- * `hackspain watch` reports, schema hackspain.telemetry.v2) plus teams and
- * GitHub activity from Convex, served by /api/tv/insights. One poller for
- * the whole page, however many boxes are on screen.
+ * Real data for the insights page and the TV's insight boxes: AI usage from
+ * RawTree (what `hackspain watch` reports, schema hackspain.telemetry.v2)
+ * plus teams and GitHub activity from Convex, served by /api/tv/insights.
+ * One poller per page, however many charts or boxes are on screen.
  */
 
 const POLL_MS = 30_000;
 /** Usage from people who are not in a team yet: counted, never ranked. */
 export const NO_TEAM_ID = "no-team";
 
-export type TvInsightData = {
+export type LiveInsightData = {
   /** "loading" until the first answer; then where the usage came from. */
   status: "loading" | TvInsights["usage"];
   samples: Sample[];
@@ -24,9 +24,10 @@ export type TvInsightData = {
   /** Minutes each of the 24 buckets covers; the hackathon is not 12 hours. */
   bucketMinutes: number;
   startsAt?: number;
+  endsAt?: number;
 };
 
-const EMPTY: TvInsightData = {
+const EMPTY: LiveInsightData = {
   bucketMinutes: 30,
   samples: [],
   status: "loading",
@@ -36,7 +37,7 @@ const EMPTY: TvInsightData = {
 const HARNESS_IDS = new Set<string>(HARNESSES.map((harness) => harness.id));
 const TEAM_COLORS = ["#d96b2a", "#35858a", "#1e3958", "#8b6b9f", "#a67516", "#677558"];
 
-export function toInsightData(payload: TvInsights): TvInsightData {
+export function toInsightData(payload: TvInsights): LiveInsightData {
   const known = new Set(payload.teams.map((team) => team.id));
   const byKey = new Map<string, Sample>();
   const sampleFor = (teamId: string, harness: HarnessId, bucket: number) => {
@@ -121,6 +122,7 @@ export function toInsightData(payload: TvInsights): TvInsightData {
       : 30;
   return {
     bucketMinutes,
+    endsAt,
     samples: [...byKey.values()].toSorted((a, b) => a.bucket - b.bucket),
     startsAt,
     status: payload.usage,
@@ -128,7 +130,7 @@ export function toInsightData(payload: TvInsights): TvInsightData {
   };
 }
 
-let current: TvInsightData = EMPTY;
+let current: LiveInsightData = EMPTY;
 const listeners = new Set<() => void>();
 let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -168,7 +170,7 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-export function useTvInsights(): TvInsightData {
+export function useLiveInsights(): LiveInsightData {
   return useSyncExternalStore(
     subscribe,
     () => current,
