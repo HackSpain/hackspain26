@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { layoutTvBox, snapTv } from '@/lib/tv';
+import { layoutTvBox } from '@/lib/tv';
 import type { TvWidget, TvWidgetKind } from '@/lib/tv';
 import { cn } from "@/lib/utils";
 import { isEditableKind, TvInlineEditor } from "./inline-edit";
@@ -352,10 +352,10 @@ export function TvEditor() {
               h: current.origH + dy,
             };
       const next = layoutTvBox({
-        x: snapTv(raw.x),
-        y: snapTv(raw.y),
-        w: snapTv(raw.w),
-        h: snapTv(raw.h),
+        x: Math.round(raw.x),
+        y: Math.round(raw.y),
+        w: Math.round(raw.w),
+        h: Math.round(raw.h),
       });
       draftRef.current = { _id: current.id, ...next };
       applyBox(boxRefs.current.get(current.id), next);

@@ -1,3 +1,4 @@
+import type { Infer } from "convex/values";
 import { v } from "convex/values";
 
 export const urlKindValidator = v.union(
@@ -17,16 +18,8 @@ export const urlEntryValidator = v.object({
 
 export const urlsValidator = v.array(urlEntryValidator);
 
-export type UrlKind =
-  | "x"
-  | "linkedin"
-  | "github"
-  | "web"
-  | "repo"
-  | "demo"
-  | "video";
-
-export type UrlEntry = { kind: UrlKind; url: string };
+export type UrlKind = Infer<typeof urlKindValidator>;
+export type UrlEntry = Infer<typeof urlEntryValidator>;
 
 export function urlOf(
   urls: UrlEntry[] | undefined,

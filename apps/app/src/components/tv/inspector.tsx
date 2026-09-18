@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import {
   TV_FONT_WEIGHT_OPTIONS,
   TV_PALETTE,
-  defaultTvFontWeight,
   tvFontSizePixels,
   isTvFontWeight,
   layoutTvBox,
@@ -203,7 +202,7 @@ function TextFields({
         <label className="block text-xs text-hs-brown">
           Peso
           <select
-            value={widget.fontWeight ?? defaultTvFontWeight()}
+            value={widget.fontWeight ?? "normal"}
             onChange={(event) => {
               const next = event.target.value;
               if (!isTvFontWeight(next) || next === widget.fontWeight) {
