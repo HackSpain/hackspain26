@@ -13,6 +13,7 @@ const REVEAL_MS = 1100;
 const HOLD_MS = 3000;
 const CLOSE_MS = 900;
 const PRESENTATION_MS = REVEAL_MS + HOLD_MS + CLOSE_MS;
+const CLOSE_AT_SECONDS = (REVEAL_MS + HOLD_MS) / 1000;
 const BAND_TONES = ["bg-hs-navy", "bg-hs-teal", "bg-hs-gold", "bg-hs-orange", "bg-hs-red"] as const;
 
 const DEMO: Arrival[] = [
@@ -87,6 +88,15 @@ function Player({ person }: { person: Arrival }) {
       if (portrait) {
         tl.to(portrait, { scale: 1.045, duration: HOLD_MS / 1000, ease: "none" }, REVEAL_MS / 1000);
       }
+      tl.to(".arena-first, .arena-last", {
+        autoAlpha: 0, yPercent: -110, skewY: -4, duration: 0.52, stagger: 0.05, ease: "expo.out",
+      }, CLOSE_AT_SECONDS)
+        .to(".arena-affiliation, .arena-number", {
+          autoAlpha: 0, y: -20, duration: 0.42, stagger: 0.04, ease: "power3.out",
+        }, CLOSE_AT_SECONDS + 0.08)
+        .to(".arena-portrait", {
+          autoAlpha: 0, x: 100, scale: 1.06, duration: 0.62, ease: "expo.out",
+        }, CLOSE_AT_SECONDS);
     });
     media.add("(prefers-reduced-motion: reduce)", () => {
       gsap.from(root.current, { autoAlpha: 0, duration: 0.18, ease: "none" });
@@ -164,7 +174,7 @@ function ArrivalBands({ personId, static: isStatic = false }: { personId?: strin
         }, 0.1)
         .fromTo(".arena-color-band", { yPercent: 100 }, {
           yPercent: 0, duration: 0.6, stagger: 0.06, ease: "expo.out", immediateRender: false,
-        }, (REVEAL_MS + HOLD_MS) / 1000);
+        }, CLOSE_AT_SECONDS);
     });
     media.add("(prefers-reduced-motion: reduce)", () => {
       gsap.set(root.current, { autoAlpha: personId ? 0 : 1 });
