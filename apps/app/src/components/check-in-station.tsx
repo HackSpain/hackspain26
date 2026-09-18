@@ -1,10 +1,7 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
 import { Check, KeyRound, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 import { LoadingText, Page, errorMessage } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,17 +11,50 @@ type CheckInResult = {
   checkedInAt: number;
   email: string;
   name: string;
-  passId: Id<"eventPasses">;
+  passId: string;
   status: "checked_in" | "already_checked_in";
 };
 
+type StaffStatus = {
+  checkedIn: number;
+  development: boolean;
+  issued: number;
+  open: boolean;
+  opensAt: number;
+  phase: "pre_event" | "live" | "ended";
+};
+
+type ReceptionAction =
+  | { action: "scan"; value: string }
+  | { action: "undo"; passId: string };
+
+async function receptionRequest<T>(action?: ReceptionAction): Promise<T> {
+  const response = await fetch("/api/reception", {
+    body: action ? JSON.stringify(action) : undefined,
+    cache: "no-store",
+    headers: action ? { "Content-Type": "application/json" } : undefined,
+    method: action ? "POST" : "GET",
+  });
+  const body: unknown = await response.json();
+  if (!response.ok) {
+    const message =
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      typeof body.error === "string"
+        ? body.error
+        : "No se ha podido conectar con el check-in";
+    throw new Error(message);
+  }
+  return body as T;
+}
+
 export function CheckInStation() {
-  const staffStatus = useQuery(api.passes.staffStatus);
-  const staffScan = useMutation(api.passes.staffScan);
-  const staffUndoCheckIn = useMutation(api.passes.staffUndoCheckIn);
   const inputRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
   const lastCodeRef = useRef<{ at: number; value: string } | null>(null);
+  const [staffStatus, setStaffStatus] = useState<StaffStatus | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +68,24 @@ export function CheckInStation() {
     staffStatus && now < staffStatus.opensAt
       ? "El check-in se activará el 18 de septiembre de 2026 a las 10:00."
       : "El responsable debe activar primero el evento en directo.";
+
+  const loadStatus = useCallback(async () => {
+    try {
+      const next = await receptionRequest<StaffStatus>();
+      setStaffStatus(next);
+      setStatusError(null);
+    } catch (caughtError) {
+      setStatusError(
+        errorMessage(caughtError, "No se ha podido cargar el check-in")
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadStatus();
+    const interval = window.setInterval(() => void loadStatus(), 15_000);
+    return () => window.clearInterval(interval);
+  }, [loadStatus]);
 
   useEffect(() => {
     if (!staffStatus || staffStatus.development || now >= staffStatus.opensAt) {
@@ -68,9 +116,13 @@ export function CheckInStation() {
     setPending(true);
     setError(null);
     try {
-      const next = await staffScan({ value });
+      const next = await receptionRequest<CheckInResult>({
+        action: "scan",
+        value,
+      });
       setResult(next);
       setCode("");
+      void loadStatus();
       navigator.vibrate?.(80);
     } catch (caughtError) {
       setResult(null);
@@ -81,7 +133,7 @@ export function CheckInStation() {
       setPending(false);
       window.requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }, [closedMessage, code, live, staffScan]);
+  }, [closedMessage, code, live, loadStatus]);
 
   async function undo() {
     if (!result) {
@@ -90,9 +142,10 @@ export function CheckInStation() {
     setPending(true);
     setError(null);
     try {
-      await staffUndoCheckIn({ passId: result.passId });
+      await receptionRequest({ action: "undo", passId: result.passId });
       setResult(null);
       lastCodeRef.current = null;
+      void loadStatus();
       inputRef.current?.focus();
     } catch (caughtError) {
       setError(errorMessage(caughtError, "No se ha podido deshacer el check-in"));
@@ -101,8 +154,30 @@ export function CheckInStation() {
     }
   }
 
-  if (staffStatus === undefined) {
+  if (!staffStatus && !statusError) {
     return <LoadingText />;
+  }
+
+  if (!staffStatus) {
+    return (
+      <Page
+        className="mx-auto max-w-2xl px-4 py-6 sm:py-10"
+        title="Entrada HackSpain"
+        description="Introduce el código de cuatro caracteres que recibió el participante por email."
+      >
+        <Card className="border-hs-red bg-hs-red/10">
+          <CardHeader>
+            <CardTitle>No se puede cargar el check-in</CardTitle>
+            <CardDescription className="text-hs-ink">
+              {statusError}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => void loadStatus()}>Reintentar</Button>
+          </CardContent>
+        </Card>
+      </Page>
+    );
   }
 
   return (
