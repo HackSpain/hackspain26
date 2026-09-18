@@ -71,9 +71,9 @@ export default function AdminTeamsPage() {
         return true;
       }
       if (trackFilter === NONE) {
-        return !team.trackId;
+        return team.entered.length === 0;
       }
-      return team.trackId === trackFilter;
+      return team.entered.some((track) => track._id === trackFilter);
     });
   }, [data?.teams, query, trackFilter]);
 
@@ -84,7 +84,7 @@ export default function AdminTeamsPage() {
   const countById = new Map(
     data.tracks.map((track) => [track._id, track.teamCount])
   );
-  const untracked = data.teams.filter((team) => !team.trackId).length;
+  const untracked = data.teams.filter((team) => team.entered.length === 0).length;
 
   const save = async (
     teamId: Id<"teams">,
@@ -104,7 +104,7 @@ export default function AdminTeamsPage() {
   return (
     <Page
       title="Equipos"
-      description="Todos los equipos. Asigna un track o quítalos. El tope de 15 no aplica aquí."
+      description="Todos los equipos. Si alguno tiene varios tracks, elige uno y el resto se suelta. El tope de 15 no aplica aquí."
       className="flex h-[calc(100dvh-11rem)] flex-col gap-4 space-y-0 sm:h-[calc(100dvh-12rem)]"
     >
       <div className="grid shrink-0 gap-3 sm:grid-cols-[minmax(0,1fr)_16rem]">
@@ -189,12 +189,12 @@ function TeamRowView({
   teamLimit: number;
   tracks: TrackRow[];
 }) {
-  const count = team.trackId ? (countById.get(team.trackId) ?? 0) : 0;
-  const over = Boolean(team.trackId) && count > teamLimit;
   const emails =
     team.emails.length > 0
       ? team.emails.join(", ")
       : team.members.map((member) => member.name).join(", ") || "—";
+  const extras = team.entered.length > 1;
+  const currentId = team.entered[0]?._id;
   return (
     <TableRow
       className="[&_td]:border-b [&_td]:border-hs-ink/20"
@@ -207,18 +207,32 @@ function TeamRowView({
         {emails}
       </TableCell>
       <TableCell>
-        {team.trackLabel ? (
-          <Badge variant={over ? "gold" : "default"} className="tabular-nums">
-            {team.trackLabel} · {occupancy(count, teamLimit)}
-          </Badge>
-        ) : (
+        {team.entered.length === 0 ? (
           <Badge>Sin track</Badge>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {team.entered.map((track) => {
+              const count = countById.get(track._id) ?? 0;
+              return (
+                <Badge
+                  key={track._id}
+                  variant={extras || count > teamLimit ? "gold" : "default"}
+                  className="tabular-nums"
+                >
+                  {track.label} · {occupancy(count, teamLimit)}
+                </Badge>
+              );
+            })}
+            {extras ? (
+              <span className="text-xs text-hs-brown">Elige uno</span>
+            ) : null}
+          </div>
         )}
       </TableCell>
       <TableCell>
         <div className="flex min-w-56 items-center gap-2">
           <Select
-            value={team.trackId ?? NONE}
+            value={currentId ?? NONE}
             disabled={disabled}
             onValueChange={(value) =>
               onChange(value === NONE ? undefined : (value as Id<"tracks">))
@@ -243,7 +257,7 @@ function TeamRowView({
               ))}
             </SelectContent>
           </Select>
-          {team.trackId ? (
+          {currentId ? (
             <Button
               type="button"
               variant="outline"

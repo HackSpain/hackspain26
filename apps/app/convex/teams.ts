@@ -896,9 +896,13 @@ export const adminDirectory = adminQuery({
         .query("submissions")
         .withIndex("by_team", (q) => q.eq("teamId", team._id))
         .first();
-      const trackId = submission?.challengeIds[0];
-      const track = trackId ? await ctx.db.get(trackId) : null;
-      if (track) {
+      const entered = [];
+      for (const trackId of [...new Set(submission?.challengeIds ?? [])]) {
+        const track = await ctx.db.get(trackId);
+        if (!track) {
+          continue;
+        }
+        entered.push({ _id: track._id, label: track.label });
         teamCount.set(track._id, (teamCount.get(track._id) ?? 0) + 1);
       }
       const people = [];
@@ -921,9 +925,8 @@ export const adminDirectory = adminQuery({
         _id: team._id,
         emails: [...new Set(emails)],
         members: people.toSorted((a, b) => Number(b.isOwner) - Number(a.isOwner)),
+        entered,
         name: team.name,
-        trackId: track?._id,
-        trackLabel: track?.label,
       });
     }
     return {
@@ -950,9 +953,13 @@ export const adminDirectory = adminQuery({
             name: v.string(),
           })
         ),
+        entered: v.array(
+          v.object({
+            _id: v.id("tracks"),
+            label: v.string(),
+          })
+        ),
         name: v.string(),
-        trackId: v.optional(v.id("tracks")),
-        trackLabel: v.optional(v.string()),
       })
     ),
     tracks: v.array(
