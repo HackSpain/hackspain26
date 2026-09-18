@@ -45,8 +45,8 @@ function ScreenCard({ screen, now }: { screen: Screen; now: number }) {
           <a href={path} target="_blank" rel="noreferrer" className="min-w-0 break-all text-sm text-hs-navy underline underline-offset-4">{path} <ExternalLink className="inline size-3" aria-hidden /></a>
         </div>
         <div className="flex shrink-0 gap-1">
-          <Button variant="ghost" size="icon" aria-label={`Recargar ${screen.key}`} title="Recargar pantalla" disabled={busy} onClick={() => void update("reload")}><RotateCcw aria-hidden /></Button>
-          {!online.length ? <Button variant="ghost" size="icon" className="text-hs-red" aria-label={`Borrar ${screen.key}`} title="Borrar pantalla" disabled={busy} onClick={() => void update("remove")}><Trash2 aria-hidden /></Button> : null}
+          <Button variant="outline" size="icon" aria-label={`Recargar ${screen.key}`} title="Recargar pantalla" disabled={busy} onClick={() => void update("reload")}><RotateCcw aria-hidden /></Button>
+          {!online.length ? <Button variant="outline" size="icon" className="text-hs-red" aria-label={`Borrar ${screen.key}`} title="Borrar pantalla" disabled={busy} onClick={() => void update("remove")}><Trash2 aria-hidden /></Button> : null}
         </div>
       </header>
         <p className={`text-sm font-medium ${online.length ? "text-hs-teal" : "text-hs-brown"}`}>{online.length ? "Conectada" : "Sin conexión"}{pending ? " · orden pendiente" : online.length ? " · al día" : ""}</p>
