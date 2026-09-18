@@ -275,6 +275,15 @@
   line-height: 1;
 }
 
+/* /tv?view=equipos: the participants map, read from across a hall. */
+.tv-teams .pg-zone-label {
+  font-size: 14px;
+  fill: var(--color-hs-ink);
+}
+.tv-teams .pg-zone[data-loose] .pg-zone-label {
+  fill: var(--color-hs-brown);
+}
+
 @keyframes hsx-flash {
   from {
     color: var(--hsx-flash);

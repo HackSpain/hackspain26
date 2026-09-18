@@ -54,6 +54,7 @@ El catálogo compartido está en `convex/lib/tvScreens.ts` y el render en
 | `patrocinadores` | Logos del catálogo de patrocinadores existente |
 | `espera` | Franjas animadas y marca HackSpain |
 | `panel` | Todo el hackathon en una pantalla: cifras, equipos, feed y patrocinadores |
+| `equipos` | El mapa de participantes por equipo, en vivo, para la fase de formación |
 
 No hay coordenadas, tamaños de cajas ni métricas simuladas en estas vistas
 (salvo la demo del panel, que lo indica en pantalla).
@@ -82,6 +83,28 @@ Los datos son los de `/api/tv/insights` (RawTree y Convex, refresco cada 30
 segundos) y `tv.listFeed`; nada por persona. La rotación se detiene con la pestaña
 en segundo plano y respeta movimiento reducido. `/tv?view=panel&demo=1` usa equipos
 y cifras inventados (`src/lib/tv-market.ts`), nunca mezclados con los reales.
+
+## Equipos
+
+`/tv?screen=hall&view=equipos` pone a pantalla completa el mapa de `/participantes`
+agrupado por equipo, pensado para dejarlo puesto mientras se forman los equipos:
+
+- La gente sin equipo se junta en el centro y los equipos se reparten alrededor.
+  Cuando alguien entra en un equipo, su punto cruza el mapa hasta él con un aro
+  dorado durante unos segundos; un equipo nuevo aparece en el primer hueco libre.
+- Cada equipo conserva su sitio mientras existe, aunque crezca. Sin eso, cada alta
+  reordenaría los equipos por tamaño y el mapa entero cambiaría de lugar.
+- Cabecera con equipos formados, cuánta gente tiene equipo y cuánta no. Abajo, los
+  últimos movimientos ("nuevo equipo" o "se une"). Salir de un equipo no se anuncia.
+- Es una suscripción a `tv.teamFormation`, así que los cambios llegan solos. La
+  query es pública como el resto de pantallas y sólo publica nombre, foto y equipo;
+  el nombre nunca cae a un email. Incluye a quien tiene la ficha completa o ya está
+  en un equipo.
+- No responde al ratón ni al teclado: es una pantalla, no el mapa interactivo.
+
+`/tv?view=equipos&demo=1` forma equipos con 96 personas inventadas, una cada dos
+segundos, y vuelve a empezar (`src/lib/tv-teams.ts`). El modo en vivo del mapa
+(`live` en `network-canvas.tsx`) no cambia el comportamiento de `/participantes`.
 
 ## Entradas y tamaños de pantalla
 

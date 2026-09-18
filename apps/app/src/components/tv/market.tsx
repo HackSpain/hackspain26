@@ -76,7 +76,7 @@ function Clock({ startsAt, endsAt }: { startsAt?: number; endsAt?: number }) {
 }
 
 /** The landing's ornament: a cell cut corner to corner, with the grid's ink stroke on the cut. */
-function Diagonal({ bg, tri, corner, className }: { bg: string; tri: string; corner: "tl" | "br"; className?: string }) {
+export function Diagonal({ bg, tri, corner, className }: { bg: string; tri: string; corner: "tl" | "br"; className?: string }) {
   return (
     <div aria-hidden className={cn("relative overflow-hidden", bg, className)}>
       <div className={cn("absolute inset-0", tri)} style={{ clipPath: corner === "tl" ? "polygon(0 0, 100% 0, 0 100%)" : "polygon(100% 0, 100% 100%, 0 100%)" }} />
