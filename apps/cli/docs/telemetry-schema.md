@@ -7,23 +7,22 @@ Source of truth for the TypeScript type and validator: `apps/cli/src/watcher/sch
 every derived field (`model.name`, `model.family`, `model.provider`, `tokens.total`) comes from a
 single pure module, `apps/app/src/app/api/cli/telemetry/canonical.ts`. The CLI runs it when it
 stamps an event (`canonicalize`); the dashboard runs it again on ingestion and never trusts the
-client's values. So stored rows are homogeneous across harnesses and across CLI versions: a
-`hackspain.telemetry.v1` event from a binary up to 0.4.x is still accepted and is stored as the
-same v2 row. What only some harnesses can report lives under `native`, which is explicitly not
-comparable.
+client's values. So exported logs are homogeneous across harnesses and CLI versions: a
+`hackspain.telemetry.v1` event from a binary up to 0.4.x is accepted and canonicalised with the
+same v2 semantics before export. What only some harnesses can report lives under `native`, which
+is explicitly not comparable.
 
 The watcher writes every event to a local spool
 (`~/.local/state/hackspain/telemetry/YYYY-MM-DD.ndjson`, one JSON object per line) and, when a URL
 is configured, POSTs the same lines as `application/x-ndjson` with
-`Authorization: Bearer <Convex JWT>`. The dashboard verifies the participant and inserts accepted
-events through the RawTree TypeScript SDK. RawTree stores the canonical objects in
-`hackspain_telemetry` by default.
+`Authorization: Bearer <Convex JWT>`. The dashboard verifies the participant, converts accepted
+events to OTLP logs and sends them to RawTree's native `POST /otlp/v1/logs` endpoint. RawTree uses
+the fixed `hackspain_otel_logs` table for both ingestion and Insights queries.
 
 Before an HTTP request, the CLI atomically saves the exact batch in a per-user pending-upload file.
 It removes that file only after a successful response, and retries it on the next flush or process
-start. The server sorts the accepted rows and sends RawTree a stable ClickHouse insert-deduplication
-token derived from the authenticated user and event ids. RawTree insert deduplication has a finite
-window, so every downstream query must still treat `(identity.userId, eventId)` as the permanent
+start. Native OTLP ingestion does not promise insert deduplication, so a retry can create another
+physical row. Every downstream query treats (`hackspain.user.id`, `event.id`) as the permanent
 logical key.
 
 The dashboard receipt accounts for every input line as accepted or rejected. Rejections include a
@@ -104,16 +103,16 @@ included). No scheduled hackathon means no window and nothing recorded.
   the local spool are skipped so nothing is sent twice.
 - Server (`occurredInWindow` in `telemetry/rawtree.ts`): the route answers 403 before the start
   and rejects every event outside the window with `outside_event_window`, whatever the binary.
-  Both the canonical table and the OpenTelemetry copy only ever receive accepted events.
+  The OTLP logs table only receives accepted events.
 
 Moving the window later does not remove rows stored under the old one; clean those in RawTree.
 
-## OpenTelemetry copy
+## OpenTelemetry storage
 
-When `RAWTREE_OTLP_LOGS_TABLE` is set, the dashboard also sends each accepted batch to RawTree's
-OTLP endpoint (`POST /otlp/v1/logs`, OTLP/JSON) for its OpenTelemetry explorer
-(`apps/app/src/app/api/cli/telemetry/otlp.ts`). One log record per event: `timeUnixNano` is
-`occurredAt`, `observedTimeUnixNano` is `observedAt`, `eventName` is `hackspain.<type>`.
+The dashboard sends every accepted batch to RawTree's OTLP endpoint as OTLP/JSON
+(`apps/app/src/app/api/cli/telemetry/otlp.ts`). This is the only server-side persistence path.
+There is one log record per event: `timeUnixNano` is `occurredAt`, `observedTimeUnixNano` is
+`observedAt`, and `eventName` is `hackspain.<type>`.
 
 | Event field | Log attribute |
 | --- | --- |
@@ -128,8 +127,7 @@ OTLP endpoint (`POST /otlp/v1/logs`, OTLP/JSON) for its OpenTelemetry explorer
 | `identity.clientVersion` | resource `service.version` (`service.name` is `hackspain-cli`) |
 | `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` |
 
-The copy is best effort and has no insert deduplication, so a retried batch can land twice: the
-canonical table stays the source of truth, and queries on the logs table dedupe on
+Native OTLP has no insert deduplication guarantee, so queries on the logs table dedupe on
 (`hackspain.user.id`, `event.id`).
 
 ## Privacy

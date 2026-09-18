@@ -11,7 +11,6 @@ const ENV = [
   "RAWTREE_API_KEY",
   "RAWTREE_DATABASE",
   "RAWTREE_BASE_URL",
-  "RAWTREE_TELEMETRY_TABLE",
 ] as const;
 const original = Object.fromEntries(ENV.map((name) => [name, process.env[name]]));
 
@@ -26,17 +25,16 @@ afterEach(() => {
 });
 
 describe("usageSql", () => {
-  // The statement itself was run against a real ClickHouse with JSON-typed
-  // columns: duplicates count once, a session counts in its first bucket
-  // only, usage without a team is kept, and anything outside the window or
-  // not `usage` is left out. These checks pin what that relied on.
+  // RawTree's OTLP transform flattens attributes into dotted top-level
+  // columns. These checks pin the permanent dedupe key, event time and
+  // standard/custom attribute names the aggregate relies on.
   test("dedupes on the permanent key and buckets on the harness's time", () => {
-    const sql = usageSql("hackspain_telemetry", window);
+    const sql = usageSql("hackspain_otel_logs", window);
     expect(sql).toContain("GROUP BY userId, id");
-    expect(sql).toContain("toString(identity.userId) AS userId");
-    expect(sql).toContain("toString(occurredAt)");
-    expect(sql).toContain("toString(tokens.total)");
-    expect(sql).toContain("WHERE toString(type) = 'usage'");
+    expect(sql).toContain("toString(`hackspain.user.id`) AS userId");
+    expect(sql).toContain("toString(timeUnixNano)");
+    expect(sql).toContain("toString(`hackspain.usage.total_tokens`)");
+    expect(sql).toContain("WHERE toString(eventName) = 'hackspain.usage'");
     // 47 h 15 min in 24 buckets, from the start of the hackathon.
     expect(sql).toContain("intDiv(at - 1789749900, 7087)");
     expect(sql).toContain("at >= 1789749900 AND at < 1789920000");
@@ -124,7 +122,7 @@ describe("fetchUsage", () => {
     expect(calls[0]?.url).toContain("https://rawtree.test/v1/query");
     expect(calls[0]?.url).toContain("database=hackspain");
     expect(calls[0]?.auth).toBe("Bearer rt_read_write");
-    expect(calls[0]?.sql).toContain("FROM hackspain_telemetry");
+    expect(calls[0]?.sql).toContain("FROM hackspain_otel_logs");
   });
 
   test("no table yet (before the first event) is empty, not an error", async () => {
@@ -132,7 +130,7 @@ describe("fetchUsage", () => {
     process.env.RAWTREE_DATABASE = "hackspain";
     const missing = (async () =>
       Response.json(
-        { error: "unknown_table", hint: "", message: "Table hackspain_telemetry does not exist" },
+        { error: "unknown_table", hint: "", message: "Table hackspain_otel_logs does not exist" },
         { status: 404 }
       )) as unknown as typeof fetch;
     expect(await fetchUsage(window, missing)).toEqual({

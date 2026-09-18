@@ -125,41 +125,47 @@ export function toOtlpLogs(events: TelemetryEvent[]): OtlpLogsRequest {
 }
 
 const DEFAULT_BASE_URL = "https://api.rawtree.com";
+const OTLP_LOGS_TABLE = "hackspain_otel_logs";
 
-export function otlpLogsEnabled(): boolean {
-  return Boolean(process.env.RAWTREE_OTLP_LOGS_TABLE);
+export class RawTreeOtlpConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RawTreeOtlpConfigurationError";
+  }
 }
 
 /**
- * Optional second copy for RawTree's OpenTelemetry explorer, on when
- * RAWTREE_OTLP_LOGS_TABLE names the destination table. The canonical table
- * written by `storeTelemetryEvents` stays the source of truth: it has insert
- * deduplication, which the OTLP endpoint does not promise, so a retried batch
- * can land here twice. Queries on this table dedupe on
+ * The only server-side persistence path for CLI telemetry. RawTree's native
+ * OTLP endpoint writes every event to `hackspain_otel_logs`. OTLP does not
+ * promise insert deduplication, so consumers dedupe on
  * (`hackspain.user.id`, `event.id`).
  */
 export async function exportTelemetryAsOtlpLogs(
   events: TelemetryEvent[],
   fetchImpl: typeof fetch = fetch
 ): Promise<void> {
-  const table = process.env.RAWTREE_OTLP_LOGS_TABLE;
-  const apiKey = process.env.RAWTREE_API_KEY;
-  if (!table || !apiKey || events.length === 0) {
+  if (events.length === 0) {
     return;
+  }
+  const apiKey = process.env.RAWTREE_API_KEY;
+  const database = process.env.RAWTREE_DATABASE;
+  if (!apiKey || !database) {
+    throw new RawTreeOtlpConfigurationError(
+      "RAWTREE_API_KEY and RAWTREE_DATABASE are required"
+    );
   }
   const base = (process.env.RAWTREE_BASE_URL ?? DEFAULT_BASE_URL).replace(
     /\/+$/,
     ""
   );
-  const database = process.env.RAWTREE_DATABASE;
   const response = await fetchImpl(`${base}/otlp/v1/logs`, {
     body: JSON.stringify(toOtlpLogs(events)),
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
       "user-agent": "hackspain-dashboard/1.0",
-      "x-rawtree-logs-table": table,
-      ...(database ? { "x-rawtree-database": database } : {}),
+      "x-rawtree-database": database,
+      "x-rawtree-logs-table": OTLP_LOGS_TABLE,
     },
     method: "POST",
     signal: AbortSignal.timeout(10_000),
