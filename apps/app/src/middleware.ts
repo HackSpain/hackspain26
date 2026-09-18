@@ -24,6 +24,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/files(.*)",
   "/tv",
   "/api/tv",
+  "/api/reception",
   "/betterstack(.*)",
   RECEPTION_PATH,
 ]);
