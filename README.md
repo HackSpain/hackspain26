@@ -83,6 +83,16 @@ It loads `DATABASE_URL` from `apps/web/.env`, and `NEXT_PUBLIC_CONVEX_URL` plus 
 
 The script upserts `hackathon_signups` and `ambassador_applications` into Convex. Rows with `approval_status = confirmed` are marked accepted. Re-runs do not clear an admin’s accepted flag.
 
+### Profile photo thumbnails
+
+The participants map draws every photo at 128px. New uploads make that copy in the browser; pictures uploaded before that are resized on every request until you run, once, from the repo root:
+
+```sh
+pnpm --filter app backfill:avatars
+```
+
+Same env as the import (`NEXT_PUBLIC_CONVEX_URL`, `MIGRATION_SECRET`). Idempotent: people who already have a thumbnail are skipped.
+
 ## Design
 
 Landing and dashboard share these tokens:

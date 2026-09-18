@@ -8,10 +8,9 @@ import {
 	missingDirectoryFields,
 	parseDirectoryCard,
 } from "./lib/directory";
+import { avatarThumbnailFor } from "./lib/photo";
 import { membershipForUser } from "./lib/team";
-import { avatarUrlFor } from "./users";
-import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 
 /** What the graph component consumes (src/components/participant-directory/types.ts). */
 const participantReturn = v.object({
@@ -37,19 +36,6 @@ const participantReturn = v.object({
 	),
 	university: v.optional(v.string()),
 });
-
-async function teamOf(
-	ctx: QueryCtx,
-	teamsById: Map<Id<"teams">, Doc<"teams">>,
-	userId: Id<"users">,
-) {
-	const membership = await membershipForUser(ctx, userId);
-	if (!membership || membership.status !== "member") {
-		return;
-	}
-	const team = teamsById.get(membership.teamId);
-	return team ? { id: team._id, name: team.name } : undefined;
-}
 
 /**
  * The viewer's own card, what is still missing, and prefills for the form:
@@ -149,13 +135,32 @@ export const normalizeCards = internalMutation({
 export const list = authedQuery({
 	args: {},
 	handler: async (ctx) => {
-		const [users, teams, submissions, tracks] = await Promise.all([
-			ctx.db.query("users").collect(),
-			ctx.db.query("teams").collect(),
-			ctx.db.query("submissions").collect(),
-			ctx.db.query("tracks").collect(),
-		]);
+		const [users, teams, memberships, submissions, tracks] = await Promise.all(
+			[
+				ctx.db.query("users").collect(),
+				ctx.db.query("teams").collect(),
+				ctx.db.query("teamMembers").collect(),
+				ctx.db.query("submissions").collect(),
+				ctx.db.query("tracks").collect(),
+			],
+		);
 		const teamsById = new Map(teams.map((team) => [team._id, team]));
+		// One read instead of one index lookup per person. Same row as
+		// membershipForUser: the earliest membership, whatever its status.
+		const membershipByUser = new Map<Id<"users">, (typeof memberships)[number]>();
+		for (const membership of memberships) {
+			if (membership.userId && !membershipByUser.has(membership.userId)) {
+				membershipByUser.set(membership.userId, membership);
+			}
+		}
+		const teamOf = (userId: Id<"users">) => {
+			const membership = membershipByUser.get(userId);
+			if (!membership || membership.status !== "member") {
+				return;
+			}
+			const team = teamsById.get(membership.teamId);
+			return team ? { id: team._id, name: team.name } : undefined;
+		};
 		const tracksById = new Map(tracks.map((track) => [track._id, track]));
 		const tracksByTeam = new Map<Id<"teams">, typeof tracks>();
 		for (const submission of submissions) {
@@ -175,7 +180,7 @@ export const list = authedQuery({
 			if (!card || !isDirectoryComplete(card)) {
 				continue;
 			}
-			const team = await teamOf(ctx, teamsById, user._id);
+			const team = teamOf(user._id);
 			out.push({
 				bio: card.bio,
 				city: card.city,
@@ -185,7 +190,7 @@ export const list = authedQuery({
 				id: user._id,
 				interests: card.interests,
 				isMe: user._id === ctx.user._id,
-				photoUrl: avatarUrlFor(user),
+				photoUrl: avatarThumbnailFor(user),
 				role: card.role,
 				skills: card.skills,
 				team,

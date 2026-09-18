@@ -43,25 +43,36 @@
 }
 
 /* --- canvas ------------------------------------------------------------ */
+/* Three layers under one pointer surface: the SVG draws the cluster zones,
+   the canvas paints the people (network-canvas.tsx hit-tests the points
+   itself), and a visually hidden button list carries keyboard and
+   screen-reader access. */
 .pg-viewport {
   position: absolute;
   inset: 0;
-}
-.pg-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
   cursor: grab;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
-.pg-canvas:active {
+.pg-viewport:active {
   cursor: grabbing;
 }
-.pg-canvas:focus-visible {
+.pg-viewport[data-hover] {
+  cursor: pointer;
+}
+.pg-viewport:focus-visible {
   outline: 3px solid var(--pg-gold);
   outline-offset: -3px;
+}
+.pg-zones-layer,
+.pg-people {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .pg-zone {
@@ -105,111 +116,6 @@
 [data-mode="peek"] .pg-zone,
 [data-mode="search"] .pg-zone {
   opacity: 0.4;
-}
-
-.pg-link {
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  opacity: 0.7;
-  pointer-events: none;
-  animation: pg-fade-in 380ms var(--ease-out) both;
-}
-[data-mode="peek"] .pg-link {
-  opacity: 0.5;
-}
-
-/* Every hover fades all the other people at once, and each frame of that
-   fade repaints the whole map: keep it short. */
-.pg-node {
-  cursor: pointer;
-  outline: none;
-  transition: opacity 160ms var(--ease-out);
-}
-.pg-node-body {
-  transform-origin: 0 0;
-  transition: transform 240ms var(--ease-out);
-}
-.pg-node:hover .pg-node-body,
-.pg-node:focus-visible .pg-node-body,
-.pg-node[data-state="active"] .pg-node-body {
-  transform: scale(1.35);
-}
-.pg-node[data-state="linked"] .pg-node-body,
-.pg-node[data-state="match"] .pg-node-body {
-  transform: scale(1.12);
-}
-.pg-node-halo {
-  fill: none;
-  stroke: transparent;
-  stroke-width: 2;
-  transition:
-    stroke 200ms var(--ease-out),
-    stroke-width 200ms var(--ease-out);
-}
-.pg-node[data-state="active"] .pg-node-halo,
-.pg-node:focus-visible .pg-node-halo {
-  stroke: var(--pg-red);
-  stroke-width: 2.5;
-}
-.pg-node[data-state="match"] .pg-node-halo {
-  stroke: var(--pg-gold);
-  stroke-width: 3;
-}
-.pg-node-disc {
-  fill: var(--pg-sand);
-}
-.pg-node-ring {
-  fill: none;
-  stroke: var(--pg-paper);
-  stroke-width: 2.5;
-}
-.pg-node[data-me] .pg-node-ring {
-  stroke: var(--pg-gold);
-  stroke-width: 3.5;
-}
-.pg-node[data-state="linked"] .pg-node-ring {
-  stroke: var(--pg-ink);
-  stroke-width: 2;
-}
-.pg-node-initials {
-  font-family: var(--font-bungee-next), "Bungee", Impact, sans-serif;
-  font-size: 10px;
-  fill: var(--pg-brown);
-  pointer-events: none;
-}
-.pg-node-photo {
-  pointer-events: none;
-}
-.pg-node-name {
-  font-size: 11.5px;
-  font-weight: 650;
-  fill: var(--pg-ink);
-  paint-order: stroke;
-  stroke: var(--pg-paper);
-  stroke-width: 4px;
-  stroke-linejoin: round;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 220ms var(--ease-out);
-}
-/* Names only while pointing at someone; the panel and lists name the rest. */
-.pg-node:hover .pg-node-name,
-.pg-node:focus-visible .pg-node-name,
-.pg-node[data-state="active"] .pg-node-name {
-  opacity: 1;
-}
-[data-mode="focus"] .pg-node:not([data-state]),
-[data-mode="peek"] .pg-node:not([data-state]) {
-  opacity: 0.2;
-}
-[data-mode="search"] .pg-node:not([data-state="match"]):not([data-state="active"]) {
-  opacity: 0.16;
-}
-
-@keyframes pg-fade-in {
-  from {
-    opacity: 0;
-  }
 }
 
 /* --- floating controls ------------------------------------------------- */
@@ -711,13 +617,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pg-link,
   .pg-panel,
   .pg-results {
     animation: none;
   }
-  .pg-node-body,
-  .pg-node,
   .pg-zone,
   .pg-search,
   .pg-tools {

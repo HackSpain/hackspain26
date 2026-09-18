@@ -12,7 +12,6 @@ import {
 } from "react";
 import type { PointerEvent as ReactPointerEvent, Ref } from "react";
 import { gsap } from "gsap";
-import { initialsOf } from "@/components/avatar";
 import type { AffinityKind } from "./affinities";
 import {
 	clusterParticipants,
@@ -27,8 +26,10 @@ import {
 	wordmarkBox,
 	ZONE_HALO,
 } from "./network-model";
-import type { GraphPoint, Lens, Link } from "./network-model";
-import { photoThumbnail } from "./photo";
+import type { GraphPoint, Layout, Lens, Link } from "./network-model";
+import { createPeoplePainter, readPalette } from "./people-painter";
+import type { Camera, PaintedLink, PeoplePainter } from "./people-painter";
+import type { Mode, NodeState } from "./people-visuals";
 import type { DirectoryParticipant } from "./types";
 
 export const CONNECTION_STYLES: Record<
@@ -51,8 +52,6 @@ export interface NetworkHandle {
 	zoom: (factor: number) => void;
 }
 
-type Camera = { x: number; y: number; scale: number };
-type NodeState = "" | "active" | "linked" | "match";
 type Drag = {
 	id?: string;
 	startX: number;
@@ -64,6 +63,8 @@ type Drag = {
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
+/** A person is hit within this many screen pixels even when zoomed far out. */
+const MIN_HIT_PX = 12;
 
 function clampScale(scale: number) {
 	return Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
@@ -76,105 +77,34 @@ function reducedMotion() {
 	);
 }
 
-function linkPath(a: GraphPoint, b: GraphPoint) {
-	const dx = b.x - a.x,
-		dy = b.y - a.y;
-	const distance = Math.hypot(dx, dy) || 1;
-	// A gentle, consistent bow keeps parallel links apart and reads as organic.
-	const bow = Math.min(60, distance * 0.14) * (a.id < b.id ? 1 : -1);
-	const cx = (a.x + b.x) / 2 - (dy / distance) * bow;
-	const cy = (a.y + b.y) / 2 + (dx / distance) * bow;
-	return `M ${a.x.toFixed(1)} ${a.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
-}
-
-function nodeTransform(point: GraphPoint) {
-	return `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`;
-}
-
 /**
- * Rewriting an SVG attribute with the value it already has still invalidates
- * paint for that subtree, so the simulation only touches what moved.
+ * Keyboard and screen-reader access to a person: the canvas paints, this
+ * button is what focus and Enter land on. Focusing it lights the person up
+ * on the map the way hovering does.
  */
-function write(element: Element, name: string, value: string) {
-	if (element.getAttribute(name) !== value) {
-		element.setAttribute(name, value);
-	}
-}
-
-const PersonNode = memo(function PersonNode({
+const PersonButton = memo(function PersonButton({
 	person,
-	state,
-	register,
-	onPointerEnter,
-	onPointerLeave,
+	pressed,
+	onFocus,
+	onBlur,
 	onActivate,
 }: {
 	person: DirectoryParticipant;
-	state: NodeState;
-	register: (id: string, element: SVGGElement | null) => void;
-	onPointerEnter: (id: string, pointerType: string) => void;
-	onPointerLeave: () => void;
+	pressed: boolean;
+	onFocus: (id: string) => void;
+	onBlur: () => void;
 	onActivate: (id: string) => void;
 }) {
-	const initials = initialsOf(person.displayName);
 	return (
-		<g
-			ref={(element) => register(person.id, element)}
-			className="pg-node"
-			data-node={person.id}
-			data-state={state || undefined}
-			data-me={person.isMe ? "" : undefined}
-			role="button"
-			tabIndex={0}
-			aria-label={`${person.displayName}, ${person.role}, ${person.city}`}
-			aria-pressed={state === "active"}
-			onPointerEnter={(event) => onPointerEnter(person.id, event.pointerType)}
-			onPointerLeave={onPointerLeave}
-			onFocus={() => onPointerEnter(person.id, "keyboard")}
-			onBlur={onPointerLeave}
-			onKeyDown={(event) => {
-				if (event.key === "Enter" || event.key === " ") {
-					event.preventDefault();
-					event.stopPropagation();
-					onActivate(person.id);
-				}
-			}}
+		<button
+			type="button"
+			aria-pressed={pressed}
+			onFocus={() => onFocus(person.id)}
+			onBlur={onBlur}
+			onClick={() => onActivate(person.id)}
 		>
-			<g className="pg-node-body">
-				<circle className="pg-node-halo" r={NODE_RADIUS + 7} />
-				<circle className="pg-node-disc" r={NODE_RADIUS} />
-				{person.photoUrl ? (
-					<image
-						className="pg-node-photo"
-						href={photoThumbnail(person.photoUrl)}
-						x={-NODE_RADIUS}
-						y={-NODE_RADIUS}
-						width={NODE_RADIUS * 2}
-						height={NODE_RADIUS * 2}
-						clipPath="url(#pg-clip)"
-						preserveAspectRatio="xMidYMid slice"
-					/>
-				) : (
-					<text
-						className="pg-node-initials"
-						textAnchor="middle"
-						dominantBaseline="central"
-						aria-hidden="true"
-					>
-						{initials}
-					</text>
-				)}
-				<circle className="pg-node-ring" r={NODE_RADIUS} />
-			</g>
-			<text
-				className="pg-node-name"
-				y={NODE_RADIUS + 16}
-				textAnchor="middle"
-				aria-hidden="true"
-			>
-				{person.displayName}
-			</text>
-		</g>
+			{person.displayName}, {person.role}, {person.city}
+		</button>
 	);
 });
 
@@ -200,12 +130,9 @@ export function NetworkCanvas({
 	ref?: Ref<NetworkHandle>;
 }) {
 	const viewportRef = useRef<HTMLDivElement>(null);
-	const svgRef = useRef<SVGSVGElement>(null);
 	const worldRef = useRef<SVGGElement>(null);
-	const nodeElements = useRef(new Map<string, SVGGElement>());
-	const linkElements = useRef(
-		new Map<string, { element: SVGPathElement; a: string; b: string }>(),
-	);
+	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const painter = useRef<PeoplePainter | null>(null);
 	const points = useRef(new Map<string, GraphPoint>());
 	const camera = useRef<Camera>({ scale: 1, x: 0, y: 0 });
 	const cameraTween = useRef<gsap.core.Tween | null>(null);
@@ -220,10 +147,17 @@ export function NetworkCanvas({
 		target: 1,
 	});
 	const zonesRef = useRef<SVGGElement>(null);
-	const nodesRef = useRef<SVGGElement>(null);
 	const introPlayed = useRef(false);
 	const alpha = useRef(0);
 	const frame = useRef(0);
+	const layoutRef = useRef<Layout | null>(null);
+	const linksRef = useRef<PaintedLink[]>([]);
+	// What the paint loop needs from React, refreshed after every render.
+	const scene = useRef<{
+		hoveredId: string | null;
+		mode: Mode;
+		stateOf: (id: string) => NodeState;
+	}>({ hoveredId: null, mode: "rest", stateOf: () => "" });
 	const drag = useRef<Drag | null>(null);
 	const pointers = useRef(new Map<number, { x: number; y: number }>());
 	const pinch = useRef<{
@@ -282,27 +216,154 @@ export function NetworkCanvas({
 		() => new Set(activeLinks.map((link) => link.participant.id)),
 		[activeLinks],
 	);
-	const mode = selectedId
-		? "focus"
-		: hoveredId
-			? "peek"
-			: matches
-				? "search"
-				: "rest";
+	let mode: Mode = "rest";
+	if (selectedId) {
+		mode = "focus";
+	} else if (hoveredId) {
+		mode = "peek";
+	} else if (matches) {
+		mode = "search";
+	}
+	const stateOf = useCallback(
+		(id: string): NodeState => {
+			if (activeId === id) {
+				return "active";
+			}
+			if (linkedIds.has(id)) {
+				return "linked";
+			}
+			return matches?.has(id) ? "match" : "";
+		},
+		[activeId, linkedIds, matches],
+	);
+
+	// --- paint loop ---------------------------------------------------------
+	// One requestAnimationFrame loop advances the simulation while it is warm,
+	// eases the visual transitions, and paints the canvas. It runs only while
+	// something changes and goes idle otherwise.
+	const tick = useCallback(function tick(now: number) {
+		frame.current = 0;
+		const paint = painter.current;
+		if (!paint) {
+			return;
+		}
+		let again = false;
+		const dragging = drag.current?.moved ? drag.current.id : undefined;
+		if (dragging) {
+			alpha.current = Math.max(alpha.current, 0.25);
+		}
+		if (alpha.current > 0 && layoutRef.current) {
+			const moved = layoutRef.current.tick(alpha.current, dragging);
+			alpha.current *= 0.97;
+			if ((alpha.current > 0.004 && moved > SETTLED) || dragging) {
+				again = true;
+			} else {
+				alpha.current = 0;
+			}
+		}
+		const view = {
+			...scene.current,
+			camera: camera.current,
+			instant: reducedMotion(),
+			links: linksRef.current,
+			points: points.current,
+		};
+		if (paint.animate(now, view)) {
+			again = true;
+		}
+		paint.draw(view, now);
+		if (again) {
+			frame.current = requestAnimationFrame(tick);
+		}
+	}, []);
+	const requestRender = useCallback(() => {
+		if (!frame.current) {
+			frame.current = requestAnimationFrame(tick);
+		}
+	}, [tick]);
+	const wake = useCallback(
+		(target: number) => {
+			alpha.current = Math.max(alpha.current, target);
+			requestRender();
+		},
+		[requestRender],
+	);
+	useEffect(
+		() => () => {
+			cancelAnimationFrame(frame.current);
+			frame.current = 0;
+		},
+		[],
+	);
+
+	useLayoutEffect(() => {
+		const canvas = canvasRef.current;
+		const viewport = viewportRef.current;
+		if (!canvas || !viewport) {
+			return;
+		}
+		const paint = createPeoplePainter(
+			canvas,
+			readPalette(viewport),
+			requestRender,
+		);
+		painter.current = paint;
+		// Names and initials are drawn with the site fonts: repaint once they arrive.
+		void document.fonts.ready.then(requestRender);
+		return () => {
+			paint.dispose();
+			painter.current = null;
+		};
+	}, [requestRender]);
+	useLayoutEffect(() => {
+		painter.current?.setPeople(participants);
+		requestRender();
+	}, [participants, requestRender]);
+	useLayoutEffect(() => {
+		painter.current?.resize(
+			size.width,
+			size.height,
+			Math.min(2, window.devicePixelRatio || 1),
+		);
+		requestRender();
+	}, [size, requestRender]);
+
+	// Everything the loop reads from React state, plus a frame to show it.
+	useEffect(() => {
+		scene.current = { hoveredId, mode, stateOf };
+		requestRender();
+	});
+	useEffect(() => {
+		const previous = new Map(
+			linksRef.current.map((link) => [`${link.a}|${link.b}`, link]),
+		);
+		const now = performance.now();
+		linksRef.current = activeId
+			? activeLinks.map((link) => {
+					const key = `${activeId}|${link.participant.id}`;
+					return (
+						previous.get(key) ?? {
+							a: activeId,
+							b: link.participant.id,
+							color:
+								CONNECTION_STYLES[link.affinities[0]?.kind ?? "skills"].color,
+							since: now,
+						}
+					);
+				})
+			: [];
+		requestRender();
+	}, [activeId, activeLinks, requestRender]);
 
 	// --- camera -------------------------------------------------------------
 	const applyCamera = useCallback(() => {
 		const { x, y, scale } = camera.current;
-		const world = worldRef.current;
-		const svg = svgRef.current;
-		if (!world || !svg) {
-			return;
-		}
-		world.setAttribute(
+		worldRef.current?.setAttribute(
 			"transform",
 			`translate(${size.width / 2} ${size.height / 2}) scale(${scale}) translate(${-x} ${-y})`,
 		);
-	}, [size]);
+		requestRender();
+	}, [size, requestRender]);
 
 	const stopTweens = useCallback(() => {
 		cameraTween.current?.kill();
@@ -391,22 +452,6 @@ export function NetworkCanvas({
 	);
 
 	// --- simulation ---------------------------------------------------------
-	const paint = useCallback(() => {
-		for (const [id, element] of nodeElements.current) {
-			const point = points.current.get(id);
-			if (point) {
-				write(element, "transform", nodeTransform(point));
-			}
-		}
-		for (const { element, a, b } of linkElements.current.values()) {
-			const from = points.current.get(a),
-				to = points.current.get(b);
-			if (from && to) {
-				write(element, "d", linkPath(from, to));
-			}
-		}
-	}, []);
-
 	const layout = useMemo(() => {
 		const carried = points.current;
 		const fresh = initialPoints(clusters, places);
@@ -419,53 +464,19 @@ export function NetworkCanvas({
 		return createLayout([...next.values()], clusters, places);
 	}, [clusters, places]);
 
-	const wake = useCallback(
-		(target: number) => {
-			alpha.current = Math.max(alpha.current, target);
-			if (frame.current) {
-				return;
-			}
-			const step = () => {
-				frame.current = 0;
-				const dragging = drag.current?.moved ? drag.current.id : undefined;
-				if (dragging) {
-					alpha.current = Math.max(alpha.current, 0.25);
-				}
-				const moved = layout.tick(alpha.current, dragging);
-				paint();
-				alpha.current *= 0.97;
-				// Every frame repaints the whole SVG, so stop as soon as nobody
-				// visibly moves rather than running the cooling curve out.
-				if ((alpha.current > 0.004 && moved > SETTLED) || dragging) {
-					frame.current = requestAnimationFrame(step);
-				} else {
-					alpha.current = 0;
-				}
-			};
-			frame.current = requestAnimationFrame(step);
-		},
-		[layout, paint],
-	);
-
 	useEffect(() => {
+		layoutRef.current = layout;
 		if (reducedMotion()) {
 			for (let i = 0; i < 260; i++) {
 				if (layout.tick(0.98 ** i) <= SETTLED) {
 					break;
 				}
 			}
-			paint();
+			requestRender();
 			return;
 		}
 		wake(1);
-		return () => {
-			cancelAnimationFrame(frame.current);
-			frame.current = 0;
-		};
-	}, [layout, paint, wake]);
-
-	// Links mount after the loop may have gone idle: give them geometry at once.
-	useLayoutEffect(paint, [activeLinks, paint]);
+	}, [layout, wake, requestRender]);
 
 	useEffect(() => {
 		const element = viewportRef.current;
@@ -526,22 +537,10 @@ export function NetworkCanvas({
 			},
 			"-=0.5",
 		);
+		let cutBloom: (() => void) | undefined;
 		if (!introPlayed.current) {
 			introPlayed.current = true;
-			const bodies = nodesRef.current?.querySelectorAll(".pg-node-body") ?? [];
-			timeline.from(
-				bodies,
-				{
-					clearProps: "all",
-					duration: 0.6,
-					ease: "back.out(1.7)",
-					opacity: 0,
-					scale: 0,
-					stagger: { amount: 1, from: "random" },
-					transformOrigin: "50% 50%",
-				},
-				"-=0.4",
-			);
+			cutBloom = painter.current?.bloom();
 		}
 		return () => {
 			// Interrupted (a lens change mid-intro, or React's dev double mount):
@@ -550,6 +549,7 @@ export function NetworkCanvas({
 				introPlayed.current = false;
 			}
 			timeline.revert();
+			cutBloom?.();
 		};
 	}, [clusters]);
 
@@ -587,19 +587,8 @@ export function NetworkCanvas({
 		[clear, fitCamera, focus, size, zoomAt],
 	);
 
-	const register = useCallback((id: string, element: SVGGElement | null) => {
-		if (element) {
-			nodeElements.current.set(id, element);
-			const point = points.current.get(id);
-			if (point) {
-				element.setAttribute("transform", nodeTransform(point));
-			}
-		} else {
-			nodeElements.current.delete(id);
-		}
-	}, []);
-	const enter = useCallback((id: string, pointerType: string) => {
-		if (pointerType !== "touch" && !drag.current?.moved) {
+	const enter = useCallback((id: string) => {
+		if (!drag.current?.moved) {
 			setHoveredId(id);
 		}
 	}, []);
@@ -607,27 +596,27 @@ export function NetworkCanvas({
 
 	// --- gestures -----------------------------------------------------------
 	useEffect(() => {
-		const svg = svgRef.current;
-		if (!svg) {
+		const viewport = viewportRef.current;
+		if (!viewport) {
 			return;
 		}
 		// Scrolling zooms around the pointer, like a map. Trackpad pinches arrive
 		// as ctrl+wheel with finer deltas, so they get a gentler curve.
 		const wheel = (event: WheelEvent) => {
 			event.preventDefault();
-			const rect = svg.getBoundingClientRect();
+			const rect = viewport.getBoundingClientRect();
 			zoomAt(
 				Math.exp(-event.deltaY * (event.ctrlKey ? 0.01 : 0.0022)),
 				event.clientX - rect.left,
 				event.clientY - rect.top,
 			);
 		};
-		svg.addEventListener("wheel", wheel, { passive: false });
-		return () => svg.removeEventListener("wheel", wheel);
+		viewport.addEventListener("wheel", wheel, { passive: false });
+		return () => viewport.removeEventListener("wheel", wheel);
 	}, [zoomAt]);
 
 	function screenToWorld(clientX: number, clientY: number) {
-		const rect = svgRef.current?.getBoundingClientRect();
+		const rect = viewportRef.current?.getBoundingClientRect();
 		const { x, y, scale } = camera.current;
 		return {
 			x: x + (clientX - (rect?.left ?? 0) - size.width / 2) / scale,
@@ -635,13 +624,31 @@ export function NetworkCanvas({
 		};
 	}
 
-	function onPointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+	/** The person under a screen point, if any: the closest disc within reach. */
+	function hitTest(clientX: number, clientY: number): string | undefined {
+		const { x, y } = screenToWorld(clientX, clientY);
+		let best: string | undefined;
+		let bestDistance = Math.max(
+			NODE_RADIUS * 1.35,
+			MIN_HIT_PX / camera.current.scale,
+		);
+		for (const point of points.current.values()) {
+			const distance = Math.hypot(point.x - x, point.y - y);
+			if (distance < bestDistance) {
+				best = point.id;
+				bestDistance = distance;
+			}
+		}
+		return best;
+	}
+
+	function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
 		if (event.button !== 0) {
 			return;
 		}
 		stopTweens();
-		const svg = event.currentTarget;
-		svg.setPointerCapture(event.pointerId);
+		const viewport = event.currentTarget;
+		viewport.setPointerCapture(event.pointerId);
 		pointers.current.set(event.pointerId, {
 			x: event.clientX,
 			y: event.clientY,
@@ -658,8 +665,7 @@ export function NetworkCanvas({
 			drag.current = null;
 			return;
 		}
-		const id = (event.target as Element).closest<SVGElement>("[data-node]")
-			?.dataset.node;
+		const id = hitTest(event.clientX, event.clientY);
 		const point = id ? points.current.get(id) : undefined;
 		drag.current = {
 			id,
@@ -670,8 +676,12 @@ export function NetworkCanvas({
 			startY: event.clientY,
 		};
 	}
-	function onPointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+	function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
 		if (!pointers.current.has(event.pointerId)) {
+			// Hovering, not dragging: light up whoever is under the pointer.
+			if (event.pointerType !== "touch") {
+				setHoveredId(hitTest(event.clientX, event.clientY) ?? null);
+			}
 			return;
 		}
 		pointers.current.set(event.pointerId, {
@@ -718,6 +728,7 @@ export function NetworkCanvas({
 				point.x = current.originX + dx / scale;
 				point.y = current.originY + dy / scale;
 			}
+			requestRender();
 		} else {
 			camera.current = {
 				scale,
@@ -727,7 +738,7 @@ export function NetworkCanvas({
 			applyCamera();
 		}
 	}
-	function onPointerUp(event: ReactPointerEvent<SVGSVGElement>) {
+	function onPointerUp(event: ReactPointerEvent<HTMLDivElement>) {
 		const current = drag.current;
 		if (
 			event.type === "pointerup" &&
@@ -751,69 +762,56 @@ export function NetworkCanvas({
 		}
 	}
 
-	const activeLinkList = useMemo(
-		() =>
-			activeId
-				? activeLinks.map((link) => ({
-						a: activeId,
-						b: link.participant.id,
-						kind: link.affinities[0]?.kind ?? "skills",
-					}))
-				: [],
-		[activeId, activeLinks],
-	);
-
 	return (
-		<div className="pg-viewport" ref={viewportRef}>
-			<svg
-				ref={svgRef}
-				className="pg-canvas"
-				data-mode={mode}
-				role="application"
-				tabIndex={0}
-				aria-label="Mapa de participantes. Arrastra para moverte, usa la rueda o pellizca para ampliar."
-				onPointerDown={onPointerDown}
-				onPointerMove={onPointerMove}
-				onPointerUp={onPointerUp}
-				onPointerCancel={onPointerUp}
-				onLostPointerCapture={onPointerUp}
-				onKeyDown={(event) => {
-					if (event.key === "Escape") {
-						clear();
-						return;
-					}
-					if (event.key === "+" || event.key === "=") {
-						zoomAt(1.3, size.width / 2, size.height / 2);
-						return;
-					}
-					if (event.key === "-") {
-						zoomAt(1 / 1.3, size.width / 2, size.height / 2);
-						return;
-					}
-					const direction = {
-						ArrowDown: [0, 80],
-						ArrowLeft: [-80, 0],
-						ArrowRight: [80, 0],
-						ArrowUp: [0, -80],
-					}[event.key];
-					if (direction) {
-						event.preventDefault();
-						const { scale, x, y } = camera.current;
-						moveCamera(
-							{
-								scale,
-								x: x + direction[0] / scale,
-								y: y + direction[1] / scale,
-							},
-							true,
-						);
-					}
-				}}
-			>
+		<div
+			className="pg-viewport"
+			ref={viewportRef}
+			data-mode={mode}
+			data-hover={hoveredId ? "" : undefined}
+			role="application"
+			tabIndex={0}
+			aria-label="Mapa de participantes. Arrastra para moverte, usa la rueda o pellizca para ampliar. Tabula para recorrer a la gente."
+			onPointerDown={onPointerDown}
+			onPointerMove={onPointerMove}
+			onPointerUp={onPointerUp}
+			onPointerCancel={onPointerUp}
+			onPointerLeave={leave}
+			onLostPointerCapture={onPointerUp}
+			onKeyDown={(event) => {
+				if (event.key === "Escape") {
+					clear();
+					return;
+				}
+				if (event.key === "+" || event.key === "=") {
+					zoomAt(1.3, size.width / 2, size.height / 2);
+					return;
+				}
+				if (event.key === "-") {
+					zoomAt(1 / 1.3, size.width / 2, size.height / 2);
+					return;
+				}
+				const direction = {
+					ArrowDown: [0, 80],
+					ArrowLeft: [-80, 0],
+					ArrowRight: [80, 0],
+					ArrowUp: [0, -80],
+				}[event.key];
+				if (direction) {
+					event.preventDefault();
+					const { scale, x, y } = camera.current;
+					moveCamera(
+						{
+							scale,
+							x: x + direction[0] / scale,
+							y: y + direction[1] / scale,
+						},
+						true,
+					);
+				}
+			}}
+		>
+			<svg className="pg-zones-layer" aria-hidden="true">
 				<defs>
-					<clipPath id="pg-clip">
-						<circle r={NODE_RADIUS} />
-					</clipPath>
 					<radialGradient id="pg-zone">
 						<stop offset="0%" stopColor="var(--pg-zone)" stopOpacity="0.9" />
 						<stop offset="62%" stopColor="var(--pg-zone)" stopOpacity="0.55" />
@@ -825,7 +823,6 @@ export function NetworkCanvas({
 						ref={zonesRef}
 						className="pg-zones"
 						data-venn={venn ? "" : undefined}
-						aria-hidden="true"
 					>
 						{clusters.map((cluster, index) => {
 							const place = places[index];
@@ -892,47 +889,22 @@ export function NetworkCanvas({
 							);
 						})}
 					</g>
-					<g className="pg-links" aria-hidden="true">
-						{activeLinkList.map(({ a, b, kind }) => (
-							<path
-								key={`${a}|${b}`}
-								className="pg-link"
-								ref={(element) => {
-									const key = `${a}|${b}`;
-									if (element) {
-										linkElements.current.set(key, { a, b, element });
-									} else {
-										linkElements.current.delete(key);
-									}
-								}}
-								stroke={CONNECTION_STYLES[kind].color}
-								fill="none"
-							/>
-						))}
-					</g>
-					<g className="pg-nodes" ref={nodesRef}>
-						{participants.map((person) => (
-							<PersonNode
-								key={person.id}
-								person={person}
-								state={
-									activeId === person.id
-										? "active"
-										: linkedIds.has(person.id)
-											? "linked"
-											: matches?.has(person.id)
-												? "match"
-												: ""
-								}
-								register={register}
-								onPointerEnter={enter}
-								onPointerLeave={leave}
-								onActivate={focus}
-							/>
-						))}
-					</g>
 				</g>
 			</svg>
+			<canvas ref={canvasRef} className="pg-people" aria-hidden="true" />
+			<ul className="sr-only" aria-label="Participantes">
+				{participants.map((person) => (
+					<li key={person.id}>
+						<PersonButton
+							person={person}
+							pressed={selectedId === person.id}
+							onFocus={enter}
+							onBlur={leave}
+							onActivate={focus}
+						/>
+					</li>
+				))}
+			</ul>
 		</div>
 	);
 }

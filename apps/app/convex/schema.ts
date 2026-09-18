@@ -285,6 +285,8 @@ export default defineSchema({
     image: v.optional(v.string()),
     /** Uploaded profile picture, served as /api/files/<id>. */
     avatarId: v.optional(v.id("_storage")),
+    /** Small square copy of `avatarId` for the participants map and lists (convex/lib/photo.ts). */
+    avatarThumbId: v.optional(v.id("_storage")),
     userTypeId: v.optional(v.id("userTypes")),
     /** Participant directory card; drives the connections graph. See convex/lib/directory.ts. */
     directory: v.optional(directoryValidator),
@@ -331,6 +333,7 @@ export default defineSchema({
     .index("by_github_id", ["githubId"])
     .index("by_github", ["githubUsername"])
     .index("by_avatar", ["avatarId"])
+    .index("by_avatar_thumb", ["avatarThumbId"])
     .index("by_user_type", ["userTypeId"]),
 
   /** Pending `hackspain auth login` browser approvals. See convex/cliAuth.ts. */

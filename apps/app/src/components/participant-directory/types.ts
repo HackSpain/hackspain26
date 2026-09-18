@@ -13,6 +13,7 @@ export interface DirectoryParticipant {
   id: string;
   /** True for the viewer's own card. */
   isMe?: boolean;
+  /** Already small (convex/lib/photo.ts): the map and lists never need more than 128px. */
   photoUrl?: string;
   role: string;
   skills: string[];

@@ -266,6 +266,25 @@ export const setTwitterHandle = authedMutation({
 });
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+/** The browser-made 128px copy; anything bigger is not a thumbnail. */
+const MAX_THUMB_BYTES = 256 * 1024;
+
+async function assertImage(
+  ctx: MutationCtx,
+  imageId: Id<"_storage">,
+  maxBytes: number
+): Promise<void> {
+  const meta = await ctx.db.system.get(imageId);
+  if (!meta) {
+    fail("NOT_FOUND", "La imagen no se ha subido");
+  }
+  if (!meta.contentType?.startsWith("image/")) {
+    fail("VALIDATION", "Solo se admiten imágenes");
+  }
+  if (meta.size > maxBytes) {
+    fail("VALIDATION", "La foto no puede superar 2 MB");
+  }
+}
 
 /** Upload target for a profile picture. POST the file there, then call setAvatar. */
 export const generateAvatarUploadUrl = authedMutation({
@@ -274,23 +293,30 @@ export const generateAvatarUploadUrl = authedMutation({
   returns: v.string(),
 });
 
+/**
+ * `thumbId` is the small square copy the browser made of the same picture
+ * (src/components/avatar-picker.tsx). Without it the map falls back to
+ * resizing the full upload on every request, so the picker always sends one
+ * when it can.
+ */
 export const setAvatar = authedMutation({
-  args: { imageId: v.id("_storage") },
+  args: { imageId: v.id("_storage"), thumbId: v.optional(v.id("_storage")) },
   handler: async (ctx, args) => {
-    const meta = await ctx.db.system.get(args.imageId);
-    if (!meta) {
-      fail("NOT_FOUND", "La imagen no se ha subido");
-    }
-    if (!meta.contentType?.startsWith("image/")) {
-      fail("VALIDATION", "Solo se admiten imágenes");
-    }
-    if (meta.size > MAX_AVATAR_BYTES) {
-      fail("VALIDATION", "La foto no puede superar 2 MB");
+    await assertImage(ctx, args.imageId, MAX_AVATAR_BYTES);
+    if (args.thumbId) {
+      await assertImage(ctx, args.thumbId, MAX_THUMB_BYTES);
     }
     const previous = ctx.user.avatarId;
-    await ctx.db.patch(ctx.user._id, { avatarId: args.imageId });
+    const previousThumb = ctx.user.avatarThumbId;
+    await ctx.db.patch(ctx.user._id, {
+      avatarId: args.imageId,
+      avatarThumbId: args.thumbId,
+    });
     if (previous && previous !== args.imageId) {
       await ctx.storage.delete(previous);
+    }
+    if (previousThumb && previousThumb !== args.thumbId) {
+      await ctx.storage.delete(previousThumb);
     }
     return imagePathFor(args.imageId);
   },
@@ -311,8 +337,15 @@ export const removeAvatar = authedMutation({
         "Sube otra foto antes de quitar esta: sin foto no puedes usar el panel"
       );
     }
-    await ctx.db.patch(ctx.user._id, { avatarId: undefined });
+    const previousThumb = ctx.user.avatarThumbId;
+    await ctx.db.patch(ctx.user._id, {
+      avatarId: undefined,
+      avatarThumbId: undefined,
+    });
     await ctx.storage.delete(previous);
+    if (previousThumb) {
+      await ctx.storage.delete(previousThumb);
+    }
     return null;
   },
   returns: v.null(),
