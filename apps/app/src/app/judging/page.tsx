@@ -1113,6 +1113,21 @@ function ProjectTable({
   onOpen: (id: Id<"submissions">, from: HTMLElement | null) => void;
 }) {
   const scoreCols = showAverages ? 2 : 0;
+  const renderRow = (row: QueueItem) => (
+    <ProjectTableRow
+      key={row._id}
+      name={row.name}
+      teamName={row.teamName}
+      challenges={row.challenges}
+      average={row.average}
+      scoreCount={row.scoreCount}
+      myScore={row.myScore}
+      showAverages={showAverages}
+      status={<ScoreMark score={row.myScore} />}
+      selected={row._id === projectId}
+      onOpen={(from) => onOpen(row._id, from)}
+    />
+  );
   return (
     <Table
       className="border-separate border-spacing-0 font-medium"
@@ -1133,21 +1148,7 @@ function ProjectTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {pending.map((row) => (
-          <ProjectTableRow
-            key={row._id}
-            name={row.name}
-            teamName={row.teamName}
-            challenges={row.challenges}
-            average={row.average}
-            scoreCount={row.scoreCount}
-            myScore={row.myScore}
-            showAverages={showAverages}
-            status={<ScoreMark score={row.myScore} />}
-            selected={row._id === projectId}
-            onOpen={(from) => onOpen(row._id, from)}
-          />
-        ))}
+        {pending.map(renderRow)}
         {scored.length > 0 && pending.length > 0 ? (
           <TableRow>
             <TableCell
@@ -1158,21 +1159,7 @@ function ProjectTable({
             </TableCell>
           </TableRow>
         ) : null}
-        {scored.map((row) => (
-          <ProjectTableRow
-            key={row._id}
-            name={row.name}
-            teamName={row.teamName}
-            challenges={row.challenges}
-            average={row.average}
-            scoreCount={row.scoreCount}
-            myScore={row.myScore}
-            showAverages={showAverages}
-            status={<ScoreMark score={row.myScore} />}
-            selected={row._id === projectId}
-            onOpen={(from) => onOpen(row._id, from)}
-          />
-        ))}
+        {scored.map(renderRow)}
       </TableBody>
     </Table>
   );
@@ -1192,6 +1179,22 @@ function RankingTable({
   onOpen: (id: Id<"submissions">, from: HTMLElement | null) => void;
 }) {
   const scoreCols = showAverages ? 2 : 0;
+  const renderRow = (row: RankingItem, rank = row.rank) => (
+    <ProjectTableRow
+      key={row._id}
+      rank={showAverages ? rank : undefined}
+      name={row.name}
+      teamName={row.teamName}
+      challenges={row.challenges}
+      average={row.average}
+      scoreCount={row.scoreCount}
+      myScore={row.canScore ? row.myScore : null}
+      showAverages={showAverages}
+      status={<RankingStatus row={row} />}
+      selected={row._id === projectId}
+      onOpen={(from) => onOpen(row._id, from)}
+    />
+  );
   return (
     <Table
       className="border-separate border-spacing-0 font-medium"
@@ -1215,22 +1218,7 @@ function RankingTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {scored.map((row) => (
-          <ProjectTableRow
-            key={row._id}
-            rank={showAverages ? row.rank : undefined}
-            name={row.name}
-            teamName={row.teamName}
-            challenges={row.challenges}
-            average={row.average}
-            scoreCount={row.scoreCount}
-            myScore={row.canScore ? row.myScore : null}
-            showAverages={showAverages}
-            status={<RankingStatus row={row} />}
-            selected={row._id === projectId}
-            onOpen={(from) => onOpen(row._id, from)}
-          />
-        ))}
+        {scored.map((row) => renderRow(row))}
         {unscored.length > 0 ? (
           <>
             <TableRow>
@@ -1241,22 +1229,7 @@ function RankingTable({
                 {showAverages ? "Sin notas" : "Pendiente"}
               </TableCell>
             </TableRow>
-            {unscored.map((row) => (
-              <ProjectTableRow
-                key={row._id}
-                rank={showAverages ? null : undefined}
-                name={row.name}
-                teamName={row.teamName}
-                challenges={row.challenges}
-                average={row.average}
-                scoreCount={row.scoreCount}
-                myScore={row.canScore ? row.myScore : null}
-                showAverages={showAverages}
-                status={<RankingStatus row={row} />}
-                selected={row._id === projectId}
-                onOpen={(from) => onOpen(row._id, from)}
-              />
-            ))}
+            {unscored.map((row) => renderRow(row, null))}
           </>
         ) : null}
       </TableBody>

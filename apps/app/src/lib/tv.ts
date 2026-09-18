@@ -66,10 +66,6 @@ export function isTvFontWeight(value: string): value is TvFontWeight {
   );
 }
 
-export function defaultTvFontWeight(): TvFontWeight {
-  return "normal";
-}
-
 export function tvHasBackground(background?: boolean): boolean {
   return background !== false;
 }
@@ -266,9 +262,3 @@ export const TICKER_DURATION: Record<TvTickerSpeed, string> = {
   normal: "24s",
   fast: "12s",
 };
-
-export const TV_SNAP = 1;
-
-export function snapTv(value: number) {
-  return Math.round(value / TV_SNAP) * TV_SNAP;
-}
