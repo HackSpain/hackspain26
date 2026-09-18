@@ -100,7 +100,7 @@ export function githubRepoSlug(remote: string): string | undefined {
       ? `${owner}/${name}`
       : undefined;
   } catch {
-    return;
+    // Invalid or non-URL remotes are intentionally ignored.
   }
 }
 
