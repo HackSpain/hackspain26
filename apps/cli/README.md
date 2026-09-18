@@ -109,15 +109,19 @@ laptop all weekend: one wakeup per second, the screen repaints only the rows tha
 one network round trip per scan, and after ten minutes without new usage the scan slows to once a
 minute until activity resumes. No prompt text or full
 paths ever leave the machine; only token counts, model, session ids, and a hash of the project
-directory. By default only usage after the watcher starts is reported; `--backfill 6` includes
-the last six hours.
+directory. Once organisers schedule the hackathon, the watcher reports exactly that window and
+all of it: usage from before the start or after the end is never sent, and usage from inside it is
+picked up even if the watcher was opened late or not at all until the end (it still runs after the
+hackathon closes, to deliver what is left). Every event keeps the time the harness recorded, not
+the time the watcher read it. On a server without a schedule only usage after the watcher starts
+is reported; `--backfill 6` includes the last six hours.
 
 The watcher remembers. `~/.local/state/hackspain/watch-memory.json` keeps the first start, the
 last scan and the latest organiser announcements, and the local spool keeps every usage event, so
 reopening it shows the harness table and recent requests for everything since the first run (the
 Harnesses box says "since …"), the last announcements are back on screen, and the first scan reads
 harness logs written while the watcher was closed instead of skipping them. `--backfill <hours>`
-still overrides that start point. Announcements caught up on start stay on screen but do not
+overrides that start point when no hackathon window is scheduled; with one, the window wins. Announcements caught up on start stay on screen but do not
 toast; only ones from the last ten minutes do.
 
 One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.

@@ -29,14 +29,14 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 | `schema` | `"hackspain.telemetry.v1"` | Bump for breaking changes |
 | `type` | `usage` \| `session.start` \| `session.end` | `session.end` is reserved; no harness emits it yet |
 | `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key for queries and downstream processing |
-| `occurredAt` | ISO-8601 UTC | When the harness recorded it |
+| `occurredAt` | ISO-8601 UTC | When the harness recorded it. The hackathon window and every time bucket use this one, so usage read days later still lands when it happened |
 | `observedAt` | ISO-8601 UTC | When the watcher read it |
 | `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
 | `harnessVersion` | string? | e.g. Claude Code `2.1.261`, Codex `0.130.0` |
 | `sessionId` | string | Harness session / task id |
 | `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path |
 | `model` | `{ raw, family, provider? }`? | `family` ∈ `claude` \| `gpt` \| `gemini` \| `qwen` \| `other`; the insights mock still shows four buckets and folds `qwen` into `other` |
-| `tokens` | `{ input, output, cacheRead, cacheWrite, reasoning? }`? | Non-negative integers. Required for `usage`. `input` excludes cache reads for every harness |
+| `tokens` | `{ input, output, cacheRead, cacheWrite, reasoning? }`? | Non-negative integers. Required for `usage`. For every harness `input` excludes cache reads and `output` includes `reasoning` (which is a breakdown, never added on top) |
 | `costUsd` | number? | Only when the harness itself reports a price |
 | `identity` | `{ userId, teamId?, clientVersion }` | Stamped by the CLI from the logged-in user and their team at flush time |
 | `native` | object? | Allowlisted harness-specific remainder. Currently only Claude `requestId` |
@@ -53,9 +53,9 @@ buckets on `occurredAt`.
 | codex | `~/.codex/sessions/**/rollout-*.jsonl`, `event_msg` with `payload.type: "token_count"` | `session_meta.payload.session_id` | line index | `last_token_usage.input_tokens − cached_input_tokens` | `output_tokens` | `cached_input_tokens` | `cache_write_input_tokens` | `turn_context.payload.model` |
 | opencode | `~/.local/share/opencode/opencode.db`, table `message`, assistant rows with `time.completed` | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
 | cline | VS Code globalStorage `saoudrizwan.claude-dev/tasks/<task>/ui_messages.json`, `say: "api_req_started"` | task id | entry `ts` | `tokensIn` | `tokensOut` | `cacheReads` | `cacheWrites` | `task_metadata.json` `model_usage` |
-| gemini-cli | `~/.gemini/tmp/<project>/chats/session-*.jsonl` (subagents one level deeper), records with `type: "gemini"` and a `tokens` object (a turn is appended again with the same `id` once usage arrives: dedupe) | metadata line `sessionId`, else the file name's short id | message `id` | `tokens.input − tokens.cached` | `tokens.output` | `tokens.cached` | 0 (implicit caching) | `model`; `tokens.thoughts` → `reasoning` |
+| gemini-cli | `~/.gemini/tmp/<project>/chats/session-*.jsonl` (subagents one level deeper), records with `type: "gemini"` and a `tokens` object (a turn is appended again with the same `id` once usage arrives: dedupe) | metadata line `sessionId`, else the file name's short id | message `id` | `tokens.input − tokens.cached` | `tokens.output + tokens.thoughts` | `tokens.cached` | 0 (implicit caching) | `model`; `tokens.thoughts` → `reasoning` |
 | kilo-code | `~/.local/share/kilo/kilo*.db` (OpenCode fork, same `message` table; channel builds use `kilo-<channel>.db`) | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
-| qwen-code | `~/.qwen/projects/<slug>/chats/<session>.jsonl` (`QWEN_HOME` overrides), records with `type: "assistant"` and `usageMetadata` | `sessionId` | record `uuid` | `promptTokenCount − cachedContentTokenCount` | `candidatesTokenCount` | `cachedContentTokenCount` | 0 | `model`; `thoughtsTokenCount` → `reasoning`; `version` → `harnessVersion` |
+| qwen-code | `~/.qwen/projects/<slug>/chats/<session>.jsonl` (`QWEN_HOME` overrides), records with `type: "assistant"` and `usageMetadata` | `sessionId` | record `uuid` | `promptTokenCount − cachedContentTokenCount` | `candidatesTokenCount`, plus `thoughtsTokenCount` when the total counts it apart | `cachedContentTokenCount` | 0 | `model`; `thoughtsTokenCount` → `reasoning`; `version` → `harnessVersion` |
 
 Reasoning tokens go to `tokens.reasoning` when the harness reports them (Claude thinking,
 Codex `reasoning_output_tokens`, OpenCode `tokens.reasoning`, Gemini CLI and Qwen Code thought
@@ -64,6 +64,49 @@ shapes or recorder source and fixtures, not from a local install; collectors log
 anything they cannot parse. Gemini-style prompt counts include the cached part, so `input` is
 the prompt minus the cache read for those two.
 
+Gemini-style usage keeps thoughts next to the candidates count, while Claude, Codex and OpenCode
+already include reasoning in their output. `outputWithReasoning` (`schema.ts`) settles it per
+record from the harness's own total: thoughts are added only when the total counts them apart.
+Without a total, Gemini CLI adds them (Gemini API semantics) and Qwen Code does not (it converts
+OpenAI-style usage, where completion tokens include reasoning).
+
+## Collection window
+
+With a scheduled hackathon (`users.me.event.startsAt` / `endsAt`) the watcher reports `[startsAt,
+endsAt)` on `occurredAt`, whole, no matter when it was opened: `since` is the start of the
+hackathon rather than the last run, `--backfill` is ignored, and the watcher still runs after the
+end to deliver what was never sent. The cursor store remembers the earliest `since` it was read
+with (`coveredSince`); an earlier one (the first windowed run, or organisers moving the start)
+starts the cursors over, and event ids already in the local spool are skipped so nothing is sent
+twice. The server applies the same window per event and rejects the rest with
+`outside_event_window`, which also covers older binaries. Organisers and servers without a
+schedule keep the catch-up rule (`catchUpSince`).
+
+## OpenTelemetry copy
+
+When `RAWTREE_OTLP_LOGS_TABLE` is set, the dashboard also sends each accepted batch to RawTree's
+OTLP endpoint (`POST /otlp/v1/logs`, OTLP/JSON) for its OpenTelemetry explorer
+(`apps/app/src/app/api/cli/telemetry/otlp.ts`). One log record per event: `timeUnixNano` is
+`occurredAt`, `observedTimeUnixNano` is `observedAt`, `eventName` is `hackspain.<type>`.
+
+| Event field | Log attribute |
+| --- | --- |
+| `eventId` | `event.id` |
+| `sessionId` | `gen_ai.conversation.id` |
+| `model.raw` / `model.provider` / `model.family` | `gen_ai.request.model` / `gen_ai.provider.name` / `hackspain.model.family` |
+| `tokens.input` / `tokens.output` | `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` |
+| `tokens.cacheRead` / `cacheWrite` / `reasoning` | `hackspain.usage.cache_read_tokens` / `cache_write_tokens` / `reasoning_tokens` |
+| `costUsd` | `hackspain.cost_usd` |
+| `harness` / `harnessVersion` | `hackspain.harness` / `hackspain.harness.version` |
+| `identity.userId` / `teamId` | `hackspain.user.id` / `hackspain.team.id` |
+| `identity.clientVersion` | resource `service.version` (`service.name` is `hackspain-cli`) |
+| `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` |
+| `native.requestId` | `hackspain.request.id` |
+
+The copy is best effort and has no insert deduplication, so a retried batch can land twice: the
+canonical table stays the source of truth, and queries on the logs table dedupe on
+(`hackspain.user.id`, `event.id`).
+
 ## Privacy
 
 - No prompt or response text, ever. Fixtures under `apps/cli/test/fixtures` are redacted and a
@@ -71,7 +114,9 @@ the prompt minus the cache read for those two.
 - Working directories are hashed; only the last path segment is kept.
 - No harness account ids. Identity is the HackSpain user and team.
 - `native` keys are allowlisted in both CLI and server validation; unknown keys are rejected.
-- `--backfill <hours>` is opt-in; by default only usage after the watcher starts is reported.
+- Only the hackathon window is reported once it is scheduled; nothing from before or after it
+  leaves the machine. Without a schedule, `--backfill <hours>` is opt-in and by default only usage
+  after the watcher starts is reported.
 
 ## Example
 
