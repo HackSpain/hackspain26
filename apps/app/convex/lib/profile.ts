@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
 import { isDirectoryComplete } from "./directory";
+import { hasUploadedAvatar } from "./photo";
 
 /**
  * What every signed-in account must have before using the dashboard: a
@@ -20,7 +21,7 @@ export const profileFieldValidator = v.union(
 
 export type ProfileUser = Pick<
   Doc<"users">,
-  "avatarId" | "directory" | "image" | "name"
+  "avatarBlobUrl" | "avatarId" | "directory" | "image" | "name"
 >;
 
 export function missingProfileFields(user: ProfileUser): ProfileField[] {
@@ -28,7 +29,7 @@ export function missingProfileFields(user: ProfileUser): ProfileField[] {
   if (!user.name?.trim()) {
     missing.push("name");
   }
-  if (!user.avatarId && !user.image?.trim()) {
+  if (!hasUploadedAvatar(user) && !user.image?.trim()) {
     missing.push("photo");
   }
   if (!isDirectoryComplete(user.directory)) {

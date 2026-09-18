@@ -1,17 +1,17 @@
 "use client";
 
-import { useMutation } from "convex/react";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { useRef } from "react";
 import type { ReactNode } from "react";
-import { api } from "@convex/_generated/api";
-import { PHOTO_WIDTH } from "@convex/lib/photo";
+import {
+  isAvatarContentType,
+  MAX_AVATAR_BYTES,
+  PHOTO_WIDTH,
+} from "@convex/lib/photo";
 import type { ActionFeedback } from "@/components/action-feedback";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
-import { uploadToConvex } from "@/lib/upload";
-
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+import { removeUploadedAvatar, uploadAvatar } from "@/lib/avatar";
 
 /**
  * A square, centred copy at the width the participants map draws, made here
@@ -57,28 +57,16 @@ async function thumbnailOf(file: File): Promise<File | undefined> {
   return blob ? new File([blob], "avatar-thumb", { type: blob.type }) : undefined;
 }
 
-/** Uploads a picture to Convex storage and makes it the profile photo. */
-export function useAvatarUpload(): (file: File) => Promise<void> {
-  const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
-  const setAvatar = useMutation(api.users.setAvatar);
-
-  return async function upload(file: File) {
-    if (!file.type.startsWith("image/")) {
-      throw new Error("Solo se admiten imágenes");
-    }
-    if (file.size > MAX_AVATAR_BYTES) {
-      throw new Error("La foto no puede superar 2 MB.");
-    }
-    const error = "No se pudo subir la foto";
-    const [imageId, thumbnail] = await Promise.all([
-      generateUploadUrl().then((url) => uploadToConvex(url, file, error)),
-      thumbnailOf(file),
-    ]);
-    const thumbId = thumbnail
-      ? await uploadToConvex(await generateUploadUrl(), thumbnail, error)
-      : undefined;
-    await setAvatar({ imageId, thumbId });
-  };
+/** Uploads a picture to Vercel Blob and makes it the profile photo. */
+async function saveAvatar(file: File): Promise<void> {
+  if (!isAvatarContentType(file.type)) {
+    throw new Error("Solo se admiten imágenes");
+  }
+  if (file.size > MAX_AVATAR_BYTES) {
+    throw new Error("La foto no puede superar 2 MB.");
+  }
+  const thumbnail = await thumbnailOf(file);
+  await uploadAvatar(file, thumbnail);
 }
 
 /**
@@ -101,8 +89,6 @@ export function AvatarPicker({
   canRemove?: boolean;
   children?: ReactNode;
 }) {
-  const upload = useAvatarUpload();
-  const removeAvatar = useMutation(api.users.removeAvatar);
   const fileInput = useRef<HTMLInputElement | null>(null);
 
   return (
@@ -131,7 +117,7 @@ export function AvatarPicker({
                   }
                   void action.run(async () => {
                     try {
-                      await upload(file);
+                      await saveAvatar(file);
                     } finally {
                       if (fileInput.current) {
                         fileInput.current.value = "";
@@ -152,7 +138,7 @@ export function AvatarPicker({
               disabled={action.pending}
               onClick={() =>
                 void action.run(async () => {
-                  await removeAvatar({});
+                  await removeUploadedAvatar();
                   return "Foto eliminada. Vuelves a usar tu avatar de GitHub.";
                 })
               }

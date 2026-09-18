@@ -137,7 +137,7 @@ export const meValidator = v.object({
   _id: v.id("users"),
   accepted: v.boolean(),
   attendanceStatus: attendanceValidator,
-  /** Same-origin path for an uploaded picture, else the GitHub avatar URL. */
+  /** Blob URL or same-origin /api/files path for an upload, else GitHub. */
   avatarUrl: v.optional(v.string()),
   /** Judging access: admin, judge role, or a user type that grants it. */
   canJudge: v.boolean(),

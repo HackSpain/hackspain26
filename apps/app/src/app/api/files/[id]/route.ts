@@ -8,10 +8,12 @@ import { parseThumbnailWidth } from "@/lib/thumbnail";
 import { bearerToken } from "../../cli/_lib/respond";
 
 /**
- * GET /api/files/<storageId>: streams a feed image from Convex storage under
- * our own domain. Feed posts only ever carry this path, so the Convex storage
- * URL never reaches a client. Signed-in browsers use the cookie session, the
- * CLI could use its bearer token; anyone else is sent to log in.
+ * GET /api/files/<storageId>: streams a feed image, team logo or legacy
+ * profile picture from Convex storage under our own domain. Feed posts only
+ * ever carry this path, so the Convex storage URL never reaches a client.
+ * New profile pictures are public Vercel Blob URLs and skip this route.
+ * Signed-in browsers use the cookie session, the CLI could use its bearer
+ * token; anyone else is sent to log in.
  *
  * `?w=<px>` returns a PNG resized to that width (never enlarged, first frame
  * of an animation). The CLI uses it to draw the picture inline in terminals

@@ -35,6 +35,16 @@ describe("missingProfileFields", () => {
     ).toEqual([]);
   });
 
+  test("a Vercel Blob avatar counts as the photo", () => {
+    expect(
+      missingProfileFields({
+        ...complete,
+        avatarBlobUrl: "https://abc.public.blob.vercel-storage.com/avatars/u/photo",
+        image: undefined,
+      })
+    ).toEqual([]);
+  });
+
   test("blank name and no picture are both missing", () => {
     expect(
       missingProfileFields({ ...complete, image: "  ", name: "   " })

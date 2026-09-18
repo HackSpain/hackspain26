@@ -277,11 +277,21 @@ export default defineSchema({
 
   users: defineTable({
     name: v.optional(v.string()),
-    /** External avatar URL (GitHub). `avatarId` wins when set. */
+    /**
+     * External avatar URL (GitHub). An uploaded picture wins: `avatarBlobUrl`
+     * first, then the legacy Convex `avatarId`.
+     */
     image: v.optional(v.string()),
-    /** Uploaded profile picture, served as /api/files/<id>. */
+    /** Public Vercel Blob URL for an uploaded profile picture. */
+    avatarBlobUrl: v.optional(v.string()),
+    /** Small square copy of `avatarBlobUrl` for the participants map and lists. */
+    avatarThumbBlobUrl: v.optional(v.string()),
+    /**
+     * Legacy Convex storage id, served as /api/files/<id>. Kept so photos
+     * uploaded before Vercel Blob still resolve.
+     */
     avatarId: v.optional(v.id("_storage")),
-    /** Small square copy of `avatarId` for the participants map and lists (convex/lib/photo.ts). */
+    /** Legacy small square copy of `avatarId` (convex/lib/photo.ts). */
     avatarThumbId: v.optional(v.id("_storage")),
     userTypeId: v.optional(v.id("userTypes")),
     /** Participant directory card; drives the connections graph. See convex/lib/directory.ts. */

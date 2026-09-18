@@ -205,8 +205,8 @@ export const post = onboardedMutation({
 
 /**
  * Storage URL behind /api/files/<id>. Only images attached to a post, set as
- * someone's profile picture or used as a team logo resolve, and only for
- * signed-in users.
+ * a legacy Convex profile picture or used as a team logo resolve, and only
+ * for signed-in users.
  */
 export const imageUrl = authedQuery({
   args: { imageId: v.id("_storage") },

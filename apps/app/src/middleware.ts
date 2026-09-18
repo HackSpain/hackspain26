@@ -7,6 +7,7 @@ import {
 // /api/cli/* authenticates with a bearer token, not the cookie session.
 // /api/files/* accepts either and does its own redirect, so image links from
 // the CLI work in a browser.
+// /api/avatar authenticates itself so a missing session returns JSON, not /login.
 // / is the unauthenticated splash. /tv is the public venue screen.
 // /cli-auth is public at the middleware level so ?hs-code= survives a
 // server-side redirect; AuthGate stashes it and routes visitors via /login.
@@ -21,6 +22,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/login/otp",
   "/api/cli(.*)",
   "/api/files(.*)",
+  "/api/avatar",
   "/tv",
   "/api/tv",
   "/betterstack(.*)",

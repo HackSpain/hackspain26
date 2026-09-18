@@ -12,6 +12,14 @@ import { fail } from "./lib/errors";
 import { parseEventDetails } from "./lib/eventDetails";
 import { eventIsOpen, eventPhase, getEventWindow } from "./lib/eventWindow";
 import { imagePathFor } from "./lib/files";
+import {
+  MAX_AVATAR_BYTES,
+  MAX_THUMB_BYTES,
+  avatarUrlFor,
+  hasUploadedAvatar,
+  isVercelBlobUrl,
+  storedBlobUrls,
+} from "./lib/photo";
 import { missingProfileFields } from "./lib/profile";
 import { effectiveSections, userTypeFor } from "./lib/userTypes";
 import {
@@ -97,14 +105,7 @@ export async function resolvePendingInvites(
   }
 }
 
-export function avatarUrlFor(
-  user: Pick<Doc<"users">, "avatarId" | "image">
-): string | undefined {
-  if (user.avatarId) {
-    return imagePathFor(user.avatarId);
-  }
-  return user.image;
-}
+export { avatarUrlFor };
 
 export const me = query({
   args: {},
@@ -136,7 +137,7 @@ export const me = query({
       name: user.name ?? signup?.fullName,
       role: user.role,
       avatarUrl: avatarUrlFor(user),
-      canRemoveAvatar: Boolean(user.avatarId && user.image?.trim()),
+      canRemoveAvatar: hasUploadedAvatar(user) && Boolean(user.image?.trim()),
       canJudge: sections.includes("judging"),
       sections,
       userType: type ? { label: type.label, slug: type.slug } : undefined,
@@ -265,10 +266,6 @@ export const setTwitterHandle = authedMutation({
   returns: v.union(v.string(), v.null()),
 });
 
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-/** The browser-made 128px copy; anything bigger is not a thumbnail. */
-const MAX_THUMB_BYTES = 256 * 1024;
-
 async function assertImage(
   ctx: MutationCtx,
   imageId: Id<"_storage">,
@@ -286,7 +283,36 @@ async function assertImage(
   }
 }
 
-/** Upload target for a profile picture. POST the file there, then call setAvatar. */
+async function deleteStoredFiles(
+  ctx: MutationCtx,
+  avatarId: Id<"_storage"> | undefined,
+  avatarThumbId: Id<"_storage"> | undefined
+): Promise<void> {
+  if (avatarId) {
+    await ctx.storage.delete(avatarId);
+  }
+  if (avatarThumbId) {
+    await ctx.storage.delete(avatarThumbId);
+  }
+}
+
+function requireBlobUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!isVercelBlobUrl(trimmed)) {
+    fail("VALIDATION", "La imagen no se ha subido");
+  }
+  return trimmed;
+}
+
+const avatarWriteReturn = v.object({
+  previousBlobUrls: v.array(v.string()),
+  url: v.string(),
+});
+
+/**
+ * Upload target for a legacy Convex storage picture. New uploads go through
+ * POST /api/avatar (Vercel Blob) and then setAvatar with `blobUrl`.
+ */
 export const generateAvatarUploadUrl = authedMutation({
   args: {},
   handler: async (ctx) => await ctx.storage.generateUploadUrl(),
@@ -294,22 +320,58 @@ export const generateAvatarUploadUrl = authedMutation({
 });
 
 /**
- * `thumbId` is the small square copy the browser made of the same picture
- * (src/components/avatar-picker.tsx). Without it the map falls back to
- * resizing the full upload on every request, so the picker always sends one
- * when it can.
+ * Attach a profile picture. The dashboard sends public Vercel Blob URLs
+ * (`blobUrl`, optional `thumbBlobUrl`). `imageId` / `thumbId` remain for
+ * photos that were still uploaded to Convex storage.
+ *
+ * The browser-made 128px copy (src/components/avatar-picker.tsx) is what the
+ * participants map draws; without it the map falls back to the full image
+ * (Blob) or the resizing file route (legacy Convex).
  */
 export const setAvatar = authedMutation({
-  args: { imageId: v.id("_storage"), thumbId: v.optional(v.id("_storage")) },
+  args: {
+    blobUrl: v.optional(v.string()),
+    imageId: v.optional(v.id("_storage")),
+    thumbBlobUrl: v.optional(v.string()),
+    thumbId: v.optional(v.id("_storage")),
+  },
   handler: async (ctx, args) => {
+    const previousBlobUrls = storedBlobUrls(ctx.user);
+    const previous = ctx.user.avatarId;
+    const previousThumb = ctx.user.avatarThumbId;
+
+    if (args.blobUrl !== undefined) {
+      const blobUrl = requireBlobUrl(args.blobUrl);
+      const thumbBlobUrl =
+        args.thumbBlobUrl === undefined
+          ? undefined
+          : requireBlobUrl(args.thumbBlobUrl);
+      await ctx.db.patch(ctx.user._id, {
+        avatarBlobUrl: blobUrl,
+        avatarId: undefined,
+        avatarThumbBlobUrl: thumbBlobUrl,
+        avatarThumbId: undefined,
+      });
+      await deleteStoredFiles(ctx, previous, previousThumb);
+      return {
+        previousBlobUrls: previousBlobUrls.filter(
+          (url) => url !== blobUrl && url !== thumbBlobUrl
+        ),
+        url: blobUrl,
+      };
+    }
+
+    if (args.imageId === undefined) {
+      fail("VALIDATION", "La imagen no se ha subido");
+    }
     await assertImage(ctx, args.imageId, MAX_AVATAR_BYTES);
     if (args.thumbId) {
       await assertImage(ctx, args.thumbId, MAX_THUMB_BYTES);
     }
-    const previous = ctx.user.avatarId;
-    const previousThumb = ctx.user.avatarThumbId;
     await ctx.db.patch(ctx.user._id, {
+      avatarBlobUrl: undefined,
       avatarId: args.imageId,
+      avatarThumbBlobUrl: undefined,
       avatarThumbId: args.thumbId,
     });
     if (previous && previous !== args.imageId) {
@@ -318,18 +380,20 @@ export const setAvatar = authedMutation({
     if (previousThumb && previousThumb !== args.thumbId) {
       await ctx.storage.delete(previousThumb);
     }
-    return imagePathFor(args.imageId);
+    return {
+      previousBlobUrls,
+      url: imagePathFor(args.imageId),
+    };
   },
-  returns: v.string(),
+  returns: avatarWriteReturn,
 });
 
 /** Only while the GitHub avatar remains: a photo is required (convex/lib/profile.ts). */
 export const removeAvatar = authedMutation({
   args: {},
   handler: async (ctx) => {
-    const previous = ctx.user.avatarId;
-    if (!previous) {
-      return null;
+    if (!hasUploadedAvatar(ctx.user)) {
+      return { previousBlobUrls: [] };
     }
     if (!ctx.user.image?.trim()) {
       fail(
@@ -337,18 +401,19 @@ export const removeAvatar = authedMutation({
         "Sube otra foto antes de quitar esta: sin foto no puedes usar el panel"
       );
     }
+    const previousBlobUrls = storedBlobUrls(ctx.user);
+    const previous = ctx.user.avatarId;
     const previousThumb = ctx.user.avatarThumbId;
     await ctx.db.patch(ctx.user._id, {
+      avatarBlobUrl: undefined,
       avatarId: undefined,
+      avatarThumbBlobUrl: undefined,
       avatarThumbId: undefined,
     });
-    await ctx.storage.delete(previous);
-    if (previousThumb) {
-      await ctx.storage.delete(previousThumb);
-    }
-    return null;
+    await deleteStoredFiles(ctx, previous, previousThumb);
+    return { previousBlobUrls };
   },
-  returns: v.null(),
+  returns: v.object({ previousBlobUrls: v.array(v.string()) }),
 });
 
 export const setAttendance = profileMutation({

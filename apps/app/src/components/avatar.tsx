@@ -14,8 +14,9 @@ export function initialsOf(name: string | null | undefined): string {
 }
 
 /**
- * Profile picture with an initials fallback. `src` is either our own
- * /api/files path or the GitHub avatar URL, so a plain img is enough.
+ * Profile picture with an initials fallback. `src` is a Vercel Blob URL, our
+ * own /api/files path (legacy Convex uploads) or the GitHub avatar URL, so a
+ * plain img is enough.
  */
 export function Avatar({
   name,
