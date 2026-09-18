@@ -7,11 +7,11 @@ import { resolvePendingInvites } from "./users";
 const STATE_TTL_MS = 10 * 60 * 1000;
 
 export function githubRedirectUri(): string {
-  const site = process.env.SITE_URL;
-  if (!site) {
-    throw new Error("SITE_URL no está configurada");
+  const convexSite = process.env.CONVEX_SITE_URL;
+  if (!convexSite) {
+    throw new Error("CONVEX_SITE_URL no está configurada");
   }
-  return `${site.replace(/\/$/, "")}/github/callback`;
+  return `${convexSite.replace(/\/$/, "")}/github/callback`;
 }
 
 function randomState(): string {
