@@ -14,6 +14,7 @@ import {
 	MAX_LINKS,
 	NODE_RADIUS,
 	placeClusters,
+	SETTLED,
 	wordmarkBox,
 } from "./network-model";
 import type { DirectoryParticipant } from "./types";
@@ -308,4 +309,24 @@ test("the layout settles members near their cluster and respects a pinned node",
 			);
 		}
 	}
+});
+
+test("a tick reports how far people moved, and a settled layout stops moving", () => {
+	const people = Array.from({ length: 40 }, (_, i) => ({
+		...person,
+		id: `p${i}`,
+		city: i % 2 ? "Madrid" : "Bilbao",
+	}));
+	const clusters = clusterParticipants(people, "city");
+	const places = placeClusters(clusters);
+	const layout = createLayout(initialPoints(clusters, places), clusters, places);
+	assert.ok(layout.tick(1) > SETTLED, "the first frame moves people");
+	let frames = 1;
+	let alpha = 0.97;
+	while (frames < 400 && layout.tick(alpha) > SETTLED) {
+		alpha *= 0.97;
+		frames++;
+	}
+	assert.ok(frames < 182, `settled in ${frames} frames, before alpha runs out`);
+	assert.ok(layout.tick(alpha) <= SETTLED, "and stays still afterwards");
 });

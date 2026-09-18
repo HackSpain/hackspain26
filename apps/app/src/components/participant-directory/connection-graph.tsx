@@ -24,6 +24,7 @@ import {
 import type { Lens, Link } from "./network-model";
 import { CONNECTION_STYLES, NetworkCanvas } from "./network-canvas";
 import type { NetworkHandle } from "./network-canvas";
+import { photoThumbnail } from "./photo";
 import type { DirectoryParticipant } from "./types";
 import "./connection-graph.css";
 
@@ -53,7 +54,7 @@ const SEARCH_KINDS: AffinityKind[] = [
 function Portrait({ person }: { person: DirectoryParticipant }) {
 	return person.photoUrl ? (
 		// eslint-disable-next-line @next/next/no-img-element -- profile images may use authenticated app URLs or GitHub avatars.
-		<img className="pg-portrait" src={person.photoUrl} alt="" />
+		<img className="pg-portrait" src={photoThumbnail(person.photoUrl)} alt="" />
 	) : (
 		<span className="pg-portrait" aria-hidden="true">
 			{initialsOf(person.displayName)}
