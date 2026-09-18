@@ -38,6 +38,8 @@ export const HARNESSES = [
   "gemini-cli",
   "qwen-code",
   "kilo-code",
+  "pi",
+  "omp",
 ] as const;
 export type HarnessId = (typeof HARNESSES)[number];
 
@@ -77,8 +79,8 @@ export type TelemetryEvent = {
   identity: { userId: string; teamId?: string; clientVersion: string };
   /**
    * What only some harnesses report, so never comparable across them:
-   * Claude Code's `requestId`, and the `costUsd` OpenCode, Kilo Code and
-   * Cline compute themselves. Allowlisted here and on the server.
+   * Claude Code's `requestId`, and the `costUsd` OpenCode, Kilo Code,
+   * Cline, Pi and Oh My Pi compute themselves. Allowlisted here and on the server.
    */
   native?: { requestId?: string; costUsd?: number };
 };

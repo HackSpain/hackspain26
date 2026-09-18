@@ -46,6 +46,8 @@ const HARNESS_NAMES: Record<string, string> = {
   "gemini-cli": "Gemini CLI",
   "kilo-code": "Kilo Code",
   opencode: "OpenCode",
+  pi: "Pi",
+  omp: "Oh My Pi",
   "qwen-code": "Qwen Code",
 };
 
@@ -66,6 +68,8 @@ const HARNESS_BRAND: Record<string, { glyph: string; color: Rgb }> = {
   cursor: { color: [160, 166, 176], glyph: "▍" },
   "gemini-cli": { color: [66, 133, 244], glyph: "✦" },
   "kilo-code": { color: [250, 204, 21], glyph: "⬢" },
+  pi: { color: [217, 119, 87], glyph: "π" },
+  omp: { color: [139, 92, 246], glyph: "π" },
   opencode: { color: [34, 197, 94], glyph: "◆" },
   "qwen-code": { color: [97, 91, 255], glyph: "❋" },
 };

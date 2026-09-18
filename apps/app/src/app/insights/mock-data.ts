@@ -54,6 +54,18 @@ export const HARNESSES = [
     mark: "Ki",
     name: "Kilo Code",
   },
+  {
+    color: "#d97757",
+    id: "pi",
+    mark: "Pi",
+    name: "Pi",
+  },
+  {
+    color: "#8b5cf6",
+    id: "omp",
+    mark: "Om",
+    name: "Oh My Pi",
+  },
 ] as const;
 
 export const TRACKS: string[] = [];

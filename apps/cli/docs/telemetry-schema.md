@@ -39,7 +39,7 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 | `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key for queries and downstream processing |
 | `occurredAt` | ISO-8601 UTC | When the harness recorded it. The hackathon window and every time bucket use this one, so usage read days later still lands when it happened |
 | `observedAt` | ISO-8601 UTC | When the watcher read it |
-| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
+| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` \| `pi` \| `omp` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
 | `harnessVersion` | string? | e.g. Claude Code `2.1.261`, Codex `0.130.0` |
 | `sessionId` | string | Harness session / task id |
 | `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path. `gitBranch` is the harness's own when it logs one (Claude Code, Codex, Qwen Code), else read from the repository's `.git/HEAD`, so every harness reports it; absent outside a repository or on a detached HEAD |
@@ -62,6 +62,8 @@ buckets on `occurredAt`.
 | gemini-cli | `~/.gemini/tmp/<project>/chats/session-*.jsonl` (subagents one level deeper), records with `type: "gemini"` and a `tokens` object (a turn is appended again with the same `id` once usage arrives: dedupe) | metadata line `sessionId`, else the file name's short id | message `id` | `tokens.input − tokens.cached` | `tokens.output + tokens.thoughts` | `tokens.cached` | 0 (implicit caching) | `model`; `tokens.thoughts` → `reasoning` |
 | kilo-code | `~/.local/share/kilo/kilo*.db` (OpenCode fork, same `message` table; channel builds use `kilo-<channel>.db`) | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
 | qwen-code | `~/.qwen/projects/<slug>/chats/<session>.jsonl` (`QWEN_HOME` overrides), records with `type: "assistant"` and `usageMetadata` | `sessionId` | record `uuid` | `promptTokenCount − cachedContentTokenCount` | `candidatesTokenCount`, plus `thoughtsTokenCount` when the total counts it apart | `cachedContentTokenCount` | 0 | `model`; `thoughtsTokenCount` → `reasoning`; `version` → `harnessVersion` |
+| pi | `~/.pi/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoning` → `reasoning`; `usage.cost.total` → `native.costUsd` |
+| omp | `~/.omp/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoningTokens` → `reasoning`; `usage.cost.total` → `native.costUsd` |
 
 Reasoning tokens go to `tokens.reasoning` when the harness reports them (Claude thinking,
 Codex `reasoning_output_tokens`, OpenCode `tokens.reasoning`, Gemini CLI and Qwen Code thought
@@ -77,6 +79,18 @@ record from the harness's own total: thoughts are added only when the total coun
 Without a total, Gemini CLI and OpenCode add them and Qwen Code does not (it converts
 OpenAI-style usage, where completion tokens include reasoning).
 
+Pi and Oh My Pi formats are checked against their upstream sources:
+[Pi session manager](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/src/core/session-manager.ts),
+[Pi usage](https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/types.ts),
+[OMP sessions](https://github.com/can1357/oh-my-pi/blob/main/docs/session.md) and
+[OMP usage](https://github.com/can1357/oh-my-pi/blob/main/packages/catalog/src/types.ts).
+Their header `version` describes the session format, so it is not sent as `harnessVersion`.
+Custom session directories (including OMP profiles or XDG storage) can be selected with
+`HACKSPAIN_PI_SESSION_DIR` and `HACKSPAIN_OMP_SESSION_DIR`, pointing directly to the sessions
+folder. Both tools share `PI_CODING_AGENT_DIR` / `PI_CODING_AGENT_SESSION_DIR`; the watcher
+intentionally uses separate overrides to avoid attributing the same logs to both harnesses.
+Only persisted assistant usage is collected, not compaction summaries or estimated counts.
+
 ## Known limits
 
 - `tokens.cacheWrite` is always 0 for Gemini CLI and Qwen Code: their caching is implicit and no
@@ -84,7 +98,7 @@ OpenAI-style usage, where completion tokens include reasoning).
 - `harnessVersion` exists only where the harness logs it (Claude Code, Codex, Qwen Code).
 - Cline reports no reasoning count, and its `tokensIn` follows whatever the provider adapter did
   with cached tokens; there is no total in the record to check it against.
-- Codex, Gemini CLI, Qwen Code and Kilo Code collectors are written from documented formats, not
+- Codex, Gemini CLI, Qwen Code, Kilo Code, Pi and Oh My Pi collectors are written from documented formats, not
   checked against a local install. Claude Code and OpenCode are checked against real logs.
 - `cursor` and `copilot` keep no local usage logs, so they have no collector.
 

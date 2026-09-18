@@ -22,6 +22,7 @@ import { codexCollector } from "./collectors/codex";
 import { geminiCliCollector } from "./collectors/gemini-cli";
 import { kiloCodeCollector } from "./collectors/kilo-code";
 import { openCodeCollector } from "./collectors/opencode";
+import { ompCollector, piCollector } from "./collectors/pi";
 import { qwenCodeCollector } from "./collectors/qwen-code";
 import { openCursorStore } from "./cursor-store";
 import type { MemoryStore } from "./memory";
@@ -60,6 +61,8 @@ export const COLLECTORS: Collector[] = [
   openCodeCollector,
   kiloCodeCollector,
   clineCollector,
+  piCollector,
+  ompCollector,
 ];
 
 export type WatchOptions = {
