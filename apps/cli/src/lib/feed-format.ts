@@ -1,7 +1,7 @@
 import { extname } from "node:path";
 import { usageError } from "./errors";
 import { formatAgo } from "./output";
-import { c, highlight } from "./style";
+import { c, highlight, terminalText } from "./style";
 
 /** The subset of a feed post the CLI renders; the watcher stores this shape too. */
 export type FeedItem = {
@@ -54,25 +54,33 @@ export function postLines(post: FeedItem, now = Date.now()): string[] {
   const when = c.dim(formatAgo(post.createdAt, now));
   const lines: string[] = [];
   if (post.kind === "github") {
-    const repo = post.github?.repo ?? "";
+    const repo = terminalText(post.github?.repo ?? "");
+    const teamName = terminalText(post.teamName ?? "");
     lines.push(
-      `${c.teal("⑂")} ${highlight(post.teamName ?? repo)} ${c.dim(`·${post.teamName ? ` ${repo} ·` : ""}`)} ${when}`
+      `${c.teal("⑂")} ${highlight(teamName || repo)} ${c.dim(`·${teamName ? ` ${repo} ·` : ""}`)} ${when}`
     );
-    lines.push(`   ${post.text}`);
+    lines.push(`   ${terminalText(post.text)}`);
     if (post.github?.url) {
-      lines.push(`   ${c.dim(post.github.url)}`);
+      lines.push(`   ${c.dim(terminalText(post.github.url))}`);
     }
     return lines;
   }
-  const who = post.author?.name ?? post.author?.email ?? "someone";
+  const who = terminalText(
+    post.author?.name ?? post.author?.email ?? "someone"
+  );
+  const teamName = terminalText(post.teamName ?? "");
   lines.push(
-    `${highlight(who)}${post.teamName ? c.dim(` · ${post.teamName}`) : ""} ${c.dim("·")} ${when}`
+    `${highlight(who)}${teamName ? c.dim(` · ${teamName}`) : ""} ${c.dim("·")} ${when}`
   );
   if (post.text) {
-    lines.push(...post.text.split("\n").map((l) => `   ${l}`));
+    lines.push(
+      ...terminalText(post.text)
+        .split("\n")
+        .map((line) => `   ${line}`)
+    );
   }
   if (post.imageUrl) {
-    lines.push(`   ${c.dim("image:")} ${c.dim(post.imageUrl)}`);
+    lines.push(`   ${c.dim("image:")} ${c.dim(terminalText(post.imageUrl))}`);
   }
   return lines;
 }
