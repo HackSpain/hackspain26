@@ -30,9 +30,10 @@ test("default reset layout fits the canvas and has no team leaderboards", () => 
 test("panelv2 layout fits the canvas and keeps live CLI widgets", () => {
   assert.equal(PANEL_V2_LAYOUT.length, 8);
   const kinds = new Set(PANEL_V2_LAYOUT.map((widget) => widget.kind));
-  for (const kind of ["liveTokens", "liveAgents", "liveCommits", "liveLeaderboard", "feed"]) {
+  for (const kind of ["liveTokens", "liveAgents", "liveCommits", "liveLeaderboard", "feed", "sponsorTicker"]) {
     assert.ok(kinds.has(kind));
   }
+  assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "clock" && widget.text === "event"), true);
   for (const widget of PANEL_V2_LAYOUT) {
     const { x, y, w, h } = widget;
     assert.deepEqual(layoutTvBox(widget), { x, y, w, h });

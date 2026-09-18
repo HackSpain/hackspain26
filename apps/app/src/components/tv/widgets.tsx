@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef } from "react";
+import { useLiveInsights } from "@/app/insights/use-live-insights";
 import type { TvFontWeight, TvWidget } from "@/lib/tv";
 import { tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from "@/lib/tv";
 import { cn } from "@/lib/utils";
 import { gsap, SplitText, TV_EASE_OUT, useGSAP } from "./gsap";
-import { usePrefersReducedMotion } from "./motion";
+import { useClock, usePrefersReducedMotion } from "./motion";
 import {
   InsightsActivityBox,
   InsightsEvolutionBox,
@@ -23,7 +24,6 @@ import {
   LiveTokensBox,
 } from "./live-boxes";
 import { SponsorGridBox, SponsorTickerBox } from "./sponsor-boxes";
-import { useClock } from "./motion";
 
 function BannerWidget({
   text,
@@ -136,6 +136,62 @@ function TickerWidget({
   );
 }
 
+function padClock(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function EventClock() {
+  const now = useClock();
+  const { startsAt, endsAt } = useLiveInsights();
+  const time = now?.getTime();
+  let label = "En marcha";
+  let target: number | undefined;
+  if (time !== undefined && startsAt !== undefined && endsAt !== undefined) {
+    if (time < startsAt) {
+      label = "Empieza en";
+      target = startsAt;
+    } else if (time < endsAt) {
+      label = "Quedan";
+      target = endsAt;
+    } else {
+      label = "Hackathon terminado";
+    }
+  }
+  const left =
+    target !== undefined && time !== undefined
+      ? Math.max(0, Math.floor((target - time) / 1000))
+      : null;
+  const madrid =
+    now?.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Madrid",
+    }) ?? "--:--";
+
+  return (
+    <div className="grid h-full grid-cols-2">
+      <div className="flex flex-col items-center justify-center bg-hs-gold px-[0.6cqw] leading-none text-hs-ink">
+        <span className="text-[clamp(0.5rem,0.7cqw,0.95rem)] font-bold tracking-[0.12em] uppercase">
+          {label}
+        </span>
+        <span className="mt-[0.35cqw] font-bungee text-[clamp(1.1rem,2.4cqw,3.2rem)] tabular-nums">
+          {left === null
+            ? "--:--:--"
+            : `${padClock(Math.floor(left / 3600))}:${padClock(Math.floor(left / 60) % 60)}:${padClock(left % 60)}`}
+        </span>
+      </div>
+      <div className="flex flex-col items-center justify-center bg-hs-teal px-[0.6cqw] leading-none text-hs-paper">
+        <span className="text-[clamp(0.5rem,0.7cqw,0.95rem)] font-bold tracking-[0.12em] uppercase">
+          Madrid
+        </span>
+        <span className="mt-[0.35cqw] font-bungee text-[clamp(1.1rem,2.4cqw,3.2rem)] tabular-nums">
+          {madrid}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ClockWidget({ fontSize }: { fontSize?: number }) {
   const now = useClock();
   return (
@@ -219,7 +275,11 @@ export function TvWidgetView({
         />
       );
     case "clock":
-      return <ClockWidget fontSize={widget.fontSize} />;
+      return widget.text === "event" ? (
+        <EventClock />
+      ) : (
+        <ClockWidget fontSize={widget.fontSize} />
+      );
     case "message":
       return (
         <MessageWidget
