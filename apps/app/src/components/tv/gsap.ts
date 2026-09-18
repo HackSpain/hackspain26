@@ -91,23 +91,27 @@ export function useCountUp<T extends HTMLElement = HTMLSpanElement>(
   return ref;
 }
 
-/** Bars grow to their share instead of snapping to it. */
-export function useBarWidth<T extends HTMLElement = HTMLDivElement>(
+/**
+ * Bars grow to their share instead of snapping to it. The element must be
+ * full-width; the share is a `scaleX` from the left so only transform changes.
+ */
+export function useBarScale<T extends HTMLElement = HTMLDivElement>(
   ratio: number,
 ) {
   const reduced = usePrefersReducedMotion();
   const ref = useRef<T>(null);
-  const width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
+  const scaleX = Math.max(0, Math.min(1, ratio));
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) {return;}
     if (reduced) {
-      gsap.set(el, { width });
+      gsap.set(el, { scaleX, transformOrigin: "0% 50%" });
       return;
     }
     const tween = gsap.to(el, {
-      width,
+      scaleX,
+      transformOrigin: "0% 50%",
       duration: 0.9,
       ease: TV_EASE_OUT,
       overwrite: "auto",
@@ -115,7 +119,7 @@ export function useBarWidth<T extends HTMLElement = HTMLDivElement>(
     return () => {
       settle(tween);
     };
-  }, [width, reduced]);
+  }, [scaleX, reduced]);
 
   return ref;
 }

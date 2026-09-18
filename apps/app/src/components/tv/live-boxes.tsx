@@ -4,9 +4,8 @@ import { useQuery } from "convex/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
-import { Sparkline } from "@/app/insights/charts";
+import { INSIGHT_BUCKETS } from "@convex/tvPlayback";
 import {
-  bucketTotals,
   compact,
   filterSamples,
   harnessRows,
@@ -28,7 +27,7 @@ import {
   settle,
   TV_EASE_OUT,
   TV_EASE_POP,
-  useBarWidth,
+  useBarScale,
   useCountUp,
   useGSAP,
   useRankRows,
@@ -165,23 +164,69 @@ export function LiveCommitsBox() {
 
 function AgentRow({
   row,
+  rank,
   share,
   rows,
   rowRef,
 }: {
   row: HarnessRow;
+  rank: number;
   share: number;
   rows: number;
   rowRef: (node: HTMLElement | null) => void;
 }) {
+  const reduced = usePrefersReducedMotion();
   const count = useCountUp(row.sessions, number, { fromZero: true });
-  const bar = useBarWidth(share);
+  const bar = useBarScale(share);
+  const shine = useRef<HTMLSpanElement>(null);
+  const delta = useRef<HTMLSpanElement>(null);
+  const flash = useRef<HTMLSpanElement>(null);
+  const previous = useRef<{ sessions: number; rank: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const before = previous.current;
+    previous.current = { sessions: row.sessions, rank };
+    if (before === null || reduced) {return;}
+    const timeline = gsap.timeline();
+    // New sessions: a shine runs down the bar, the count pops, a "+N" rides up.
+    if (row.sessions > before.sessions && shine.current && count.current && delta.current) {
+      timeline.fromTo(
+        shine.current,
+        { xPercent: -120, opacity: 0.85 },
+        { xPercent: 120, opacity: 0, duration: 0.9, ease: TV_EASE_OUT },
+        0,
+      );
+      timeline.fromTo(
+        count.current,
+        { scale: 1.28, transformOrigin: "100% 50%" },
+        { scale: 1, duration: 0.6, ease: TV_EASE_POP },
+        0,
+      );
+      delta.current.textContent = `+${number(row.sessions - before.sessions)}`;
+      timeline.fromTo(
+        delta.current,
+        { opacity: 0, y: 6 },
+        { opacity: 1, y: 0, duration: 0.3, ease: TV_EASE_OUT },
+        0.05,
+      );
+      timeline.to(delta.current, { opacity: 0, y: -8, duration: 0.22, ease: "power2.in" }, "+=1.1");
+    }
+    if (rank < before.rank && flash.current) {
+      const flashTween = flashGold(flash.current, 1.6);
+      if (flashTween) {timeline.add(flashTween, 0);}
+    }
+    return () => {
+      settle(timeline);
+    };
+  }, [row.sessions, rank, reduced, count]);
+
   return (
     <li
       ref={rowRef}
       className="absolute inset-x-0 top-0 flex items-center gap-[0.7cqw] pr-[0.2cqw]"
       style={{ height: `${100 / rows}%` }}
     >
+      <span ref={flash} data-flash aria-hidden className={FLASH_LAYER_CLASS} />
       <span
         className="font-bungee flex w-[2.2cqw] shrink-0 items-center justify-center py-[0.25cqw] text-[clamp(0.5rem,0.7cqw,0.95rem)] text-hs-paper"
         style={{ backgroundColor: row.color }}
@@ -191,14 +236,25 @@ function AgentRow({
       <span className="w-[6.5cqw] shrink-0 truncate text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold">
         {row.name}
       </span>
-      <span className="relative h-[0.7cqw] min-w-0 flex-1 bg-hs-ink/8">
+      <span className="relative h-[0.7cqw] min-w-0 flex-1 overflow-hidden bg-hs-ink/8">
         <span
           ref={bar}
-          className="absolute inset-y-0 left-0 w-0"
+          className="absolute inset-0 origin-left scale-x-0 overflow-hidden"
           style={{ backgroundColor: row.color }}
-        />
+        >
+          <span
+            ref={shine}
+            aria-hidden
+            className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-hs-paper to-transparent opacity-0"
+          />
+        </span>
       </span>
-      <span className="flex w-[3.6cqw] shrink-0 items-center justify-end gap-[0.4cqw]">
+      <span className="relative flex w-[3.6cqw] shrink-0 items-center justify-end gap-[0.4cqw]">
+        <span
+          ref={delta}
+          aria-hidden
+          className="absolute -top-[0.9cqw] right-0 font-mono text-[clamp(0.45rem,0.6cqw,0.8rem)] font-bold text-hs-ink opacity-0 tabular-nums"
+        />
         <span
           data-live-dot
           className="size-[0.45cqw] rounded-full"
@@ -207,7 +263,7 @@ function AgentRow({
         />
         <span
           ref={count}
-          className="font-mono text-[clamp(0.6rem,0.85cqw,1.15rem)] tabular-nums"
+          className="inline-block font-mono text-[clamp(0.6rem,0.85cqw,1.15rem)] tabular-nums"
         >
           {number(row.sessions)}
         </span>
@@ -229,6 +285,21 @@ export function LiveAgentsBox() {
   const order = useMemo(() => tools.map((tool) => tool.id), [tools]);
   const register = useRankRows(order);
   const totalRef = useCountUp(total, number, { fromZero: true });
+  const previousTotal = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const before = previousTotal.current;
+    previousTotal.current = total;
+    if (before === null || reduced || total <= before || !totalRef.current) {return;}
+    const tween = gsap.fromTo(
+      totalRef.current,
+      { scale: 1.2, transformOrigin: "100% 50%" },
+      { scale: 1, duration: 0.6, ease: TV_EASE_POP },
+    );
+    return () => {
+      settle(tween);
+    };
+  }, [total, reduced, totalRef]);
 
   useGSAP(
     () => {
@@ -265,7 +336,7 @@ export function LiveAgentsBox() {
         title="Agentes activos"
         aside={
           <>
-            <span ref={totalRef}>{number(total)}</span> sesiones
+            <span ref={totalRef} className="inline-block">{number(total)}</span> sesiones
           </>
         }
       />
@@ -276,6 +347,7 @@ export function LiveAgentsBox() {
             <AgentRow
               key={tool.id}
               row={live}
+              rank={order.indexOf(tool.id)}
               share={live.sessions / max}
               rows={Math.max(stable.length, 6)}
               rowRef={register(tool.id)}
@@ -288,60 +360,171 @@ export function LiveAgentsBox() {
 }
 
 const ODOMETER_FACES = [..."01234567890123456789"];
+const FACE_PERCENT = 100 / ODOMETER_FACES.length;
+/** Mirrors the insights poll: between answers the counter drifts at a share of the measured rate. */
+const TOKEN_POLL_MS = 30_000;
+const TOKEN_DRIFT = 0.6;
 
-function odometerParts(value: number): { text: string; unit: string } {
-  const locale = (input: number, digits: number) =>
-    new Intl.NumberFormat("es-ES", {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    }).format(input);
-  if (value >= 1_000_000_000) {return { text: locale(value / 1_000_000_000, 2), unit: "B" };}
-  if (value >= 1_000_000) {return { text: locale(value / 1_000_000, 2), unit: "M" };}
-  if (value >= 1000) {return { text: locale(value / 1000, 1), unit: "k" };}
-  return { text: locale(value, 0), unit: "" };
+type OdometerLayout = { unit: string; divisor: number; decimals: number; places: number };
+
+function odometerLayout(value: number): OdometerLayout {
+  const abs = Math.max(0, value);
+  const scale =
+    abs >= 1_000_000_000
+      ? { unit: "B", divisor: 1_000_000_000, decimals: 2 }
+      : abs >= 1_000_000
+        ? { unit: "M", divisor: 1_000_000, decimals: 2 }
+        : abs >= 1000
+          ? { unit: "k", divisor: 1000, decimals: 1 }
+          : { unit: "", divisor: 1, decimals: 0 };
+  const places =
+    Math.max(1, String(Math.floor(abs / scale.divisor)).length) + scale.decimals;
+  return { ...scale, places };
 }
 
-function OdometerDigit({ digit }: { digit: number }) {
-  const reduced = usePrefersReducedMotion();
-  const strip = useRef<HTMLSpanElement>(null);
-  const position = useRef(digit);
+/**
+ * Wheel position (0–10) for the digit at 10^power of the scaled counter. The
+ * lowest wheel spins continuously; each wheel above only turns while the one
+ * below rolls 9 → 0, like a mechanical odometer.
+ */
+function wheelPosition(counter: number, power: number): number {
+  const shifted = counter / 10 ** power;
+  if (power === 0) {return shifted % 10;}
+  const whole = Math.floor(shifted);
+  const below = shifted - whole;
+  const roll = gsap.utils.clamp(0, 1, (below - 0.9) / 0.1);
+  return (whole % 10) + roll * roll * (3 - 2 * roll);
+}
 
+/**
+ * Live counter. Every answer from the poll is a `target`; the wheels roll up to
+ * it over ~2 s, then keep drifting at 60 % of the measured rate so the number
+ * never sits still, capped below the next expected answer so it does not
+ * overshoot the truth.
+ */
+function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) {
+  const reduced = usePrefersReducedMotion();
+  const [layout, setLayout] = useState(() => odometerLayout(target));
+  const shown = useRef(0);
+  const anchor = useRef(target);
+  const rate = useRef(ratePerMs);
+  const rolling = useRef<gsap.core.Tween | null>(null);
+  const wheels = useRef(new Map<number, HTMLElement>());
+
+  const paint = useCallback((value: number) => {
+    const next = odometerLayout(value);
+    setLayout((current) =>
+      current.unit === next.unit && current.places === next.places ? current : next,
+    );
+    const counter = (value / next.divisor) * 10 ** next.decimals;
+    for (const [power, wheel] of wheels.current) {
+      wheel.style.transform = `translate3d(0, ${-wheelPosition(counter, power) * FACE_PERCENT}%, 0)`;
+    }
+  }, []);
+
+  const register = useCallback(
+    (power: number) => (node: HTMLElement | null) => {
+      if (node) {wheels.current.set(power, node);}
+      else {wheels.current.delete(power);}
+    },
+    [],
+  );
+
+  useEffect(() => {
+    rate.current = ratePerMs;
+  }, [ratePerMs]);
+
+  // A wheel that just appeared (99,99 → 100,00) takes its position at once.
   useLayoutEffect(() => {
-    const el = strip.current;
-    if (!el) {return;}
+    paint(shown.current);
+  }, [layout, paint]);
+
+  useEffect(() => {
+    anchor.current = target;
     if (reduced) {
-      position.current = digit;
-      gsap.set(el, { yPercent: -digit * 5 });
+      shown.current = target;
+      paint(target);
       return;
     }
-    let from = position.current;
-    if (from >= 10) {
-      from -= 10;
-      gsap.set(el, { yPercent: -from * 5 });
-    }
-    // Always roll forward; the strip holds two loops so 9 → 0 keeps moving down.
-    const to = digit < from ? digit + 10 : digit;
-    position.current = to;
-    const tween = gsap.to(el, {
-      yPercent: -to * 5,
-      duration: 1,
-      ease: "power4.out",
-      overwrite: "auto",
+    const from = shown.current;
+    if (from === target) {return;}
+    const up = target > from;
+    const proxy = { value: from };
+    rolling.current?.kill();
+    rolling.current = gsap.to(proxy, {
+      value: target,
+      duration: up ? 2.2 : 1.2,
+      ease: up ? "power3.out" : "power2.inOut",
+      onUpdate: () => {
+        shown.current = proxy.value;
+        paint(proxy.value);
+      },
+      onComplete: () => {
+        rolling.current = null;
+      },
     });
     return () => {
-      settle(tween);
+      rolling.current?.kill();
+      rolling.current = null;
     };
-  }, [digit, reduced]);
+  }, [target, reduced, paint]);
+
+  useEffect(() => {
+    if (reduced) {return;}
+    const tick = (_time: number, deltaMs: number) => {
+      if (rolling.current) {return;}
+      const cap = anchor.current + rate.current * TOKEN_POLL_MS * 0.9;
+      shown.current = Math.min(cap, shown.current + rate.current * TOKEN_DRIFT * deltaMs);
+      paint(shown.current);
+    };
+    gsap.ticker.add(tick);
+    return () => {
+      gsap.ticker.remove(tick);
+    };
+  }, [reduced, paint]);
+
+  const columns: ReactNode[] = [];
+  for (let power = layout.places - 1; power >= 0; power -= 1) {
+    if (layout.decimals > 0 && power === layout.decimals - 1) {
+      columns.push(
+        <span key="sep" className="inline-block w-[0.3em] text-center leading-none">
+          ,
+        </span>,
+      );
+    }
+    columns.push(
+      <span
+        key={`w${power}`}
+        className="relative inline-block h-[1em] w-[0.62em] overflow-hidden text-center"
+      >
+        <span ref={register(power)} className="absolute inset-x-0 top-0 block will-change-transform">
+          {ODOMETER_FACES.map((face, index) => (
+            <span key={index} className="block h-[1em] leading-none">
+              {face}
+            </span>
+          ))}
+        </span>
+      </span>,
+    );
+  }
 
   return (
-    <span className="relative inline-block h-[1em] w-[0.62em] overflow-hidden text-center">
-      <span ref={strip} className="absolute inset-x-0 top-0 block will-change-transform">
-        {ODOMETER_FACES.map((face, index) => (
-          <span key={index} className="block h-[1em] leading-none">
-            {face}
-          </span>
-        ))}
+    <span
+      role="img"
+      aria-label={`${compact(target)} tokens`}
+      className="inline-flex items-end font-sans font-black tracking-[-0.06em] tabular-nums"
+    >
+      <span aria-hidden className="inline-flex text-[clamp(1.6rem,4.6cqw,6.5rem)] leading-none">
+        {columns}
       </span>
+      {layout.unit ? (
+        <span
+          aria-hidden
+          className="mb-[0.55cqw] ml-[0.3cqw] font-bungee text-[clamp(0.9rem,2cqw,2.8rem)] leading-none"
+        >
+          {layout.unit}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -390,27 +573,56 @@ function burst(root: HTMLElement | null, origin: HTMLElement, count: number) {
   return timeline;
 }
 
-function Odometer({ value }: { value: number }) {
-  const { text, unit } = odometerParts(value);
+/** Tokens per bucket of the hackathon; the bucket in progress is paper and breathes. */
+function TokenBars({ values, current }: { values: number[]; current: number }) {
+  const reduced = usePrefersReducedMotion();
+  const root = useRef<HTMLDivElement>(null);
+  const mounted = useRef(false);
+  const max = Math.max(1, ...values);
+  const key = values.join("|");
+
+  useGSAP(
+    () => {
+      const bars = root.current?.querySelectorAll<HTMLElement>("[data-bar]");
+      if (!bars || bars.length === 0) {return;}
+      const first = !mounted.current;
+      mounted.current = true;
+      if (reduced) {
+        for (const bar of bars) {
+          gsap.set(bar, { scaleY: Number(bar.dataset.bar), transformOrigin: "50% 100%" });
+        }
+        return;
+      }
+      gsap.to(bars, {
+        scaleY: (index, bar: HTMLElement) => Number(bar.dataset.bar),
+        transformOrigin: "50% 100%",
+        duration: first ? 0.9 : 0.8,
+        ease: TV_EASE_OUT,
+        stagger: first ? 0.035 : 0,
+        delay: first ? 0.5 : 0,
+        overwrite: "auto",
+      });
+    },
+    { dependencies: [key, reduced] },
+  );
+
   return (
-    <span className="inline-flex items-end font-sans font-black tracking-[-0.06em] tabular-nums">
-      <span className="inline-flex text-[clamp(1.6rem,4.6cqw,6.5rem)] leading-none">
-        {[...text].map((char, index) =>
-          /\d/.test(char) ? (
-            <OdometerDigit key={`${index}-d`} digit={Number(char)} />
-          ) : (
-            <span key={`${index}-s`} className="inline-block w-[0.3em] text-center leading-none">
-              {char}
-            </span>
-          ),
-        )}
-      </span>
-      {unit ? (
-        <span className="mb-[0.55cqw] ml-[0.3cqw] font-bungee text-[clamp(0.9rem,2cqw,2.8rem)] leading-none">
-          {unit}
-        </span>
-      ) : null}
-    </span>
+    <div
+      ref={root}
+      aria-hidden
+      className="flex h-full min-w-0 flex-1 items-end gap-[0.2cqw]"
+    >
+      {values.map((value, index) => (
+        <span
+          key={index}
+          data-bar={Math.max(0.04, value / max)}
+          className={cn(
+            "block h-full flex-1 origin-bottom scale-y-0",
+            index === current ? "tv-pulse bg-hs-paper" : index < current ? "bg-hs-ink" : "bg-hs-ink/20",
+          )}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -419,12 +631,21 @@ export function LiveTokensBox() {
   const root = useRef<HTMLDivElement>(null);
   const chip = useRef<HTMLSpanElement>(null);
   const ring = useRef<HTMLSpanElement>(null);
+  const sweep = useRef<HTMLSpanElement>(null);
   const data = useLiveInsights();
   const samples = filterSamples(data.samples, "event", "all", data.teams);
   const totals = sumSamples(samples);
   const previous = useRef<number | null>(null);
-  const trend = bucketTotals(samples).map((bucket) => bucket.tokens);
-  const perMinute = trend.length > 0 ? (trend.at(-1) ?? 0) / Math.max(data.bucketMinutes, 1) : 0;
+  const perBucket = useMemo(() => {
+    const out = Array.from({ length: INSIGHT_BUCKETS }, () => 0);
+    for (const sample of samples) {
+      out[sample.bucket] = (out[sample.bucket] ?? 0) + sample.tokens;
+    }
+    return out;
+  }, [samples]);
+  const current = perBucket.findLastIndex((value) => value > 0);
+  const perMinute =
+    current === -1 ? 0 : (perBucket[current] ?? 0) / Math.max(data.bucketMinutes, 1);
   const rateRef = useCountUp(perMinute, compact, { fromZero: true });
 
   useLayoutEffect(() => {
@@ -462,13 +683,21 @@ export function LiveTokensBox() {
       { scale: 1, duration: 0.8, ease: "elastic.out(1, 0.4)" },
       0.05,
     );
+    if (sweep.current) {
+      timeline.fromTo(
+        sweep.current,
+        { xPercent: -130, opacity: 0.9 },
+        { xPercent: 130, opacity: 0, duration: 0.8, ease: TV_EASE_OUT },
+        0.1,
+      );
+    }
     timeline.fromTo(
       chipEl,
       { opacity: 0, y: 10, scale: 0.92 },
       { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: TV_EASE_POP },
       0.1,
     );
-    timeline.to(chipEl, { opacity: 0, y: -10, duration: 0.25, ease: "power2.in" }, "+=1.4");
+    timeline.to(chipEl, { opacity: 0, y: -10, duration: 0.25, ease: "power2.in" }, "+=1.6");
     timeline.fromTo(
       ringEl,
       { opacity: 0.9, scale: 0.985 },
@@ -486,7 +715,7 @@ export function LiveTokensBox() {
   return (
     <div
       ref={root}
-      className="relative flex h-full flex-col justify-between overflow-hidden bg-hs-gold p-[1cqw] text-hs-ink"
+      className="relative flex h-full flex-col overflow-hidden bg-hs-gold p-[1cqw] text-hs-ink"
     >
       <span
         ref={ring}
@@ -502,11 +731,16 @@ export function LiveTokensBox() {
           </>
         }
       />
-      <div className="flex items-end justify-between gap-[1cqw]">
-        <div className="min-w-0">
+      <div className="mt-[0.6cqw] flex min-h-0 flex-1 items-stretch justify-between gap-[2cqw]">
+        <div className="flex min-w-0 shrink-0 flex-col justify-end">
           <div className="flex items-start gap-[0.6cqw]">
-            <span data-odometer className="inline-block will-change-transform">
-              <Odometer value={totals.tokens} />
+            <span data-odometer className="relative inline-block overflow-hidden will-change-transform">
+              <Odometer target={totals.tokens} ratePerMs={perMinute / 60_000} />
+              <span
+                ref={sweep}
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-hs-paper/80 to-transparent opacity-0"
+              />
             </span>
             <span
               ref={chip}
@@ -518,7 +752,7 @@ export function LiveTokensBox() {
             {percent(totals.cachedTokens, totals.tokens)} reutilizados desde caché
           </p>
         </div>
-        <Sparkline values={trend} color="#2a170f" />
+        <TokenBars values={perBucket} current={current} />
       </div>
     </div>
   );
