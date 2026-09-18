@@ -101,3 +101,24 @@ export function TrackMarkdown({
     </div>
   );
 }
+
+export function TrackBrief({
+  markdown,
+  body,
+}: {
+  markdown?: string;
+  body: string;
+}) {
+  const brief = markdown?.trim() ?? "";
+  if (brief) {
+    return <TrackMarkdown source={brief} />;
+  }
+  return (
+    <div className="space-y-3">
+      <p className="text-pretty leading-relaxed">{body}</p>
+      <p className="text-sm text-hs-brown">
+        El enunciado completo se publicará aquí.
+      </p>
+    </div>
+  );
+}

@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@convex/_generated/api";
-import { TrackMarkdown } from "@/components/markdown";
+import { TrackBrief } from "@/components/markdown";
 import { EmptyState, LoadingText, Page } from "@/components/page";
 import { ProjectCliDialog } from "@/components/project-cli-dialog";
 import { TrackLogo } from "@/components/track-tag";
@@ -23,48 +22,24 @@ export default function TrackBriefPage() {
     return (
       <Page title="Reto">
         <EmptyState title="Reto no encontrado">
-          Este reto no existe o ya no está visible.{" "}
-          <Link href="/tracks" className="underline underline-offset-2">
-            Volver a retos
-          </Link>
+          Este reto no existe o ya no está visible.
         </EmptyState>
       </Page>
     );
   }
 
-  const brief = track.markdown?.trim();
-
   return (
     <Page
       title={
-        <div className="min-w-0 space-y-3">
-          <Link
-            href="/tracks"
-            className="inline-flex min-h-11 items-center font-bungee text-xs uppercase text-hs-navy motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
-          >
-            Volver a retos
-          </Link>
-          <div className="flex min-h-12 flex-wrap items-center gap-3">
-            <h1>
-              <TrackLogo track={track} className="h-10 max-w-72 text-2xl sm:text-3xl" />
-            </h1>
-          </div>
-        </div>
+        <h1>
+          <TrackLogo track={track} className="h-10 max-w-72 text-2xl sm:text-3xl" />
+        </h1>
       }
       description={track.note}
     >
       <Card>
         <CardContent className="max-w-prose py-2">
-          {brief ? (
-            <TrackMarkdown source={brief} />
-          ) : (
-            <div className="space-y-3">
-              <p className="text-pretty leading-relaxed">{track.body}</p>
-              <p className="text-sm text-hs-brown">
-                El enunciado completo se publicará aquí.
-              </p>
-            </div>
-          )}
+          <TrackBrief markdown={track.markdown} body={track.body} />
         </CardContent>
       </Card>
 
