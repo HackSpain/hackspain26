@@ -22,6 +22,7 @@ import { uiFor } from "../lib/output";
 import type { Submission, Team } from "../lib/participant";
 import { c, cmd } from "../lib/style";
 import { VERSION } from "../version";
+import { profileNudge } from "./profile";
 
 /**
  * `hackspain` with no command: a friendly overview of where you stand. On an
@@ -105,8 +106,15 @@ function renderReady(
   snapshot: Extract<Snapshot, { kind: "ready" }>,
   menuMode: boolean
 ): void {
-  const { gate, team, submission, email } = snapshot;
-  ui.result({ loggedIn: true, gate, team, submission });
+  const { gate, me, team, submission, email } = snapshot;
+  const nudge = profileNudge(me);
+  ui.result({
+    loggedIn: true,
+    gate,
+    profileMissing: me.profileMissing,
+    team,
+    submission,
+  });
   if (!ui.json) {
     console.log("");
     console.log(
@@ -133,6 +141,9 @@ function renderReady(
       )
     );
     console.log();
+    if (nudge) {
+      console.log(`  ${c.orange(nudge)}\n`);
+    }
   }
   if (menuMode) {
     return;

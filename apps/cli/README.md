@@ -19,16 +19,18 @@ Binaries are self-contained; nothing else to install.
 hackspain                       # where you stand, then a navigable menu (interactive terminals only)
 hackspain auth login            # sign in via the browser (approve on the dashboard's /cli-auth page),
                                 # or --email/--code for the 8-digit email code; then asks for a missing
-                                # name, phone or GitHub
+                                # name, phone, GitHub or X
 hackspain auth status | logout
-hackspain open [feed|teams|tracks|perks|profile|/path] [--print]
+hackspain open [feed|teams|tracks|perks|profile|onboarding|/path] [--print]
                                 # the dashboard in your browser, already signed in (link works once, 2 min)
 
-hackspain profile               # name, diet, travel, phone, notices, GitHub
+hackspain profile               # name, diet, travel, phone, notices, GitHub, X; photo and
+                                # participant card show as done/missing (they need the dashboard)
 hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]
 hackspain profile notify on|off
 hackspain profile phone [+34…]  # contact number, same as the dashboard
 hackspain profile github [--unlink]         # prints the link to authorise in a browser
+hackspain profile x [@handle] [--clear]     # X handle, same rules as the dashboard
 
 hackspain team create <name> [-m github:x -m a@b.c]
 hackspain team join <code>      # 8-character code from the owner

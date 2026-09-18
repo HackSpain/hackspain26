@@ -108,7 +108,8 @@ export default function CliPage() {
 
         <CommandCard title="Perfil">
           <CommandRow command="hackspain profile">
-            Nombre, dieta, viaje, teléfono, avisos y GitHub.
+            Nombre, dieta, viaje, teléfono, avisos, GitHub y X. La foto y la
+            ficha se completan en el dashboard.
           </CommandRow>
           <CommandRow command="hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]">
             Edita los datos de tu perfil.
@@ -121,6 +122,9 @@ export default function CliPage() {
           </CommandRow>
           <CommandRow command="hackspain profile github [--unlink]">
             Imprime el enlace para autorizar GitHub en el navegador.
+          </CommandRow>
+          <CommandRow command="hackspain profile x [@usuario] [--clear]">
+            Guarda tu usuario de X, igual que en el dashboard.
           </CommandRow>
         </CommandCard>
 
@@ -230,7 +234,7 @@ export default function CliPage() {
 
         <CommandCard
           title="Códigos de salida"
-          description="Los comandos que necesitan equipo, solicitud aceptada u onboarding completo fallan rápido con el siguiente paso a dar. Fuera de la ventana de la hackathon solo funciona hackspain profile."
+          description="Los comandos que necesitan equipo, solicitud aceptada u onboarding completo fallan rápido con el siguiente paso a dar. Fuera de la ventana de la hackathon siguen funcionando hackspain profile, hackspain perk list y hackspain open participantes."
         >
           <div>
             {EXIT_CODES.map((row) => (

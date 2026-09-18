@@ -11,12 +11,14 @@ import { openProfile } from "../lib/participant";
 import { formatPhone, validatePhone } from "../lib/phone";
 import { confirmOrFlag, textOrFlag } from "../lib/prompts";
 import { c, cmd, highlight } from "../lib/style";
+import { normalizeX, validateX } from "../lib/x-handle";
 
 /**
- * `hackspain profile`: what the dashboard's profile page edits (name, diet
- * and travel, phone, event notices, GitHub), so a hacker never has to leave
- * the terminal to keep organisers informed. Attendance is deliberately not
- * here: this tool is used at the venue.
+ * `hackspain profile`: what the dashboard's profile page edits (name, phone,
+ * event notices, GitHub and X), plus diet and travel, which only the CLI still
+ * asks. The photo and the participant card need the browser, so they show up
+ * here as status with the command that opens them. Attendance is deliberately
+ * not here: this tool is used at the venue.
  */
 function githubLabel(me: Me): string {
   if (me.githubLinked && me.githubUsername) {
@@ -26,6 +28,37 @@ function githubLabel(me: Me): string {
     return `${me.githubUsername} ${c.dim("· from your signup, not linked · hackspain profile github")}`;
   }
   return c.dim("not linked · hackspain profile github");
+}
+
+function xLabel(me: Me): string {
+  if (me.twitterHandle) {
+    return `@${me.twitterHandle}`;
+  }
+  if (me.suggestedTwitterHandle) {
+    return `@${me.suggestedTwitterHandle} ${c.dim("· from your signup, not saved · hackspain profile x")}`;
+  }
+  return c.dim("not set · hackspain profile x <handle>");
+}
+
+/** Photo and card are edited in the browser; here they are done or missing. */
+function dashboardLabel(me: Me, field: "photo" | "directory"): string {
+  return me.profileMissing.includes(field)
+    ? c.dim("missing · hackspain open onboarding")
+    : "done";
+}
+
+/** The dashboard sends anyone with these missing to its wizard; the CLI only says so. */
+export function profileNudge(me: Me): string | undefined {
+  if (me.profileComplete) {
+    return;
+  }
+  const pieces = me.profileMissing.map((field) => {
+    if (field === "name") {
+      return "your name";
+    }
+    return field === "photo" ? "a photo" : "your participant card";
+  });
+  return `The dashboard still needs ${pieces.join(" and ")}. ${cmd("hackspain open onboarding")} takes you straight to those steps.`;
 }
 
 export function profileRows(me: Me): [string, string][] {
@@ -51,6 +84,9 @@ export function profileRows(me: Me): [string, string][] {
         : c.dim("off · hackspain profile notify on"),
     ],
     ["GitHub", githubLabel(me)],
+    ["X", xLabel(me)],
+    ["Photo", dashboardLabel(me, "photo")],
+    ["Participant card", dashboardLabel(me, "directory")],
   ];
 }
 
@@ -65,6 +101,8 @@ export function profileJson(me: Me) {
     notificationConsent: me.notificationConsent,
     githubUsername: me.githubUsername,
     githubLinked: me.githubLinked,
+    twitterHandle: me.twitterHandle,
+    profileMissing: me.profileMissing,
   };
 }
 
@@ -75,6 +113,10 @@ async function showProfile(command: Command): Promise<void> {
   ui.result(profileJson(me));
   ui.intro("profile");
   ui.kv(profileRows(me));
+  const nudge = profileNudge(me);
+  if (nudge) {
+    ui.warn(nudge);
+  }
   ui.next([
     ["hackspain profile edit", "diet and where you travel from"],
     ["hackspain profile phone <number>", "so we can reach you at the venue"],
@@ -206,6 +248,40 @@ async function setPhoneCommand(
   ui.success(`${phone} saved. Organisers can reach you at the venue.`);
 }
 
+async function setXCommand(
+  handle: string | undefined,
+  opts: { clear?: boolean },
+  command: Command
+): Promise<void> {
+  const ctx = contextFor(command);
+  const ui = uiFor(ctx);
+  const { session, me } = await openProfile(ctx);
+  ui.intro("profile · x");
+  const value = opts.clear
+    ? ""
+    : normalizeX(
+        await textOrFlag(ctx, handle, {
+          flag: "<handle>",
+          initialValue: me.twitterHandle ?? me.suggestedTwitterHandle ?? "",
+          message: "Your X handle",
+          placeholder: "@ana",
+          validate: validateX,
+        })
+      );
+  const saved = await ui.spin(
+    "Saving…",
+    () =>
+      session.client.mutation(api.users.setTwitterHandle, { handle: value }),
+    "Saved"
+  );
+  ui.result({ twitterHandle: saved });
+  ui.success(
+    saved
+      ? `@${saved} saved. Team invites sent to that handle find you now.`
+      : "X handle cleared."
+  );
+}
+
 async function linkGithub(
   opts: { unlink?: boolean; yes?: boolean },
   command: Command
@@ -288,7 +364,7 @@ function validateName(value: string): string | undefined {
 
 /**
  * Right after login: ask for whatever organisers need and the profile is
- * still missing (name, phone, GitHub). Every step can be skipped
+ * still missing (name, phone, GitHub, X). Every step can be skipped
  * with Enter; nothing runs in --json or non-interactive mode.
  */
 export async function completeProfile(
@@ -313,6 +389,7 @@ export async function completeProfile(
   }
   const askPhone =
     !current.phone && (current.accepted || current.role === "admin");
+  const askX = !current.twitterHandle;
   // Photo and directory card are dashboard-only; the wizard there asks for them.
   const dashboardMissing = current.profileMissing.filter(
     (field) => field !== "name"
@@ -321,6 +398,7 @@ export async function completeProfile(
     !current.name && "your name",
     askPhone && "a contact phone",
     githubUrl && "your GitHub",
+    askX && "your X handle",
     dashboardMissing.length > 0 && "your dashboard profile",
   ].filter(Boolean) as string[];
   if (missing.length === 0) {
@@ -366,14 +444,25 @@ export async function completeProfile(
       "Link your GitHub in the browser"
     );
   }
-  if (dashboardMissing.length > 0) {
-    const pieces = dashboardMissing.map((field) =>
-      field === "photo" ? "a photo" : "your participant card"
-    );
-    ui.note(
-      `The dashboard still needs ${pieces.join(" and ")}. ${cmd("hackspain open")} takes you straight to those steps.`,
-      "Finish on the dashboard"
-    );
+  if (askX) {
+    const handle = await textOrFlag(ctx, undefined, {
+      flag: "--x",
+      initialValue: current.suggestedTwitterHandle ?? "",
+      message: "Your X handle, if you have one",
+      optional: true,
+      placeholder: "@ana",
+      validate: (v) => (v.trim() ? validateX(v) : undefined),
+    });
+    if (handle.trim()) {
+      const saved = await session.client.mutation(api.users.setTwitterHandle, {
+        handle: normalizeX(handle),
+      });
+      current = { ...current, twitterHandle: saved ?? undefined };
+    }
+  }
+  const nudge = profileNudge(current);
+  if (nudge) {
+    ui.note(nudge, "Finish on the dashboard");
   }
   return current;
 }
@@ -413,6 +502,12 @@ export function registerProfile(program: Command): void {
     .command("phone [number]")
     .description("Your contact number for the venue")
     .action(setPhoneCommand);
+
+  profile
+    .command("x [handle]")
+    .description("Your X handle (or --clear it)")
+    .option("--clear", "remove the handle")
+    .action(setXCommand);
 
   profile
     .command("github")

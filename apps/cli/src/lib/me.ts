@@ -1,7 +1,13 @@
 import type { FunctionReturnType } from "convex/server";
 import type { Session } from "./api";
 import { api } from "./api";
-import { authError, CliError, EXIT } from "./errors";
+import {
+  authError,
+  CliError,
+  EVENT_CLOSED_HINT,
+  EXIT,
+  ONBOARDING_HINT,
+} from "./errors";
 
 export type Me = NonNullable<FunctionReturnType<typeof api.users.me>>;
 
@@ -29,13 +35,21 @@ const EVENT_DATE = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
 });
 
-/** "Sat 3 Oct, 10:00 (Madrid)" — the window is set by organisers in Spain. */
+/**
+ * "Sat 3 Oct, 10:00 (Madrid)" — the window is set by organisers in Spain.
+ * Built from parts: the literal between date and time ("," or " at ")
+ * depends on the runtime's ICU version.
+ */
 export function formatEventDate(ms: number): string {
-  return `${EVENT_DATE.format(new Date(ms))} (Madrid)`;
+  const parts = new Map(
+    EVENT_DATE.formatToParts(new Date(ms)).map((part) => [
+      part.type,
+      part.value,
+    ])
+  );
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.get(type) ?? "";
+  return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour")}:${get("minute")} (Madrid)`;
 }
-
-export const EVENT_CLOSED_HINT =
-  "You can still use `hackspain profile`, list perks with `hackspain perk list`, and open the participant directory with `hackspain open participantes`.";
 
 /** English copy for a closed window; the server sends the Spanish version by code. */
 export function closedEventMessage(event: Me["event"]): string {
@@ -71,7 +85,7 @@ export function describeGate(me: Me): Gate {
   }
   if (!me.onboardingComplete) {
     return {
-      hint: "Finish onboarding in the dashboard, then retry.",
+      hint: ONBOARDING_HINT,
       message:
         "Accepted. Confirm your details to unlock teams and submissions.",
       state: "onboarding",
