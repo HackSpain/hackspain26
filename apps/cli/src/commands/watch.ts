@@ -3,12 +3,8 @@ import type { Command } from "commander";
 import { api, openSession } from "../lib/api";
 import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
-import { CliError, EVENT_CLOSED_HINT, EXIT, usageError } from "../lib/errors";
-import {
-  closedEventMessage,
-  formatEventDate,
-  requireOnboarded,
-} from "../lib/me";
+import { usageError } from "../lib/errors";
+import { formatEventDate, requireOnboarded } from "../lib/me";
 import { firstName, formatWhen, uiFor } from "../lib/output";
 import { c } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
@@ -16,7 +12,7 @@ import { acquireWatchLock, runWatch } from "../watcher";
 import { catchUpSince, openMemory } from "../watcher/memory";
 import { startScreen, summaryLines } from "../watcher/screen";
 import { createState, feedLive, scrollFeed } from "../watcher/state";
-import { collectionWindow } from "../watcher/window";
+import { collectionWindow, windowNotice } from "../watcher/window";
 
 type WatchFlags = {
   once?: boolean;
@@ -68,16 +64,10 @@ export function registerWatch(program: Command): void {
         : undefined;
       const memory = openMemory();
       const session = await openSession(ctx, { requireAuth: true });
-      // After the hackathon the watcher still runs, to report whatever the
-      // window holds that was never sent; before it there is nothing to do.
+      // Outside the hackathon the watcher still runs and says it is not
+      // recording: opened early it starts on its own at the opening time,
+      // opened late it delivers what the window holds and was never sent.
       const me = await requireOnboarded(session, { allowClosed: true });
-      if (!me.event.open && me.event.phase !== "after") {
-        throw new CliError(closedEventMessage(me.event), {
-          code: "EVENT_CLOSED",
-          exitCode: EXIT.INELIGIBLE,
-          hint: EVENT_CLOSED_HINT,
-        });
-      }
       // With a scheduled hackathon: the whole window, whenever the watcher
       // was opened. Otherwise everything since the last scan, so usage while
       // the watcher was closed is reported too; --backfill overrides that.
@@ -113,6 +103,7 @@ export function registerWatch(program: Command): void {
         since,
         toast: flags.toast,
         until: window.until,
+        window,
         uploadUrl,
         verbose: Boolean(flags.verbose),
       };
@@ -140,6 +131,7 @@ export function registerWatch(program: Command): void {
               }
             : undefined,
           uploadEnabled: Boolean(uploadUrl),
+          window,
         });
         const screen = startScreen(state, {
           intervalMs,
@@ -226,6 +218,10 @@ export function registerWatch(program: Command): void {
         }
         if (catchingUp) {
           ui.line(c.dim(`Catching up on usage since ${formatWhen(since)}.`));
+        }
+        const notice = windowNotice(window, Date.now(), formatEventDate);
+        if (notice) {
+          ui.warn(notice);
         }
         if (window.scheduled && window.until !== undefined) {
           ui.line(

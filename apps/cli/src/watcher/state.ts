@@ -1,6 +1,7 @@
 import type { FeedItem } from "../lib/feed-format";
 import type { ImageBounds, ImageProtocol } from "../lib/term-images";
 import type { HarnessId, TelemetryEvent } from "./schema";
+import type { CollectionWindow } from "./window";
 
 /** Everything the live screen shows. runWatch mutates it; the screen only reads. */
 export type WatchState = {
@@ -8,6 +9,8 @@ export type WatchState = {
   startedAt: number;
   /** First run on this machine; the totals cover everything since then. */
   trackedSince?: number;
+  /** The hackathon window, when scheduled; the screen warns while outside it. */
+  window?: CollectionWindow;
   me: { name: string; email?: string };
   team?: { name: string; isOwner: boolean; repoUrl?: string; members: number };
   project?: {
@@ -98,13 +101,17 @@ export const NOTIFICATIONS_KEPT = 20;
 const LOG_KEPT = 6;
 
 export function createState(
-  init: Pick<WatchState, "me" | "team" | "project" | "trackedSince"> & {
+  init: Pick<
+    WatchState,
+    "me" | "team" | "project" | "trackedSince" | "window"
+  > & {
     uploadEnabled: boolean;
     imageProtocol?: ImageProtocol | null;
   }
 ): WatchState {
   return {
     trackedSince: init.trackedSince,
+    window: init.window,
     feed: [],
     feedExhausted: false,
     feedImageFailed: new Set(),

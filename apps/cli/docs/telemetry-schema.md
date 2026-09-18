@@ -74,8 +74,9 @@ OpenAI-style usage, where completion tokens include reasoning).
 
 With a scheduled hackathon (`users.me.event.startsAt` / `endsAt`) the watcher reports `[startsAt,
 endsAt)` on `occurredAt`, whole, no matter when it was opened: `since` is the start of the
-hackathon rather than the last run, `--backfill` is ignored, and the watcher still runs after the
-end to deliver what was never sent. The cursor store remembers the earliest `since` it was read
+hackathon rather than the last run, `--backfill` is ignored, and the watcher also runs before the
+start (waiting) and after the end (to deliver what was never sent), showing "Not recording" while
+the clock is outside the window and leaving the dashboard's closed functions alone. The cursor store remembers the earliest `since` it was read
 with (`coveredSince`); an earlier one (the first windowed run, or organisers moving the start)
 starts the cursors over, and event ids already in the local spool are skipped so nothing is sent
 twice. The server applies the same window per event and rejects the rest with

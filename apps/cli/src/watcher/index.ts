@@ -48,7 +48,8 @@ import {
   WATCH_IMAGE_BOUNDS,
 } from "./state";
 import type { Collector, CollectorContext } from "./types";
-import { inWindow } from "./window";
+import type { CollectionWindow } from "./window";
+import { inWindow, windowPhase } from "./window";
 
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
@@ -66,6 +67,8 @@ export type WatchOptions = {
   since: number;
   /** Exclusive end of the collection window (the hackathon's end). */
   until?: number;
+  /** The scheduled hackathon window; the dashboard's functions are closed outside it. */
+  window?: CollectionWindow;
   toast: boolean;
   /** Where batches are uploaded; undefined disables the upload sink. */
   uploadUrl?: string;
@@ -504,8 +507,20 @@ export async function runWatch(
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
 
+  // Team, announcements and the feed are hackathon-window functions on the
+  // server: outside it they only answer "closed", so they are not asked.
+  const inEvent = (): boolean => {
+    const phase = windowPhase(options.window, Date.now());
+    return phase === undefined || phase === "during";
+  };
+  let wasInEvent = inEvent();
+
   const tick = async (): Promise<ScanResult> => {
-    if (Date.now() - teamCheckedAt > TEAM_REFRESH_MS) {
+    // The doors just opened with the watcher already running: pick the team
+    // up now rather than at the next refresh.
+    const opened = inEvent() && !wasInEvent;
+    wasInEvent = inEvent();
+    if (inEvent() && (opened || Date.now() - teamCheckedAt > TEAM_REFRESH_MS)) {
       teamCheckedAt = Date.now();
       try {
         teamId = (await session.client.query(api.teams.mine, {}))?._id;
@@ -565,8 +580,10 @@ export async function runWatch(
         Date.now(),
         startedAt
       );
-    await pollNotifications();
-    await pollFeed();
+    if (inEvent()) {
+      await pollNotifications();
+      await pollFeed();
+    }
     let nextScan = Date.now() + interval();
     if (state) {
       state.nextScanAt = nextScan;
@@ -582,8 +599,10 @@ export async function runWatch(
           if (scanned.events > 0) {
             lastEventAt = Date.now();
           }
-          await pollNotifications();
-          await pollFeed();
+          if (inEvent()) {
+            await pollNotifications();
+            await pollFeed();
+          }
           nextScan = Date.now() + interval();
         }
         if (state) {
@@ -594,8 +613,10 @@ export async function runWatch(
       await sleepOrWake(state, state?.paused ? 5000 : 1000);
       // Scrolling past the loaded posts asks for an older page; pictures
       // for anything loaded trickle in a few per turn.
-      await fetchOlderFeed();
-      await loadFeedImages();
+      if (inEvent()) {
+        await fetchOlderFeed();
+        await loadFeedImages();
+      }
     }
     say("Stopping, flushing…");
     await batcher.flush();
