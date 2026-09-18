@@ -243,7 +243,7 @@ describe("devin", () => {
       await drain(collectDevin([path], ctx({ log: (m) => logs.push(m) })))
     ).toEqual([]);
     expect(logs).toHaveLength(1);
-    expect(logs[0]).toContain("devin: query failed");
+    expect(logs[0]).toContain("devin: cannot read");
   });
 
   test("database path follows XDG_DATA_HOME and discovery needs the file", async () => {

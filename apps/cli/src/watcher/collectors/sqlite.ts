@@ -2,9 +2,8 @@ import { Database } from "bun:sqlite";
 import { existsSync, statSync } from "node:fs";
 
 /**
- * A WAL database whose writer has gone leaves no `-wal` file, and then a
- * read-only open fails because SQLite cannot create the shared-memory
- * index; `immutable=1` reads the main file as it is instead.
+ * A WAL database without its `-wal` file cannot be opened read-only, only as
+ * immutable.
  */
 export function openReadOnly(path: string): Database {
   const location = existsSync(`${path}-wal`)
@@ -13,7 +12,6 @@ export function openReadOnly(path: string): Database {
   return new Database(location, { readonly: true });
 }
 
-/** When the database last changed, counting the WAL when there is one. */
 export function lastWriteMs(path: string): number {
   const wal = `${path}-wal`;
   return Math.max(

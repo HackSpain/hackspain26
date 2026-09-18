@@ -12,22 +12,15 @@ import { lastWriteMs, openReadOnly } from "./sqlite";
 export const ANTIGRAVITY = "antigravity" as const;
 
 /**
- * The Antigravity CLI (`agy`) keeps one SQLite database per conversation
- * under `~/.gemini/antigravity-cli/conversations/<uuid>.db`. Every step is a
- * row of `steps` whose `metadata` blob is a protobuf; model steps carry a
- * usage message in field 9 (model code, input net of cache reads, output
- * including thoughts, cache reads, and the thought count on its own), and
- * `gen_metadata` maps the model code to its name. The sibling
- * `conversation_summaries.db` knows the workspace of each conversation. The
- * databases are in WAL mode and agy leaves them without a `-wal` file.
- * Rows are written once, complete: across 11k real model steps none was
- * seen without its usage, so the cursor is the last `idx` read. Decoded by
- * hand because the schema is undocumented; unknown fields are skipped.
+ * The Antigravity CLI (`agy`) keeps one SQLite database per conversation under
+ * `~/.gemini/antigravity-cli/conversations/<uuid>.db`, with each step's
+ * `metadata` as an undocumented protobuf. Model steps carry usage in field 9
+ * (model code, input net of cache reads, output including thoughts, cache
+ * reads, thought count), `gen_metadata` names the model codes and the sibling
+ * `conversation_summaries.db` gives the workspace. Steps are written once and
+ * complete, so the cursor is the last `idx` read.
  */
-type ProtoField = {
-  number: number;
-  value: bigint | Uint8Array;
-};
+type ProtoField = { number: number; value: number | Uint8Array };
 
 const STEP_CREATED = 1;
 const STEP_USAGE = 9;
@@ -42,26 +35,25 @@ const GENERATION_MODEL_NAME = 19;
 const TIMESTAMP_SECONDS = 1;
 const TIMESTAMP_NANOS = 2;
 const NANOS_PER_MS = 1_000_000;
-/** Seven payload bits per varint byte; the eighth says another follows. */
 const VARINT_BASE = 128;
-const WIRE_TYPES = 8n;
+const WIRE_TYPES = 8;
 
 export function decodeMessage(bytes: Uint8Array): ProtoField[] {
   const fields: ProtoField[] = [];
   let offset = 0;
-  const varint = (): bigint => {
-    let result = 0n;
-    let weight = 1n;
+  const varint = (): number => {
+    let result = 0;
+    let weight = 1;
     for (;;) {
       if (offset >= bytes.length) {
         throw new Error("truncated protobuf message");
       }
       const byte = bytes[offset++] as number;
-      result += BigInt(byte % VARINT_BASE) * weight;
+      result += (byte % VARINT_BASE) * weight;
       if (byte < VARINT_BASE) {
         return result;
       }
-      weight *= BigInt(VARINT_BASE);
+      weight *= VARINT_BASE;
     }
   };
   const take = (length: number): Uint8Array => {
@@ -74,14 +66,14 @@ export function decodeMessage(bytes: Uint8Array): ProtoField[] {
   };
   while (offset < bytes.length) {
     const tag = varint();
-    const number = Number(tag / WIRE_TYPES);
-    const wireType = Number(tag % WIRE_TYPES);
+    const number = Math.floor(tag / WIRE_TYPES);
+    const wireType = tag % WIRE_TYPES;
     if (wireType === 0) {
       fields.push({ number, value: varint() });
     } else if (wireType === 1) {
       fields.push({ number, value: take(8) });
     } else if (wireType === 2) {
-      fields.push({ number, value: take(Number(varint())) });
+      fields.push({ number, value: take(varint()) });
     } else if (wireType === 5) {
       fields.push({ number, value: take(4) });
     } else {
@@ -92,27 +84,18 @@ export function decodeMessage(bytes: Uint8Array): ProtoField[] {
 }
 
 function nested(fields: ProtoField[], number: number): ProtoField[] | null {
-  const field = fields.find(
-    (candidate) =>
-      candidate.number === number && candidate.value instanceof Uint8Array
-  );
-  return field ? decodeMessage(field.value as Uint8Array) : null;
+  const value = fields.find((field) => field.number === number)?.value;
+  return value instanceof Uint8Array ? decodeMessage(value) : null;
 }
 
 function integer(fields: ProtoField[], number: number): number | null {
-  const field = fields.find(
-    (candidate) =>
-      candidate.number === number && typeof candidate.value === "bigint"
-  );
-  return field ? Number(field.value) : null;
+  const value = fields.find((field) => field.number === number)?.value;
+  return typeof value === "number" ? value : null;
 }
 
 function text(fields: ProtoField[], number: number): string | null {
-  const field = fields.find(
-    (candidate) =>
-      candidate.number === number && candidate.value instanceof Uint8Array
-  );
-  return field ? new TextDecoder().decode(field.value as Uint8Array) : null;
+  const value = fields.find((field) => field.number === number)?.value;
+  return value instanceof Uint8Array ? new TextDecoder().decode(value) : null;
 }
 
 export type StepRow = {
@@ -139,16 +122,8 @@ function modelOf(row: GenerationRow): [number, string] | null {
   }
 }
 
-/**
- * Model code → name, from the `gen_metadata` rows of one conversation, on
- * top of what other conversations already named: a few conversations log
- * usage under a code they never name themselves.
- */
-export function modelNames(
-  rows: GenerationRow[],
-  known = new Map<number, string>()
-): Map<number, string> {
-  const names = new Map(known);
+export function modelNames(rows: GenerationRow[]): Map<number, string> {
+  const names = new Map<number, string>();
   for (const row of rows) {
     const model = modelOf(row);
     if (model) {
@@ -219,7 +194,6 @@ export function antigravityConversationsDir(): string {
   return join(homedir(), ".gemini", "antigravity-cli", "conversations");
 }
 
-/** Conversation id → working directory, from `conversation_summaries.db`. */
 export function workspaces(
   summariesDb: string,
   log: (message: string) => void
@@ -228,14 +202,9 @@ export function workspaces(
   if (!existsSync(summariesDb)) {
     return out;
   }
-  let db: Database;
+  let db: Database | undefined;
   try {
     db = openReadOnly(summariesDb);
-  } catch (error) {
-    log(`antigravity: cannot open ${summariesDb}: ${String(error)}`);
-    return out;
-  }
-  try {
     const rows = db
       .query<{ conversation_id: string; workspace_uris: string }, []>(
         "SELECT conversation_id, workspace_uris FROM conversation_summaries"
@@ -250,7 +219,7 @@ export function workspaces(
   } catch (error) {
     log(`antigravity: cannot read ${summariesDb}: ${String(error)}`);
   } finally {
-    db.close();
+    db?.close();
   }
   return out;
 }
@@ -268,12 +237,6 @@ function firstWorkspace(uris: string): string | undefined {
     : undefined;
 }
 
-function listConversations(dir: string): string[] {
-  return readdirSync(dir)
-    .filter((name) => name.endsWith(".db"))
-    .map((name) => join(dir, name));
-}
-
 export async function* collectAntigravity(
   dirs: string[],
   ctx: CollectorContext
@@ -283,46 +246,40 @@ export async function* collectAntigravity(
       join(dirname(dir), "conversation_summaries.db"),
       ctx.log
     );
-    let known = new Map<number, string>();
-    const recent = listConversations(dir)
-      .map((path) => ({ mtimeMs: lastWriteMs(path), path }))
-      .filter(
-        ({ path, mtimeMs }) => mtimeMs >= ctx.since || ctx.cursors.get(path)
-      )
-      .toSorted((a, b) => b.mtimeMs - a.mtimeMs);
-    for (const { path, mtimeMs } of recent) {
+    const paths = readdirSync(dir)
+      .filter((name) => name.endsWith(".db"))
+      .toSorted()
+      .map((name) => join(dir, name));
+    for (const path of paths) {
+      const mtimeMs = lastWriteMs(path);
       const previous = ctx.cursors.get(path);
-      if (previous && previous.mtimeMs === mtimeMs) {
+      if (
+        (previous && previous.mtimeMs === mtimeMs) ||
+        (!previous && mtimeMs < ctx.since)
+      ) {
         continue;
       }
       const sessionId = basename(path, ".db");
       const announced = new Set(previous?.seenSessions);
       let mark = typeof previous?.mark === "number" ? previous.mark : -1;
-      let db: Database;
+      let db: Database | undefined;
+      let models: Map<number, string>;
+      let steps: StepRow[];
       try {
         db = openReadOnly(path);
-      } catch (error) {
-        ctx.log(`antigravity: cannot open ${path}: ${String(error)}`);
-        continue;
-      }
-      let steps: StepRow[];
-      let models: Map<number, string>;
-      try {
         models = modelNames(
-          db.query<GenerationRow, []>("SELECT data FROM gen_metadata").all(),
-          known
+          db.query<GenerationRow, []>("SELECT data FROM gen_metadata").all()
         );
-        known = models;
         steps = db
           .query<StepRow, [number]>(
             "SELECT idx, metadata FROM steps WHERE idx > ?1 ORDER BY idx ASC"
           )
           .all(mark);
       } catch (error) {
-        ctx.log(`antigravity: query failed on ${path}: ${String(error)}`);
+        ctx.log(`antigravity: cannot read ${path}: ${String(error)}`);
         continue;
       } finally {
-        db.close();
+        db?.close();
       }
       const context = { cwd: cwds.get(sessionId), models, sessionId };
       for (const row of steps) {

@@ -61,13 +61,13 @@ function expectCanonical(events: RawEvent[]): void {
 }
 
 function varint(value: number): number[] {
-  let rest = BigInt(value);
+  let rest = value;
   const out: number[] = [];
   do {
-    const low = Number(rest % 128n);
-    rest /= 128n;
-    out.push(rest > 0n ? low + 128 : low);
-  } while (rest > 0n);
+    const low = rest % 128;
+    rest = Math.floor(rest / 128);
+    out.push(rest > 0 ? low + 128 : low);
+  } while (rest > 0);
   return out;
 }
 
@@ -153,8 +153,6 @@ function makeConversation(
   for (const [idx, data] of generations.entries()) {
     db.run("INSERT INTO gen_metadata (idx, data) VALUES (?, ?)", [idx, data]);
   }
-  // agy leaves a WAL database with no -wal beside it; a plain read-only
-  // open of that fails, which is what the collector has to cope with.
   db.run("PRAGMA wal_checkpoint(TRUNCATE)");
   db.close();
   rmSync(`${path}-wal`, { force: true });
@@ -192,7 +190,7 @@ describe("antigravity", () => {
       message(field(1, 300), field(2, "gemini"), field(3, message(field(1, 7))))
     );
     expect(fields.map((f) => f.number)).toEqual([1, 2, 3]);
-    expect(fields[0]?.value).toBe(300n);
+    expect(fields[0]?.value).toBe(300);
     expect(new TextDecoder().decode(fields[1]?.value as Uint8Array)).toBe(
       "gemini"
     );
@@ -453,7 +451,7 @@ describe("antigravity", () => {
     );
     expect(events).toEqual([]);
     expect(logs).toHaveLength(1);
-    expect(logs[0]).toContain("antigravity: query failed");
+    expect(logs[0]).toContain("antigravity: cannot read");
   });
 
   test("discover: only when the conversations directory exists", async () => {

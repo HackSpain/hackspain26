@@ -11,14 +11,11 @@ import { lastWriteMs, openReadOnly } from "./sqlite";
 export const DEVIN = "devin" as const;
 
 /**
- * The Devin CLI keeps every local session in one SQLite database,
- * `~/.local/share/devin/cli/sessions.db`: `sessions` has the working
- * directory, the backend and the model, and `message_nodes` has one row per
- * message per conversation chain, with the assistant's metrics (input net
- * of cache reads, output, cache reads and writes) inside the `chat_message`
- * JSON. The same assistant message lands in two chains, so rows are deduped
- * on `message_id`. The model is the session's current one; the message does
- * not name it. Timestamps are seconds. Checked against real sessions.
+ * The Devin CLI keeps every session in `~/.local/share/devin/cli/sessions.db`:
+ * `sessions` has the working directory, backend and model, and `message_nodes`
+ * has one row per message per conversation chain, with the assistant's metrics
+ * inside the `chat_message` JSON. The same assistant message lands in two
+ * chains, so rows are deduped on `message_id`.
  */
 type Metrics = {
   input_tokens?: number | null;
@@ -98,24 +95,19 @@ export async function* collectDevin(
   for (const path of dbPaths) {
     const mtimeMs = lastWriteMs(path);
     const previous = ctx.cursors.get(path);
-    if (previous && previous.mtimeMs === mtimeMs) {
-      continue;
-    }
-    if (!previous && mtimeMs < ctx.since) {
+    if (
+      (previous && previous.mtimeMs === mtimeMs) ||
+      (!previous && mtimeMs < ctx.since)
+    ) {
       continue;
     }
     let mark = typeof previous?.mark === "number" ? previous.mark : 0;
     const announced = new Set(previous?.seenSessions);
-    let db: Database;
-    try {
-      db = openReadOnly(path);
-    } catch (error) {
-      ctx.log(`devin: cannot open ${path}: ${String(error)}`);
-      continue;
-    }
+    let db: Database | undefined;
     let sessions: Map<string, SessionRow>;
     let rows: MessageRow[];
     try {
+      db = openReadOnly(path);
       sessions = new Map(
         db
           .query<SessionRow, []>(
@@ -130,10 +122,10 @@ export async function* collectDevin(
         )
         .all(mark);
     } catch (error) {
-      ctx.log(`devin: query failed on ${path}: ${String(error)}`);
+      ctx.log(`devin: cannot read ${path}: ${String(error)}`);
       continue;
     } finally {
-      db.close();
+      db?.close();
     }
     const emitted = new Set<string>();
     for (const row of rows) {
