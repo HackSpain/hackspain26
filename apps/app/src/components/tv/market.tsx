@@ -137,12 +137,24 @@ function Kpis({ series }: { series: MarketSeries }) {
   const totals = marketTotals(series);
   const last = series.at(-1);
   const trend = (metric: keyof MarketSeries[number]) => series.map((row) => row[metric]);
+  const cards = [
+    { label: "Tokens procesados", value: totals.tokens, shown: compact(totals.tokens), recent: `+${compact(last?.tokens ?? 0)} este tramo`, trend: trend("tokens"), tone: "bg-hs-gold text-hs-ink" },
+    { label: "Pushes a GitHub", value: totals.pushes, shown: number(totals.pushes), recent: `+${number(last?.pushes ?? 0)} este tramo`, trend: trend("pushes"), tone: "bg-hs-orange text-hs-paper" },
+    { label: "Sesiones de agentes", value: totals.sessions, shown: number(totals.sessions), recent: `+${number(last?.sessions ?? 0)} este tramo`, trend: trend("sessions"), tone: "bg-hs-teal text-hs-paper" },
+    { label: "Pull requests", value: totals.pullRequests, shown: number(totals.pullRequests), recent: `+${number(last?.pullRequests ?? 0)} este tramo`, trend: trend("pullRequests"), tone: "bg-hs-navy text-hs-paper" },
+  ].filter((card) => card.value > 0);
+
+  if (cards.length === 0) { return null; }
+
   return (
-    <div className="grid shrink-0 grid-cols-4 gap-[var(--line)] portrait:grid-cols-2">
-      <Kpi label="Tokens procesados" value={totals.tokens} shown={compact(totals.tokens)} recent={`+${compact(last?.tokens ?? 0)} este tramo`} trend={trend("tokens")} tone="bg-hs-gold text-hs-ink" />
-      <Kpi label="Pushes a GitHub" value={totals.pushes} shown={number(totals.pushes)} recent={`+${number(last?.pushes ?? 0)} este tramo`} trend={trend("pushes")} tone="bg-hs-orange text-hs-paper" />
-      <Kpi label="Sesiones de agentes" value={totals.sessions} shown={number(totals.sessions)} recent={`+${number(last?.sessions ?? 0)} este tramo`} trend={trend("sessions")} tone="bg-hs-teal text-hs-paper" />
-      <Kpi label="Pull requests" value={totals.pullRequests} shown={number(totals.pullRequests)} recent={`+${number(last?.pullRequests ?? 0)} este tramo`} trend={trend("pullRequests")} tone="bg-hs-navy text-hs-paper" />
+    <div className={cn(
+      "grid shrink-0 gap-[var(--line)]",
+      cards.length === 1 && "grid-cols-1",
+      cards.length === 2 && "grid-cols-2",
+      cards.length === 3 && "grid-cols-3 portrait:grid-cols-2 portrait:[&>*:last-child]:col-span-2",
+      cards.length === 4 && "grid-cols-4 portrait:grid-cols-2",
+    )}>
+      {cards.map((card) => <Kpi key={card.label} {...card} />)}
     </div>
   );
 }
