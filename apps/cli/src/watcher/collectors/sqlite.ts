@@ -2,15 +2,23 @@ import { Database } from "bun:sqlite";
 import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-/**
- * A WAL database without its `-wal` file cannot be opened read-only, only as
- * immutable.
- */
 export function openReadOnly(path: string): Database {
-  const location = existsSync(`${path}-wal`)
-    ? path
-    : `${pathToFileURL(path).href}?immutable=1`;
-  return new Database(location, { readonly: true });
+  let db: Database | undefined;
+  try {
+    db = new Database(path, { readonly: true });
+    db.query("PRAGMA schema_version").get();
+    return db;
+  } catch (error) {
+    db?.close();
+    // macOS cannot reopen a WAL database whose sidecars are gone, while Linux
+    // rejects Bun's immutable URI. Never use immutable when a real WAL exists.
+    if (existsSync(`${path}-wal`)) {
+      throw error;
+    }
+    return new Database(`${pathToFileURL(path).href}?immutable=1`, {
+      readonly: true,
+    });
+  }
 }
 
 export function lastWriteMs(path: string): number {
