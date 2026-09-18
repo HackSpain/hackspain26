@@ -13,8 +13,8 @@ export const SCREEN_PRESETS: { value: ScreenPreset; label: string; description: 
   { value: "patrocinadores", label: "Patrocinadores", description: "Logos de los colaboradores" },
   { value: "espera", label: "Espera", description: "Franjas animadas de HackSpain" },
 ];
-export const SCREEN_OFFLINE_MS = 20_000;
-export const SCREEN_POLL_MS = 3000;
+export const SCREEN_OFFLINE_MS = 45_000;
+export const SCREEN_HEARTBEAT_MS = 15_000;
 export const screenConfigValidator = v.object({
   preset: screenPresetValidator, message: v.string(), revision: v.number(), reloadVersion: v.number(),
 });

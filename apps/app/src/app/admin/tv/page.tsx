@@ -99,7 +99,7 @@ export default function AdminTvPage() {
     finally { setBusy(false); }
   }
   return (
-    <Page title="Pantallas" description="Asigna una vista a cada pantalla y contrólala desde aquí. Los cambios llegan en unos segundos.">
+    <Page title="Pantallas" description="Asigna una vista a cada pantalla y contrólala desde aquí. Los cambios llegan en tiempo real.">
       <section className="space-y-4 border-2 border-hs-ink bg-hs-gold/15 p-5">
         <h2 className="font-bungee">Conectar una pantalla</h2>
         <p className="max-w-3xl text-sm">Abre <code>/tv?screen=entrada</code> en su navegador. Cambia «entrada» por «auditorio», «hall» o un nombre único. Aparecerá aquí automáticamente. También puedes prepararla antes de conectarla.</p>
@@ -112,7 +112,7 @@ export default function AdminTvPage() {
       {!data ? <LoadingText /> : data.screens.length ? (
         <div className="grid gap-5 lg:grid-cols-2">{data.screens.map((screen) => <ScreenCard key={`${screen._id}:${screen.revision}`} screen={screen} now={now?.getTime() ?? data.serverTime} />)}</div>
       ) : <p className="py-10 text-center text-hs-brown">Todavía no hay pantallas. Abre su URL o prepara la primera arriba.</p>}
-      <p className="text-sm text-hs-brown">Una pantalla sin respuesta durante 20 segundos aparece desconectada. Las órdenes se conservan hasta que vuelva a conectarse. Recargar no enciende un ordenador apagado o suspendido.</p>
+      <p className="text-sm text-hs-brown">Una pantalla sin respuesta durante 45 segundos aparece desconectada. Las órdenes se conservan hasta que vuelva a conectarse. Recargar no enciende un ordenador apagado o suspendido.</p>
     </Page>
   );
 }

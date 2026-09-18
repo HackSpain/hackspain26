@@ -53,6 +53,16 @@ export const reload = adminMutation({
 });
 
 
+// Only configuration changes invalidate this subscription; presence is a separate table.
+export const screenConfiguration = query({
+  args: { key: v.string() },
+  returns: v.union(screenConfigValidator, v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", screenKey(args.key))).unique();
+    return row ? screenConfig(row) : null;
+  },
+});
+
 // Public kiosks can announce their presence, but cannot change an existing screen's commands.
 export const heartbeat = mutation({
   args: {

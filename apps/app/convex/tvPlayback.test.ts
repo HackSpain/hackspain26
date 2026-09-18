@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MutationCtx } from "./_generated/server";
-import { heartbeat, reloadScreen, removeScreen, screens, setScreen } from "./tvPlayback";
+import { heartbeat, reloadScreen, removeScreen, screenConfiguration, screens, setScreen } from "./tvPlayback";
 
 type Row = Record<string, unknown> & { _id: string; table: string };
 function venue() {
@@ -98,11 +98,30 @@ test("only offline screens can be removed, including their connections", async (
   await assert.rejects(removeScreen._handler(ctx, { key: "entrada" }), /Desconecta/);
   const entry = (await screens._handler(ctx, {})).screens.find((screen) => screen.key === "entrada");
   assert.ok(entry);
-  await ctx.db.patch(entry.connections[0]._id, { lastSeenAt: Date.now() - 21_000 });
+  await ctx.db.patch(entry.connections[0]._id, { lastSeenAt: Date.now() - 46_000 });
   await removeScreen._handler(ctx, { key: "entrada" });
   assert.deepEqual((await screens._handler(ctx, {})).screens.map((screen) => screen.key), ["hall"]);
   assert.equal((await ctx.db.query("tvScreenConnections").collect()).length, 1);
   await removeScreen._handler(ctx, { key: "entrada" });
   await ping("entrada");
   assert.equal((await screens._handler(ctx, {})).screens.length, 2);
+});
+
+
+test("public screen subscription returns only its configuration and follows admin commands", async () => {
+  const { ctx, ping, anonymous } = venue();
+  assert.equal(await screenConfiguration._handler(ctx, { key: "entrada" }), null);
+  await ping("entrada");
+  await ping("hall", "hall-123456789012");
+  await setScreen._handler(ctx, { key: "entrada", preset: "avisos", message: "Hola" });
+  await reloadScreen._handler(ctx, { key: "entrada" });
+  anonymous();
+  assert.deepEqual(await screenConfiguration._handler(ctx, { key: "entrada" }), {
+    preset: "avisos", message: "Hola", revision: 1, reloadVersion: 1,
+  });
+  assert.deepEqual(await screenConfiguration._handler(ctx, { key: "hall" }), {
+    preset: "entradas", message: "", revision: 0, reloadVersion: 0,
+  });
+  // Old clients still receive reload commands in their heartbeat response.
+  assert.equal((await ping("entrada")).reloadVersion, 1);
 });
