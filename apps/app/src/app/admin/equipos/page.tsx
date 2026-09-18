@@ -15,7 +15,12 @@ import {
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -60,10 +65,7 @@ export default function AdminTeamsPage() {
   const removeTrack = useMutation(api.teams.adminRemoveTrack);
   const [search, setSearch] = useState("");
   const [trackFilter, setTrackFilter] = useState<string>(ALL);
-  const [selected, setSelected] = useState<Set<Id<"teams">>>(new Set());
-  const [adding, setAdding] = useState<Set<Id<"teams">>>(new Set());
-  const [bulkTrack, setBulkTrack] = useState("");
-  const [busy, setBusy] = useState<Id<"teams"> | "bulk" | null>(null);
+  const [savingId, setSavingId] = useState<Id<"teams"> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const query = search.trim().toLowerCase();
@@ -91,95 +93,35 @@ export default function AdminTeamsPage() {
     data.tracks.map((track) => [track._id, track.teamCount])
   );
   const untracked = data.teams.filter((team) => team.entered.length === 0).length;
-  const filterTrack =
-    trackFilter !== ALL && trackFilter !== NONE
-      ? (trackFilter as Id<"tracks">)
-      : null;
-  const addable = filterTrack
-    ? data.teams.filter(
-        (team) =>
-          matchesSearch(team, query) &&
-          !team.entered.some((track) => track._id === filterTrack) &&
-          !adding.has(team._id)
-      )
-    : [];
-  const addingTeams = data.teams.filter((team) => adding.has(team._id));
 
-  const visibleIds = teams.map((team) => team._id);
-  const selectedVisible = visibleIds.filter((id) => selected.has(id));
-  const allVisibleSelected =
-    visibleIds.length > 0 && selectedVisible.length === visibleIds.length;
-  const someVisibleSelected = selectedVisible.length > 0;
-
-  const toggle = (teamId: Id<"teams">, on: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (on) {
-        next.add(teamId);
-      } else {
-        next.delete(teamId);
-      }
-      return next;
-    });
-  };
-
-  const toggleVisible = (on: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const id of visibleIds) {
-        if (on) {
-          next.add(id);
-        } else {
-          next.delete(id);
-        }
-      }
-      return next;
-    });
-  };
-
-  const save = async (
-    teamIds: Id<"teams">[],
-    trackId: Id<"tracks"> | undefined,
-    scope: Id<"teams"> | "bulk"
-  ) => {
-    setBusy(scope);
+  const add = async (teamId: Id<"teams">, trackId: Id<"tracks">) => {
+    setSavingId(teamId);
     setError(null);
     try {
-      await setTrack({ teamIds, trackId });
-      if (scope === "bulk") {
-        setSelected(new Set());
-        setAdding(new Set());
-      }
+      await setTrack({ teamId, trackId });
     } catch (err) {
-      setError(errorMessage(err, "No se pudo cambiar el track."));
+      setError(errorMessage(err, "No se pudo añadir el track."));
     } finally {
-      setBusy(null);
+      setSavingId(null);
     }
   };
 
-  const drop = async (
-    teamIds: Id<"teams">[],
-    trackId: Id<"tracks">,
-    scope: Id<"teams"> | "bulk"
-  ) => {
-    setBusy(scope);
+  const drop = async (teamId: Id<"teams">, trackId: Id<"tracks">) => {
+    setSavingId(teamId);
     setError(null);
     try {
-      await removeTrack({ teamIds, trackId });
-      if (scope === "bulk") {
-        setSelected(new Set());
-      }
+      await removeTrack({ teamId, trackId });
     } catch (err) {
       setError(errorMessage(err, "No se pudo quitar el track."));
     } finally {
-      setBusy(null);
+      setSavingId(null);
     }
   };
 
   return (
     <Page
       title="Equipos"
-      description="Asignar suma un track. La cruz lo quita. El tope de 15 no aplica aquí."
+      description="Añade varios tracks a un equipo; la cruz quita uno. El tope de 15 no aplica aquí."
       className="flex h-[calc(100dvh-11rem)] flex-col gap-4 space-y-0 sm:h-[calc(100dvh-12rem)]"
     >
       <div className="grid shrink-0 gap-3 sm:grid-cols-[minmax(0,1fr)_16rem]">
@@ -189,13 +131,7 @@ export default function AdminTeamsPage() {
           placeholder="Equipo o email"
           aria-label="Buscar equipo o email"
         />
-        <Select
-          value={trackFilter}
-          onValueChange={(value) => {
-            setTrackFilter(value);
-            setAdding(new Set());
-          }}
-        >
+        <Select value={trackFilter} onValueChange={setTrackFilter}>
           <SelectTrigger aria-label="Filtrar por track">
             <SelectValue />
           </SelectTrigger>
@@ -215,145 +151,9 @@ export default function AdminTeamsPage() {
           </SelectContent>
         </Select>
       </div>
-      {filterTrack ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Select
-            value={undefined}
-            onValueChange={(teamId) =>
-              setAdding((prev) => {
-                const next = new Set(prev);
-                next.add(teamId as Id<"teams">);
-                return next;
-              })
-            }
-          >
-            <SelectTrigger
-              aria-label="Añadir equipos al track"
-              className="min-w-52"
-              size="sm"
-            >
-              <SelectValue placeholder="Añadir equipos" />
-            </SelectTrigger>
-            <SelectContent>
-              {addable.length === 0 ? (
-                <SelectItem value="none" disabled>
-                  No hay más equipos
-                </SelectItem>
-              ) : (
-                addable.map((team) => (
-                  <SelectItem key={team._id} value={team._id}>
-                    {team.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-          {addingTeams.map((team) => (
-            <Badge key={team._id} className="gap-1 pr-0.5">
-              {team.name}
-              <button
-                type="button"
-                aria-label={`Sacar ${team.name} de la lista`}
-                className="flex size-5 items-center justify-center text-hs-ink/70 hover:text-hs-ink"
-                onClick={() =>
-                  setAdding((prev) => {
-                    const next = new Set(prev);
-                    next.delete(team._id);
-                    return next;
-                  })
-                }
-              >
-                <X className="size-3" aria-hidden />
-              </button>
-            </Badge>
-          ))}
-          {adding.size > 0 ? (
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy !== null}
-              onClick={() => void save([...adding], filterTrack, "bulk")}
-            >
-              {adding.size === 1 ? "Añadir 1" : `Añadir ${adding.size}`}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-      {selected.size > 0 ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <p className="text-sm text-hs-brown tabular-nums" aria-live="polite">
-            {selected.size === 1
-              ? "1 seleccionado"
-              : `${selected.size} seleccionados`}
-          </p>
-          {filterTrack ? (
-            <>
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy !== null}
-                onClick={() => void save([...selected], filterTrack, "bulk")}
-              >
-                Añadir al track
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={busy !== null}
-                onClick={() => void drop([...selected], filterTrack, "bulk")}
-              >
-                Quitar del track
-              </Button>
-            </>
-          ) : (
-            <>
-              <Select value={bulkTrack || undefined} onValueChange={setBulkTrack}>
-                <SelectTrigger
-                  aria-label="Track para los seleccionados"
-                  className="min-w-44"
-                  size="sm"
-                >
-                  <SelectValue placeholder="Track" />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.tracks.map((track) => (
-                    <SelectItem key={track._id} value={track._id}>
-                      <span>{track.label}</span>
-                      <span className="text-xs text-hs-brown tabular-nums">
-                        · {occupancy(track.teamCount, data.teamLimit)}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy !== null || !bulkTrack}
-                onClick={() =>
-                  void save([...selected], bulkTrack as Id<"tracks">, "bulk")
-                }
-              >
-                Asignar
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={busy !== null}
-                onClick={() => void save([...selected], undefined, "bulk")}
-              >
-                Quitar
-              </Button>
-            </>
-          )}
-        </div>
-      ) : (
-        <p className="shrink-0 text-sm text-hs-brown tabular-nums" aria-live="polite">
-          {teams.length === 1 ? "1 equipo" : `${teams.length} equipos`}
-        </p>
-      )}
+      <p className="shrink-0 text-sm text-hs-brown tabular-nums" aria-live="polite">
+        {teams.length === 1 ? "1 equipo" : `${teams.length} equipos`}
+      </p>
       <FormError message={error} />
       {teams.length === 0 ? (
         <EmptyState title="Ningún equipo coincide">
@@ -366,41 +166,22 @@ export default function AdminTeamsPage() {
         >
           <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
             <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  aria-label="Seleccionar todos"
-                  checked={
-                    allVisibleSelected
-                      ? true
-                      : someVisibleSelected
-                        ? "indeterminate"
-                        : false
-                  }
-                  disabled={busy !== null || visibleIds.length === 0}
-                  onCheckedChange={(state) => toggleVisible(state === true)}
-                />
-              </TableHead>
               <TableHead>Equipo</TableHead>
               <TableHead>Participantes</TableHead>
-              <TableHead>Track</TableHead>
-              <TableHead>Asignar</TableHead>
+              <TableHead>Tracks</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {teams.map((team) => (
               <TeamRowView
                 key={team._id}
-                checked={selected.has(team._id)}
                 countById={countById}
-                disabled={busy !== null}
+                disabled={savingId === team._id}
                 team={team}
                 teamLimit={data.teamLimit}
                 tracks={data.tracks}
-                onChange={(trackId) =>
-                  void save([team._id], trackId, team._id)
-                }
-                onCheckedChange={(on) => toggle(team._id, on)}
-                onRemove={(trackId) => void drop([team._id], trackId, team._id)}
+                onAdd={(trackId) => void add(team._id, trackId)}
+                onRemove={(trackId) => void drop(team._id, trackId)}
               />
             ))}
           </TableBody>
@@ -411,21 +192,17 @@ export default function AdminTeamsPage() {
 }
 
 function TeamRowView({
-  checked,
   countById,
   disabled,
-  onChange,
-  onCheckedChange,
+  onAdd,
   onRemove,
   team,
   teamLimit,
   tracks,
 }: {
-  checked: boolean;
   countById: Map<string, number>;
   disabled: boolean;
-  onChange: (trackId: Id<"tracks">) => void;
-  onCheckedChange: (on: boolean) => void;
+  onAdd: (trackId: Id<"tracks">) => void;
   onRemove: (trackId: Id<"tracks">) => void;
   team: TeamRow;
   teamLimit: number;
@@ -442,16 +219,7 @@ function TeamRowView({
     <TableRow
       className="[&_td]:border-b [&_td]:border-hs-ink/20"
       data-disabled={disabled || undefined}
-      data-state={checked ? "selected" : undefined}
     >
-      <TableCell className="w-10">
-        <Checkbox
-          aria-label={`Seleccionar ${team.name}`}
-          checked={checked}
-          disabled={disabled}
-          onCheckedChange={(state) => onCheckedChange(state === true)}
-        />
-      </TableCell>
       <TableCell className="font-medium whitespace-normal">
         {team.name}
       </TableCell>
@@ -459,60 +227,60 @@ function TeamRowView({
         {emails}
       </TableCell>
       <TableCell>
-        {team.entered.length === 0 ? (
-          <Badge>Sin track</Badge>
-        ) : (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {team.entered.map((track) => {
-              const count = countById.get(track._id) ?? 0;
-              return (
-                <Badge
-                  key={track._id}
-                  variant={extras || count > teamLimit ? "gold" : "default"}
-                  className="gap-1 pr-0.5 tabular-nums"
+        <div className="flex flex-wrap items-center gap-1.5">
+          {team.entered.length === 0 ? <Badge>Sin track</Badge> : null}
+          {team.entered.map((track) => {
+            const count = countById.get(track._id) ?? 0;
+            return (
+              <Badge
+                key={track._id}
+                variant={extras || count > teamLimit ? "gold" : "default"}
+                className="gap-1 pr-0.5 tabular-nums"
+              >
+                {track.label} · {occupancy(count, teamLimit)}
+                <button
+                  type="button"
+                  aria-label={`Quitar ${track.label} de ${team.name}`}
+                  disabled={disabled}
+                  className="flex size-5 items-center justify-center text-hs-ink/70 hover:text-hs-ink disabled:pointer-events-none"
+                  onClick={() => onRemove(track._id)}
                 >
-                  {track.label} · {occupancy(count, teamLimit)}
-                  <button
-                    type="button"
-                    aria-label={`Quitar ${track.label} de ${team.name}`}
-                    disabled={disabled}
-                    className="flex size-5 items-center justify-center text-hs-ink/70 hover:text-hs-ink disabled:pointer-events-none"
-                    onClick={() => onRemove(track._id)}
+                  <X className="size-3" aria-hidden />
+                </button>
+              </Badge>
+            );
+          })}
+          {available.length === 0 ? null : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Añadir track a ${team.name}`}
+                >
+                  Añadir
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {available.map((track) => (
+                  <DropdownMenuItem
+                    key={track._id}
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      onAdd(track._id);
+                    }}
                   >
-                    <X className="size-3" aria-hidden />
-                  </button>
-                </Badge>
-              );
-            })}
-          </div>
-        )}
-      </TableCell>
-      <TableCell>
-        {available.length === 0 ? null : (
-          <Select
-            value={undefined}
-            disabled={disabled}
-            onValueChange={(value) => onChange(value as Id<"tracks">)}
-          >
-            <SelectTrigger
-              aria-label={`Añadir track a ${team.name}`}
-              className="min-w-44"
-              size="sm"
-            >
-              <SelectValue placeholder="Añadir" />
-            </SelectTrigger>
-            <SelectContent>
-              {available.map((track) => (
-                <SelectItem key={track._id} value={track._id}>
-                  <span>{track.label}</span>
-                  <span className="text-xs text-hs-brown tabular-nums">
-                    · {occupancy(track.teamCount, teamLimit)}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+                    <span>{track.label}</span>
+                    <span className="text-xs text-hs-brown tabular-nums">
+                      · {occupancy(track.teamCount, teamLimit)}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );
