@@ -42,6 +42,8 @@ hackspain stack set nextjs convex claude-code
 hackspain track list
 hackspain track register [slug] | unregister
 hackspain submit [--draft]      # interactive form; flags for scripts
+hackspain submit --draft --name "My project"       # draft flags can be added over several runs
+hackspain --json submit --yes                       # submit a complete saved draft from a script
 hackspain project show | list
 hackspain perk list
 
