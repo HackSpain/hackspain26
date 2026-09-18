@@ -92,6 +92,77 @@ test("the track lens puts people in every challenge of their team, with the word
 	);
 });
 
+test("staff without a team or track sit in their type cluster, not sin equipo / sin reto", () => {
+	const hacker = {
+		...person,
+		id: "h",
+		userType: { isDefault: true, label: "Hacker", slug: "hacker" },
+	};
+	const mentor = {
+		...peer,
+		id: "m",
+		userType: { isDefault: false, label: "Mentor", slug: "mentor" },
+	};
+	const sponsor = {
+		...person,
+		id: "s",
+		userType: { isDefault: false, label: "Sponsor", slug: "sponsor" },
+	};
+	const jurado = {
+		...person,
+		id: "j",
+		userType: { isDefault: false, label: "Jurado", slug: "jurado" },
+	};
+	const teamedMentor = {
+		...mentor,
+		id: "tm",
+		team: { id: "orbita", name: "Órbita" },
+	};
+	assert.deepEqual(
+		clusterParticipants([hacker, mentor, sponsor, jurado], "team").map(
+			(cluster) => [cluster.label, cluster.staff, cluster.loose, cluster.memberIds],
+		),
+		[
+			["Jurado", true, false, ["j"]],
+			["Mentor", true, false, ["m"]],
+			["Sponsor", true, false, ["s"]],
+			["Sin equipo", undefined, true, ["h"]],
+		],
+	);
+	assert.deepEqual(
+		clusterParticipants([hacker, mentor], "track").map((cluster) => [
+			cluster.label,
+			cluster.staff,
+			cluster.loose,
+			cluster.memberIds,
+		]),
+		[
+			["Mentor", true, false, ["m"]],
+			["Sin reto", undefined, true, ["h"]],
+		],
+	);
+	assert.deepEqual(
+		clusterParticipants([teamedMentor, mentor], "team").map((cluster) => [
+			cluster.label,
+			cluster.staff,
+			cluster.memberIds,
+		]),
+		[
+			["Órbita", undefined, ["tm"]],
+			["Mentor", true, ["m"]],
+		],
+	);
+	assert.deepEqual(
+		clusterParticipants([mentor, hacker], "city").map((cluster) => [
+			cluster.label,
+			cluster.staff,
+			cluster.loose,
+			cluster.memberIds,
+		]),
+		[["Madrid", undefined, false, ["h", "m"]]],
+	);
+});
+
 test("members of a track with a symbol ring it instead of covering it", () => {
 	const track = { id: "t", label: "Maisa", logoUrl: "/tracks/maisa.png" };
 	const people = Array.from({ length: 9 }, (_, i) => ({

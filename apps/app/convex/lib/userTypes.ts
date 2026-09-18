@@ -36,16 +36,42 @@ export const userTypeSummaryValidator = v.object({
   sortOrder: v.number(),
 });
 
-/** Fallback when no type is assigned and none is marked as default. */
+/**
+ * Tabs a competing hacker sees. The directory (`participantes`) is staff-only:
+ * Mentor and Sponsor types opt into it; admins see every section anyway.
+ */
 export const PARTICIPANT_SECTIONS: Sections = [
   "teams",
   "tracks",
   "perks",
+  "cli",
+];
+
+export const JURADO_SECTIONS: Sections = ["judging"];
+
+export const MENTOR_SECTIONS: Sections = [
+  "tracks",
   "participantes",
   "cli",
 ];
 
+export const SPONSOR_SECTIONS: Sections = [
+  "tracks",
+  "perks",
+  "participantes",
+];
+
 export const ALL_SECTIONS: Sections = [...SECTION_KEYS];
+
+/** Competing default type (Hacker): the directory is staff, not for this type. */
+export function isHackerType(
+  type: Pick<Doc<"userTypes">, "isDefault" | "sections" | "slug">
+): boolean {
+  return (
+    type.slug === "hacker" ||
+    (type.isDefault && type.sections.includes("teams"))
+  );
+}
 
 export function normalizeSections(input: readonly string[]): Sections {
   const wanted = new Set(input);
@@ -101,7 +127,22 @@ export function effectiveSections(
   if (user.role === "admin") {
     return ALL_SECTIONS;
   }
-  return type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS;
+  if (!type) {
+    return PARTICIPANT_SECTIONS;
+  }
+  const sections = normalizeSections(type.sections);
+  if (isHackerType(type)) {
+    return normalizeSections(sections.filter((key) => key !== "participantes"));
+  }
+  return sections;
+}
+
+export function grantsSection(
+  user: Pick<Doc<"users">, "role">,
+  type: Doc<"userTypes"> | null,
+  section: SectionKey
+): boolean {
+  return effectiveSections(user, type).includes(section);
 }
 
 export function grantsJudging(

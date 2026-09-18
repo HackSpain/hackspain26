@@ -40,6 +40,7 @@ function ParticipantList({
             participant.company,
             participant.degree,
             participant.team?.name,
+            participant.userType?.label,
             ...participant.skills,
             ...(participant.interests ?? []),
           ]
@@ -87,7 +88,16 @@ function ParticipantList({
                 )}
                 <div>
                   <h2>{participant.displayName}</h2>
-                  <p>{participant.role}</p>
+                  <p>
+                    {[
+                      participant.userType && !participant.userType.isDefault
+                        ? participant.userType.label
+                        : null,
+                      participant.role,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
                 </div>
               </div>
 

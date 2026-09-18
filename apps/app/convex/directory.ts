@@ -10,6 +10,7 @@ import {
 } from "./lib/directory";
 import { avatarThumbnailFor } from "./lib/photo";
 import { membershipForUser } from "./lib/team";
+import { grantsSection, userTypeFor } from "./lib/userTypes";
 import type { Id } from "./_generated/dataModel";
 
 /** What the graph component consumes (src/components/participant-directory/types.ts). */
@@ -36,6 +37,14 @@ const participantReturn = v.object({
 		}),
 	),
 	university: v.optional(v.string()),
+	/** CRM type. Default/hacker types stay in “sin equipo” / “sin reto”. */
+	userType: v.optional(
+		v.object({
+			isDefault: v.boolean(),
+			label: v.string(),
+			slug: v.string(),
+		}),
+	),
 });
 
 /**
@@ -121,22 +130,25 @@ export const normalizeCards = internalMutation({
 });
 
 /**
- * Everyone with a complete card. The viewer has one too: onboarding asks for
- * it before the dashboard opens (convex/lib/profile.ts), so nobody browses
- * without contributing their own data points.
+ * Everyone with a complete card, for viewers whose type opens the directory
+ * (mentors, sponsors, admins). Onboarding still asks everyone for a card.
  */
 export const list = authedQuery({
 	args: {},
 	handler: async (ctx) => {
-		const [users, teams, memberships, submissions, tracks] = await Promise.all(
-			[
+		const viewerType = await userTypeFor(ctx, ctx.user);
+		if (!grantsSection(ctx.user, viewerType, "participantes")) {
+			throw new Error("No tienes acceso al directorio");
+		}
+		const [users, teams, memberships, submissions, tracks, userTypes] =
+			await Promise.all([
 				ctx.db.query("users").collect(),
 				ctx.db.query("teams").collect(),
 				ctx.db.query("teamMembers").collect(),
 				ctx.db.query("submissions").collect(),
 				ctx.db.query("tracks").collect(),
-			],
-		);
+				ctx.db.query("userTypes").collect(),
+			]);
 		const teamsById = new Map(teams.map((team) => [team._id, team]));
 		// One read instead of one index lookup per person. Same row as
 		// membershipForUser: the earliest membership, whatever its status.
@@ -153,6 +165,17 @@ export const list = authedQuery({
 			}
 			const team = teamsById.get(membership.teamId);
 			return team ? { id: team._id, name: team.name } : undefined;
+		};
+		const typeById = new Map(userTypes.map((type) => [type._id, type]));
+		const defaultType = userTypes.find((type) => type.isDefault);
+		const typeOf = (user: (typeof users)[number]) => {
+			if (user.userTypeId) {
+				const assigned = typeById.get(user.userTypeId);
+				if (assigned) {
+					return assigned;
+				}
+			}
+			return defaultType;
 		};
 		const tracksById = new Map(tracks.map((track) => [track._id, track]));
 		const tracksByTeam = new Map<Id<"teams">, typeof tracks>();
@@ -174,6 +197,7 @@ export const list = authedQuery({
 				continue;
 			}
 			const team = teamOf(user._id);
+			const type = typeOf(user);
 			out.push({
 				bio: card.bio,
 				city: card.city,
@@ -197,6 +221,13 @@ export const list = authedQuery({
 					slug: track.slug,
 				})),
 				university: card.university,
+				userType: type
+					? {
+							isDefault: type.isDefault,
+							label: type.label,
+							slug: type.slug,
+						}
+					: undefined,
 			});
 		}
 		return out.toSorted((a, b) =>
