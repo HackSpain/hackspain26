@@ -742,6 +742,8 @@ export const setTechStack = onboardedMutation({
     await ctx.db.patch(team._id, {
       techStack,
       techStackAt: Date.now(),
+      // Typed by hand from here on, until the next repo scan says otherwise.
+      techStackSource: undefined,
       updatedAt: Date.now(),
     });
     return techStack;
