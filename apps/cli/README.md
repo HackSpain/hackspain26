@@ -111,8 +111,10 @@ minute until activity resumes. No prompt text or full
 paths ever leave the machine; only token counts, model, session ids, and a hash of the project
 directory. Once organisers schedule the hackathon, the watcher reports exactly that window and
 all of it: usage from before the start or after the end is never sent, and usage from inside it is
-picked up even if the watcher was opened late or not at all until the end (it still runs after the
-hackathon closes, to deliver what is left). Every event keeps the time the harness recorded, not
+picked up even if the watcher was opened late or not at all until the end. It runs outside the
+window too: opened early it waits and starts recording on its own, opened after the end it
+delivers what is left, and in both cases an orange "Not recording" line under the header and in
+the status bar says so, with the date that matters. Every event keeps the time the harness recorded, not
 the time the watcher read it. On a server without a schedule only usage after the watcher starts
 is reported; `--backfill 6` includes the last six hours.
 

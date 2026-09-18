@@ -155,6 +155,30 @@ describe("frame", () => {
     expect(stripAnsi(lines.at(-1) ?? "")).toContain("paused");
     expect(stripAnsi(lines.at(-1) ?? "")).toContain("p resume");
   });
+
+  test("outside the hackathon window the board says it is not recording", () => {
+    const state = sampleState();
+    const hour = 3_600_000;
+    const render = (window: { since: number; until: number }) =>
+      frame(
+        { ...state, window: { ...window, scheduled: true } },
+        { columns: 120, rows: 30 },
+        { now: NOW }
+      ).map((line) => stripAnsi(line));
+
+    const before = render({ since: NOW + hour, until: NOW + 49 * hour });
+    expect(before[1]).toContain("Not recording yet: the hackathon starts");
+    expect(before.at(-1)).toContain("not recording");
+
+    const after = render({ since: NOW - 49 * hour, until: NOW - hour });
+    expect(after[1]).toContain("Not recording: the hackathon ended");
+    expect(after.at(-1)).toContain("not recording");
+
+    const during = render({ since: NOW - hour, until: NOW + hour });
+    expect(during.join("\n")).not.toContain("ot recording");
+    // Same height either way: the notice takes a row, it does not add one.
+    expect(before).toHaveLength(during.length);
+  });
 });
 
 describe("primitives", () => {

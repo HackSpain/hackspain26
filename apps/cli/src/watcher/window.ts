@@ -30,6 +30,41 @@ export function collectionWindow(
   return { scheduled: true, since: startsAt, until: endsAt };
 }
 
+export type WindowPhase = "before" | "during" | "after";
+
+/** Where `now` falls; undefined without a scheduled window. */
+export function windowPhase(
+  window: Pick<CollectionWindow, "since" | "until" | "scheduled"> | undefined,
+  now: number
+): WindowPhase | undefined {
+  if (!window?.scheduled || window.until === undefined) {
+    return;
+  }
+  if (now < window.since) {
+    return "before";
+  }
+  return now < window.until ? "during" : "after";
+}
+
+/**
+ * What the watcher shows while the clock is outside the window, so nobody
+ * leaves it running believing it records. `formatDate` is injected to keep
+ * this module free of the CLI's copy helpers.
+ */
+export function windowNotice(
+  window: CollectionWindow | undefined,
+  now: number,
+  formatDate: (ms: number) => string
+): string | undefined {
+  const phase = windowPhase(window, now);
+  if (!window || window.until === undefined || !phase || phase === "during") {
+    return;
+  }
+  return phase === "before"
+    ? `Not recording yet: the hackathon starts ${formatDate(window.since)}. Leave this open, it starts on its own.`
+    : `Not recording: the hackathon ended ${formatDate(window.until)}. Only usage from inside it is still delivered.`;
+}
+
 export function inWindow(
   occurredAt: string,
   window: Pick<CollectionWindow, "since" | "until">

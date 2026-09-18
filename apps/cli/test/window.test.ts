@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { memoryCursorStore } from "../src/watcher/cursor-store";
 import { outputWithReasoning } from "../src/watcher/schema";
-import { collectionWindow, inWindow } from "../src/watcher/window";
+import {
+  collectionWindow,
+  inWindow,
+  windowNotice,
+  windowPhase,
+} from "../src/watcher/window";
 
 const START = Date.parse("2026-10-03T08:00:00Z");
 const END = Date.parse("2026-10-05T16:00:00Z");
@@ -45,6 +50,32 @@ describe("collectionWindow", () => {
     expect(inWindow("2026-10-05T16:00:00.000Z", window)).toBe(false);
     expect(inWindow("not a date", window)).toBe(false);
     expect(inWindow("2030-01-01T00:00:00Z", { since: START })).toBe(true);
+  });
+});
+
+describe("windowPhase and windowNotice", () => {
+  const window = { scheduled: true, since: START, until: END };
+  const date = (ms: number) => `<${new Date(ms).toISOString()}>`;
+
+  test("before, during and after, on the current clock", () => {
+    expect(windowPhase(window, START - 1)).toBe("before");
+    expect(windowPhase(window, START)).toBe("during");
+    expect(windowPhase(window, END)).toBe("after");
+    expect(windowPhase({ scheduled: false, since: 0 }, START)).toBeUndefined();
+    expect(windowPhase(undefined, START)).toBeUndefined();
+  });
+
+  test("a notice only while outside, with the date that matters", () => {
+    expect(windowNotice(window, START, date)).toBeUndefined();
+    expect(windowNotice(window, START - 1, date)).toContain(
+      "starts <2026-10-03T08:00:00.000Z>"
+    );
+    expect(windowNotice(window, END, date)).toContain(
+      "ended <2026-10-05T16:00:00.000Z>"
+    );
+    expect(
+      windowNotice({ scheduled: false, since: 0 }, 1, date)
+    ).toBeUndefined();
   });
 });
 
