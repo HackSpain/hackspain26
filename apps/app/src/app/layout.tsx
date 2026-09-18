@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { BetterStackWebVitals } from "@logtail/next/webVitals";
 import type { Metadata } from "next";
 import { Bungee, DM_Sans } from "next/font/google";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
+import { BetterStackWebVitals } from "@/components/better-stack-web-vitals";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
