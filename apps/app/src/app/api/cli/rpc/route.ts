@@ -1,6 +1,14 @@
 import { fetchAction, fetchMutation, fetchQuery } from "convex/nextjs";
+import { reportServerEvent } from "@/lib/server-observability";
 import { CLI_FUNCTIONS } from "../_lib/functions";
-import { bearerToken, fail, fromError, ok, readJson } from "../_lib/respond";
+import {
+  bearerToken,
+  fail,
+  fromError,
+  ok,
+  readJson,
+  serverMessage,
+} from "../_lib/respond";
 
 /**
  * POST { name: "teams:join", args: {...} } with `Authorization: Bearer <token>`.
@@ -39,6 +47,16 @@ export async function POST(request: Request) {
       }
     }
   } catch (error) {
-    return fromError(error);
+    const response = fromError(error);
+    if (response.status >= 500) {
+      await reportServerEvent("error", "CLI RPC failed", {
+        errorMessage:
+          error instanceof Error ? serverMessage(error.message) : String(error),
+        errorName: error instanceof Error ? error.name : typeof error,
+        functionKind: exposed.kind,
+        functionName: name,
+      });
+    }
+    return response;
   }
 }
