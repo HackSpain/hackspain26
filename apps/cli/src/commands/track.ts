@@ -34,6 +34,13 @@ async function applyPlan(
       `Run \`hackspain track list\`. Known: ${tracks.map((t) => t.slug).join(", ")}.`
     );
   }
+  const full = plan.added.filter((t) => t.teamCount >= t.teamLimit);
+  if (full.length > 0) {
+    throw usageError(
+      `${full.map((t) => t.label).join(", ")} ${full.length > 1 ? "are" : "is"} full (${full[0]?.teamLimit} teams).`,
+      "Run `hackspain track list` to see which tracks still have room."
+    );
+  }
   if (plan.added.length === 0 && plan.removed.length === 0) {
     ui.result({ changed: false, tracks: plan.next });
     ui.info("Already set up that way. Nothing to change.");
@@ -105,9 +112,12 @@ export function registerTrack(program: Command): void {
         submissionsOpen: settings.submissionsOpen,
         tracks: tracks.map((t) => ({
           entered: entered.has(t._id),
+          full: t.teamCount >= t.teamLimit,
           label: t.label,
           note: t.note,
           slug: t.slug,
+          teamCount: t.teamCount,
+          teamLimit: t.teamLimit,
         })),
       });
       ui.table(
@@ -115,9 +125,12 @@ export function registerTrack(program: Command): void {
           entered.has(t._id) ? c.gold("●") : c.dim("○"),
           entered.has(t._id) ? highlight(t.slug) : t.slug,
           t.label,
+          t.teamCount >= t.teamLimit
+            ? c.gold(`${t.teamCount}/${t.teamLimit} full`)
+            : `${t.teamCount}/${t.teamLimit}`,
           c.dim(t.note),
         ]),
-        ["", "Slug", "Track", "Note"]
+        ["", "Slug", "Track", "Teams", "Note"]
       );
       ui.line(
         entered.size

@@ -7,7 +7,7 @@ import {
 } from "./lib/customFunctions";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { HACKATHON_SETTINGS_KEY, settingsDoc } from "./lib/eventWindow";
 
 const DEFAULT_TRACKS = [
@@ -60,6 +60,9 @@ const DEFAULT_TRACKS = [
 
 const RETIRED_SLUGS = ["ml", "non-tech"] as const;
 
+/** Projects (team or solo, draft or submitted) one track takes. */
+export const MAX_TEAMS_PER_TRACK = 15;
+
 /** Absolute http(s) URL or a site-relative path; empty clears the field. */
 function parseBrandUrl(raw: string, what: string): string | undefined {
   const value = raw.trim();
@@ -98,6 +101,23 @@ function trackFields(track: Doc<"tracks">) {
     sortOrder: track.sortOrder,
     website: track.website,
   };
+}
+
+/** How many projects have entered each track. */
+export async function trackEntryCounts(
+  ctx: QueryCtx | MutationCtx,
+  exceptSubmissionId?: Id<"submissions">
+): Promise<Map<Id<"tracks">, number>> {
+  const counts = new Map<Id<"tracks">, number>();
+  for (const submission of await ctx.db.query("submissions").collect()) {
+    if (submission._id === exceptSubmissionId) {
+      continue;
+    }
+    for (const trackId of new Set(submission.challengeIds)) {
+      counts.set(trackId, (counts.get(trackId) ?? 0) + 1);
+    }
+  }
+  return counts;
 }
 
 export async function submissionsAreOpen(
@@ -160,15 +180,28 @@ export async function seedDefaults(ctx: MutationCtx): Promise<void> {
 export const list = onboardedQuery({
   args: {},
   handler: async (ctx) => {
-    const tracks = await ctx.db
-      .query("tracks")
-      .withIndex("by_active_and_sort", (q) => q.eq("active", true))
-      .collect();
+    const [tracks, counts] = await Promise.all([
+      ctx.db
+        .query("tracks")
+        .withIndex("by_active_and_sort", (q) => q.eq("active", true))
+        .collect(),
+      trackEntryCounts(ctx),
+    ]);
     return tracks
       .toSorted((a, b) => a.sortOrder - b.sortOrder)
-      .map(trackFields);
+      .map((track) => ({
+        ...trackFields(track),
+        teamCount: counts.get(track._id) ?? 0,
+        teamLimit: MAX_TEAMS_PER_TRACK,
+      }));
   },
-  returns: v.array(trackReturn),
+  returns: v.array(
+    v.object({
+      ...trackReturn.fields,
+      teamCount: v.number(),
+      teamLimit: v.number(),
+    })
+  ),
 });
 
 export const get = onboardedQuery({

@@ -16,6 +16,8 @@ const tracks: Track[] = [
     note: "",
     slug: "maisa",
     sortOrder: 1,
+    teamCount: 0,
+    teamLimit: 15,
     website: "https://maisa.ai",
   },
   {
@@ -28,6 +30,8 @@ const tracks: Track[] = [
     note: "",
     slug: "embat",
     sortOrder: 2,
+    teamCount: 0,
+    teamLimit: 15,
     website: undefined,
   },
   {
@@ -40,6 +44,8 @@ const tracks: Track[] = [
     note: "",
     slug: "theker",
     sortOrder: 3,
+    teamCount: 0,
+    teamLimit: 15,
     website: undefined,
   },
 ];
