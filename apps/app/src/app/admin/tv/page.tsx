@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { Copy, ExternalLink, Monitor, RotateCcw, Trash2 } from "lucide-react";
+import { ExternalLink, Monitor, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import { SCREEN_OFFLINE_MS, SCREEN_PRESETS, screenKey, screenPreset } from "@convex/lib/tvScreens";
@@ -36,21 +36,21 @@ function ScreenCard({ screen, now }: { screen: Screen; now: number }) {
     } catch (error) { setFailure(errorMessage(error, "No se ha podido actualizar la pantalla")); }
     finally { setBusy(false); }
   }
-  async function copy() {
-    try { await navigator.clipboard.writeText(new URL(path, window.location.origin).toString()); setNotice("URL copiada."); }
-    catch { setFailure("No se ha podido copiar. Usa el enlace de la pantalla."); }
-  }
   return (
     <section className="space-y-5 border-2 border-hs-ink/20 bg-hs-paper p-5 sm:p-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+      <header className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
           <Monitor className="size-6 shrink-0 text-hs-teal" aria-hidden />
           <h2 className="font-bungee text-xl">{screen.key}</h2>
           <a href={path} target="_blank" rel="noreferrer" className="min-w-0 break-all text-sm text-hs-navy underline underline-offset-4">{path} <ExternalLink className="inline size-3" aria-hidden /></a>
-          <Button variant="outline" size="icon" aria-label={`Copiar URL de ${screen.key}`} onClick={() => void copy()}><Copy aria-hidden /></Button>
         </div>
-        <p className={`text-sm font-medium ${online.length ? "text-hs-teal" : "text-hs-brown"}`}>{online.length ? "Conectada" : "Sin conexión"}{pending ? " · orden pendiente" : online.length ? " · al día" : ""}</p>
+        <div className="flex shrink-0 gap-1">
+          <Button variant="ghost" size="icon" aria-label={`Recargar ${screen.key}`} title="Recargar pantalla" disabled={busy} onClick={() => void update("reload")}><RotateCcw aria-hidden /></Button>
+          {!online.length ? <Button variant="ghost" size="icon" className="text-hs-red" aria-label={`Borrar ${screen.key}`} title="Borrar pantalla" disabled={busy} onClick={() => void update("remove")}><Trash2 aria-hidden /></Button> : null}
+        </div>
       </header>
+        <p className={`text-sm font-medium ${online.length ? "text-hs-teal" : "text-hs-brown"}`}>{online.length ? "Conectada" : "Sin conexión"}{pending ? " · orden pendiente" : online.length ? " · al día" : ""}</p>
+
       {online.length > 1 ? <p className="border-l-4 border-hs-gold pl-3 text-sm">{online.length} conexiones comparten este identificador. Recibirán los mismos cambios. Usa otro nombre para controlarlas por separado.</p> : null}
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
         <label className="space-y-2 text-sm font-medium">Contenido
@@ -77,9 +77,6 @@ function ScreenCard({ screen, now }: { screen: Screen; now: number }) {
           {!screen.connections.length ? <li>Abre la URL en el navegador de la pantalla para conectarla.</li> : null}
         </ul>
       </details>
-      <div className="flex flex-wrap gap-3 border-t border-hs-ink/15 pt-4"><Button variant="outline" disabled={busy} onClick={() => void update("reload")}><RotateCcw aria-hidden /> Recargar esta pantalla</Button>
-        {!online.length ? <Button variant="outline" className="text-hs-red" disabled={busy} onClick={() => void update("remove")}><Trash2 aria-hidden /> Borrar pantalla</Button> : null}
-      </div>
       <FormError message={failure} /><FormNotice message={notice} />
     </section>
   );
