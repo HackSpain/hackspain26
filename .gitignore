@@ -4,6 +4,7 @@ dist/
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/make-interfaces-feel-better/
+!.agents/skills/ponytail/
 .next/
 out/
 
