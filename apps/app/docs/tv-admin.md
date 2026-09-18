@@ -13,16 +13,23 @@ para no borrar composiciones guardadas, pero `/tv` utiliza vistas predefinidas.
   pantallas reales se registran; `demo=1` es sólo una preview y no se registra.
 - `view` indica la vista inicial de una pantalla nueva. Una configuración guardada
   por el admin siempre tiene prioridad, también después de recargar el navegador.
-- En `/admin/tv` se puede preparar un nombre antes de abrirlo, copiar su URL, elegir
+- En `/admin/tv` se puede preparar un nombre antes de abrirlo, abrir su URL, elegir
   una vista, escribir un aviso y recargar únicamente esa pantalla.
 - Puedes borrar una pantalla desconectada y sus conexiones desde su tarjeta. Si se
   vuelve a abrir esa URL, se registrará de nuevo con la configuración inicial.
 - Dos navegadores con el mismo nombre comparten contenido y órdenes. El panel avisa
   y lista cada conexión con su URL, resolución y última respuesta. Para controlarlos
   por separado, usa nombres distintos.
-- Cada navegador comunica presencia y recibe órdenes mediante `POST /api/tv` cada
-  tres segundos, con timeout de ocho segundos. A los veinte segundos sin respuesta
-  aparece desconectado. Se conserva la última vista durante un fallo de conexión.
+- Las órdenes llegan mediante una suscripción pública de Convex a `tvPlayback.screenConfiguration`,
+  filtrada por identificador. Sólo los administradores pueden modificarlas.
+- Cada navegador comunica presencia mediante `POST /api/tv` cada 15 segundos y al
+  recibir una configuración, con timeout de ocho segundos. A los 45 segundos sin
+  señal aparece desconectado. La vista conserva su último contenido al perder conexión;
+  Convex reanuda la suscripción al reconectar. La respuesta HTTP no aplica órdenes
+  en los clientes nuevos, evitando que una respuesta antigua sobrescriba la suscripción.
+- El endpoint y la respuesta del heartbeat se mantienen para clientes anteriores:
+  despliega backend y frontend, y pulsa recargar en el admin. El cliente antiguo
+  recoge la orden por polling y carga la versión con suscripciones sin tocar el PC.
 - Las órdenes persisten. El panel indica si todavía están pendientes de recepción;
   esta confirmación no certifica que el monitor físico esté encendido ni que el
   contenido se haya renderizado sin errores.
