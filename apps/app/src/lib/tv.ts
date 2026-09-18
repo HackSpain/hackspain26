@@ -232,6 +232,12 @@ export const TV_PALETTE: readonly {
     group: "live",
   },
   {
+    kind: "liveModels",
+    label: "Modelos",
+    hint: "Ranking de modelos por tokens",
+    group: "live",
+  },
+  {
     kind: "liveLeaderboard",
     label: "Equipos",
     hint: "Clasificación animada",

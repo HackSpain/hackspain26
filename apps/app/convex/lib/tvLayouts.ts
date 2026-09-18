@@ -46,7 +46,8 @@ export const PANEL_V2_LAYOUT = [
   { kind: "clock", x: 48, y: 1, w: 50, h: 11, z: 1, text: "event", fontSize: 1.5 },
   { kind: "liveTokens", x: 2, y: 14, w: 62, h: 20, z: 1, text: "" },
   { kind: "liveLeaderboard", x: 2, y: 36, w: 30, h: 53, z: 1, text: "" },
-  { kind: "liveAgents", x: 34, y: 36, w: 30, h: 53, z: 1, text: "" },
+  { kind: "liveAgents", x: 34, y: 36, w: 30, h: 27, z: 1, text: "" },
+  { kind: "liveModels", x: 34, y: 65, w: 30, h: 24, z: 1, text: "" },
   {
     kind: "feed",
     x: 66,

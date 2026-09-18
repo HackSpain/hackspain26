@@ -21,6 +21,7 @@ import {
   LiveAgentsBox,
   LiveCommitsBox,
   LiveLeaderboardBox,
+  LiveModelsBox,
   LiveTokensBox,
 } from "./live-boxes";
 import { SponsorGridBox, SponsorTickerBox } from "./sponsor-boxes";
@@ -316,6 +317,8 @@ export function TvWidgetView({
       return <LiveAgentsBox />;
     case "liveTokens":
       return <LiveTokensBox />;
+    case "liveModels":
+      return <LiveModelsBox />;
     case "liveLeaderboard":
       return <LiveLeaderboardBox />;
     case "feed":

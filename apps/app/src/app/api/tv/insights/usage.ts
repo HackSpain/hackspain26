@@ -15,7 +15,78 @@ export type UsageRow = {
   requests: number;
 };
 
+/** One model over the whole hackathon window, every harness and team together. */
+export type ModelRow = {
+  /** `model.name` from the telemetry schema: the normalised grouping key. */
+  name: string;
+  family: string;
+  provider: string;
+  tokens: number;
+  requests: number;
+};
+
 export type UsageWindow = { startsAt: number; endsAt: number; buckets: number };
+
+const MODEL_ROWS = 12;
+
+/**
+ * Same dedupe as `usageSql`, then tokens and requests per normalised model
+ * name. A model served by several providers keeps one row.
+ */
+export function modelsSql(table: string, window: UsageWindow): string {
+  if (!TABLE_NAME.test(table)) {
+    throw new Error("Invalid telemetry table name");
+  }
+  const start = Math.floor(window.startsAt / 1000);
+  const end = Math.floor(window.endsAt / 1000);
+  return `
+WITH events AS (
+  SELECT
+    toString(\`hackspain.user.id\`) AS userId,
+    toString(\`event.id\`) AS id,
+    any(toString(\`gen_ai.request.model\`)) AS model,
+    any(toString(\`hackspain.model.family\`)) AS family,
+    any(toString(\`gen_ai.provider.name\`)) AS provider,
+    any(intDiv(toInt64OrZero(toString(timeUnixNano)), 1000000000)) AS at,
+    any(toInt64OrZero(toString(\`hackspain.usage.total_tokens\`))) AS total
+  FROM ${table}
+  WHERE toString(eventName) = 'hackspain.usage'
+  GROUP BY userId, id
+)
+SELECT
+  model AS name,
+  any(family) AS family,
+  any(provider) AS provider,
+  sum(total) AS tokens,
+  count() AS requests
+FROM events
+WHERE at >= ${start} AND at < ${end} AND model != ''
+GROUP BY model
+ORDER BY tokens DESC, model
+LIMIT ${MODEL_ROWS}
+`.trim();
+}
+
+export function parseModelRows(data: unknown[]): ModelRow[] {
+  const rows: ModelRow[] = [];
+  for (const entry of data) {
+    if (typeof entry !== "object" || entry === null) {
+      continue;
+    }
+    const row = entry as Record<string, unknown>;
+    if (typeof row.name !== "string" || !row.name) {
+      continue;
+    }
+    rows.push({
+      family: typeof row.family === "string" && row.family ? row.family : "other",
+      name: row.name,
+      provider: typeof row.provider === "string" && row.provider ? row.provider : "unknown",
+      requests: toCount(row.requests),
+      tokens: toCount(row.tokens),
+    });
+  }
+  return rows;
+}
 
 /**
  * One aggregate over the OTLP logs table (see
@@ -104,11 +175,11 @@ export function parseUsageRows(data: unknown[]): UsageRow[] {
 }
 
 export type UsageResult =
-  | { status: "ok"; rows: UsageRow[] }
+  | { status: "ok"; rows: UsageRow[]; models: ModelRow[] }
   /** No RawTree key on this deployment. */
-  | { status: "unconfigured"; rows: [] }
+  | { status: "unconfigured"; rows: []; models: [] }
   /** The table does not exist until the first event of the hackathon lands. */
-  | { status: "empty"; rows: [] };
+  | { status: "empty"; rows: []; models: [] };
 
 /**
  * The dashboard uses one `read_write` RawTree key for ingestion and queries.
@@ -122,7 +193,7 @@ export async function fetchUsage(
   const apiKey = process.env.RAWTREE_API_KEY;
   const database = process.env.RAWTREE_DATABASE;
   if (!apiKey || !database) {
-    return { rows: [], status: "unconfigured" };
+    return { models: [], rows: [], status: "unconfigured" };
   }
   const rawtree = new RawTree({
     apiKey,
@@ -134,14 +205,24 @@ export async function fetchUsage(
     userAgent: "hackspain-dashboard/1.0",
   });
   try {
-    const result = await rawtree.query({
-      signal: AbortSignal.timeout(15_000),
-      sql: usageSql(OTLP_LOGS_TABLE, window),
-    });
-    return { rows: parseUsageRows(result.data), status: "ok" };
+    const [usage, models] = await Promise.all([
+      rawtree.query({
+        signal: AbortSignal.timeout(15_000),
+        sql: usageSql(OTLP_LOGS_TABLE, window),
+      }),
+      rawtree.query({
+        signal: AbortSignal.timeout(15_000),
+        sql: modelsSql(OTLP_LOGS_TABLE, window),
+      }),
+    ]);
+    return {
+      models: parseModelRows(models.data),
+      rows: parseUsageRows(usage.data),
+      status: "ok",
+    };
   } catch (error) {
     if (error instanceof RawTreeError && isMissingTable(error)) {
-      return { rows: [], status: "empty" };
+      return { models: [], rows: [], status: "empty" };
     }
     throw error;
   }

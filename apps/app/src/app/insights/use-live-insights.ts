@@ -23,6 +23,8 @@ export type LiveInsightData = {
   teams: Team[];
   /** Technologies per project; `auto` of `total` were read from a repo. */
   stacks: TvInsights["stacks"];
+  /** Models by tokens over the window, most used first. */
+  models: TvInsights["models"];
   /** Minutes each of the 24 buckets covers; the hackathon is not 12 hours. */
   bucketMinutes: number;
   startsAt?: number;
@@ -31,6 +33,7 @@ export type LiveInsightData = {
 
 const EMPTY: LiveInsightData = {
   bucketMinutes: 30,
+  models: [],
   samples: [],
   stacks: { auto: 0, rows: [], total: 0 },
   status: "loading",
@@ -126,6 +129,8 @@ export function toInsightData(payload: TvInsights): LiveInsightData {
   return {
     bucketMinutes,
     endsAt,
+    // Older servers answer without `models`; the box then shows its empty state.
+    models: payload.models ?? [],
     samples: [...byKey.values()].toSorted((a, b) => a.bucket - b.bucket),
     stacks: payload.stacks,
     startsAt,

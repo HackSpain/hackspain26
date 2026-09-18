@@ -19,6 +19,7 @@ import {
   NO_TEAM_ID,
   useLiveInsights,
 } from "@/app/insights/use-live-insights";
+import type { LiveInsightData } from "@/app/insights/use-live-insights";
 import { cn } from "@/lib/utils";
 import {
   FLASH_LAYER_CLASS,
@@ -354,6 +355,181 @@ export function LiveAgentsBox() {
             />
           );
         })}
+      </ol>
+    </div>
+  );
+}
+
+const MODEL_ROWS = 5;
+const OTHER_FAMILY = { color: "#8a7a6a", mark: "AI" };
+const FAMILY_STYLE: Record<string, { color: string; mark: string }> = {
+  claude: { color: "#d96b2a", mark: "CL" },
+  gpt: { color: "#35858a", mark: "GPT" },
+  gemini: { color: "#1e3958", mark: "GEM" },
+  qwen: { color: "#8b6b9f", mark: "QW" },
+  other: OTHER_FAMILY,
+};
+
+type ModelRow = LiveInsightData["models"][number];
+
+function ModelRowView({
+  model,
+  rank,
+  share,
+  total,
+  rows,
+  rowRef,
+}: {
+  model: ModelRow;
+  rank: number;
+  share: number;
+  total: number;
+  rows: number;
+  rowRef: (node: HTMLElement | null) => void;
+}) {
+  const reduced = usePrefersReducedMotion();
+  const style = FAMILY_STYLE[model.family] ?? OTHER_FAMILY;
+  const tokens = useCountUp(model.tokens, compact, { fromZero: true });
+  const bar = useBarScale(share);
+  const name = useRef<HTMLSpanElement>(null);
+  const shine = useRef<HTMLSpanElement>(null);
+  const flash = useRef<HTMLSpanElement>(null);
+  const previous = useRef<{ tokens: number; rank: number } | null>(null);
+
+  // The name types itself in from noise the first time the model shows up.
+  useGSAP(
+    () => {
+      if (reduced || !name.current) {return;}
+      gsap.to(name.current, {
+        duration: 0.9,
+        delay: 0.35 + rank * 0.08,
+        scrambleText: { text: model.name, chars: "lowerCase", speed: 0.6, revealDelay: 0.15 },
+      });
+    },
+    { dependencies: [model.name, reduced] },
+  );
+
+  useLayoutEffect(() => {
+    const before = previous.current;
+    previous.current = { rank, tokens: model.tokens };
+    if (before === null || reduced) {return;}
+    const timeline = gsap.timeline();
+    if (model.tokens > before.tokens && shine.current) {
+      timeline.fromTo(
+        shine.current,
+        { xPercent: -120, opacity: 0.85 },
+        { xPercent: 120, opacity: 0, duration: 0.9, ease: TV_EASE_OUT },
+        0,
+      );
+    }
+    if (rank < before.rank && flash.current) {
+      const flashTween = flashGold(flash.current, 1.6);
+      if (flashTween) {timeline.add(flashTween, 0);}
+    }
+    return () => {
+      settle(timeline);
+    };
+  }, [model.tokens, rank, reduced]);
+
+  return (
+    <li
+      ref={rowRef}
+      className="absolute inset-x-0 top-0 flex items-center gap-[0.7cqw] pr-[0.2cqw]"
+      style={{ height: `${100 / rows}%` }}
+    >
+      <span ref={flash} data-flash aria-hidden className={FLASH_LAYER_CLASS} />
+      <span
+        className={cn(
+          "font-bungee flex w-[2.2cqw] shrink-0 items-center justify-center py-[0.25cqw] text-[clamp(0.45rem,0.6cqw,0.85rem)]",
+          rank === 0 ? "text-hs-gold" : "text-hs-paper",
+        )}
+        style={{ backgroundColor: rank === 0 ? "#2a170f" : style.color }}
+      >
+        {style.mark}
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-[0.25cqw]">
+        <span className="flex items-baseline justify-between gap-[0.6cqw]">
+          <span
+            ref={name}
+            className="truncate font-mono text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold"
+          >
+            {model.name}
+          </span>
+          <span className="shrink-0 text-[clamp(0.5rem,0.65cqw,0.9rem)] text-hs-brown tabular-nums">
+            {percent(model.tokens, total)}
+          </span>
+        </span>
+        <span className="relative h-[0.45cqw] w-full overflow-hidden bg-hs-ink/8">
+          <span
+            ref={bar}
+            className="absolute inset-0 origin-left scale-x-0 overflow-hidden"
+            style={{ backgroundColor: style.color }}
+          >
+            <span
+              ref={shine}
+              aria-hidden
+              className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-hs-paper to-transparent opacity-0"
+            />
+          </span>
+        </span>
+      </span>
+      <span
+        ref={tokens}
+        className="w-[3.6cqw] shrink-0 text-right font-mono text-[clamp(0.6rem,0.85cqw,1.15rem)] tabular-nums"
+      >
+        {compact(model.tokens)}
+      </span>
+    </li>
+  );
+}
+
+/** Which models the agents are actually calling, ranked by tokens over the hackathon. */
+export function LiveModelsBox() {
+  const data = useLiveInsights();
+  const ranked = useMemo(
+    () =>
+      data.models
+        .filter((model) => model.tokens > 0)
+        .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
+        .slice(0, MODEL_ROWS),
+    [data.models],
+  );
+  const total = data.models.reduce((sum, model) => sum + model.tokens, 0);
+  const max = Math.max(1, ...ranked.map((model) => model.tokens));
+  const order = useMemo(() => ranked.map((model) => model.name), [ranked]);
+  const register = useRankRows(order);
+  const stable = useMemo(
+    () => ranked.toSorted((a, b) => a.name.localeCompare(b.name)),
+    [ranked],
+  );
+
+  return (
+    <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
+      <LiveHeader
+        title="Modelos"
+        aside={
+          data.models.length > 0
+            ? `${data.models.length} en uso · por tokens`
+            : "por tokens"
+        }
+      />
+      {ranked.length === 0 ? (
+        <p className="mt-[0.6cqw] text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
+          {data.status === "loading" ? "Cargando modelos…" : "Sin modelos todavía."}
+        </p>
+      ) : null}
+      <ol className="relative mt-[0.5cqw] min-h-0 flex-1">
+        {stable.map((model) => (
+          <ModelRowView
+            key={model.name}
+            model={model}
+            rank={order.indexOf(model.name)}
+            share={model.tokens / max}
+            total={total}
+            rows={Math.max(stable.length, 4)}
+            rowRef={register(model.name)}
+          />
+        ))}
       </ol>
     </div>
   );
