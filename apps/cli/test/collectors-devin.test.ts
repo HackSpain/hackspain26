@@ -151,6 +151,10 @@ describe("devin", () => {
       )
     ).toBeNull();
     expect(normalizeDevin({ ...row, chat_message: "{" }, SESSION)).toBeNull();
+    expect(
+      normalizeDevin({ ...row, chat_message: "null" }, SESSION)
+    ).toBeNull();
+    expect(normalizeDevin({ ...row, chat_message: "[]" }, SESSION)).toBeNull();
   });
 
   test("collect: dedupes the two chains, announces once, restart reads only new rows", async () => {

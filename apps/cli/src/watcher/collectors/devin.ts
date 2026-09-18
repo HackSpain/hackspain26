@@ -48,12 +48,16 @@ export function normalizeDevin(
   row: MessageRow,
   session: SessionRow | undefined
 ): RawEvent | null {
-  let message: ChatMessage;
+  let parsed: unknown;
   try {
-    message = JSON.parse(row.chat_message) as ChatMessage;
+    parsed = JSON.parse(row.chat_message);
   } catch {
     return null;
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return null;
+  }
+  const message = parsed as ChatMessage;
   const metrics = message.metadata?.metrics;
   if (message.role !== "assistant" || !metrics || !message.message_id) {
     return null;

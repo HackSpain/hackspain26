@@ -144,50 +144,49 @@ export function normalizeAntigravityStep(
   if (!row.metadata) {
     return null;
   }
-  let fields: ProtoField[];
   try {
-    fields = decodeMessage(row.metadata);
+    const fields = decodeMessage(row.metadata);
+    const usage = nested(fields, STEP_USAGE);
+    const created = nested(fields, STEP_CREATED);
+    if (!(usage && created)) {
+      return null;
+    }
+    const seconds = integer(created, TIMESTAMP_SECONDS);
+    if (seconds === null) {
+      return null;
+    }
+    const nanos = integer(created, TIMESTAMP_NANOS) ?? 0;
+    const input = integer(usage, USAGE_INPUT) ?? 0;
+    const output = integer(usage, USAGE_OUTPUT) ?? 0;
+    const cacheRead = integer(usage, USAGE_CACHE_READ) ?? 0;
+    if (input + output + cacheRead === 0) {
+      return null;
+    }
+    const code = integer(usage, USAGE_MODEL);
+    const model =
+      (code === null ? undefined : context.models.get(code)) ?? "unknown";
+    const thoughts = integer(usage, USAGE_THOUGHTS);
+    return {
+      eventId: eventId(ANTIGRAVITY, context.sessionId, row.idx),
+      harness: ANTIGRAVITY,
+      model: { family: modelFamily(model), provider: "google", raw: model },
+      occurredAt: new Date(
+        seconds * 1000 + Math.floor(nanos / NANOS_PER_MS)
+      ).toISOString(),
+      project: projectRef(context.cwd),
+      sessionId: context.sessionId,
+      tokens: {
+        cacheRead,
+        cacheWrite: 0,
+        input,
+        output,
+        ...(thoughts === null ? {} : { reasoning: thoughts }),
+      },
+      type: "usage",
+    };
   } catch {
     return null;
   }
-  const usage = nested(fields, STEP_USAGE);
-  const created = nested(fields, STEP_CREATED);
-  if (!(usage && created)) {
-    return null;
-  }
-  const seconds = integer(created, TIMESTAMP_SECONDS);
-  if (seconds === null) {
-    return null;
-  }
-  const nanos = integer(created, TIMESTAMP_NANOS) ?? 0;
-  const input = integer(usage, USAGE_INPUT) ?? 0;
-  const output = integer(usage, USAGE_OUTPUT) ?? 0;
-  const cacheRead = integer(usage, USAGE_CACHE_READ) ?? 0;
-  if (input + output + cacheRead === 0) {
-    return null;
-  }
-  const code = integer(usage, USAGE_MODEL);
-  const model =
-    (code === null ? undefined : context.models.get(code)) ?? "unknown";
-  const thoughts = integer(usage, USAGE_THOUGHTS);
-  return {
-    eventId: eventId(ANTIGRAVITY, context.sessionId, row.idx),
-    harness: ANTIGRAVITY,
-    model: { family: modelFamily(model), provider: "google", raw: model },
-    occurredAt: new Date(
-      seconds * 1000 + Math.floor(nanos / NANOS_PER_MS)
-    ).toISOString(),
-    project: projectRef(context.cwd),
-    sessionId: context.sessionId,
-    tokens: {
-      cacheRead,
-      cacheWrite: 0,
-      input,
-      output,
-      ...(thoughts === null ? {} : { reasoning: thoughts }),
-    },
-    type: "usage",
-  };
 }
 
 export function antigravityConversationsDir(): string {

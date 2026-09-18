@@ -290,7 +290,19 @@ describe("antigravity", () => {
     ).toBeNull();
     expect(
       normalizeAntigravityStep(
-        { idx: 10, metadata: message(field(9, message(field(2, 5)))) },
+        {
+          idx: 10,
+          metadata: message(
+            field(1, message(field(1, Math.floor(at.getTime() / 1000)))),
+            field(9, Uint8Array.from([10, 255]))
+          ),
+        },
+        context
+      )
+    ).toBeNull();
+    expect(
+      normalizeAntigravityStep(
+        { idx: 11, metadata: message(field(9, message(field(2, 5)))) },
         context
       )
     ).toBeNull();
