@@ -173,7 +173,7 @@ export function TeamCliDialog({ children }: { children: ReactNode }) {
           <p className="font-bungee text-xs">3 · Gestiona el equipo</p>
           <CodeBlock>
             {
-              "hackspain team repo <url>      # vincula el repo de GitHub\nhackspain team transfer [member]\nhackspain team dissolve\nhackspain stack set nextjs convex claude-code"
+              "hackspain team repo <url>      # vincula el repo público de GitHub\nhackspain team transfer [member]\nhackspain team dissolve\nhackspain stack set nextjs convex claude-code"
             }
           </CodeBlock>
         </div>

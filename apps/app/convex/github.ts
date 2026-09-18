@@ -54,7 +54,10 @@ export const startLink = authedMutation({
     const url = new URL("https://github.com/login/oauth/authorize");
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", githubRedirectUri());
-    url.searchParams.set("scope", "read:user repo");
+    // Public repository contents do not require a repository scope. In
+    // particular, `public_repo` would still grant write access to every public
+    // repo, so only request the profile permission used to link the account.
+    url.searchParams.set("scope", "read:user");
     url.searchParams.set("state", state);
     return { url: url.toString() };
   },
