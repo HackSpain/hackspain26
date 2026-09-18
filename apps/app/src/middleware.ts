@@ -3,6 +3,7 @@ import {
   createRouteMatcher,
   nextjsMiddlewareRedirect,
 } from "@convex-dev/auth/nextjs/server";
+import { RECEPTION_PATH } from "@/lib/reception";
 
 // /api/cli/* authenticates with a bearer token, not the cookie session.
 // /api/files/* accepts either and does its own redirect, so image links from
@@ -24,6 +25,7 @@ const isPublicRoute = createRouteMatcher([
   "/tv",
   "/api/tv",
   "/betterstack(.*)",
+  RECEPTION_PATH,
 ]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {

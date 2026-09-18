@@ -21,10 +21,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { contentWidth, fullBleed } from "@/lib/layout";
+import { RECEPTION_PATH } from "@/lib/reception";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "CRM" },
+  { href: "/admin/check-in", label: "Accesos" },
   { href: "/admin/types", label: "Tipos" },
   { href: "/admin/perks", label: "Perks" },
   { href: "/admin/applications", label: "Solicitudes" },
@@ -150,8 +152,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useConvexAuth();
   const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
 
-  // The public venue screen brings its own full-screen layout.
-  if (pathname === "/tv") {
+  // Public operational screens bring their own full-screen layout.
+  if (pathname === "/tv" || pathname === RECEPTION_PATH) {
     return <>{children}</>;
   }
 
