@@ -21,6 +21,7 @@ import type * as github from "../github.js";
 import type * as githubFeed from "../githubFeed.js";
 import type * as http from "../http.js";
 import type * as judging from "../judging.js";
+import type * as lib_accessCodeEmail from "../lib/accessCodeEmail.js";
 import type * as lib_attendance from "../lib/attendance.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_customFunctions from "../lib/customFunctions.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   githubFeed: typeof githubFeed;
   http: typeof http;
   judging: typeof judging;
+  "lib/accessCodeEmail": typeof lib_accessCodeEmail;
   "lib/attendance": typeof lib_attendance;
   "lib/auth": typeof lib_auth;
   "lib/customFunctions": typeof lib_customFunctions;
