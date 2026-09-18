@@ -123,7 +123,7 @@ export const mine = onboardedQuery({
   returns: v.union(passReturn, v.null()),
 });
 
-async function checkIn(ctx: MutationCtx, value: string, checkedInBy?: Id<"users">) {
+async function checkIn(ctx: MutationCtx, value: string) {
   const eventSettings = await ctx.db
     .query("eventSettings")
     .withIndex("by_key", (q) => q.eq("key", "main"))
@@ -176,8 +176,6 @@ async function checkIn(ctx: MutationCtx, value: string, checkedInBy?: Id<"users"
   const checkedInAt = Date.now();
   await ctx.db.patch(pass._id, {
     checkedInAt,
-    checkedInBy,
-    checkedInVia: checkedInBy ? "admin" : "reception_url",
     signupId: pass.signupId ?? resolvedSignup?._id,
     userId: pass.userId ?? user?._id,
     updatedAt: checkedInAt,
@@ -193,7 +191,7 @@ async function checkIn(ctx: MutationCtx, value: string, checkedInBy?: Id<"users"
 
 export const scan = adminMutation({
   args: { value: v.string() },
-  handler: async (ctx, args) => await checkIn(ctx, args.value, ctx.user._id),
+  handler: async (ctx, args) => await checkIn(ctx, args.value),
   returns: scanReturn,
 });
 
@@ -222,6 +220,65 @@ export const staffStatus = query({
   returns: staffStatusReturn,
 });
 
+// Public venue projection: deliberately excludes email, access codes and contact details.
+// The first response establishes a server-clock baseline so opening a screen never
+// replays the day's arrivals. Subsequent subscriptions also catch up after reconnects.
+export const arrivals = query({
+  args: { since: v.optional(v.number()) },
+  returns: v.object({
+    serverTime: v.number(),
+    checkedIn: v.number(),
+    entries: v.array(v.object({
+      id: v.string(),
+      checkedInAt: v.number(),
+      number: v.number(),
+      name: v.string(),
+      image: v.union(v.string(), v.null()),
+      role: v.string(),
+      city: v.string(),
+      company: v.string(),
+      university: v.string(),
+      skills: v.array(v.string()),
+    })),
+  }),
+  handler: async (ctx, { since }) => {
+    const passes = (await ctx.db.query("eventPasses").collect())
+      .filter((pass): pass is Doc<"eventPasses"> & { checkedInAt: number } =>
+        pass.status === "active" && pass.checkedInAt !== undefined)
+      .toSorted((a, b) => (a.checkedInAt - b.checkedInAt) || a._id.localeCompare(b._id));
+    const entries = await Promise.all(passes.flatMap((pass, index) => {
+      if (since === undefined || pass.checkedInAt < since) {
+        return [];
+      }
+      return [(async () => {
+        const signup = pass.signupId ? await ctx.db.get(pass.signupId) : null;
+        let user: Doc<"users"> | null = null;
+        if (pass.userId) {
+          user = await ctx.db.get(pass.userId);
+        } else if (signup) {
+          user = await findUserByEmail(ctx, signup.email);
+        }
+        const card = user?.directory;
+        return {
+          id: `${pass._id}:${pass.checkedInAt}`,
+          checkedInAt: pass.checkedInAt,
+          number: index + 1,
+          name: user?.name?.trim() || signup?.fullName || "Hacker",
+          image: user?.avatarId
+            ? await ctx.storage.getUrl(user.avatarId)
+            : user?.image || null,
+          role: card?.role || "Hacker",
+          city: card?.city || "",
+          company: card?.company || "",
+          university: card?.university || "",
+          skills: card?.skills.slice(0, 4) || [],
+        };
+      })()];
+    }));
+    return { serverTime: Date.now(), checkedIn: passes.length, entries };
+  },
+});
+
 export const staffScan = mutation({
   args: { value: v.string() },
   handler: async (ctx, args) => {
@@ -240,8 +297,6 @@ export const staffUndoCheckIn = mutation({
     }
     await ctx.db.patch(pass._id, {
       checkedInAt: undefined,
-      checkedInBy: undefined,
-      checkedInVia: undefined,
       updatedAt: Date.now(),
     });
     return null;
@@ -258,8 +313,6 @@ export const undoCheckIn = adminMutation({
     }
     await ctx.db.patch(pass._id, {
       checkedInAt: undefined,
-      checkedInBy: undefined,
-      checkedInVia: undefined,
       updatedAt: Date.now(),
     });
     return null;

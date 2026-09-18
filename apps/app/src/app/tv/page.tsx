@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { ArrivalDemo, LiveArrivals } from "@/components/arrivals/screen";
 import type { TvSnapshot } from "@convex/tvPlayback";
 import { useClock } from "@/components/tv/motion";
 import { TvStage } from "@/components/tv/stage";
@@ -146,7 +147,7 @@ function TvScreen({ snapshot }: { snapshot: TvSnapshot | undefined }) {
   return <TvComposition widgets={snapshot?.widgets} />;
 }
 
-export default function TvPage() {
+function StandardTvPage() {
   const { snapshot, connected, revision } = useTvPlayback();
   return (
     <>
@@ -156,4 +157,16 @@ export default function TvPage() {
     {!connected && <p role="status" className="fixed right-4 bottom-3 z-50 bg-hs-ink/90 px-3 py-1 text-sm text-hs-paper">Reconectando · mantenemos la última pantalla</p>}
     </>
   );
+}
+
+function TvRoute() {
+  const params = useSearchParams();
+  if (params.get("view") === "entradas") {
+    return params.get("demo") === "1" ? <ArrivalDemo /> : <LiveArrivals />;
+  }
+  return <StandardTvPage />;
+}
+
+export default function TvPage() {
+  return <Suspense fallback={<div className="h-dvh bg-hs-ink" />}><TvRoute /></Suspense>;
 }

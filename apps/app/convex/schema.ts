@@ -42,10 +42,6 @@ export default defineSchema({
     status: v.union(v.literal("active"), v.literal("revoked")),
     codeSentAt: v.optional(v.number()),
     checkedInAt: v.optional(v.number()),
-    checkedInBy: v.optional(v.id("users")),
-    checkedInVia: v.optional(
-      v.union(v.literal("admin"), v.literal("reception_url"))
-    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
