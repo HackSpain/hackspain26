@@ -3,8 +3,12 @@ import type { Command } from "commander";
 import { api, openSession } from "../lib/api";
 import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
-import { usageError } from "../lib/errors";
-import { requireOnboarded } from "../lib/me";
+import { CliError, EVENT_CLOSED_HINT, EXIT, usageError } from "../lib/errors";
+import {
+  closedEventMessage,
+  formatEventDate,
+  requireOnboarded,
+} from "../lib/me";
 import { firstName, formatWhen, uiFor } from "../lib/output";
 import { c } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
@@ -12,6 +16,7 @@ import { acquireWatchLock, runWatch } from "../watcher";
 import { catchUpSince, openMemory } from "../watcher/memory";
 import { startScreen, summaryLines } from "../watcher/screen";
 import { createState, feedLive, scrollFeed } from "../watcher/state";
+import { collectionWindow } from "../watcher/window";
 
 type WatchFlags = {
   once?: boolean;
@@ -62,18 +67,36 @@ export function registerWatch(program: Command): void {
         ? positiveNumber("--backfill", flags.backfill) * 3_600_000
         : undefined;
       const memory = openMemory();
-      // Default: everything since the last scan, so usage while the watcher
-      // was closed is reported too. An explicit --backfill overrides it.
-      const since = catchUpSince(memory.data, backfillMs);
-      const catchingUp =
-        backfillMs === undefined && since < Date.now() - 60_000;
-
       const session = await openSession(ctx, { requireAuth: true });
-      const me = await requireOnboarded(session);
-      const [team, submission] = await Promise.all([
-        session.client.query(api.teams.mine, {}),
-        session.client.query(api.submissions.mine, {}),
-      ]);
+      // After the hackathon the watcher still runs, to report whatever the
+      // window holds that was never sent; before it there is nothing to do.
+      const me = await requireOnboarded(session, { allowClosed: true });
+      if (!me.event.open && me.event.phase !== "after") {
+        throw new CliError(closedEventMessage(me.event), {
+          code: "EVENT_CLOSED",
+          exitCode: EXIT.INELIGIBLE,
+          hint: EVENT_CLOSED_HINT,
+        });
+      }
+      // With a scheduled hackathon: the whole window, whenever the watcher
+      // was opened. Otherwise everything since the last scan, so usage while
+      // the watcher was closed is reported too; --backfill overrides that.
+      const window = collectionWindow(
+        me,
+        catchUpSince(memory.data, backfillMs)
+      );
+      const { since } = window;
+      const catchingUp =
+        !window.scheduled &&
+        backfillMs === undefined &&
+        since < Date.now() - 60_000;
+      // Team and project are hackathon-window functions; closed means none.
+      const [team, submission] = me.event.open
+        ? await Promise.all([
+            session.client.query(api.teams.mine, {}),
+            session.client.query(api.submissions.mine, {}),
+          ])
+        : [null, null];
       const releaseLock = acquireWatchLock();
       const uploadUrl = flags.upload
         ? (flags.sinkUrl ??
@@ -89,6 +112,7 @@ export function registerWatch(program: Command): void {
         once: Boolean(flags.once),
         since,
         toast: flags.toast,
+        until: window.until,
         uploadUrl,
         verbose: Boolean(flags.verbose),
       };
@@ -202,6 +226,13 @@ export function registerWatch(program: Command): void {
         }
         if (catchingUp) {
           ui.line(c.dim(`Catching up on usage since ${formatWhen(since)}.`));
+        }
+        if (window.scheduled && window.until !== undefined) {
+          ui.line(
+            c.dim(
+              `Reporting AI usage from ${formatEventDate(since)} to ${formatEventDate(window.until)}, including what happened while this was closed. Nothing outside that window is sent.`
+            )
+          );
         }
         const code = await runWatch(options, {
           announce,

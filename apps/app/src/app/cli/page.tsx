@@ -213,8 +213,9 @@ export default function CliPage() {
           description="Pensado para quedarse abierto en su propia terminal todo el fin de semana: detecta tus harnesses de IA (Claude Code, Codex, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline), muestra el feed y los avisos de la organización, y reporta uso. Nunca salen prompts ni rutas completas de tu máquina."
         >
           <CommandRow command="hackspain watch [--interval 30] [--backfill <hours>] [--no-upload] [--no-images] [--once]">
-            Arranca el watcher; recuerda lo reportado entre sesiones y recoge
-            el uso que hubo mientras estaba cerrado.{" "}
+            Arranca el watcher; reporta todo el uso de IA de la ventana de la
+            hackathon, también el de cuando estaba cerrado, y nada de fuera de
+            ella.{" "}
             <code className="font-mono text-xs">q</code> sale,{" "}
             <code className="font-mono text-xs">p</code> pausa,{" "}
             <code className="font-mono text-xs">↑↓</code> recorren el feed y{" "}

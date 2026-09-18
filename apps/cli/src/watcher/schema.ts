@@ -92,6 +92,29 @@ export function modelFamily(raw: string): ModelFamily {
   return "other";
 }
 
+/**
+ * `tokens.output` includes reasoning for every harness. Claude, Codex and
+ * OpenCode report it that way; Gemini-style usage keeps thoughts next to the
+ * candidates count instead. The harness's own total settles which one a
+ * record is: when it only adds up with the thoughts on top, they are added.
+ * Without a total, `separateByDefault` says what the upstream API does.
+ */
+export function outputWithReasoning(usage: {
+  prompt: number;
+  output: number;
+  reasoning: number;
+  total: number;
+  separateByDefault: boolean;
+}): number {
+  const { prompt, output, reasoning, total } = usage;
+  if (reasoning === 0) {
+    return output;
+  }
+  const separate =
+    total > 0 ? total >= prompt + output + reasoning : usage.separateByDefault;
+  return separate ? output + reasoning : output;
+}
+
 export function eventId(
   harness: HarnessId,
   sessionId: string,

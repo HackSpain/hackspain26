@@ -48,6 +48,7 @@ import {
   WATCH_IMAGE_BOUNDS,
 } from "./state";
 import type { Collector, CollectorContext } from "./types";
+import { inWindow } from "./window";
 
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
@@ -63,6 +64,8 @@ export type WatchOptions = {
   once: boolean;
   intervalMs: number;
   since: number;
+  /** Exclusive end of the collection window (the hackathon's end). */
+  until?: number;
   toast: boolean;
   /** Where batches are uploaded; undefined disables the upload sink. */
   uploadUrl?: string;
@@ -228,6 +231,12 @@ export async function scanOnce(
           result.skipped++;
           continue;
         }
+        // Collectors drop what is older than `since` themselves; the end of
+        // the window is enforced here, on the harness's own timestamp.
+        if (!inWindow(raw.occurredAt, ctx)) {
+          result.skipped++;
+          continue;
+        }
         const event = stamp(raw, identity);
         const problems = validateEvent(event);
         if (problems.length > 0) {
@@ -304,7 +313,21 @@ export async function runWatch(
     ...(teamId ? { teamId } : {}),
     clientVersion: VERSION,
   });
-  const ctx: CollectorContext = { cursors, log, since: options.since };
+  const ctx: CollectorContext = {
+    cursors,
+    log,
+    since: options.since,
+    until: options.until,
+  };
+  // An earlier `since` than the cursors were built with (the first windowed
+  // run, or organisers moving the start) means reading the logs again. What
+  // this machine already reported is in the spool, so it is not sent twice.
+  if (cursors.coverFrom(options.since)) {
+    for (const event of deps.history ?? readSpool()) {
+      recent.add(event.eventId);
+    }
+    log("reading harness logs again to cover the whole hackathon window");
+  }
 
   const discovered: string[] = [];
   for (const c of collectors) {

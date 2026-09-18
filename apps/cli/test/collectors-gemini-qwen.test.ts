@@ -78,7 +78,8 @@ describe("gemini-cli collector", () => {
       cacheRead: 9000,
       cacheWrite: 0,
       input: 3000,
-      output: 340,
+      // 340 candidates + 120 thoughts: output includes reasoning everywhere.
+      output: 460,
       reasoning: 120,
     });
     expect(first?.model).toEqual({
@@ -219,7 +220,8 @@ describe("qwen-code collector", () => {
       cacheRead: 6000,
       cacheWrite: 0,
       input: 2000,
-      output: 210,
+      // 210 candidates + 40 thoughts, as the record's total says.
+      output: 250,
       reasoning: 40,
     });
     expect(usage[0]?.model).toEqual({

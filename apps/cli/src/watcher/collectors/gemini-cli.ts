@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { projectRef } from "../project";
 import type { RawEvent } from "../schema";
-import { eventId, modelFamily } from "../schema";
+import { eventId, modelFamily, outputWithReasoning } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
@@ -113,12 +113,19 @@ export function normalizeGeminiCli(
   const t = value.tokens;
   const prompt = count(t.input);
   const cached = Math.min(count(t.cached), prompt);
-  const output = count(t.output);
+  const reasoning = count(t.thoughts);
+  // The Gemini API counts thoughts apart from the candidates.
+  const output = outputWithReasoning({
+    output: count(t.output),
+    prompt,
+    reasoning,
+    separateByDefault: true,
+    total: count(t.total),
+  });
   if (prompt === 0 && output === 0 && count(t.total) === 0) {
     return null;
   }
   const model = value.model ?? "gemini";
-  const reasoning = count(t.thoughts);
   const sessionId = state.sessionId ?? fallbackSessionId;
   return {
     eventId: eventId(GEMINI_CLI, sessionId, value.id),
