@@ -64,10 +64,11 @@ shapes or recorder source and fixtures, not from a local install; collectors log
 anything they cannot parse. Gemini-style prompt counts include the cached part, so `input` is
 the prompt minus the cache read for those two.
 
-Gemini-style usage keeps thoughts next to the candidates count, while Claude, Codex and OpenCode
-already include reasoning in their output. `outputWithReasoning` (`schema.ts`) settles it per
+Gemini-style usage and OpenCode (so Kilo Code too) keep reasoning next to the output count, while
+Claude and Codex already include it. OpenCode was checked against a real database: total 31456 =
+input 39 + output 74 + reasoning 111 + cache read 31232. `outputWithReasoning` (`schema.ts`) settles it per
 record from the harness's own total: thoughts are added only when the total counts them apart.
-Without a total, Gemini CLI adds them (Gemini API semantics) and Qwen Code does not (it converts
+Without a total, Gemini CLI and OpenCode add them and Qwen Code does not (it converts
 OpenAI-style usage, where completion tokens include reasoning).
 
 ## Collection window

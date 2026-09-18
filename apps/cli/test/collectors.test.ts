@@ -363,6 +363,8 @@ describe("opencode", () => {
             input: 100,
             output: 20,
             reasoning: 5,
+            // As OpenCode writes it: reasoning counted next to the output.
+            total: 175,
           },
         })
       );
@@ -399,7 +401,8 @@ describe("opencode", () => {
       cacheRead: 50,
       cacheWrite: 0,
       input: 100,
-      output: 20,
+      // 20 output + 5 reasoning: output includes reasoning for every harness.
+      output: 25,
       reasoning: 5,
     });
     expect(first[1]?.costUsd).toBe(0.01);
