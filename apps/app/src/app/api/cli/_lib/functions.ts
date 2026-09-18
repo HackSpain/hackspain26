@@ -32,6 +32,7 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "users:setName": mutation(api.users.setName),
   "users:setNotificationConsent": mutation(api.users.setNotificationConsent),
   "users:setPhone": mutation(api.users.setPhone),
+  "users:setTwitterHandle": mutation(api.users.setTwitterHandle),
   "users:updateEventDetails": mutation(api.users.updateEventDetails),
   "github:startLink": mutation(api.github.startLink),
   "github:unlink": mutation(api.github.unlink),

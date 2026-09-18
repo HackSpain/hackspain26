@@ -164,6 +164,8 @@ describe("buildMainMenu", () => {
       "profile-edit",
       "profile-phone",
       "profile-github",
+      "profile-x",
+      "profile-card",
       "profile-notify",
       "auth-status",
       "auth-logout",

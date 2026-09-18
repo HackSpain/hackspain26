@@ -65,6 +65,14 @@ export function authError(
   });
 }
 
+/** What keeps working outside the hackathon window (the `anytime*` functions). */
+export const EVENT_CLOSED_HINT =
+  "You can still use `hackspain profile`, list perks with `hackspain perk list`, and open the participant directory with `hackspain open participantes`.";
+
+/** Phone, terms and consent are confirmed in the dashboard's wizard. */
+export const ONBOARDING_HINT =
+  "Run `hackspain open onboarding` to finish it in the dashboard, then retry.";
+
 /**
  * The backend's gate helpers throw plain `Error` with Spanish copy (the web
  * renders `err.message` directly). Convex wraps them as
@@ -115,7 +123,7 @@ const GATE_MESSAGES: {
     explained: {
       code: "NOT_ONBOARDED",
       exitCode: EXIT.INELIGIBLE,
-      hint: "Finish onboarding in the dashboard, then retry.",
+      hint: ONBOARDING_HINT,
       message: "You still need to confirm your details.",
     },
     needle: "Confirma tus datos primero",
@@ -162,8 +170,7 @@ const CODED_HINT: Record<string, string> = {
   BAD_CODE: "Ask the team owner for the code shown by `hackspain team show`.",
   BAD_OTP:
     "Check the digits in the email, or run `hackspain auth login` for a new one.",
-  EVENT_CLOSED:
-    "Only `hackspain profile` works outside the hackathon window; `hackspain auth status` shows the dates.",
+  EVENT_CLOSED: EVENT_CLOSED_HINT,
   NO_TEAM:
     "Create one with `hackspain team create <name>` or join with `hackspain team join <code>`.",
   OTP_EXPIRED:

@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { profileJson, profileRows } from "../src/commands/profile";
+import {
+  profileJson,
+  profileNudge,
+  profileRows,
+} from "../src/commands/profile";
 import type { Me } from "../src/lib/me";
 import { stripAnsi } from "../src/lib/style";
+import { normalizeX, validateX } from "../src/lib/x-handle";
 
 const base: Me = {
   _id: "u1" as Me["_id"],
@@ -81,6 +86,39 @@ describe("profile", () => {
       "notificationConsent",
       "githubUsername",
       "githubLinked",
+      "twitterHandle",
+      "profileMissing",
     ]);
+  });
+
+  test("X handle: saved, suggested from the signup, or missing", () => {
+    expect(row({ ...base, twitterHandle: "ana_dev" }, "X")).toBe("@ana_dev");
+    expect(row({ ...base, suggestedTwitterHandle: "ana_dev" }, "X")).toContain(
+      "not saved"
+    );
+    expect(row(base, "X")).toContain("hackspain profile x");
+  });
+
+  test("X handles follow the dashboard's rules", () => {
+    expect(normalizeX("@Ana_Dev")).toBe("ana_dev");
+    expect(normalizeX("https://x.com/ana_dev?s=21")).toBe("ana_dev");
+    expect(validateX("ana_dev")).toBeUndefined();
+    expect(validateX("ana-dev!")).toBeDefined();
+    expect(validateX("a".repeat(16))).toBeDefined();
+  });
+
+  test("photo and card are dashboard steps, nudged while missing", () => {
+    expect(row(base, "Photo")).toBe("done");
+    expect(profileNudge(base)).toBeUndefined();
+    const me: Me = {
+      ...base,
+      profileComplete: false,
+      profileMissing: ["photo", "directory"],
+    };
+    expect(row(me, "Photo")).toContain("hackspain open onboarding");
+    expect(row(me, "Participant card")).toContain("missing");
+    expect(stripAnsi(profileNudge(me) ?? "")).toContain(
+      "a photo and your participant card"
+    );
   });
 });

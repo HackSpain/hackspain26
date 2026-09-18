@@ -27,6 +27,7 @@ const PAGE_ALIASES: Record<string, string> = {
   perks: "/perks",
   perk: "/perks",
   profile: "/profile",
+  onboarding: "/onboarding",
   insights: "/insights",
   participantes: "/participantes",
   people: "/participantes",
