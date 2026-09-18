@@ -23,7 +23,7 @@ import {
 	NODE_RADIUS,
 	placeClusters,
 	SETTLED,
-	wordmarkBox,
+	symbolBox,
 	ZONE_HALO,
 } from "./network-model";
 import type { GraphPoint, Layout, Lens, Link } from "./network-model";
@@ -63,6 +63,8 @@ type Drag = {
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
+/** The layout gives up settling here: about six seconds after the last wake. */
+const COLD = 1e-5;
 /** A person is hit within this many screen pixels even when zoomed far out. */
 const MIN_HIT_PX = 12;
 
@@ -187,7 +189,7 @@ export function NetworkCanvas({
 	const bounds = useMemo(() => layoutBounds(places), [places]);
 	const venn = useMemo(() => clustersOverlap(clusters), [clusters]);
 	// Text labels sit just outside the halo, facing away from any overlap.
-	// Wordmarks are watermarked at the centre instead (see the zone markup).
+	// Symbols are watermarked at the centre instead (see the zone markup).
 	const labelAt = useMemo(() => {
 		const directions = labelDirections(clusters, places);
 		return places.map((place, index) => {
@@ -255,7 +257,9 @@ export function NetworkCanvas({
 		if (alpha.current > 0 && layoutRef.current) {
 			const moved = layoutRef.current.tick(alpha.current, dragging);
 			alpha.current *= 0.97;
-			if ((alpha.current > 0.004 && moved > SETTLED) || dragging) {
+			// Cooling only fades the soft forces: keep going until everyone has
+			// reached their place, with a floor so a crowd that cannot rest stops.
+			if ((alpha.current > COLD && moved > SETTLED) || dragging) {
 				again = true;
 			} else {
 				alpha.current = 0;
@@ -846,14 +850,14 @@ export function NetworkCanvas({
 												href={cluster.logoUrl}
 												x={
 													place.x -
-													wordmarkBox(cluster.memberIds.length).width / 2
+													symbolBox(cluster.memberIds.length).width / 2
 												}
 												y={
 													place.y -
-													wordmarkBox(cluster.memberIds.length).height / 2
+													symbolBox(cluster.memberIds.length).height / 2
 												}
-												width={wordmarkBox(cluster.memberIds.length).width}
-												height={wordmarkBox(cluster.memberIds.length).height}
+												width={symbolBox(cluster.memberIds.length).width}
+												height={symbolBox(cluster.memberIds.length).height}
 												preserveAspectRatio="xMidYMid meet"
 											/>
 											<text
@@ -861,7 +865,7 @@ export function NetworkCanvas({
 												x={place.x}
 												y={
 													place.y +
-													wordmarkBox(cluster.memberIds.length).height / 2 +
+													symbolBox(cluster.memberIds.length).height / 2 +
 													13
 												}
 												textAnchor="middle"

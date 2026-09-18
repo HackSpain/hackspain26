@@ -32,7 +32,7 @@ export interface Cluster {
 	id: string;
 	lens: Lens;
 	label: string;
-	/** Sponsor wordmark, drawn instead of the label when the lens is a track. */
+	/** Sponsor symbol, drawn instead of the label when the lens is a track. */
 	logoUrl?: string;
 	/** People without a value for the lens gather in one loose cluster. */
 	loose: boolean;
@@ -60,7 +60,7 @@ export interface Home {
 	x: number;
 	y: number;
 	r: number;
-	/** An ellipse around the centre that stays clear, for the sponsor wordmark. */
+	/** An ellipse around the centre that stays clear, for the sponsor symbol. */
 	keepOut?: { rx: number; ry: number };
 }
 
@@ -79,13 +79,26 @@ interface LensEntry {
 	logoUrl?: string;
 }
 
+/**
+ * The map marks each challenge with the sponsor's symbol, which reads at the
+ * centre of a crowd where a wordmark does not. Tracks without one fall back
+ * to their wordmark.
+ */
+const TRACK_SYMBOLS: Record<string, string> = {
+	embat: "/tracks/symbols/embat.svg",
+	happyrobot: "/tracks/symbols/happyrobot.svg",
+	maisa: "/tracks/symbols/maisa.svg",
+	"prosper-ai": "/tracks/symbols/prosper-ai.svg",
+	theker: "/tracks/symbols/theker.svg",
+};
+
 /** Every grouping value of a person: teams and tracks key on ids, the rest on text. */
 function lensValues(person: DirectoryParticipant, lens: Lens): LensEntry[] {
 	if (lens === "track") {
 		return (person.tracks ?? []).map((track) => ({
 			key: track.id,
 			label: track.label,
-			logoUrl: track.logoUrl,
+			logoUrl: (track.slug && TRACK_SYMBOLS[track.slug]) || track.logoUrl,
 		}));
 	}
 	const value = valuesFor(person, lens)[0]?.trim().replaceAll(/\s+/g, " ");
@@ -185,13 +198,13 @@ function seed(value: string) {
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-/** The wordmark box at a cluster's centre, sized by how many people ring it. */
-export function wordmarkBox(members: number): {
+/** The symbol's square box at a cluster's centre, sized by how many people ring it. */
+export function symbolBox(members: number): {
 	width: number;
 	height: number;
 } {
-	const width = Math.max(120, Math.min(230, 90 + Math.sqrt(members) * 26));
-	return { height: width * 0.32, width };
+	const side = Math.max(64, Math.min(120, 44 + Math.sqrt(members) * 9));
+	return { height: side, width: side };
 }
 
 /** Room a cluster needs for its members to sit loosely packed. */
@@ -201,8 +214,8 @@ export function clusterRadius(members: number, logo = false): number {
 	if (!logo) {
 		return packed + NODE_RADIUS;
 	}
-	// Members ring the wordmark: add its footprint to the area.
-	const box = wordmarkBox(members);
+	// Members ring the symbol: add its footprint to the area.
+	const box = symbolBox(members);
 	return Math.hypot(packed, (box.width + box.height) / 4) + NODE_RADIUS;
 }
 
@@ -317,7 +330,7 @@ export function memberHomes(
 			continue;
 		}
 		if (cluster.logoUrl) {
-			const box = wordmarkBox(cluster.memberIds.length);
+			const box = symbolBox(cluster.memberIds.length);
 			keepOutById.set(cluster.id, {
 				rx: box.width / 2 + NODE_RADIUS + 4,
 				ry: box.height / 2 + NODE_RADIUS + 4,
@@ -374,7 +387,7 @@ export function initialPoints(
 	const homes = memberHomes(clusters, places);
 	return [...homes].map(([id, home]) => {
 		const angle = seed(id) * Math.PI * 2;
-		// Start on the ring around a wordmark, otherwise scattered over the centre.
+		// Start on the ring around a symbol, otherwise scattered over the centre.
 		const inner = home.keepOut
 			? Math.hypot(
 					home.keepOut.rx * Math.cos(angle),
@@ -449,10 +462,21 @@ export interface Layout {
 /** Below this per-frame movement (world units) nothing changes on screen. */
 export const SETTLED = 0.05;
 
+/** How strongly a group's centre of mass is carried onto its home, per frame. */
+const CENTRING = 0.08;
+/** Past this share of the home radius a member is pulled in however cool the layout is. */
+const RIM = 0.8;
+
 /**
  * Members drift towards their home, keep a small distance from each other,
  * and come to rest as alpha cools. The topology is resolved once so each
  * frame is a tight pair loop.
+ *
+ * The drift cools with alpha so a settled cluster keeps its airy shape, which
+ * means it can die out before people carried over from another lens arrive.
+ * Two forces do not cool, so every group ends up centred in its circle: the
+ * group's centre of mass is carried onto the home (a translation, it never
+ * compresses the group), and anyone left outside the rim is pulled in.
  */
 export function createLayout(
 	points: GraphPoint[],
@@ -467,7 +491,7 @@ export function createLayout(
 		if (!cluster.logoUrl || !place) {
 			return [];
 		}
-		const box = wordmarkBox(cluster.memberIds.length);
+		const box = symbolBox(cluster.memberIds.length);
 		return [
 			{
 				rx: box.width / 2 + NODE_RADIUS + 4,
@@ -477,6 +501,14 @@ export function createLayout(
 			},
 		];
 	});
+	// People who share a home (a cluster, or the same overlap) are centred together.
+	const groups = new Map<string, number[]>();
+	for (const [index, home] of homes.entries()) {
+		if (home) {
+			const key = `${home.x}|${home.y}`;
+			groups.set(key, [...(groups.get(key) ?? []), index]);
+		}
+	}
 	const contact = PITCH;
 	const reach = contact * 2.2;
 	return {
@@ -505,6 +537,28 @@ export function createLayout(
 					b.vy += dy * force;
 				}
 			}
+			for (const members of groups.values()) {
+				let x = 0,
+					y = 0,
+					free = 0;
+				for (const index of members) {
+					if (points[index].id !== pinnedId) {
+						x += points[index].x;
+						y += points[index].y;
+						free++;
+					}
+				}
+				const home = homes[members[0]];
+				if (!home || !free) {
+					continue;
+				}
+				const shiftX = (home.x - x / free) * CENTRING,
+					shiftY = (home.y - y / free) * CENTRING;
+				for (const index of members) {
+					points[index].vx += shiftX;
+					points[index].vy += shiftY;
+				}
+			}
 			for (let i = 0; i < points.length; i++) {
 				const point = points[i];
 				if (point.id === pinnedId) {
@@ -518,22 +572,34 @@ export function createLayout(
 						dy = home.y - point.y;
 					const distance = Math.hypot(dx, dy);
 					// Pull harder the further out a member drifts past its home's rim.
-					const pull =
-						0.045 * alpha * (1 + Math.max(0, distance - home.r * 0.7) / home.r);
+					const pull = Math.min(
+						0.3,
+						0.045 *
+							(alpha * (1 + Math.max(0, distance - home.r * 0.7) / home.r) +
+								Math.max(0, distance - home.r * RIM) / home.r),
+					);
 					point.vx += dx * pull;
 					point.vy += dy * pull;
 				}
 				for (const logo of logos) {
-					// Every wordmark is an obstacle for everyone: inside its ellipse,
-					// push straight out to the edge, whichever cluster you belong to.
-					const dx = point.x - logo.x,
-						dy = point.y - logo.y;
+					// Every symbol is an obstacle for everyone: inside its ellipse,
+					// push out through the nearest edge, whichever cluster you belong
+					// to. The push is a spring on how deep the member sits, fading to
+					// nothing at the edge: a constant kick there knocks people out,
+					// the crowd presses them back in, and they never come to rest.
+					const dx = point.x - logo.x || 0.01,
+						dy = point.y - logo.y || 0.01;
 					const inside = Math.hypot(dx / logo.rx, dy / logo.ry);
 					if (inside < 1) {
-						const distance = Math.hypot(dx, dy) || 1;
-						const shove = (1 - inside) * 0.6 + 0.08;
-						point.vx += (dx / distance) * shove * logo.rx;
-						point.vy += (dy / distance) * shove * logo.ry;
+						const nx = dx / (logo.rx * logo.rx),
+							ny = dy / (logo.ry * logo.ry);
+						const normal = Math.hypot(nx, ny);
+						const depth = Math.min(
+							logo.ry,
+							Math.hypot(dx, dy) * (1 / Math.max(inside, 0.1) - 1),
+						);
+						point.vx += (nx / normal) * depth * 0.32;
+						point.vy += (ny / normal) * depth * 0.32;
 					}
 				}
 				point.vx *= 0.6;

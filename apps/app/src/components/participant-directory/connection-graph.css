@@ -94,7 +94,7 @@
   letter-spacing: 0.02em;
   fill: #a58c66;
 }
-/* The wordmark is a watermark under the people, not a label above them. */
+/* The symbol is a watermark under the people, not a label above them. */
 .pg-zone-logo {
   opacity: 0.9;
   mix-blend-mode: multiply;
