@@ -2,18 +2,11 @@
 
 pnpm monorepo: `apps/web` is the Astro landing on Neon/Drizzle; `apps/app` is the Next.js dashboard with Convex; `apps/cli` is the Bun CLI. Setup and commands: [README](README.md) and [CLI README](apps/cli/README.md).
 
-## Working agreements
-
-- Use `samuel/<feature-name>` for branches unless instructed otherwise.
-- Keep changes scoped: no unrelated formatting, imports, refactors, or dependency updates. Prefer precise TypeScript types; justify any necessary `any` at the boundary where it is used.
-- Add or modify tests only for behavior introduced or fixed by the task. Run the affected workspace's checks; verify UI in the browser when behavior or appearance changes warrant it.
-- Do not retain temporary harness, fixture, environment, build, dependency, or logging workarounds just to pass local checks. Remove them and disclose what was temporarily changed. Do not commit or push local-only workarounds without explicit authorization; ask before keeping one as a production change.
-
 ## Documentation
 
 - Consult relevant entries in [docs/learnings.md](docs/learnings.md) before working in an affected area.
 - Add or update a learning when the task establishes a non-obvious, project-specific fact that will prevent a recurring or costly mistake. Record the evidence, consequence, and prevention/verification step. Mark unknown causes explicitly. Skip routine debugging, generic advice, and unverified theories; update an existing entry rather than duplicating it.
-- Keep this file for working agreements and traps that are hard to infer from code. Put setup in README and historical explanations in learnings. Correct documentation that the task proves stale; avoid feature inventories and permanent bans based solely on past implementations.
+- Keep this file for project-specific constraints and traps that are hard to infer from code. Personal preferences belong in each contributor's local agent configuration. Put setup in README and historical explanations in learnings. Correct documentation that the task proves stale; avoid feature inventories and permanent bans based solely on past implementations.
 
 ## Project traps
 
