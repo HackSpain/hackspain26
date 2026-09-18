@@ -9,6 +9,7 @@ import { AuthScreen, FormError, LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeNextPath } from "@/lib/cli-handoff";
+import { usePrivateUrlParameter } from "@/lib/private-url-parameter";
 
 const EXPIRED_MESSAGE =
   "Este enlace ya se ha usado o ha caducado. Vuelve a ejecutar hackspain open en tu terminal.";
@@ -19,21 +20,25 @@ const EXPIRED_MESSAGE =
  * Convex Auth proxy, which sets the normal dashboard cookies, so the browser
  * is logged in as the same person without a second code.
  *
- * Not `?token=` under the name `code`: the Convex Auth middleware consumes a
- * `code` query param on every route.
+ * New CLI versions keep the token in the URL fragment so it never reaches
+ * server logs. The query fallback preserves links printed by older versions.
  */
 function HandoffCard() {
   const params = useSearchParams();
-  const token = params.get("hs-token")?.trim() ?? "";
+  const queryToken = params.get("hs-token")?.trim() ?? "";
   const next = safeNextPath(params.get("next"));
   const { signIn } = useAuthActions();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
   const started = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  const { ready: credentialsReady, value: token } = usePrivateUrlParameter(
+    "hs-token",
+    queryToken
+  );
 
   useEffect(() => {
-    if (isLoading || started.current) {
+    if (!credentialsReady || isLoading || started.current) {
       return;
     }
     started.current = true;
@@ -62,7 +67,7 @@ function HandoffCard() {
       setError(EXPIRED_MESSAGE);
     }
     void redeem();
-  }, [isAuthenticated, isLoading, next, router, signIn, token]);
+  }, [credentialsReady, isAuthenticated, isLoading, next, router, signIn, token]);
 
   return (
     <Card className="hs-enter w-full max-w-md">

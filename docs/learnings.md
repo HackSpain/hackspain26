@@ -42,6 +42,12 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 
 **Prevention and verification.** Read dependency behavior and peer requirements before patching around SDK errors. Keep domain error codes intact. Filter noise using narrow source/stack evidence, not broad message matches such as “Failed to fetch” or “MetaMask.” Inspect mixed application/extension stacks before expanding a filter: extension presence alone does not prove every failure is harmless. Verify genuine application errors still arrive and retain request sanitization in browser/server/edge hooks.
 
+## 2026-09-18 — Request sanitization does not cover every URL
+
+**Evidence.** Better Stack contained CLI handoff credentials in Vercel proxy paths and referers, and browser error breadcrumbs retained the same query parameters. The existing sanitizer removed request query strings but did not inspect breadcrumbs. No credential values belong in this file, and the observation does not establish misuse.
+
+**Correction and prevention.** New CLI links place `hs-code` and `hs-token` in URL fragments, which browsers do not send in HTTP requests. The dashboard still accepts query links from older CLI versions and removes either form after reading it. Error breadcrumbs redact the known authentication parameters as a second layer. Old CLI links can still reach the proxy log before client code scrubs them, so verify the result after the updated CLI is distributed and handle retention of historical logs separately.
+
 ## 2026-09-18 — A GitHub 404 can be repository configuration or access
 
 **Evidence.** Convex `githubFeed:pollRepos` warned about a configured team repository; a separate authenticated GitHub request also returned 404. This established inaccessibility with the credentials used, not whether the repository was deleted, private, misspelled, or renamed.
