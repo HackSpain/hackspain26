@@ -188,10 +188,7 @@ export function registerSubmit(program: Command): void {
       if (mode === "submit") {
         ui.kv([
           ["Project", highlight(args.name)],
-          [
-            "Track",
-            selected?.label ?? c.dim("–"),
-          ],
+          ["Track", selected?.label ?? c.dim("–")],
           ["Repo", args.repoUrl ?? c.dim("–")],
           ["Demo", args.demoUrl ?? c.dim("–")],
           ["Video", args.videoUrl ?? c.dim("–")],
