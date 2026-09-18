@@ -204,7 +204,7 @@ export function ArrivalStage({ person, demo = false, connected = true }: { perso
         {person ? <Player key={person.id} person={person} /> : null}
         <ArrivalBands personId={person?.id} />
         <header className="absolute top-[4.4%] right-[4.6%] left-[4.6%] z-50 flex h-[7%] items-center justify-between">
-          <Image src="/logo.svg" alt="HackSpain" width={190} height={62} className="h-auto w-[clamp(90px,10cqw,240px)]" />
+          <Image src="/logo.svg" alt="HackSpain" width={190} height={63} className="h-auto w-[clamp(90px,10cqw,240px)]" />
           {demo || !connected ? <p className="font-mono text-[clamp(10px,0.8cqw,18px)] uppercase tracking-[0.2em] text-hs-paper/45">{demo ? "Demo" : "Reconectando"}</p> : null}
         </header>
       </main>
