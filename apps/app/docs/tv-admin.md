@@ -1,48 +1,87 @@
-# Venue TV administration
+# Pantallas del evento
 
-`/admin/tv` builds on the existing canvas and saved layouts. Saved screens are in a left sidebar; editing and publishing are separate actions. Saving changes to the currently live layout updates the venue screens.
+`/admin/tv` administra pantallas identificadas por URL. Sustituye al editor de cajas
+como interfaz de operación. Las tablas y funciones del antiguo canvas se conservan
+para no borrar composiciones guardadas, pero `/tv` utiliza vistas predefinidas.
 
-- Restore defaults loads the aggregate Insights composition without team leaderboards. It saves a recovery copy of the working canvas and preserves the published layout.
-- Text sizes accept 8–240 reference pixels on a 1920px canvas, scaling with the display. Existing semantic presets retain their rendering until edited. Geometry accepts decimal percentages.
-- Insights widgets still use demo data. Do not present them as live telemetry or add private participant data to this public screen.
-- `/tv` consumes the existing public layout through Convex subscriptions and a `/api/tv` HTTP fallback every 20 seconds. It retains the last snapshot in memory through connection failures.
-- Remote reload increments a version consumed once per tab, persisted before reloading. The recovery controller is outside widget rendering errors. There is no per-screen delivery acknowledgement or classroom inventory.
-- Venue computers must stay awake with their browser open; JavaScript cannot recover suspended or closed browsers.
+## Conectar y controlar
 
-This feature does not introduce registration, access codes, reception routes, check-in, or participant access gates.
+- Abre `/tv?screen=entrada&view=entradas` en recepción, `/tv?screen=auditorio` en el
+  auditorio, etc. El nombre admite 1–48 letras sin acentos, números, guiones o guiones
+  bajos y se normaliza a minúsculas.
+- Sin `screen`, la URL recibe un identificador `tv-…` automáticamente. Todas las
+  pantallas reales se registran; `demo=1` es sólo una preview y no se registra.
+- `view` indica la vista inicial de una pantalla nueva. Una configuración guardada
+  por el admin siempre tiene prioridad, también después de recargar el navegador.
+- En `/admin/tv` se puede preparar un nombre antes de abrirlo, copiar su URL, elegir
+  una vista, escribir un aviso y recargar únicamente esa pantalla.
+- Puedes borrar una pantalla desconectada y sus conexiones desde su tarjeta. Si se
+  vuelve a abrir esa URL, se registrará de nuevo con la configuración inicial.
+- Dos navegadores con el mismo nombre comparten contenido y órdenes. El panel avisa
+  y lista cada conexión con su URL, resolución y última respuesta. Para controlarlos
+  por separado, usa nombres distintos.
+- Cada navegador comunica presencia y recibe órdenes mediante `POST /api/tv` cada
+  tres segundos, con timeout de ocho segundos. A los veinte segundos sin respuesta
+  aparece desconectado. Se conserva la última vista durante un fallo de conexión.
+- Las órdenes persisten. El panel indica si todavía están pendientes de recepción;
+  esta confirmación no certifica que el monitor físico esté encendido ni que el
+  contenido se haya renderizado sin errores.
+- La recarga se consume antes de reiniciar y su versión se conserva en sessionStorage,
+  por identificador, para evitar bucles. El controlador permanece fuera del boundary
+  visual y funciona aunque falle la vista. Un navegador nuevo adopta el estado actual.
+- Los registros de conexiones anteriores a 24 horas se limpian cuando la pantalla
+  vuelve a comunicar presencia. Los nombres/configuraciones se conservan.
+- Mantén el ordenador despierto y el navegador abierto. Una recarga web no puede
+  encender un ordenador suspendido, cerrado o apagado.
 
-## Pantalla de entrada (1920 × 1080)
+## Vistas predefinidas
 
-Abre `/tv?view=entradas` en el monitor de recepción; el botón «Abrir pantalla de
-bienvenida» de la estación de check-in lleva a esa vista. Pasa el ratón por la
-esquina inferior derecha para activar pantalla completa. El lienzo conserva 16:9.
+El catálogo compartido está en `convex/lib/tvScreens.ts` y el render en
+`src/components/tv/presets.tsx`:
 
-Cada check-in nuevo (desde recepción o administración) presenta al participante
-10 segundos, incluidas las transiciones de franjas verticales de color, con nombre,
-foto, rol, ciudad, empresa y universidad en campos separados, y hasta tres
-especialidades, según los datos de su perfil. Los campos vacíos no se muestran. Si no tiene foto se muestran sus iniciales. No se
-publican emails, teléfonos ni códigos de acreditación. Las entradas simultáneas
-se encolan; escanear dos veces un pase no repite la presentación. Deshacer una
-entrada la retira de la cola. Al abrir o recargar se empieza desde ese momento,
-sin reproducir las entradas anteriores; una reconexión de la misma página sí
-recupera las entradas pendientes. Las franjas de color cubren el cambio entre
-personas y siguen moviéndose mientras la cola está vacía; no hay pantallas de texto intermedias.
+| Vista | Contenido |
+| --- | --- |
+| `entradas` | Presentaciones de participantes a partir de check-ins reales |
+| `avisos` | Un mensaje propio de esa pantalla, hasta 500 caracteres |
+| `actividad` | Las últimas publicaciones y eventos de GitHub del feed real |
+| `patrocinadores` | Logos del catálogo de patrocinadores existente |
+| `espera` | Franjas animadas y marca HackSpain |
 
-`/tv?view=entradas&demo=1` reproduce ejemplos y la pantalla de espera (la foto y
-el cargo de Mark Villacampa vienen de la web pública; los otros perfiles son ficticios),
-sin consultar entradas ni hacer check-ins. Respeta movimiento reducido. Hay que
-publicar la función Convex `passes.arrivals` junto con el frontend.
+No hay coordenadas, tamaños de cajas ni métricas simuladas en estas vistas.
+Sólo las funciones admin pueden cambiar contenido y emitir recargas; el heartbeat
+público únicamente registra presencia y lee la configuración correspondiente.
+Las URLs guardadas sólo incluyen el identificador y la vista, nunca otros parámetros.
 
-### Conexión con recepción
+## Entradas y tamaños de pantalla
 
-Abre primero `/tv?view=entradas` (sin `demo=1`) en el monitor y usa la URL de
-recepción en las dos mesas. Al validar los cuatro caracteres, `passes.staffScan`
-guarda `eventPasses.checkedInAt`. La suscripción `passes.arrivals` transmite la
-entrada al monitor, que carga los datos del perfil y la presenta automáticamente,
-sin recargar ni pulsar nada en la TV. Si está libre, sale al recibir el cambio;
-si ya está presentando a alguien, espera su turno. No se almacena el operador ni
-el canal de entrada. Los códigos incorrectos y los pases ya registrados no generan
-una nueva presentación.
+El contenido ocupa todo el viewport, sin un lienzo fijo de 1920 × 1080 ni barras
+para conservar 16:9. La foto, tipografía y datos se adaptan al ancho y alto; en
+vertical la foto queda arriba y la ficha debajo.
+
+Cada persona permanece completamente visible durante **3 segundos**, además de
+1,1 segundos de entrada y 0,9 de salida (5 segundos por turno). Se presentan foto,
+nombre, rol, ciudad, empresa, universidad y hasta tres especialidades según su perfil.
+Los campos vacíos no se muestran; sin foto aparecen sus iniciales. Las franjas cubren
+el cambio y siguen en bucle si no hay entradas pendientes. Respeta movimiento reducido.
+
+El check-in está disponible siempre, independientemente de la fase o fecha del evento.
+Abre la pantalla **antes** de validar el código en recepción. `passes.staffScan`
+guarda `checkedInAt` y `passes.arrivals` transmite la entrada al monitor, sin recargas
+ni acciones adicionales allí. Entradas simultáneas se encolan; repetir el código no
+repite la presentación. Deshacer una entrada la retira. Al abrir o recargar se empieza
+desde ese momento; la reconexión de la misma vista recupera entradas pendientes.
+No se publican emails, teléfonos ni códigos de acreditación.
+
+`/tv?view=entradas&demo=1` reproduce ejemplos sin consultar entradas ni hacer check-ins.
+La foto/cargo de Mark Villacampa son públicos; los demás perfiles son ficticios.
+También puede previsualizarse cualquier otra vista con `view=…&demo=1`.
+
+## Despliegue
+
+Publica el esquema con `tvScreens` y `tvScreenConnections`, las funciones nuevas de
+`tvPlayback`, `passes.arrivals` y el frontend. No requiere migrar las composiciones
+antiguas: cada pantalla se registra al abrir su URL. Las pantallas que sigan ejecutando
+la web anterior necesitan una recarga inicial para usar el registro y control nuevo.
 
 ### Retirada de los metadatos antiguos
 

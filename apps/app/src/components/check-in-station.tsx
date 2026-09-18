@@ -17,11 +17,7 @@ type CheckInResult = {
 
 type StaffStatus = {
   checkedIn: number;
-  development: boolean;
   issued: number;
-  open: boolean;
-  opensAt: number;
-  phase: "pre_event" | "live" | "ended";
 };
 
 type ReceptionAction =
@@ -59,16 +55,6 @@ export function CheckInStation() {
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
-  const live = Boolean(
-    staffStatus &&
-    (staffStatus.development || (staffStatus.phase === "live" && now >= staffStatus.opensAt)),
-  );
-  const closedMessage =
-    staffStatus && now < staffStatus.opensAt
-      ? "El check-in se activará el 18 de septiembre de 2026 a las 10:00."
-      : "El responsable debe activar primero el evento en directo.";
-
   const loadStatus = useCallback(async () => {
     try {
       const next = await receptionRequest<StaffStatus>();
@@ -87,24 +73,9 @@ export function CheckInStation() {
     return () => window.clearInterval(interval);
   }, [loadStatus]);
 
-  useEffect(() => {
-    if (!staffStatus || staffStatus.development || now >= staffStatus.opensAt) {
-      return;
-    }
-    const timeout = window.setTimeout(
-      () => setNow(Date.now()),
-      Math.min(staffStatus.opensAt - now + 250, 60_000),
-    );
-    return () => window.clearTimeout(timeout);
-  }, [now, staffStatus]);
-
   const processCode = useCallback(async () => {
     const value = code.trim();
     if (value.length !== 4 || busyRef.current) {
-      return;
-    }
-    if (!live) {
-      setError(closedMessage);
       return;
     }
     const previous = lastCodeRef.current;
@@ -133,7 +104,7 @@ export function CheckInStation() {
       setPending(false);
       window.requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }, [closedMessage, code, live, loadStatus]);
+  }, [code, loadStatus]);
 
   async function undo() {
     if (!result) {
@@ -191,14 +162,6 @@ export function CheckInStation() {
           <Monitor aria-hidden /> Abrir pantalla de bienvenida
         </a>
       </Button>
-      {!live ? (
-        <Card className="border-hs-gold bg-hs-gold/15">
-          <CardHeader>
-            <CardTitle>El check-in está cerrado</CardTitle>
-            <CardDescription>{closedMessage}</CardDescription>
-          </CardHeader>
-        </Card>
-      ) : null}
 
       <Card>
         <CardHeader className="gap-1">
@@ -242,7 +205,6 @@ export function CheckInStation() {
               spellCheck={false}
               className="h-20 text-center font-bungee text-4xl tracking-[0.22em] uppercase tabular-nums sm:text-5xl"
               aria-label="Código de acceso"
-              disabled={!live}
               inputMode="text"
               maxLength={4}
             />
@@ -250,7 +212,7 @@ export function CheckInStation() {
               type="submit"
               variant="teal"
               className="min-h-12 w-full"
-              disabled={!live || pending || code.length !== 4}
+              disabled={pending || code.length !== 4}
             >
               {pending ? "Validando…" : "Marcar como dentro"}
             </Button>
