@@ -312,12 +312,9 @@ export const adminCreate = adminMutation({
       updatedAt: now,
     });
     if (args.type === "code") {
-      const unique = new Set(
-        (args.codes ?? [])
-          .map((code) => code.trim())
-          .filter((code) => code.length > 0),
-      );
-      for (const code of unique) {
+      for (const raw of args.codes ?? []) {
+        const code = raw.trim();
+        if (!code) continue;
         await ctx.db.insert("perkCodes", {
           perkId,
           code,
@@ -375,20 +372,14 @@ export const adminUpdate = adminMutation({
     await ctx.db.patch(perk._id, patch);
 
     if (perk.type === "code" && args.codesToAdd) {
-      const existing = await ctx.db
-        .query("perkCodes")
-        .withIndex("by_perk", (q) => q.eq("perkId", perk._id))
-        .collect();
-      const have = new Set(existing.map((row) => row.code));
       for (const raw of args.codesToAdd) {
         const code = raw.trim();
-        if (!code || have.has(code)) continue;
+        if (!code) continue;
         await ctx.db.insert("perkCodes", {
           perkId: perk._id,
           code,
           available: true,
         });
-        have.add(code);
       }
     }
     return null;
@@ -415,8 +406,14 @@ async function attachCodeToClaim(
     .query("perkCodes")
     .withIndex("by_perk", (q) => q.eq("perkId", claim.perkId))
     .collect();
-  const match = existing.find((row) => row.code === code);
+  const copies = existing.filter((row) => row.code === code);
+  const match =
+    copies.find((row) => row.assignedTo === claim.userId) ??
+    copies.find((row) => row.available);
   const now = Date.now();
+  if (copies.length > 0 && !match) {
+    throw new Error("Ese código ya está asignado a otra persona");
+  }
   if (match) {
     if (match.assignedTo && match.assignedTo !== claim.userId) {
       throw new Error("Ese código ya está asignado a otra persona");

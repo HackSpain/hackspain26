@@ -155,10 +155,6 @@ function lines(value: string): string[] {
     .filter(Boolean);
 }
 
-function uniqueCodes(value: string): string[] {
-  return [...new Set(lines(value))];
-}
-
 function codesCountLabel(count: number): string {
   return `${count} ${count === 1 ? "código" : "códigos"}`;
 }
@@ -350,9 +346,9 @@ export default function AdminPerksPage() {
                   <Field
                     label="Añadir más códigos"
                     hint={
-                      uniqueCodes(extraCodes[perk._id] ?? "").length > 0 ? (
+                      lines(extraCodes[perk._id] ?? "").length > 0 ? (
                         <span className="tabular-nums">
-                          {`${codesCountLabel(uniqueCodes(extraCodes[perk._id] ?? "").length)} a añadir. Se ignoran vacíos y duplicados.`}
+                          {`${codesCountLabel(lines(extraCodes[perk._id] ?? "").length)} a añadir. Se ignoran líneas vacías.`}
                         </span>
                       ) : undefined
                     }
@@ -649,7 +645,7 @@ function PerkFields({
           htmlFor={`${ids}-codes`}
           hint={
             <span className="tabular-nums">
-              {`${codesCountLabel(uniqueCodes(draft.codes).length)}. Se ignoran vacíos y duplicados.`}
+              {`${codesCountLabel(lines(draft.codes).length)}. Se ignoran líneas vacías.`}
             </span>
           }
         >
