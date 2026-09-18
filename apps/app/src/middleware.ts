@@ -13,11 +13,9 @@ import { RECEPTION_PATH } from "@/lib/reception";
 // server-side redirect; AuthGate stashes it and routes visitors via /login.
 // /cli-auth/handoff signs the browser in from a CLI session, so it must be
 // reachable without one.
-// /github/callback relays GitHub's public callback to the Convex HTTP action.
 const isPublicRoute = createRouteMatcher([
   "/",
   "/login",
-  "/github/callback",
   "/cli-auth(.*)",
   "/api/login/otp",
   "/api/cli(.*)",
@@ -29,16 +27,14 @@ const isPublicRoute = createRouteMatcher([
   RECEPTION_PATH,
 ]);
 
-export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
-  const authenticated = await convexAuth.isAuthenticated();
-  if (!isPublicRoute(request) && !authenticated) {
-    return nextjsMiddlewareRedirect(request, "/login");
+export default convexAuthNextjsMiddleware(
+  async (request, { convexAuth }) => {
+    const authenticated = await convexAuth.isAuthenticated();
+    if (!isPublicRoute(request) && !authenticated) {
+      return nextjsMiddlewareRedirect(request, "/login");
+    }
   }
-  return undefined;
-}, {
-  // This code belongs to GitHub account linking, not a Convex Auth sign-in.
-  shouldHandleCode: (request) => request.nextUrl.pathname !== "/github/callback",
-});
+);
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
