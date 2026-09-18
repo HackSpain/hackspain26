@@ -23,10 +23,12 @@ import {
 	layoutBounds,
 	NODE_RADIUS,
 	placeClusters,
+	SETTLED,
 	wordmarkBox,
 	ZONE_HALO,
 } from "./network-model";
 import type { GraphPoint, Lens, Link } from "./network-model";
+import { photoThumbnail } from "./photo";
 import type { DirectoryParticipant } from "./types";
 
 export const CONNECTION_STYLES: Record<
@@ -85,6 +87,20 @@ function linkPath(a: GraphPoint, b: GraphPoint) {
 	return `M ${a.x.toFixed(1)} ${a.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
 }
 
+function nodeTransform(point: GraphPoint) {
+	return `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`;
+}
+
+/**
+ * Rewriting an SVG attribute with the value it already has still invalidates
+ * paint for that subtree, so the simulation only touches what moved.
+ */
+function write(element: Element, name: string, value: string) {
+	if (element.getAttribute(name) !== value) {
+		element.setAttribute(name, value);
+	}
+}
+
 const PersonNode = memo(function PersonNode({
 	person,
 	state,
@@ -130,7 +146,7 @@ const PersonNode = memo(function PersonNode({
 				{person.photoUrl ? (
 					<image
 						className="pg-node-photo"
-						href={person.photoUrl}
+						href={photoThumbnail(person.photoUrl)}
 						x={-NODE_RADIUS}
 						y={-NODE_RADIUS}
 						width={NODE_RADIUS * 2}
@@ -379,17 +395,14 @@ export function NetworkCanvas({
 		for (const [id, element] of nodeElements.current) {
 			const point = points.current.get(id);
 			if (point) {
-				element.setAttribute(
-					"transform",
-					`translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
-				);
+				write(element, "transform", nodeTransform(point));
 			}
 		}
 		for (const { element, a, b } of linkElements.current.values()) {
 			const from = points.current.get(a),
 				to = points.current.get(b);
 			if (from && to) {
-				element.setAttribute("d", linkPath(from, to));
+				write(element, "d", linkPath(from, to));
 			}
 		}
 	}, []);
@@ -418,11 +431,15 @@ export function NetworkCanvas({
 				if (dragging) {
 					alpha.current = Math.max(alpha.current, 0.25);
 				}
-				layout.tick(alpha.current, dragging);
+				const moved = layout.tick(alpha.current, dragging);
 				paint();
 				alpha.current *= 0.97;
-				if (alpha.current > 0.004 || dragging) {
+				// Every frame repaints the whole SVG, so stop as soon as nobody
+				// visibly moves rather than running the cooling curve out.
+				if ((alpha.current > 0.004 && moved > SETTLED) || dragging) {
 					frame.current = requestAnimationFrame(step);
+				} else {
+					alpha.current = 0;
 				}
 			};
 			frame.current = requestAnimationFrame(step);
@@ -433,7 +450,9 @@ export function NetworkCanvas({
 	useEffect(() => {
 		if (reducedMotion()) {
 			for (let i = 0; i < 260; i++) {
-				layout.tick(0.98 ** i);
+				if (layout.tick(0.98 ** i) <= SETTLED) {
+					break;
+				}
 			}
 			paint();
 			return;
@@ -573,10 +592,7 @@ export function NetworkCanvas({
 			nodeElements.current.set(id, element);
 			const point = points.current.get(id);
 			if (point) {
-				element.setAttribute(
-					"transform",
-					`translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`,
-				);
+				element.setAttribute("transform", nodeTransform(point));
 			}
 		} else {
 			nodeElements.current.delete(id);
@@ -597,8 +613,6 @@ export function NetworkCanvas({
 		}
 		// Scrolling zooms around the pointer, like a map. Trackpad pinches arrive
 		// as ctrl+wheel with finer deltas, so they get a gentler curve.
-		// Scrolling zooms around the pointer, like a map. Trackpad pinches arrive
-		// as ctrl+wheel with finer deltas, so they get a gentler curve.
 		const wheel = (event: WheelEvent) => {
 			event.preventDefault();
 			const rect = svg.getBoundingClientRect();
@@ -610,7 +624,7 @@ export function NetworkCanvas({
 		};
 		svg.addEventListener("wheel", wheel, { passive: false });
 		return () => svg.removeEventListener("wheel", wheel);
-	});
+	}, [zoomAt]);
 
 	function screenToWorld(clientX: number, clientY: number) {
 		const rect = svgRef.current?.getBoundingClientRect();

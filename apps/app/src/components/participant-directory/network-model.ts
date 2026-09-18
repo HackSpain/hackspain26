@@ -438,9 +438,16 @@ export function layoutBounds(places: ClusterPlace[]) {
 }
 
 export interface Layout {
-	/** Advance one frame. `alpha` in (0, 1] scales the settling forces. */
-	tick: (alpha: number, pinnedId?: string) => void;
+	/**
+	 * Advance one frame. `alpha` in (0, 1] scales the settling forces. Returns
+	 * the furthest any member moved, so the caller can stop painting once the
+	 * layout has come to rest instead of running the cooling curve out.
+	 */
+	tick: (alpha: number, pinnedId?: string) => number;
 }
+
+/** Below this per-frame movement (world units) nothing changes on screen. */
+export const SETTLED = 0.05;
 
 /**
  * Members drift towards their home, keep a small distance from each other,
@@ -474,6 +481,7 @@ export function createLayout(
 	const reach = contact * 2.2;
 	return {
 		tick(alpha, pinnedId) {
+			let moved = 0;
 			for (let i = 0; i < points.length; i++) {
 				const a = points[i];
 				for (let j = i + 1; j < points.length; j++) {
@@ -530,9 +538,13 @@ export function createLayout(
 				}
 				point.vx *= 0.6;
 				point.vy *= 0.6;
-				point.x += Math.max(-12, Math.min(12, point.vx));
-				point.y += Math.max(-12, Math.min(12, point.vy));
+				const stepX = Math.max(-12, Math.min(12, point.vx));
+				const stepY = Math.max(-12, Math.min(12, point.vy));
+				point.x += stepX;
+				point.y += stepY;
+				moved = Math.max(moved, Math.abs(stepX), Math.abs(stepY));
 			}
+			return moved;
 		},
 	};
 }

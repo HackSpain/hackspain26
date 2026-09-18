@@ -91,10 +91,9 @@
 }
 /* Overlapping circles read as a Venn diagram: a faint rim marks each set. */
 .pg-zones[data-venn] .pg-zone circle {
-  stroke: #b89c6a;
-  stroke-opacity: 0.45;
+  stroke: #a88c5c;
+  stroke-opacity: 0.5;
   stroke-width: 1.5;
-  mix-blend-mode: multiply;
 }
 .pg-zone[data-loose] .pg-zone-label {
   fill: #a39a88;
@@ -119,10 +118,12 @@
   opacity: 0.5;
 }
 
+/* Every hover fades all the other people at once, and each frame of that
+   fade repaints the whole map: keep it short. */
 .pg-node {
   cursor: pointer;
   outline: none;
-  transition: opacity 280ms var(--ease-out);
+  transition: opacity 160ms var(--ease-out);
 }
 .pg-node-body {
   transform-origin: 0 0;
