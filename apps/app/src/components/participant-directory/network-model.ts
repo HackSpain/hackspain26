@@ -254,11 +254,26 @@ function overlapDistance(a: number, b: number, shared: number): number {
 export function placeClusters(
 	clusters: Cluster[],
 	aspect = 1.6,
+	{
+		slots,
+		flatten = false,
+	}: {
+		/** Spiral position per cluster; defaults to its index. See `stickySlots`. */
+		slots?: number[];
+		/**
+		 * For a wide screen holding a hundred clusters: pull harder towards the
+		 * horizon the wider the stage, keep less air between neighbours, and
+		 * finish pushing only. Measured at 100 teams of three plus 110 people
+		 * without one: a larger map with fewer overlapping zones than the default.
+		 */
+		flatten?: boolean;
+	} = {},
 ): ClusterPlace[] {
 	const places = clusters.map((cluster, index) => {
 		const r = clusterRadius(cluster.memberIds.length, Boolean(cluster.logoUrl));
-		const angle = index * GOLDEN_ANGLE;
-		const distance = Math.sqrt(index) * (r + 110) * 1.15;
+		const slot = slots?.[index] ?? index;
+		const angle = slot * GOLDEN_ANGLE;
+		const distance = Math.sqrt(slot) * (r + 110) * 1.15;
 		return {
 			id: cluster.id,
 			r,
@@ -266,6 +281,7 @@ export function placeClusters(
 			y: (Math.sin(angle) * distance) / Math.sqrt(aspect),
 		};
 	});
+	const pullY = flatten ? Math.max(0.85, 0.985 - 0.13 * (aspect - 1)) : 0.98;
 	const shared = sharedCounts(clusters);
 	const targets = places.map((a, i) =>
 		places.map((b, j) => {
@@ -274,10 +290,13 @@ export function placeClusters(
 			}
 			const common = shared(i, j);
 			// Room for the label above each cluster and clear air between neighbours.
-			return common ? overlapDistance(a.r, b.r, common) : a.r + b.r + 96;
+			return common ? overlapDistance(a.r, b.r, common) : a.r + b.r + (flatten ? 64 : 96);
 		}),
 	);
-	for (let iteration = 0; iteration < 320; iteration++) {
+	// A strong pull leaves neighbours pressed together: finish with a few
+	// passes that only push, so nobody ends up on top of anybody.
+	const settle = flatten ? 20 : 0;
+	for (let iteration = 0; iteration < 320 + settle; iteration++) {
 		for (let i = 0; i < places.length; i++) {
 			for (let j = i + 1; j < places.length; j++) {
 				const a = places[i],
@@ -301,9 +320,12 @@ export function placeClusters(
 				b.y += dy * push * (1 - share);
 			}
 		}
+		if (iteration >= 320) {
+			continue;
+		}
 		for (const place of places) {
 			place.x *= 0.985;
-			place.y *= 0.98;
+			place.y *= pullY;
 		}
 	}
 	return places.map((place) => ({
@@ -311,6 +333,41 @@ export function placeClusters(
 		x: Math.round(place.x),
 		y: Math.round(place.y),
 	}));
+}
+
+/**
+ * Spiral slots that survive data changes, for a map that stays on screen while
+ * clusters come and go: a cluster keeps its slot for as long as it exists, a
+ * new one takes the lowest free slot, and slot 0 (the centre) belongs to
+ * `centre` alone. Without this a cluster that grows by one person overtakes
+ * its neighbours in the size order and everybody swaps places.
+ */
+export function stickySlots(
+	previous: ReadonlyMap<string, number>,
+	ids: string[],
+	centre?: string,
+): Map<string, number> {
+	const next = new Map<string, number>();
+	const taken = new Set<number>([0]);
+	for (const id of ids) {
+		const slot = id === centre ? 0 : previous.get(id);
+		if (slot !== undefined && (slot > 0 || id === centre)) {
+			next.set(id, slot);
+			taken.add(slot);
+		}
+	}
+	let free = 1;
+	for (const id of ids) {
+		if (next.has(id)) {
+			continue;
+		}
+		while (taken.has(free)) {
+			free += 1;
+		}
+		next.set(id, free);
+		taken.add(free);
+	}
+	return next;
 }
 
 /**

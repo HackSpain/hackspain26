@@ -23,6 +23,7 @@ import {
 	NODE_RADIUS,
 	placeClusters,
 	SETTLED,
+	stickySlots,
 	symbolBox,
 	ZONE_HALO,
 } from "./network-model";
@@ -118,6 +119,8 @@ export function NetworkCanvas({
 	linksOf,
 	panelLeft,
 	onSelect,
+	live = false,
+	spotlight = null,
 	ref,
 }: {
 	participants: DirectoryParticipant[];
@@ -129,6 +132,14 @@ export function NetworkCanvas({
 	/** Where the floating profile's left edge lands, so focus centres in the free area. */
 	panelLeft: (viewportWidth: number) => number | null;
 	onSelect: (id: string | null) => void;
+	/**
+	 * A map left on a screen while the data changes under it: people without a
+	 * cluster gather at the centre, clusters keep their place as they grow, and
+	 * only new clusters bloom in.
+	 */
+	live?: boolean;
+	/** People to ring in gold without dimming anybody else. */
+	spotlight?: Set<string> | null;
 	ref?: Ref<NetworkHandle>;
 }) {
 	const viewportRef = useRef<HTMLDivElement>(null);
@@ -172,10 +183,27 @@ export function NetworkCanvas({
 	const [hoveredId, setHoveredId] = useState<string | null>(null);
 	const [fitted, setFitted] = useState(false);
 
-	const clusters = useMemo(
-		() => clusterParticipants(participants, lens),
-		[participants, lens],
-	);
+	const slots = useRef<ReadonlyMap<string, number>>(new Map());
+	const seenZones = useRef(new Set<string>());
+	const clusters = useMemo(() => {
+		const all = clusterParticipants(participants, lens);
+		return live
+			? all.toSorted((a, b) => Number(b.loose) - Number(a.loose))
+			: all;
+	}, [participants, lens, live]);
+	const spiral = useMemo(() => {
+		if (!live) {
+			return;
+		}
+		const next = stickySlots(
+			slots.current,
+			clusters.map((cluster) => cluster.id),
+			clusters.find((cluster) => cluster.loose)?.id,
+		);
+		// oxlint-disable-next-line react/immutability -- the slots only feed the next layout, like the carried points below.
+		slots.current = next;
+		return clusters.map((cluster) => next.get(cluster.id) ?? 0);
+	}, [clusters, live]);
 	const aspect = size.height
 		? Math.max(
 				0.6,
@@ -183,8 +211,8 @@ export function NetworkCanvas({
 			)
 		: 1.6;
 	const places = useMemo(
-		() => placeClusters(clusters, aspect),
-		[clusters, aspect],
+		() => placeClusters(clusters, aspect, { flatten: live, slots: spiral }),
+		[clusters, aspect, spiral, live],
 	);
 	const bounds = useMemo(() => layoutBounds(places), [places]);
 	const venn = useMemo(() => clustersOverlap(clusters), [clusters]);
@@ -234,9 +262,9 @@ export function NetworkCanvas({
 			if (linkedIds.has(id)) {
 				return "linked";
 			}
-			return matches?.has(id) ? "match" : "";
+			return (matches ?? spotlight)?.has(id) ? "match" : "";
 		},
-		[activeId, linkedIds, matches],
+		[activeId, linkedIds, matches, spotlight],
 	);
 
 	// --- paint loop ---------------------------------------------------------
@@ -520,8 +548,19 @@ export function NetworkCanvas({
 			introPlayed.current = true;
 			return;
 		}
-		const circles = zones.querySelectorAll(".pg-zone circle");
-		const labels = zones.querySelectorAll(".pg-zone-logo, .pg-zone-label");
+		// On a live map the data changes all the time: only newcomers bloom.
+		const seen = seenZones.current;
+		const fresh = [...zones.querySelectorAll<SVGGElement>(".pg-zone")].filter(
+			(zone) => !(live && seen.has(zone.dataset.cluster ?? "")),
+		);
+		seenZones.current = new Set(clusters.map((cluster) => cluster.id));
+		if (!fresh.length) {
+			return;
+		}
+		const circles = fresh.flatMap((zone) => [...zone.querySelectorAll("circle")]);
+		const labels = fresh.flatMap((zone) => [
+			...zone.querySelectorAll(".pg-zone-logo, .pg-zone-label"),
+		]);
 		const timeline = gsap.timeline({ defaults: { ease: "power3.out" } });
 		timeline.from(circles, {
 			duration: 0.8,
@@ -551,11 +590,14 @@ export function NetworkCanvas({
 			// put everything back and let the next run bloom the people again.
 			if (timeline.progress() < 1) {
 				introPlayed.current = false;
+				for (const zone of fresh) {
+					seenZones.current.delete(zone.dataset.cluster ?? "");
+				}
 			}
 			timeline.revert();
 			cutBloom?.();
 		};
-	}, [clusters]);
+	}, [clusters, live]);
 
 	useEffect(() => stopTweens, [stopTweens]);
 
@@ -835,6 +877,7 @@ export function NetworkCanvas({
 								<g
 									key={cluster.id}
 									className="pg-zone"
+									data-cluster={cluster.id}
 									data-loose={cluster.loose ? "" : undefined}
 								>
 									<circle

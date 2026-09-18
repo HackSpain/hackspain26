@@ -7,6 +7,7 @@ import type { ScreenConfig } from "@convex/lib/tvScreens";
 import { ArrivalDemo, ArrivalStage, LiveArrivals } from "@/components/arrivals/screen";
 import { resolveTvSponsors } from "@/lib/tv";
 import { MarketScreen } from "./market";
+import { TeamsScreen } from "./teams";
 import { useClock } from "./motion";
 
 function Activity() {
@@ -31,6 +32,7 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
   if (config.preset === "entradas") { return demo ? <ArrivalDemo /> : <LiveArrivals />; }
   if (config.preset === "espera") { return <ArrivalStage person={null} waiting />; }
   if (config.preset === "panel") { return <MarketScreen demo={demo} />; }
+  if (config.preset === "equipos") { return <TeamsScreen demo={demo} />; }
   return (
     <main className="flex h-dvh w-full flex-col gap-[4vmin] overflow-hidden bg-hs-ink p-[4vmin] text-hs-paper">
       <header className="flex shrink-0 items-center justify-between gap-6">
