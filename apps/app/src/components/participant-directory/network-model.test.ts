@@ -188,6 +188,12 @@ test("clusters with people in common overlap like a Venn diagram; others keep cl
 		"track",
 	);
 	const logoPlaces = placeClusters(logoClusters);
+	const logoA = logoPlaces[logoClusters.findIndex((c) => c.label === "A")];
+	const logoB = logoPlaces[logoClusters.findIndex((c) => c.label === "B")];
+	assert.ok(
+		Math.hypot(logoA.x - logoB.x, logoA.y - logoB.y) > logoA.r + logoB.r,
+		"sponsor circles keep a gap",
+	);
 	const logoPoints = initialPoints(logoClusters, logoPlaces);
 	const logoLayout = createLayout(logoPoints, logoClusters, logoPlaces);
 	for (let i = 0; i < 300; i++) {
