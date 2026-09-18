@@ -3,19 +3,30 @@ import { exportTelemetryAsOtlpLogs, toOtlpLogs } from "./otlp";
 import type { TelemetryEvent } from "./rawtree";
 
 const event: TelemetryEvent = {
-  costUsd: 0.25,
   eventId: "claude-code:session-1:msg_1",
   harness: "claude-code",
   identity: { clientVersion: "0.4.0", teamId: "team-1", userId: "user-1" },
-  model: { family: "claude", provider: "anthropic", raw: "claude-fable-5-1" },
-  native: { requestId: "req_1" },
+  model: {
+    family: "claude",
+    name: "claude-fable-5-1",
+    provider: "anthropic",
+    raw: "claude-fable-5-1-20260101",
+  },
+  native: { costUsd: 0.25, requestId: "req_1" },
   // Read two days after it happened.
   observedAt: "2026-10-05T10:00:00.000Z",
   occurredAt: "2026-10-03T09:30:00.000Z",
   project: { dirHash: "9f2c1a7b3e4d5c6a", name: "agentos" },
-  schema: "hackspain.telemetry.v1",
+  schema: "hackspain.telemetry.v2",
   sessionId: "session-1",
-  tokens: { cacheRead: 4, cacheWrite: 5, input: 2, output: 3, reasoning: 1 },
+  tokens: {
+    cacheRead: 4,
+    cacheWrite: 5,
+    input: 2,
+    output: 3,
+    reasoning: 1,
+    total: 14,
+  },
   type: "usage",
 };
 
@@ -65,7 +76,15 @@ describe("toOtlpLogs", () => {
     expect(attribute(record, "hackspain.usage.cache_read_tokens")).toEqual({
       intValue: "4",
     });
-    expect(attribute(record, "hackspain.cost_usd")).toEqual({ doubleValue: 0.25 });
+    expect(attribute(record, "hackspain.model.raw")).toEqual({
+      stringValue: "claude-fable-5-1-20260101",
+    });
+    expect(attribute(record, "hackspain.usage.total_tokens")).toEqual({
+      intValue: "14",
+    });
+    expect(attribute(record, "hackspain.native.cost_usd")).toEqual({
+      doubleValue: 0.25,
+    });
     expect(attribute(record, "event.id")).toEqual({
       stringValue: "claude-code:session-1:msg_1",
     });
@@ -78,7 +97,7 @@ describe("toOtlpLogs", () => {
       identity: { clientVersion: "0.3.0", userId: "user-1" },
       observedAt: event.observedAt,
       occurredAt: event.occurredAt,
-      schema: "hackspain.telemetry.v1",
+      schema: "hackspain.telemetry.v2",
       sessionId: "s2",
       type: "session.start",
     };

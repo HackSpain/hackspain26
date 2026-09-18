@@ -292,7 +292,7 @@ describe("scanOnce", () => {
       skipped: 2,
     });
     expect(pushed[0]?.identity).toEqual({ clientVersion: "t", userId: "u" });
-    expect(pushed[0]?.schema).toBe("hackspain.telemetry.v1");
+    expect(pushed[0]?.schema).toBe("hackspain.telemetry.v2");
     expect(logs.some((l) => l.includes("dropped bad"))).toBe(true);
     expect(logs.some((l) => l.includes("collector failed"))).toBe(true);
   });
@@ -356,7 +356,12 @@ describe("telemetry stats", () => {
       event(1),
       event(2, {
         harness: "codex",
-        model: { family: "gpt", raw: "gpt-5" },
+        model: {
+          family: "gpt",
+          name: "gpt-5",
+          provider: "openai",
+          raw: "gpt-5",
+        },
         sessionId: "s2",
       }),
       stamp(

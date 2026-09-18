@@ -34,7 +34,7 @@ import {
 import type { Toaster } from "./notify";
 import { platformToaster } from "./notify";
 import type { RawEvent, TelemetryEvent } from "./schema";
-import { SCHEMA, validateEvent } from "./schema";
+import { canonicalize, SCHEMA, validateEvent } from "./schema";
 import { httpSink } from "./sinks/http";
 import type { Sink } from "./sinks/spool";
 import { readSpool, spoolSink } from "./sinks/spool";
@@ -201,7 +201,7 @@ export function stamp(
 ): TelemetryEvent {
   return {
     schema: SCHEMA,
-    ...raw,
+    ...canonicalize(raw),
     observedAt: observedAt.toISOString(),
     identity,
   };

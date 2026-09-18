@@ -48,7 +48,7 @@ function rejection(
 
 /**
  * POST application/x-ndjson from `hackspain watch`, one canonical
- * `hackspain.telemetry.v1` event per line (apps/cli/docs/telemetry-schema.md).
+ * `hackspain.telemetry.v2` event per line (v1 is upgraded) (apps/cli/docs/telemetry-schema.md).
  *
  * The participant session is verified before canonical events are inserted in
  * RawTree. The RawTree API key stays server-side. Events also stay in the

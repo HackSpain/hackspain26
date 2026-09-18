@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 import { RawTree } from "@rawtree/sdk";
 import type { JsonObject } from "@rawtree/sdk";
+import type { CanonicalModel, TokenCounts } from "./canonical";
+import {
+  canonicalModel,
+  TELEMETRY_SCHEMA,
+  TELEMETRY_SCHEMA_V1,
+  totalTokens,
+} from "./canonical";
 
 const DEFAULT_TELEMETRY_TABLE = "hackspain_telemetry";
 
@@ -24,14 +31,19 @@ const HARNESSES = [
   "qwen-code",
   "kilo-code",
 ] as const;
-const MODEL_FAMILIES = ["claude", "gpt", "gemini", "qwen", "other"] as const;
 
 type EventType = (typeof EVENT_TYPES)[number];
 type Harness = (typeof HARNESSES)[number];
-type ModelFamily = (typeof MODEL_FAMILIES)[number];
 
+/**
+ * What is stored: always `hackspain.telemetry.v2`, with every derived field
+ * (`model.name`, `model.family`, `model.provider`, `tokens.total`) computed
+ * here by `./canonical`, never trusted from the client. A v1 event from an
+ * older binary goes through the same code, so rows do not differ by harness
+ * or by CLI version.
+ */
 export type TelemetryEvent = {
-  schema: "hackspain.telemetry.v1";
+  schema: typeof TELEMETRY_SCHEMA;
   type: EventType;
   eventId: string;
   occurredAt: string;
@@ -40,17 +52,11 @@ export type TelemetryEvent = {
   harnessVersion?: string;
   sessionId: string;
   project?: { dirHash: string; name: string; gitBranch?: string };
-  model?: { raw: string; family: ModelFamily; provider?: string };
-  tokens?: {
-    input: number;
-    output: number;
-    cacheRead: number;
-    cacheWrite: number;
-    reasoning?: number;
-  };
-  costUsd?: number;
+  model?: CanonicalModel;
+  tokens?: TokenCounts & { total: number };
   identity: { userId: string; teamId?: string; clientVersion: string };
-  native?: Record<string, unknown>;
+  /** Harness-specific, never comparable across harnesses. */
+  native?: { requestId?: string; costUsd?: number };
 };
 
 export class RawTreeConfigurationError extends Error {
@@ -122,40 +128,51 @@ function parseModel(
   if (!isRecord(value)) {
     return null;
   }
-  const { raw, family, provider } = value;
+  const { raw, provider } = value;
   if (
     !isBoundedString(raw, MAX_SHORT_STRING_LENGTH) ||
-    !MODEL_FAMILIES.includes(family as ModelFamily) ||
     !isOptionalBoundedString(provider, MAX_SHORT_STRING_LENGTH)
   ) {
     return null;
   }
-  return {
-    family: family as ModelFamily,
-    raw,
-    ...(provider ? { provider } : {}),
-  };
+  // name, family and provider are derived here, whatever the client sent.
+  return canonicalModel(raw, provider);
 }
 
+function isCost(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+/**
+ * `requestId` only from Claude Code; `costUsd` from the harnesses that price
+ * their own requests. v1 carried the price at the top level (`legacyCost`).
+ */
 function parseNative(
   value: unknown,
-  harness: Harness
+  harness: Harness,
+  legacyCost: unknown
 ): TelemetryEvent["native"] | null | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (!isRecord(value) || harness !== "claude-code") {
+  if (value !== undefined && !isRecord(value)) {
     return null;
   }
-  const keys = Object.keys(value);
+  const { requestId, costUsd, ...unknown } = value ?? {};
+  const cost = costUsd ?? legacyCost;
   if (
-    keys.length !== 1 ||
-    keys[0] !== "requestId" ||
-    !isBoundedString(value.requestId, MAX_EVENT_ID_LENGTH)
+    Object.keys(unknown).length > 0 ||
+    (cost !== undefined && !isCost(cost)) ||
+    (requestId !== undefined &&
+      (harness !== "claude-code" ||
+        !isBoundedString(requestId, MAX_EVENT_ID_LENGTH)))
   ) {
     return null;
   }
-  return { requestId: value.requestId };
+  if (requestId === undefined && cost === undefined) {
+    return undefined;
+  }
+  return {
+    ...(requestId === undefined ? {} : { requestId }),
+    ...(cost === undefined ? {} : { costUsd: cost }),
+  };
 }
 
 function parseTokens(
@@ -177,13 +194,14 @@ function parseTokens(
   ) {
     return null;
   }
-  return {
+  const counts = {
     cacheRead,
     cacheWrite,
     input,
     output,
     ...(reasoning === undefined ? {} : { reasoning }),
   };
+  return { ...counts, total: totalTokens(counts) };
 }
 
 /**
@@ -221,17 +239,13 @@ export function parseTelemetryEvent(
   const harness = HARNESSES.includes(value.harness as Harness)
     ? (value.harness as Harness)
     : null;
-  let native: ReturnType<typeof parseNative> | null | undefined;
-  if (harness) {
-    native = parseNative(value.native, harness);
-  } else if (value.native === undefined) {
-    native = undefined;
-  } else {
-    native = null;
-  }
+  const native = harness
+    ? parseNative(value.native, harness, value.costUsd)
+    : null;
 
   if (
-    value.schema !== "hackspain.telemetry.v1" ||
+    (value.schema !== TELEMETRY_SCHEMA &&
+      value.schema !== TELEMETRY_SCHEMA_V1) ||
     !EVENT_TYPES.includes(value.type as EventType) ||
     !isBoundedString(value.eventId, MAX_EVENT_ID_LENGTH) ||
     !isDate(value.occurredAt) ||
@@ -242,11 +256,7 @@ export function parseTelemetryEvent(
     project === null ||
     model === null ||
     tokens === null ||
-    (value.type === "usage" && tokens === undefined) ||
-    (value.costUsd !== undefined &&
-      (typeof value.costUsd !== "number" ||
-        !Number.isFinite(value.costUsd) ||
-        value.costUsd < 0)) ||
+    (value.type === "usage" && (tokens === undefined || model === undefined)) ||
     !isRecord(identity) ||
     identity.userId !== authenticated.userId ||
     !isOptionalBoundedString(identity.teamId, MAX_SESSION_ID_LENGTH) ||
@@ -257,7 +267,7 @@ export function parseTelemetryEvent(
   }
 
   return {
-    schema: value.schema,
+    schema: TELEMETRY_SCHEMA,
     type: value.type as EventType,
     eventId: value.eventId,
     occurredAt: value.occurredAt,
@@ -268,7 +278,6 @@ export function parseTelemetryEvent(
     ...(project ? { project } : {}),
     ...(model ? { model } : {}),
     ...(tokens ? { tokens } : {}),
-    ...(value.costUsd === undefined ? {} : { costUsd: value.costUsd }),
     identity: {
       userId: authenticated.userId,
       ...(authenticated.teamId ? { teamId: authenticated.teamId } : {}),
