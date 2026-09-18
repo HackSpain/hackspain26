@@ -13,6 +13,7 @@ export type ErrorCode =
   | "ALREADY_IN_TEAM"
   | "BAD_CODE"
   | "EVENT_CLOSED"
+  | "TRACK_FULL"
   | "VALIDATION"
   // Email OTP login (convex/login.ts, convex/auth.ts). The login page and the
   // CLI both branch on these instead of parsing the library's messages.

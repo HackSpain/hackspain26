@@ -219,12 +219,18 @@ export const get = onboardedQuery({
   returns: v.union(trackReturn, v.null()),
 });
 
+const settingsReturn = v.object({
+  submissionsOpen: v.boolean(),
+  teamLimit: v.number(),
+});
+
 export const settings = onboardedQuery({
   args: {},
   handler: async (ctx) => ({
     submissionsOpen: await submissionsAreOpen(ctx),
+    teamLimit: MAX_TEAMS_PER_TRACK,
   }),
-  returns: v.object({ submissionsOpen: v.boolean() }),
+  returns: settingsReturn,
 });
 
 export const adminList = adminQuery({
@@ -242,8 +248,9 @@ export const adminSettings = adminQuery({
   args: {},
   handler: async (ctx) => ({
     submissionsOpen: await submissionsAreOpen(ctx),
+    teamLimit: MAX_TEAMS_PER_TRACK,
   }),
-  returns: v.object({ submissionsOpen: v.boolean() }),
+  returns: settingsReturn,
 });
 
 export const adminEnsureDefaults = adminMutation({
