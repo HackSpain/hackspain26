@@ -19,8 +19,8 @@ esquina inferior derecha para activar pantalla completa. El lienzo conserva 16:9
 
 Cada check-in nuevo (desde recepción o administración) presenta al participante
 10 segundos, incluidas las transiciones de franjas verticales de color, con nombre,
-foto, rol y empresa o universidad,
-según los datos de su perfil. Si no tiene foto se muestran sus iniciales. No se
+foto, rol, ciudad, empresa y universidad en campos separados, y hasta tres
+especialidades, según los datos de su perfil. Los campos vacíos no se muestran. Si no tiene foto se muestran sus iniciales. No se
 publican emails, teléfonos ni códigos de acreditación. Las entradas simultáneas
 se encolan; escanear dos veces un pase no repite la presentación. Deshacer una
 entrada la retira de la cola. Al abrir o recargar se empieza desde ese momento,

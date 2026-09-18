@@ -15,7 +15,7 @@ const BAND_TONES = ["bg-hs-navy", "bg-hs-teal", "bg-hs-gold", "bg-hs-orange", "b
 const DEMO: Arrival[] = [
   // Public mentor portrait and role, already published on the marketing site.
   { id: "demo-1", checkedInAt: 1, number: 42, name: "Mark Villacampa", image: "/arrivals/demo-mark-villacampa.jpg", role: "Software Engineer", city: "", company: "RevenueCat", university: "", skills: [] },
-  { id: "demo-2", checkedInAt: 2, number: 43, name: "Lucía Fernández de la Vega", image: null, role: "Diseño de producto", city: "Barcelona", company: "Estudio independiente", university: "", skills: ["Diseño UX/UI", "Figma", "Prototipado"] },
+  { id: "demo-2", checkedInAt: 2, number: 43, name: "Lucía Fernández de la Vega", image: null, role: "Diseño de producto", city: "Barcelona", company: "Estudio independiente", university: "Universitat de Barcelona", skills: ["Diseño UX/UI", "Figma", "Prototipado"] },
   { id: "demo-3", checkedInAt: 3, number: 44, name: "Dani", image: null, role: "Hacker", city: "", company: "", university: "", skills: [] },
 ];
 
@@ -99,15 +99,34 @@ function Player({ person }: { person: Arrival }) {
     <article ref={root} className="arena-player absolute inset-0" aria-label={`Entra ${person.name}`}>
       <div aria-hidden className="arena-brand-panel absolute top-0 right-0 h-full w-[780px]" />
       <Portrait person={person} />
-      <div className="absolute top-[335px] left-[88px] z-10 w-[1120px]">
+      <div className="absolute top-[290px] left-[88px] z-10 w-[1120px]">
         <h1 className="arena-type uppercase leading-[0.98] tracking-[-0.025em] text-hs-paper">
           <span className="block overflow-hidden pb-2"><span className="arena-first block text-hs-gold" style={{ fontSize: firstName.length > 14 || lastName.length > 15 ? 96 : 132 }}>{firstName}</span></span>
           {lastName ? <span className="block overflow-hidden pb-5"><span className="arena-last block text-balance break-words" style={{ fontSize: nameSize }}>{lastName}</span></span> : null}
         </h1>
-        <div className="arena-affiliation mt-10 max-w-[870px]">
-          <p className="text-[22px] font-semibold uppercase tracking-[0.1em] text-hs-gold">{person.role}</p>
+        <div className="arena-affiliation mt-8 max-w-[940px]">
+          <p className="flex items-baseline gap-5 text-[24px] leading-snug">
+            <span className="font-semibold uppercase tracking-[0.08em] text-hs-gold">{person.role}</span>
+            {person.city ? <span className="shrink-0 text-hs-paper/65"><span aria-hidden className="mr-5 text-hs-gold/50">·</span>{person.city}</span> : null}
+          </p>
           {person.company || person.university ? (
-            <p className="mt-3 line-clamp-2 text-[34px] leading-snug text-hs-paper/75">{[person.company, person.university].filter(Boolean).join(" / ")}</p>
+            <dl className={`mt-7 grid gap-x-10 gap-y-5 ${person.company && person.university ? "grid-cols-2" : "grid-cols-1"}`}>
+              {person.company ? (
+                <div>
+                  <dt className="text-[17px] font-medium uppercase tracking-[0.16em] text-hs-paper/45">Empresa</dt>
+                  <dd className="mt-2 line-clamp-2 text-[32px] leading-tight text-hs-paper">{person.company}</dd>
+                </div>
+              ) : null}
+              {person.university ? (
+                <div>
+                  <dt className="text-[17px] font-medium uppercase tracking-[0.16em] text-hs-paper/45">Universidad</dt>
+                  <dd className="mt-2 line-clamp-2 text-[32px] leading-tight text-hs-paper">{person.university}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
+          {person.skills.length > 0 ? (
+            <p className="mt-6 line-clamp-2 text-[23px] leading-relaxed text-hs-paper/60" aria-label="Especialidades">{person.skills.slice(0, 3).join(" · ")}</p>
           ) : null}
         </div>
       </div>
