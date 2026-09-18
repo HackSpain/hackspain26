@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -353,19 +354,24 @@ export default function TracksPage() {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <code className="font-mono text-xs text-hs-brown">
-                    hackspain track register {track.slug}
-                  </code>
-                  {track.website ? (
-                    <a
-                      href={track.website}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-11 items-center text-sm font-medium text-hs-navy underline-offset-4 hover:underline"
-                    >
-                      Conoce al sponsor
-                    </a>
-                  ) : null}
+                  <Button asChild className="w-full sm:w-auto">
+                    <Link href={`/tracks/${track.slug}`}>Ver reto</Link>
+                  </Button>
+                  <div className="flex min-w-0 flex-wrap items-center gap-3">
+                    <code className="font-mono text-xs text-hs-brown">
+                      hackspain track register {track.slug}
+                    </code>
+                    {track.website ? (
+                      <a
+                        href={track.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-11 items-center text-sm font-medium text-hs-navy underline-offset-4 hover:underline"
+                      >
+                        Conoce al sponsor
+                      </a>
+                    ) : null}
+                  </div>
                 </div>
               </CardContent>
             </Card>

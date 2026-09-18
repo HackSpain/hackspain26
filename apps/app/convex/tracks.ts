@@ -78,6 +78,7 @@ const trackReturn = v.object({
   body: v.string(),
   label: v.string(),
   logoUrl: v.optional(v.string()),
+  markdown: v.optional(v.string()),
   note: v.string(),
   slug: v.string(),
   sortOrder: v.number(),
@@ -91,6 +92,7 @@ function trackFields(track: Doc<"tracks">) {
     body: track.body,
     label: track.label,
     logoUrl: track.logoUrl,
+    markdown: track.markdown,
     note: track.note,
     slug: track.slug,
     sortOrder: track.sortOrder,
@@ -167,6 +169,21 @@ export const list = onboardedQuery({
       .map(trackFields);
   },
   returns: v.array(trackReturn),
+});
+
+export const get = onboardedQuery({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const track = await ctx.db
+      .query("tracks")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!track?.active) {
+      return null;
+    }
+    return trackFields(track);
+  },
+  returns: v.union(trackReturn, v.null()),
 });
 
 export const settings = onboardedQuery({
@@ -246,6 +263,7 @@ export const adminUpdate = adminMutation({
     body: v.optional(v.string()),
     label: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
+    markdown: v.optional(v.string()),
     note: v.optional(v.string()),
     sortOrder: v.optional(v.number()),
     trackId: v.id("tracks"),
@@ -259,6 +277,7 @@ export const adminUpdate = adminMutation({
     const patch: {
       label?: string;
       body?: string;
+      markdown?: string;
       note?: string;
       active?: boolean;
       sortOrder?: number;
@@ -280,6 +299,9 @@ export const adminUpdate = adminMutation({
     }
     if (args.body !== undefined) {
       patch.body = args.body.trim();
+    }
+    if (args.markdown !== undefined) {
+      patch.markdown = args.markdown.trim();
     }
     if (args.note !== undefined) {
       patch.note = args.note.trim();

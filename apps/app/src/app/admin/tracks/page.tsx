@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
@@ -169,6 +170,7 @@ function TrackEditor({
   const [label, setLabel] = useState(track.label);
   const [note, setNote] = useState(track.note);
   const [body, setBody] = useState(track.body);
+  const [markdown, setMarkdown] = useState(track.markdown ?? "");
   const [logoUrl, setLogoUrl] = useState(track.logoUrl ?? "");
   const [website, setWebsite] = useState(track.website ?? "");
   const [pending, setPending] = useState<"text" | "visibility" | null>(null);
@@ -178,6 +180,7 @@ function TrackEditor({
     label.trim() !== track.label ||
     note.trim() !== track.note ||
     body.trim() !== track.body ||
+    markdown.trim() !== (track.markdown ?? "").trim() ||
     logoUrl.trim() !== (track.logoUrl ?? "") ||
     website.trim() !== (track.website ?? "");
 
@@ -228,6 +231,18 @@ function TrackEditor({
             onChange={(event) => setBody(event.target.value)}
           />
         </Field>
+        <Field
+          label="Enunciado"
+          htmlFor="track-markdown"
+          hint="Markdown del reto. Se publica en la ficha que ven los equipos."
+        >
+          <Textarea
+            id="track-markdown"
+            value={markdown}
+            onChange={(event) => setMarkdown(event.target.value)}
+            className="min-h-48 font-mono text-sm"
+          />
+        </Field>
         <div className="grid gap-3 md:grid-cols-2">
           <Field
             label="Logo del sponsor"
@@ -258,7 +273,15 @@ function TrackEditor({
             disabled={!dirty || pending !== null}
             onClick={() =>
               void run("text", () =>
-                update({ trackId: track._id, label, body, note, logoUrl, website }),
+                update({
+                  trackId: track._id,
+                  label,
+                  body,
+                  markdown,
+                  note,
+                  logoUrl,
+                  website,
+                }),
               )
             }
           >
@@ -276,6 +299,11 @@ function TrackEditor({
           >
             {track.active ? "Ocultar" : "Mostrar"}
           </Button>
+          {track.active ? (
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href={`/tracks/${track.slug}`}>Ver ficha</Link>
+            </Button>
+          ) : null}
         </div>
         {submissions.length === 0 ? (
           <p className="text-sm text-hs-brown">Aún no hay proyectos en este reto.</p>
