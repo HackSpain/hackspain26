@@ -21,6 +21,7 @@ import {
 } from "recharts";
 import {
   HARNESSES,
+  bucketSpan,
   compact,
   minuteLabel,
   number,
@@ -251,10 +252,10 @@ export function ConsumptionChart({
           ))
         ) : (
           <>
-            <span>Barras · intervalos de 30 min</span>
+            <span>Barras · intervalos de {bucketSpan(timeline)}</span>
             <span className="inline-flex items-center gap-2">
               <span className="h-0.5 w-4" style={{ backgroundColor: color }} />
-              Línea · media de los últimos 90 min disponibles
+              Línea · media de los tres últimos intervalos disponibles
             </span>
           </>
         )}

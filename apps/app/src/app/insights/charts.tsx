@@ -27,6 +27,7 @@ import {
   number,
   percent,
   sumSamples,
+  bucketSpan,
   timeLabel,
 } from "./mock-data";
 import type {
@@ -168,7 +169,7 @@ export function ActivityChart({
             margin={{ bottom: 0, left: -12, right: 0, top: 12 }}
             barCategoryGap="26%"
             accessibilityLayer
-            aria-label={`${unit} por intervalos de 30 minutos. Usa las flechas para explorar.`}
+            aria-label={`${unit} por intervalos de ${bucketSpan(timeline)}. Usa las flechas para explorar.`}
           >
             <CartesianGrid
               strokeDasharray="2 4"
