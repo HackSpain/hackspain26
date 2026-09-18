@@ -70,6 +70,23 @@ describe("toInsightData", () => {
     expect(tokens["gemini-cli"]).toBe(40);
   });
 
+  test("Pi and Oh My Pi usage contributes to totals and separate harness rows", () => {
+    const piData = toInsightData({
+      ...payload,
+      samples: [
+        { bucket: 1, cachedTokens: 30, harness: "pi", requests: 1, sessions: 1, teamId: "t1", tokens: 100 },
+        { bucket: 1, cachedTokens: 40, harness: "omp", requests: 1, sessions: 1, teamId: "t1", tokens: 200 },
+      ],
+    });
+    const totals = sumSamples(piData.samples);
+    expect(totals.tokens).toBe(300);
+    expect(totals.cachedTokens).toBe(70);
+    expect(totals.sessions).toBe(2);
+    const rows = harnessRows(piData.samples);
+    expect(rows.find((row) => row.id === "pi")?.tokens).toBe(100);
+    expect(rows.find((row) => row.id === "omp")?.tokens).toBe(200);
+  });
+
   test("buckets follow the real hackathon, not a 12-hour day", () => {
     expect(data.bucketMinutes).toBeCloseTo(118.125);
     expect(data.startsAt).toBe(payload.window.startsAt);

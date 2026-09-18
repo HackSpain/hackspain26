@@ -25,6 +25,8 @@ const HARNESSES = [
   "gemini-cli",
   "qwen-code",
   "kilo-code",
+  "pi",
+  "omp",
 ] as const;
 
 type EventType = (typeof EVENT_TYPES)[number];
