@@ -4,6 +4,7 @@ import { convexAuthNextjsToken } from "@convex-dev/auth/nextjs/server";
 import { fetchQuery } from "convex/nextjs";
 import { NextResponse } from "next/server";
 import sharp from "sharp";
+import { reportServerEvent } from "@/lib/server-observability";
 import { parseThumbnailWidth } from "@/lib/thumbnail";
 import { bearerToken } from "../../cli/_lib/respond";
 
@@ -58,8 +59,21 @@ export async function GET(
   if (!url) {
     return new NextResponse("Not found", { status: 404 });
   }
-  const upstream = await fetch(url);
+  let upstream: Response;
+  try {
+    upstream = await fetch(url);
+  } catch (error) {
+    await reportServerEvent("error", "Image proxy upstream request failed", {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorName: error instanceof Error ? error.name : typeof error,
+    });
+    return new NextResponse("Unavailable", { status: 502 });
+  }
   if (!upstream.ok || !upstream.body) {
+    await reportServerEvent("error", "Image proxy upstream response failed", {
+      hasBody: Boolean(upstream.body),
+      upstreamStatus: upstream.status,
+    });
     return new NextResponse("Unavailable", { status: 502 });
   }
   const width = parseThumbnailWidth(
@@ -68,7 +82,12 @@ export async function GET(
   if (width !== null) {
     try {
       return await thumbnail(upstream, width);
-    } catch {
+    } catch (error) {
+      await reportServerEvent("warn", "Image proxy thumbnail failed", {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : typeof error,
+        width,
+      });
       return new NextResponse("Cannot resize this image", { status: 415 });
     }
   }
