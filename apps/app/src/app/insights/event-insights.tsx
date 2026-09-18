@@ -74,14 +74,16 @@ export function LiveTechnologyStacks() {
   return (
     <Panel
       title="Stacks más usados"
-      eyebrow="Detectado de los repos vinculados"
+      eyebrow="Detectado automáticamente de los repos"
     >
       {histogram === undefined ? (
         <p className="text-sm text-hs-brown">Cargando stacks…</p>
       ) : total === 0 ? (
         <p className="text-sm text-hs-brown">
-          Aún no hay stacks. Se leen del repo al vincularlo con{" "}
-          <code className="font-mono text-xs">hackspain team repo</code>.
+          Aún no hay stacks. Se leen solos del repo (también en monorepos) al
+          vincularlo con{" "}
+          <code className="font-mono text-xs">hackspain team repo</code> o al
+          ponerlo en el proyecto.
         </p>
       ) : (
         <>
@@ -128,7 +130,9 @@ export function LiveTechnologyStacks() {
         </>
       )}
       <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
-        Datos reales del repo.
+        {total === 0
+          ? "Datos reales del repo."
+          : `${histogram?.auto ?? 0} de ${total} proyectos con stack leído del repo; el resto lo escribió el equipo.`}
       </p>
     </Panel>
   );

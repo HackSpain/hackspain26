@@ -4,6 +4,7 @@ import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import { getEventWindow } from "./lib/eventWindow";
+import { histogramReturn, stackHistogram } from "./stack";
 import { messageReturn, widgetReturn } from "./tv";
 import { SCREEN_OFFLINE_MS, screenConfig, screenConfigValidator, screenKey, screenPresetValidator } from "./lib/tvScreens";
 
@@ -232,7 +233,12 @@ export const insightsBase = query({
         activity.set(key, row);
       }
     }
-    return { activity: [...activity.values()], teams: rows, window };
+    return {
+      activity: [...activity.values()],
+      stacks: await stackHistogram(ctx),
+      teams: rows,
+      window,
+    };
   },
   returns: v.object({
     activity: v.array(
@@ -243,6 +249,7 @@ export const insightsBase = query({
         teamId: v.string(),
       })
     ),
+    stacks: histogramReturn,
     teams: v.array(
       v.object({
         id: v.string(),

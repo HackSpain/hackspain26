@@ -22,6 +22,12 @@ export type TvInsights = {
     pushes: number;
     pullRequests: number;
   }[];
+  /** Technologies per project, read from the repos (or typed by the team). */
+  stacks: {
+    auto: number;
+    rows: { category: string; count: number; name: string }[];
+    total: number;
+  };
   generatedAt: number;
 };
 
@@ -44,6 +50,7 @@ async function load(): Promise<TvInsights> {
     activity: base.activity,
     buckets: INSIGHT_BUCKETS,
     generatedAt: Date.now(),
+    stacks: base.stacks,
     teams: base.teams,
     window: base.window,
   };

@@ -19,6 +19,11 @@ const payload: TvInsights = {
     { bucket: 9, cachedTokens: 0, harness: "gemini-cli", requests: 1, sessions: 1, teamId: "t2", tokens: 40 },
     { bucket: 9, cachedTokens: 0, harness: "not-a-harness", requests: 1, sessions: 1, teamId: "t2", tokens: 999 },
   ],
+  stacks: {
+    auto: 1,
+    rows: [{ category: "Frontend", count: 1, name: "Next.js" }],
+    total: 1,
+  },
   teams: [
     { id: "t1", members: 3, name: "Los Compiladores", project: "AgentOS" },
     { id: "t2", members: 2, name: "Tortilla Stack", project: "" },
