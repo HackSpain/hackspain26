@@ -265,6 +265,32 @@ describe("codex", () => {
 describe("cline", () => {
   const taskDir = join(FIXTURES, "cline", "tasks", "1758276000000");
 
+  test("model changes use the last metadata entry at or before each request", () => {
+    const messages = [5, 20, 30].map((ts) => ({
+      say: "api_req_started",
+      text: '{"tokensIn":1}',
+      ts,
+      type: "say",
+    }));
+    const task = {
+      messages,
+      metadata: {
+        model_usage: [
+          { model_id: "middle", ts: 20 },
+          { model_id: "first", ts: 10 },
+          { model_id: "last", ts: 20 },
+        ],
+      },
+      taskId: "model-switch",
+    };
+    expect(
+      normalizeCline(task, 0).events.map((event) => event.model?.raw)
+    ).toEqual(["first", "last", "last"]);
+    expect(
+      normalizeCline({ ...task, metadata: undefined }, 0).events[0]?.model?.raw
+    ).toBe("unknown");
+  });
+
   test("normalize: completed requests only, stops at the in-flight one, model from metadata", () => {
     const task = {
       messages: JSON.parse(
