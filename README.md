@@ -22,8 +22,7 @@ Landing static pages run without a database. Signup and ambassador APIs need `DA
 
 The dashboard needs a Convex development deployment (`pnpm dev:convex` / `pnpm --filter app exec convex dev`). Do not use `pnpm --filter app exec convex deploy` unless you are shipping production. Dashboard env lives in `apps/app/.env.example`.
 
-Errors, logs, Web Vitals and uptime are consolidated in Better Stack. Resource
-and Vercel environment setup is documented in [OBSERVABILITY.md](OBSERVABILITY.md).
+Errors, logs, Web Vitals and uptime are consolidated in Better Stack.
 
 ## Commands
 
