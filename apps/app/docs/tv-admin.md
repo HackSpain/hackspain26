@@ -13,16 +13,23 @@ para no borrar composiciones guardadas, pero `/tv` utiliza vistas predefinidas.
   pantallas reales se registran; `demo=1` es sólo una preview y no se registra.
 - `view` indica la vista inicial de una pantalla nueva. Una configuración guardada
   por el admin siempre tiene prioridad, también después de recargar el navegador.
-- En `/admin/tv` se puede preparar un nombre antes de abrirlo, copiar su URL, elegir
+- En `/admin/tv` se puede preparar un nombre antes de abrirlo, abrir su URL, elegir
   una vista, escribir un aviso y recargar únicamente esa pantalla.
 - Puedes borrar una pantalla desconectada y sus conexiones desde su tarjeta. Si se
   vuelve a abrir esa URL, se registrará de nuevo con la configuración inicial.
 - Dos navegadores con el mismo nombre comparten contenido y órdenes. El panel avisa
   y lista cada conexión con su URL, resolución y última respuesta. Para controlarlos
   por separado, usa nombres distintos.
-- Cada navegador comunica presencia y recibe órdenes mediante `POST /api/tv` cada
-  tres segundos, con timeout de ocho segundos. A los veinte segundos sin respuesta
-  aparece desconectado. Se conserva la última vista durante un fallo de conexión.
+- Las órdenes llegan mediante una suscripción pública de Convex a `tvPlayback.screenConfiguration`,
+  filtrada por identificador. Sólo los administradores pueden modificarlas.
+- Cada navegador comunica presencia mediante `POST /api/tv` cada 15 segundos y al
+  recibir una configuración, con timeout de ocho segundos. A los 45 segundos sin
+  señal aparece desconectado. La vista conserva su último contenido al perder conexión;
+  Convex reanuda la suscripción al reconectar. La respuesta HTTP no aplica órdenes
+  en los clientes nuevos, evitando que una respuesta antigua sobrescriba la suscripción.
+- El endpoint y la respuesta del heartbeat se mantienen para clientes anteriores:
+  despliega backend y frontend, y pulsa recargar en el admin. El cliente antiguo
+  recoge la orden por polling y carga la versión con suscripciones sin tocar el PC.
 - Las órdenes persisten. El panel indica si todavía están pendientes de recepción;
   esta confirmación no certifica que el monitor físico esté encendido ni que el
   contenido se haya renderizado sin errores.
@@ -46,11 +53,58 @@ El catálogo compartido está en `convex/lib/tvScreens.ts` y el render en
 | `actividad` | Las últimas publicaciones y eventos de GitHub del feed real |
 | `patrocinadores` | Logos del catálogo de patrocinadores existente |
 | `espera` | Franjas animadas y marca HackSpain |
+| `panel` | Todo el hackathon en una pantalla: cifras, equipos, feed y patrocinadores |
+| `equipos` | El mapa de participantes por equipo, en vivo, para la fase de formación |
 
-No hay coordenadas, tamaños de cajas ni métricas simuladas en estas vistas.
+No hay coordenadas, tamaños de cajas ni métricas simuladas en estas vistas
+(salvo la demo del panel, que lo indica en pantalla).
 Sólo las funciones admin pueden cambiar contenido y emitir recargas; el heartbeat
 público únicamente registra presencia y lee la configuración correspondiente.
 Las URLs guardadas sólo incluyen el identificador y la vista, nunca otros parámetros.
+
+## Panel
+
+`/tv?screen=hall&view=panel` reúne lo que ya enseñan las otras vistas, con la
+retícula de celdas de color de la landing:
+
+- Cabecera con el tramo del hackathon (24 tramos iguales), la cuenta atrás hasta
+  el cierre y la hora de Madrid.
+- Una cinta con todos los equipos por tokens y los puestos que han ganado o
+  perdido desde que cerró el tramo anterior.
+- Cuatro cifras fijas: tokens, pushes, sesiones de agentes y pull requests, cada
+  una con su evolución por tramo y lo sumado en el tramo en curso.
+- Un tablero que rota cada 12 segundos: pulso del evento, clasificación (siete
+  equipos por página, todas las páginas pasan), herramientas de IA y tecnologías.
+- El feed (publicaciones y GitHub) baja una fila cada 4,5 segundos y recicla las
+  16 últimas; una publicación nueva entra arriba al momento.
+- Una cinta de patrocinadores en tinta, como en la landing.
+
+Los datos son los de `/api/tv/insights` (RawTree y Convex, refresco cada 30
+segundos) y `tv.listFeed`; nada por persona. La rotación se detiene con la pestaña
+en segundo plano y respeta movimiento reducido. `/tv?view=panel&demo=1` usa equipos
+y cifras inventados (`src/lib/tv-market.ts`), nunca mezclados con los reales.
+
+## Equipos
+
+`/tv?screen=hall&view=equipos` pone a pantalla completa el mapa de `/participantes`
+agrupado por equipo, pensado para dejarlo puesto mientras se forman los equipos:
+
+- La gente sin equipo se junta en el centro y los equipos se reparten alrededor.
+  Cuando alguien entra en un equipo, su punto cruza el mapa hasta él con un aro
+  dorado durante unos segundos; un equipo nuevo aparece en el primer hueco libre.
+- Cada equipo conserva su sitio mientras existe, aunque crezca. Sin eso, cada alta
+  reordenaría los equipos por tamaño y el mapa entero cambiaría de lugar.
+- Cabecera con equipos formados, cuánta gente tiene equipo y cuánta no. Abajo, los
+  últimos movimientos ("nuevo equipo" o "se une"). Salir de un equipo no se anuncia.
+- Es una suscripción a `tv.teamFormation`, así que los cambios llegan solos. La
+  query es pública como el resto de pantallas y sólo publica nombre, foto y equipo;
+  el nombre nunca cae a un email. Incluye a quien tiene la ficha completa o ya está
+  en un equipo.
+- No responde al ratón ni al teclado: es una pantalla, no el mapa interactivo.
+
+`/tv?view=equipos&demo=1` forma equipos con 96 personas inventadas, una cada dos
+segundos, y vuelve a empezar (`src/lib/tv-teams.ts`). El modo en vivo del mapa
+(`live` en `network-canvas.tsx`) no cambia el comportamiento de `/participantes`.
 
 ## Entradas y tamaños de pantalla
 

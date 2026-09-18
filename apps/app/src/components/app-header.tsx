@@ -27,7 +27,7 @@ export function AppHeader({
             src="/logo.svg"
             alt="HackSpain"
             width={125}
-            height={40}
+            height={41}
             className="h-auto w-20 sm:h-10 sm:w-auto"
           />
         </Link>

@@ -5,8 +5,10 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { ScreenConfig } from "@convex/lib/tvScreens";
 import { ArrivalDemo, ArrivalStage, LiveArrivals } from "@/components/arrivals/screen";
-import { resolveTvSponsors } from "@/lib/tv";
+import { MarketScreen } from "./market";
+import { TeamsScreen } from "./teams";
 import { useClock } from "./motion";
+import { SponsorsScreen } from "./sponsors-screen";
 
 function Activity() {
   const posts = useQuery(api.tv.listFeed, { source: "all" });
@@ -28,11 +30,14 @@ function Activity() {
 export function PresetScreen({ config, demo = false }: { config: ScreenConfig; demo?: boolean }) {
   const now = useClock();
   if (config.preset === "entradas") { return demo ? <ArrivalDemo /> : <LiveArrivals />; }
-  if (config.preset === "espera") { return <ArrivalStage person={null} />; }
+  if (config.preset === "espera") { return <ArrivalStage person={null} waiting />; }
+  if (config.preset === "panel") { return <MarketScreen demo={demo} />; }
+  if (config.preset === "equipos") { return <TeamsScreen demo={demo} />; }
+  if (config.preset === "patrocinadores") { return <SponsorsScreen />; }
   return (
     <main className="flex h-dvh w-full flex-col gap-[4vmin] overflow-hidden bg-hs-ink p-[4vmin] text-hs-paper">
       <header className="flex shrink-0 items-center justify-between gap-6">
-        <Image src="/logo.svg" alt="HackSpain" width={190} height={62} className="h-auto w-[clamp(100px,12vw,280px)]" />
+        <Image src="/logo.svg" alt="HackSpain" width={190} height={63} className="h-auto w-[clamp(100px,12vw,280px)]" />
         <p className="font-mono text-[clamp(16px,2.5vmin,48px)] tabular-nums text-hs-paper/60">
           {now?.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" })}
         </p>
@@ -43,15 +48,6 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
         </div>
       ) : null}
       {config.preset === "actividad" ? <Activity /> : null}
-      {config.preset === "patrocinadores" ? (
-        <div className="grid min-h-0 flex-1 grid-cols-3 auto-rows-fr gap-[2vmin] sm:grid-cols-4">
-          {resolveTvSponsors().map((sponsor) => (
-            <div key={sponsor.name} className="flex min-h-0 items-center justify-center bg-hs-paper p-[2vmin]">
-              <Image src={sponsor.logoUrl} alt={sponsor.name} width={250} height={100} className="max-h-full w-full object-contain" />
-            </div>
-          ))}
-        </div>
-      ) : null}
     </main>
   );
 }

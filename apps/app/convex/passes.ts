@@ -4,8 +4,14 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalAction, internalMutation, mutation, query } from "./_generated/server";
+import {
+  ACCESS_CODE_EMAIL_SUBJECT,
+  accessCodeEmailHtml,
+  accessCodeEmailText,
+} from "./lib/accessCodeEmail";
 import { adminMutation, adminQuery, onboardedQuery } from "./lib/customFunctions";
 import { findUserByEmail, getSignupForUser, signupIsAccepted } from "./lib/auth";
+import { resendApiKey, resendFrom } from "./lib/resend";
 const PASS_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const PASS_CODE_LENGTH = 4;
 
@@ -319,7 +325,7 @@ export const stats = adminQuery({
 export const issueAndEmailAccepted = adminMutation({
   args: {},
   handler: async (ctx) => {
-    if (!process.env.AUTH_RESEND_KEY) {
+    if (!resendApiKey()) {
       throw new Error("Configura Resend antes de enviar los códigos de acceso");
     }
     const signups = await ctx.db
@@ -406,27 +412,20 @@ export const deliverAccessCodes = internalAction({
     ),
   },
   handler: async (ctx, args) => {
-    const apiKey = process.env.AUTH_RESEND_KEY;
+    const apiKey = resendApiKey();
     if (!apiKey) {
-      throw new Error("AUTH_RESEND_KEY is not set; access codes were not emailed");
+      throw new Error("Resend is not configured; access codes were not emailed");
     }
     const resend = new ResendAPI(apiKey);
-    const from = process.env.AUTH_EMAIL ?? "HackSpain <onboarding@resend.dev>";
+    const from = resendFrom();
     for (let offset = 0; offset < args.recipients.length; offset += 100) {
       const chunk = args.recipients.slice(offset, offset + 100);
       const { error } = await resend.batch.send(
         chunk.map((recipient) => ({
           from,
-          subject: "Tu código de acceso a HackSpain 2026",
-          text: [
-            `Hola ${recipient.name},`,
-            "",
-            `Tu código de acceso a HackSpain 2026 es: ${recipient.code}`,
-            "",
-            "Enséñalo al equipo de acreditación cuando llegues. Después del check-in, inicia sesión en https://hackspain.app desde tu ordenador con este mismo email para acceder a la experiencia del evento.",
-            "",
-            "Este código es personal. No lo compartas.",
-          ].join("\n"),
+          html: accessCodeEmailHtml(recipient),
+          subject: ACCESS_CODE_EMAIL_SUBJECT,
+          text: accessCodeEmailText(recipient),
           to: [recipient.email],
         })),
       );

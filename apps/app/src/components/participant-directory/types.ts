@@ -5,8 +5,8 @@ export interface DirectoryParticipant {
   company?: string;
   degree?: string;
   team?: { id: string; name: string };
-  /** The team's chosen challenges; `logoUrl` is the sponsor wordmark. */
-  tracks?: { id: string; label: string; logoUrl?: string }[];
+  /** The team's chosen challenges; `logoUrl` is the sponsor wordmark, `slug` finds its symbol. */
+  tracks?: { id: string; label: string; logoUrl?: string; slug?: string }[];
   interests?: string[];
   displayName: string;
   /** Stable public identifier used in shareable links. Never use an email. */

@@ -10,8 +10,8 @@
 //     cannot leave dark text on a dark panel
 //   - the logo is a raster PNG (`public/hs-email-logo.png`), not the source SVG:
 //     Gmail strips <img src="*.svg"> outright and Outlook will not render it.
-//     Regenerate it from src/assets/logo.svg with the plaque recoloured to
-//     `paper` and flattened onto the same colour, so it merges into the panel.
+//     Regenerate it from src/assets/logo.svg at 640 px wide, flattened onto
+//     `paper` so it merges into the panel.
 
 const PALETTE = {
   brown: "#4a2c1f",

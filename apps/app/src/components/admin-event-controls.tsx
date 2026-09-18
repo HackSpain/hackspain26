@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { CalendarClock, Check, Flag, Mail, Radio } from "lucide-react";
+import { Check, Mail, Radio } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
@@ -10,11 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function AdminEventControls() {
-  const event = useQuery(api.event.status);
   const stats = useQuery(api.passes.stats);
-  const setPhase = useMutation(api.event.setPhase);
   const issueAndEmailAccepted = useMutation(api.passes.issueAndEmailAccepted);
-  const [saving, setSaving] = useState(false);
   const [sendingCodes, setSendingCodes] = useState(false);
   const [confirmingSend, setConfirmingSend] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +23,7 @@ export function AdminEventControls() {
     return () => window.clearInterval(interval);
   }, []);
 
-  if (!event || !stats) {
+  if (!stats) {
     return <LoadingText />;
   }
 
@@ -34,28 +31,15 @@ export function AdminEventControls() {
   const sent = stats.sent ?? 0;
   const codesReady = total > 0 && sent >= total;
   const completed = total > 0 && stats.checkedIn >= total;
-  let currentStep = 0;
-  if (completed) {
-    currentStep = 3;
-  } else if (event.phase === "live") {
-    currentStep = 2;
-  } else if (codesReady) {
-    currentStep = 1;
-  }
+  const currentStep = codesReady ? 1 : 0;
   const pace = (stats.checkInTimes ?? []).filter((at) => at >= now - 60_000).length;
-  let openButtonLabel = "Abrir check-in";
-  if (saving) {
-    openButtonLabel = "Abriendo…";
-  } else if (completed) {
-    openButtonLabel = "Completado";
-  } else if (event.phase === "live") {
-    openButtonLabel = "Check-in abierto";
-  }
   let finalStepText = `Faltan ${Math.max(total - stats.checkedIn, 0)} por llegar`;
   if (completed) {
     finalStepText = "Ya estamos todos";
   } else if (total === 0) {
     finalStepText = "Aún no hay participantes";
+  } else if (!codesReady) {
+    finalStepText = "Genera y envía los códigos para empezar";
   }
   const steps = [
     {
@@ -64,33 +48,11 @@ export function AdminEventControls() {
       icon: Mail,
     },
     {
-      title: "Antes del evento",
-      description: "Todo preparado. Los participantes tienen su código y esperan a la apertura.",
-      icon: CalendarClock,
-    },
-    {
-      title: "Check-in abierto",
-      description: "Cada llegada desbloquea la app para ese participante.",
+      title: "Registrar llegadas",
+      description: "La recepción puede validar los códigos en cualquier momento.",
       icon: Radio,
     },
-    {
-      title: "Check-in finalizado",
-      description: "Todos dentro. La app sigue disponible y el hackathon continúa.",
-      icon: Flag,
-    },
   ];
-
-  async function openCheckIn() {
-    setSaving(true);
-    setError(null);
-    try {
-      await setPhase({ phase: "live" });
-    } catch (caughtError) {
-      setError(errorMessage(caughtError, "No se ha podido abrir el check-in"));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function sendAccessCodes() {
     setSendingCodes(true);
@@ -131,10 +93,10 @@ export function AdminEventControls() {
       <FormError message={error} />
       <FormNotice message={notice} />
 
-      <ol aria-label="Progreso de la entrada" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <ol aria-label="Progreso de la entrada" className="grid gap-4 md:grid-cols-2">
         {steps.map((step, index) => {
-          const done = index < currentStep || (index === 3 && completed);
-          const active = index === currentStep;
+          const done = index < currentStep || (index === 1 && completed);
+          const active = !completed && index === currentStep;
           const Icon = step.icon;
           let markerClass = "border-hs-ink/20 text-hs-brown";
           if (done) {
@@ -179,28 +141,6 @@ export function AdminEventControls() {
                     {codesReady ? "Códigos enviados" : "Generar y enviar"}
                   </Button>
                 )}
-              </>
-            );
-          } else if (index === 1) {
-            content = (
-              <p className="text-sm font-semibold text-hs-brown">
-                {codesReady ? "Listos para recibir a todos" : "Pendiente del envío"}
-              </p>
-            );
-          } else if (index === 2) {
-            content = (
-              <>
-                <p className="text-xs text-pretty text-hs-brown">
-                  Apertura: 18 de septiembre, 10:00 (Madrid). En local puedes probarlo antes.
-                </p>
-                <Button
-                  variant="teal"
-                  className="min-h-11 w-full"
-                  disabled={saving || event.phase === "live" || completed}
-                  onClick={() => void openCheckIn()}
-                >
-                  {openButtonLabel}
-                </Button>
               </>
             );
           } else {

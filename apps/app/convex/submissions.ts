@@ -14,7 +14,11 @@ import {
 import { submissionStatusValidator } from "./lib/validators";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import { fail } from "./lib/errors";
-import { TRACK_TEAM_LIMIT, submissionsAreOpen } from "./tracks";
+import {
+  MAX_TEAMS_PER_TRACK,
+  submissionsAreOpen,
+  trackEntryCounts,
+} from "./tracks";
 import { findOwnedSubmission, membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { scheduleStackScan } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -96,7 +100,11 @@ async function hydrateSubmission(
     teamId: submission.teamId,
     teamLogoUrl: teamLogoUrlFor(team),
     teamName: team?.name,
-    techStack: submission.techStack ?? [],
+    // The scan lands on whichever has the repo; the team's covers a project
+    // that never got its own repo URL.
+    techStack: submission.techStack?.length
+      ? submission.techStack
+      : (team?.techStack ?? []),
     updatedAt: submission.updatedAt,
     urls: submission.urls,
   };
@@ -105,9 +113,16 @@ async function hydrateSubmission(
 async function resolveChallengeIds(
   ctx: MutationCtx,
   challengeIds: Id<"tracks">[],
-  requireActive: boolean
+  requireActive: boolean,
+  existing: Doc<"submissions"> | null
 ): Promise<Id<"tracks">[]> {
   const unique = [...new Set(challengeIds)];
+  // A project keeps the places it already holds; only new entries need room.
+  const added = unique.filter(
+    (trackId) => !existing?.challengeIds.includes(trackId)
+  );
+  const counts =
+    added.length > 0 ? await trackEntryCounts(ctx, existing?._id) : null;
   for (const trackId of unique) {
     const track = await ctx.db.get(trackId);
     if (!track) {
@@ -115,6 +130,15 @@ async function resolveChallengeIds(
     }
     if (requireActive && !track.active) {
       throw new Error(`${track.label} no está abierto`);
+    }
+    if (
+      added.includes(trackId) &&
+      (counts?.get(trackId) ?? 0) >= MAX_TEAMS_PER_TRACK
+    ) {
+      fail(
+        "TRACK_FULL",
+        `${track.label} ya tiene ${MAX_TEAMS_PER_TRACK} equipos. Únete a otro track.`
+      );
     }
   }
   return unique;
@@ -132,29 +156,6 @@ async function resolvePerkIds(
     }
   }
   return unique;
-}
-
-async function assertTrackCapacity(
-  ctx: MutationCtx,
-  challengeIds: Id<"tracks">[],
-  existing: Doc<"submissions"> | null
-): Promise<void> {
-  const already = new Set(existing?.challengeIds);
-  const joining = challengeIds.filter((trackId) => !already.has(trackId));
-  if (joining.length === 0) {
-    return;
-  }
-  const rows = await ctx.db.query("submissions").collect();
-  for (const trackId of joining) {
-    const taken = rows.filter((row) => row.challengeIds.includes(trackId)).length;
-    if (taken >= TRACK_TEAM_LIMIT) {
-      const track = await ctx.db.get(trackId);
-      fail(
-        "TRACK_FULL",
-        `${track?.label ?? "Este reto"} ya tiene ${TRACK_TEAM_LIMIT} equipos. Únete a otro track.`
-      );
-    }
-  }
 }
 
 async function nextGeneralGroup(ctx: MutationCtx): Promise<number> {
@@ -217,10 +218,10 @@ async function upsertProject(
   const challengeIds = await resolveChallengeIds(
     ctx,
     args.challengeIds,
-    mode === "submit"
+    mode === "submit",
+    existing
   );
   const perkIds = await resolvePerkIds(ctx, args.perkIds);
-  await assertTrackCapacity(ctx, challengeIds, existing);
 
   if (mode === "submit") {
     if (!(await submissionsAreOpen(ctx))) {

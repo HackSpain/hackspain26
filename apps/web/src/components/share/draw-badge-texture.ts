@@ -18,7 +18,7 @@ const SLOT_CENTER_Y = 78;
 const HEADER_TOP = 150;
 const HEADER_BOTTOM = 470;
 const LOGO_PADDING = 62;
-const LOGO_ASPECT = 80 / 250;
+const LOGO_ASPECT = 306 / 928;
 
 const BODY_INSET = 34;
 const STRIPE_WIDTH = 170;

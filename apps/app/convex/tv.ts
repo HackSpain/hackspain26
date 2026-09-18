@@ -4,6 +4,8 @@ import { query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { getSignupForUser } from "./lib/auth";
+import { isDirectoryComplete } from "./lib/directory";
+import { externalThumbnail } from "./lib/photo";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import { INSIGHTS_LAYOUT } from "./lib/tvLayouts";
 import { clampTv, layoutTvBox as layoutBox } from "./lib/tvLayout";
@@ -273,6 +275,63 @@ export const listFeed = query({
       out.push(await toTvFeedPost(ctx, row));
     }
     return out;
+  },
+});
+
+/**
+ * The team-formation screen: who is here and which team each person is in,
+ * and nothing else from their card. Public like the rest of the venue
+ * screens, so photos are storage URLs rather than the app's session-bound
+ * file route, and a missing name never falls back to an email.
+ */
+export const teamFormation = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      name: v.string(),
+      photoUrl: v.optional(v.string()),
+      team: v.optional(v.object({ id: v.string(), name: v.string() })),
+    }),
+  ),
+  handler: async (ctx) => {
+    const [users, teams, memberships] = await Promise.all([
+      ctx.db.query("users").collect(),
+      ctx.db.query("teams").collect(),
+      ctx.db.query("teamMembers").collect(),
+    ]);
+    const teamsById = new Map(teams.map((team) => [team._id, team]));
+    // Same row as membershipForUser: the earliest membership, whatever its status.
+    const membershipByUser = new Map<string, (typeof memberships)[number]>();
+    for (const membership of memberships) {
+      if (membership.userId && !membershipByUser.has(membership.userId)) {
+        membershipByUser.set(membership.userId, membership);
+      }
+    }
+    const people = await Promise.all(
+      users.map(async (user) => {
+        const membership = membershipByUser.get(user._id);
+        const team = membership?.status === "member" ? teamsById.get(membership.teamId) : undefined;
+        // The people on the participants map, plus anyone already in a team.
+        if (!team && !(user.directory && isDirectoryComplete(user.directory))) {
+          return null;
+        }
+        const photoId = user.avatarThumbId ?? user.avatarId;
+        let photoUrl = user.image ? externalThumbnail(user.image) : undefined;
+        if (photoId) {
+          photoUrl = (await ctx.storage.getUrl(photoId)) ?? undefined;
+        }
+        return {
+          id: user._id as string,
+          name: user.name || "Participante",
+          photoUrl,
+          team: team ? { id: team._id as string, name: team.name } : undefined,
+        };
+      }),
+    );
+    return people
+      .filter((person) => person !== null)
+      .toSorted((a, b) => a.id.localeCompare(b.id));
   },
 });
 

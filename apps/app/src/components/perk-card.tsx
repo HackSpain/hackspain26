@@ -4,6 +4,7 @@ import type { FunctionReturnType } from "convex/server";
 import { ArrowUpRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { api } from "@convex/_generated/api";
+import { LinkedText } from "@/components/linked-text";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { answerFor } from "@/lib/perks";
@@ -54,7 +55,9 @@ export function PerkCard({
         </h3>
         {offer ? <p className="text-base leading-snug font-medium">{offer}</p> : null}
         {description ? (
-          <p className="mt-2 text-sm leading-relaxed text-hs-brown/80">{description}</p>
+          <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-hs-brown/80">
+            <LinkedText text={description} />
+          </p>
         ) : null}
         {perk.type === "external" && perk.instructions ? (
           <div className="mt-3 border-t border-hs-ink/20 pt-4">

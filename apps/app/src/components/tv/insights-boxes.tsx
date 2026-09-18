@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { ActivityChart, Sparkline, TeamScatter } from "@/app/insights/charts";
-import { technologyRows } from "@/app/insights/event-data";
 import { ConsumptionChart } from "@/app/insights/evolution-charts";
 import { Panel } from "@/app/insights/panel";
 import {
@@ -32,6 +31,7 @@ function useInsightSnapshot() {
   return {
     bucketMinutes: data.bucketMinutes,
     samples,
+    stacks: data.stacks,
     startsAt: data.startsAt,
     teams: teamRows(samples, data.teams).filter(
       (team) => team.id !== NO_TEAM_ID
@@ -195,39 +195,40 @@ export function InsightsHarnessBox() {
   );
 }
 
+const STACK_COLORS = ["#1e3958", "#35858a", "#d96b2a", "#8b6b9f", "#a67516"];
+
 export function InsightsStacksBox() {
-  const { teams } = useInsightSnapshot();
-  const rows = technologyRows(
-    teams.map((team) => team.id),
-    "all",
-  ).slice(0, 5);
+  const { stacks } = useInsightSnapshot();
+  const rows = stacks.rows.slice(0, 5);
   return (
     <TvInsightPanel
       title="Con qué construimos"
       subtitle="Tecnologías · equipos"
     >
       <div className="grid h-full grid-cols-2 content-between gap-x-[2cqw] gap-y-[0.5cqw]">
-        {rows.map((row) => (
+        {rows.map((row, index) => (
           <div key={row.name} className="space-y-[0.25cqw]">
             <div className="flex items-center justify-between text-[0.85cqw]">
               <span className="font-semibold">{row.name}</span>
               <span className="tabular-nums text-hs-brown">
-                {row.teams.length} / {teams.length}
+                {row.count} / {stacks.total}
               </span>
             </div>
             <div className="h-[0.3cqw] bg-hs-ink/5">
               <div
                 className="h-full"
                 style={{
-                  width: `${(row.teams.length / Math.max(teams.length, 1)) * 100}%`,
-                  backgroundColor: row.color,
+                  width: `${(row.count / Math.max(stacks.total, 1)) * 100}%`,
+                  backgroundColor: STACK_COLORS[index % STACK_COLORS.length],
                 }}
               />
             </div>
           </div>
         ))}
         <p className="self-center text-[0.65cqw] text-hs-brown">
-          {rows.length ? "Cada equipo puede usar varias tecnologías." : "Sin datos de tecnologías todavía."}
+          {rows.length
+            ? `Leído de los repos de ${stacks.auto} de ${stacks.total} proyectos.`
+            : "Sin datos de tecnologías todavía."}
         </p>
       </div>
     </TvInsightPanel>
