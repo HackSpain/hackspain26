@@ -127,7 +127,8 @@ export function LinksStep({
         {github.error ? <p className="text-sm text-hs-red">{github.error}</p> : null}
         {askGithub && !github.error ? (
           <p className="hs-enter text-sm font-medium text-hs-red" role="status">
-            ¿Seguro que no quieres vincular GitHub? Sin él tu equipo no te encuentra.
+            ¿Seguro que no quieres vincular GitHub? El análisis de tus commits
+            ayudará a tu puntuación final.
           </p>
         ) : null}
       </div>
