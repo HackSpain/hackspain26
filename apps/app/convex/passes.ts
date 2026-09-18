@@ -8,7 +8,6 @@ import { adminMutation, adminQuery, onboardedQuery } from "./lib/customFunctions
 import { findUserByEmail, getSignupForUser, signupIsAccepted } from "./lib/auth";
 const PASS_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const PASS_CODE_LENGTH = 4;
-const CHECK_IN_OPENS_AT = Date.parse("2026-09-18T10:00:00+02:00");
 
 const passReturn = v.object({
   _id: v.id("eventPasses"),
@@ -30,26 +29,8 @@ const scanReturn = v.object({
 
 const staffStatusReturn = v.object({
   checkedIn: v.number(),
-  development: v.boolean(),
   issued: v.number(),
-  open: v.boolean(),
-  opensAt: v.number(),
-  phase: v.union(v.literal("pre_event"), v.literal("live"), v.literal("ended")),
 });
-
-function developmentCheckInEnabled(): boolean {
-  const siteUrl = process.env.SITE_URL ?? "";
-  try {
-    const hostname = new URL(siteUrl).hostname;
-    return hostname === "localhost" || hostname === "127.0.0.1";
-  } catch {
-    return false;
-  }
-}
-
-function checkInIsOpen(phase: "pre_event" | "live" | "ended" | undefined): boolean {
-  return developmentCheckInEnabled() || (Date.now() >= CHECK_IN_OPENS_AT && phase === "live");
-}
 
 function maskedEmail(email: string): string {
   const [local = "", domain = ""] = email.split("@");
@@ -124,16 +105,6 @@ export const mine = onboardedQuery({
 });
 
 async function checkIn(ctx: MutationCtx, value: string) {
-  const eventSettings = await ctx.db
-    .query("eventSettings")
-    .withIndex("by_key", (q) => q.eq("key", "main"))
-    .unique();
-  if (!checkInIsOpen(eventSettings?.phase)) {
-    if (Date.now() < CHECK_IN_OPENS_AT) {
-      throw new Error("El check-in abre el 18 de septiembre de 2026 a las 10:00");
-    }
-    throw new Error("El responsable todavía no ha abierto el check-in");
-  }
   const code = value.trim().toUpperCase();
   if (!/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}$/.test(code)) {
     throw new Error("Introduce un código válido de cuatro caracteres");
@@ -198,23 +169,11 @@ export const scan = adminMutation({
 export const staffStatus = query({
   args: {},
   handler: async (ctx) => {
-    const [settings, passes] = await Promise.all([
-      ctx.db
-        .query("eventSettings")
-        .withIndex("by_key", (q) => q.eq("key", "main"))
-        .unique(),
-      ctx.db.query("eventPasses").collect(),
-    ]);
-    const phase = settings?.phase ?? ("pre_event" as const);
-    const development = developmentCheckInEnabled();
+    const passes = await ctx.db.query("eventPasses").collect();
     return {
       checkedIn: passes.filter((pass) => pass.status === "active" && pass.checkedInAt !== undefined)
         .length,
-      development,
       issued: passes.filter((pass) => pass.status === "active").length,
-      open: checkInIsOpen(phase),
-      opensAt: CHECK_IN_OPENS_AT,
-      phase,
     };
   },
   returns: staffStatusReturn,

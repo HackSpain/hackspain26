@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
 import type { MutationCtx } from "./_generated/server";
-import { arrivals, staffScan, staffUndoCheckIn } from "./passes";
+import { arrivals, staffScan, staffStatus, staffUndoCheckIn } from "./passes";
 import { dropCheckInMetadata } from "./migrations";
 import { reconcileArrivals } from "../src/lib/arrival-queue";
 
@@ -126,4 +126,17 @@ test("legacy cleanup removes only operator metadata and can run twice", async (t
   assert.equal("checkedInBy" in (clean ?? {}), false);
   assert.equal("checkedInVia" in (clean ?? {}), false);
   assert.equal(await dropCheckInMetadata._handler(ctx, {}), 0);
+});
+
+
+test("reception accepts codes before and after the event without an opening time", async (t) => {
+  const { ctx, rows } = reception(t);
+  t.mock.method(Date, "now", () => Date.parse("2026-09-01T08:00:00Z"));
+  const settings = rows.get("settings");
+  assert.ok(settings);
+  settings.phase = "pre_event";
+  assert.equal((await staffScan._handler(ctx, { value: "AB7K" })).status, "checked_in");
+  settings.phase = "ended";
+  assert.equal((await staffScan._handler(ctx, { value: "CD8M" })).status, "checked_in");
+  assert.equal((await staffStatus._handler(ctx, {})).checkedIn, 2);
 });

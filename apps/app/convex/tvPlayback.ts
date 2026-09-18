@@ -4,7 +4,7 @@ import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import { messageReturn, widgetReturn } from "./tv";
-import { screenConfig, screenConfigValidator, screenKey, screenPresetValidator } from "./lib/tvScreens";
+import { SCREEN_OFFLINE_MS, screenConfig, screenConfigValidator, screenKey, screenPresetValidator } from "./lib/tvScreens";
 
 export const snapshotValidator = v.object({
   widgets: v.array(widgetReturn),
@@ -140,6 +140,22 @@ export const reloadScreen = adminMutation({
     const screen = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", screenKey(args.key))).unique();
     if (!screen) { throw new Error("Pantalla no encontrada"); }
     await ctx.db.patch(screen._id, { reloadVersion: screen.reloadVersion + 1 });
+    return null;
+  },
+});
+
+export const removeScreen = adminMutation({
+  args: { key: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const screen = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", screenKey(args.key))).unique();
+    if (!screen) { return null; }
+    const connections = await ctx.db.query("tvScreenConnections").withIndex("by_screen", (q) => q.eq("screenId", screen._id)).collect();
+    if (connections.some((connection) => Date.now() - connection.lastSeenAt < SCREEN_OFFLINE_MS)) {
+      throw new Error("Desconecta la pantalla antes de borrarla");
+    }
+    for (const connection of connections) { await ctx.db.delete(connection._id); }
+    await ctx.db.delete(screen._id);
     return null;
   },
 });

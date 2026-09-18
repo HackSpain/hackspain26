@@ -15,6 +15,8 @@ para no borrar composiciones guardadas, pero `/tv` utiliza vistas predefinidas.
   por el admin siempre tiene prioridad, también después de recargar el navegador.
 - En `/admin/tv` se puede preparar un nombre antes de abrirlo, copiar su URL, elegir
   una vista, escribir un aviso y recargar únicamente esa pantalla.
+- Puedes borrar una pantalla desconectada y sus conexiones desde su tarjeta. Si se
+  vuelve a abrir esa URL, se registrará de nuevo con la configuración inicial.
 - Dos navegadores con el mismo nombre comparten contenido y órdenes. El panel avisa
   y lista cada conexión con su URL, resolución y última respuesta. Para controlarlos
   por separado, usa nombres distintos.
@@ -62,6 +64,7 @@ nombre, rol, ciudad, empresa, universidad y hasta tres especialidades según su 
 Los campos vacíos no se muestran; sin foto aparecen sus iniciales. Las franjas cubren
 el cambio y siguen en bucle si no hay entradas pendientes. Respeta movimiento reducido.
 
+El check-in está disponible siempre, independientemente de la fase o fecha del evento.
 Abre la pantalla **antes** de validar el código en recepción. `passes.staffScan`
 guarda `checkedInAt` y `passes.arrivals` transmite la entrada al monitor, sin recargas
 ni acciones adicionales allí. Entradas simultáneas se encolan; repetir el código no

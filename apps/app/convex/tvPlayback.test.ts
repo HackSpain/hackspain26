@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MutationCtx } from "./_generated/server";
-import { heartbeat, reloadScreen, screens, setScreen } from "./tvPlayback";
+import { heartbeat, reloadScreen, removeScreen, screens, setScreen } from "./tvPlayback";
 
 type Row = Record<string, unknown> & { _id: string; table: string };
 function venue() {
@@ -79,6 +79,7 @@ test("kiosks cannot issue admin commands, while anonymous presence remains avail
   await assert.rejects(setScreen._handler(ctx, { key: "entrada", preset: "avisos", message: "No" }), /sesión/);
   await assert.rejects(reloadScreen._handler(ctx, { key: "entrada" }), /sesión/);
   await assert.rejects(screens._handler(ctx, {}), /sesión/);
+  await assert.rejects(removeScreen._handler(ctx, { key: "entrada" }), /sesión/);
   assert.equal((await ping("entrada")).preset, "entradas");
 });
 
@@ -87,4 +88,21 @@ test("invalid identifiers and messages are rejected without creating extra scree
   await assert.rejects(ping("bad/name"), /letras/);
   await assert.rejects(setScreen._handler(ctx, { key: "entrada", preset: "avisos", message: "x".repeat(501) }), /500/);
   assert.equal((await screens._handler(ctx, {})).screens.length, 0);
+});
+
+
+test("only offline screens can be removed, including their connections", async () => {
+  const { ctx, ping } = venue();
+  await ping("entrada");
+  await ping("hall", "hall-123456789012");
+  await assert.rejects(removeScreen._handler(ctx, { key: "entrada" }), /Desconecta/);
+  const entry = (await screens._handler(ctx, {})).screens.find((screen) => screen.key === "entrada");
+  assert.ok(entry);
+  await ctx.db.patch(entry.connections[0]._id, { lastSeenAt: Date.now() - 21_000 });
+  await removeScreen._handler(ctx, { key: "entrada" });
+  assert.deepEqual((await screens._handler(ctx, {})).screens.map((screen) => screen.key), ["hall"]);
+  assert.equal((await ctx.db.query("tvScreenConnections").collect()).length, 1);
+  await removeScreen._handler(ctx, { key: "entrada" });
+  await ping("entrada");
+  assert.equal((await screens._handler(ctx, {})).screens.length, 2);
 });
