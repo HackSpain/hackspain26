@@ -14,13 +14,9 @@ import {
   roleValidator,
 } from "./lib/validators";
 
-const authTablesWithoutUsers = Object.fromEntries(
-  Object.entries(authTables).filter(([name]) => name !== "users")
-) as Omit<typeof authTables, "users">;
-
 export default defineSchema({
   tvPlaybackControl: defineTable({ key: v.string(), reloadVersion: v.number() }).index("by_key", ["key"]),
-  ...authTablesWithoutUsers,
+  ...authTables,
   ambassadorApplications: defineTable({
     email: v.string(),
     fullName: v.string(),

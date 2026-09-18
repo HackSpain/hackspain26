@@ -35,6 +35,15 @@ describe("selectStackFiles", () => {
 });
 
 describe("detectStack", () => {
+  test("keeps known GitHub languages in catalogue order and ignores others", () => {
+    expect(
+      detectStack({
+        files: [],
+        languages: { CSS: 100, Ruby: 30, Rust: 20, Python: 10, HTML: 5 },
+      })
+    ).toEqual(["Python", "Rust", "Ruby"]);
+  });
+
   test("maps a Next + Convex + Tailwind repo to product tags", () => {
     const tags = detectStack({
       files: [

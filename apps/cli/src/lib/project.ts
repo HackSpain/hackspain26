@@ -1,16 +1,10 @@
+import type { FunctionArgs } from "convex/server";
+import type { api } from "./api";
 import { CliError } from "./errors";
 import type { Submission, Track } from "./participant";
 
 /** What `submissions.saveDraft` / `submit` take, derived from the current state. */
-export type ProjectArgs = {
-  name: string;
-  description: string;
-  repoUrl?: string;
-  demoUrl?: string;
-  videoUrl?: string;
-  challengeIds: Submission["challengeIds"];
-  perkIds: Submission["perkIds"];
-};
+export type ProjectArgs = FunctionArgs<typeof api.submissions.saveDraft>;
 
 function urlOf(
   urls: Submission["urls"] | undefined,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { ActivityChart, Sparkline, TeamScatter } from "@/app/insights/charts";
 import { technologyRows } from "@/app/insights/event-data";
@@ -17,15 +17,10 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
+import { useTick } from "./motion";
 
 function useInsightSnapshot() {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") setTick((value) => value + 1);
-    }, 5_000);
-    return () => window.clearInterval(timer);
-  }, []);
+  const tick = useTick(5_000);
   return useMemo(() => {
     const samples = filterSamples(getSamples(tick), "event", "all");
     return {

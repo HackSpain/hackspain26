@@ -43,11 +43,7 @@ export const DIRECTORY_FIELDS = [
 export type DirectoryField = (typeof DIRECTORY_FIELDS)[number];
 
 export const directoryFieldValidator = v.union(
-  v.literal("role"),
-  v.literal("city"),
-  v.literal("affiliation"),
-  v.literal("skills"),
-  v.literal("interests")
+  ...DIRECTORY_FIELDS.map((field) => v.literal(field))
 );
 
 export const MAX_TAGS = 12;
