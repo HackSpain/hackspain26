@@ -1,5 +1,5 @@
-import { Database } from "bun:sqlite";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import type { Database } from "bun:sqlite";
+import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,7 @@ import { projectRef } from "../project";
 import type { RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
+import { lastWriteMs, openReadOnly } from "./sqlite";
 
 export const ANTIGRAVITY = "antigravity" as const;
 
@@ -17,7 +18,8 @@ export const ANTIGRAVITY = "antigravity" as const;
  * usage message in field 9 (model code, input net of cache reads, output
  * including thoughts, cache reads, and the thought count on its own), and
  * `gen_metadata` maps the model code to its name. The sibling
- * `conversation_summaries.db` knows the workspace of each conversation.
+ * `conversation_summaries.db` knows the workspace of each conversation. The
+ * databases are in WAL mode and agy leaves them without a `-wal` file.
  * Rows are written once, complete: across 11k real model steps none was
  * seen without its usage, so the cursor is the last `idx` read. Decoded by
  * hand because the schema is undocumented; unknown fields are skipped.
@@ -215,26 +217,6 @@ export function normalizeAntigravityStep(
 
 export function antigravityConversationsDir(): string {
   return join(homedir(), ".gemini", "antigravity-cli", "conversations");
-}
-
-/**
- * The databases are in WAL mode. Without a `-wal` file next to it a
- * read-only open fails because SQLite cannot create the shared-memory
- * index, and `immutable=1` reads the main file as it is.
- */
-function openReadOnly(path: string): Database {
-  const location = existsSync(`${path}-wal`)
-    ? path
-    : `file:${path.split("/").map(encodeURIComponent).join("/")}?immutable=1`;
-  return new Database(location, { readonly: true });
-}
-
-function lastWriteMs(path: string): number {
-  const wal = `${path}-wal`;
-  return Math.max(
-    statSync(path).mtimeMs,
-    existsSync(wal) ? statSync(wal).mtimeMs : 0
-  );
 }
 
 /** Conversation id → working directory, from `conversation_summaries.db`. */
