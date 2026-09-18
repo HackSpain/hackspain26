@@ -15,8 +15,12 @@ export { gsap, SplitText, useGSAP };
 
 // Same curves as `--ease-out` in globals.css and the landing, so the venue
 // screen moves like the rest of the brand.
-export const TV_EASE_OUT = CustomEase.create("hs-out", "0.23,1,0.32,1");
-export const TV_EASE_MOVE = CustomEase.create("hs-in-out", "0.77,0,0.175,1");
+function brandEase(name: string, curve: string) {
+  return CustomEase.get(name) ?? CustomEase.create(name, curve);
+}
+
+export const TV_EASE_OUT = brandEase("hs-out", "0.23,1,0.32,1");
+export const TV_EASE_MOVE = brandEase("hs-in-out", "0.77,0,0.175,1");
 export const TV_EASE_POP = "back.out(1.4)";
 /** Reduced motion keeps short opacity fades so changes stay legible. */
 export const TV_REDUCED_FADE = 0.2;

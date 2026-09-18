@@ -35,7 +35,11 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
   if (config.preset === "espera") { return <ArrivalStage person={null} waiting />; }
   if (config.preset === "panel") { return <MarketScreen demo={demo} />; }
   if (config.preset === "panelv2") {
-    return <TvStage widgets={tvPresetWidgets("panelv2")} fill enter />;
+    return (
+      <div className="h-dvh w-full bg-hs-ink">
+        <TvStage widgets={tvPresetWidgets("panelv2")} fill enter />
+      </div>
+    );
   }
   if (config.preset === "equipos") { return <TeamsScreen demo={demo} />; }
   if (config.preset === "patrocinadores") { return <SponsorsScreen />; }

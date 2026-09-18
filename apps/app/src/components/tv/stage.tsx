@@ -50,29 +50,33 @@ function useStageEntrance(
       const sweep = stage.querySelector<HTMLElement>("[data-tv-sweep]");
       if (boxes.length === 0) {return;}
 
-      const timeline = gsap.timeline({ defaults: { ease: TV_EASE_OUT } });
-      if (sweep) {
+      try {
+        const timeline = gsap.timeline({ defaults: { ease: TV_EASE_OUT } });
+        if (sweep) {
+          timeline.fromTo(
+            sweep,
+            { yPercent: 0, opacity: 1 },
+            { yPercent: 100 * 100, opacity: 0.4, duration: 1.1, ease: "power2.inOut" },
+            0,
+          );
+          timeline.to(sweep, { opacity: 0, duration: 0.3 }, ">-0.1");
+        }
         timeline.fromTo(
-          sweep,
-          { yPercent: 0, opacity: 1 },
-          { yPercent: 100 * 100, opacity: 0.4, duration: 1.1, ease: "power2.inOut" },
-          0,
+          boxes,
+          { clipPath: "inset(0% 0% 100% 0%)", y: 36, opacity: 0 },
+          {
+            clipPath: "inset(0% 0% 0% 0%)",
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.07,
+            clearProps: "clipPath,opacity,transform",
+          },
+          0.12,
         );
-        timeline.to(sweep, { opacity: 0, duration: 0.3 }, ">-0.1");
+      } catch {
+        gsap.set(boxes, { clearProps: "clipPath,opacity,transform" });
       }
-      timeline.fromTo(
-        boxes,
-        { clipPath: "inset(0% 0% 100% 0%)", y: 36, opacity: 0 },
-        {
-          clipPath: "inset(0% 0% 0% 0%)",
-          y: 0,
-          opacity: 1,
-          duration: 0.8,
-          stagger: 0.07,
-          clearProps: "clipPath,opacity,transform",
-        },
-        0.12,
-      );
     },
     { scope: root, dependencies: [key, enabled, reduced], revertOnUpdate: true },
   );
