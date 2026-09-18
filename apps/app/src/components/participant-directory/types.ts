@@ -17,4 +17,6 @@ export interface DirectoryParticipant {
   photoUrl?: string;
   role: string;
   skills: string[];
+  /** CRM type. Default/hacker people stay in “sin equipo” / “sin reto”. */
+  userType?: { isDefault: boolean; label: string; slug: string };
 }

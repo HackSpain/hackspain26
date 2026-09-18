@@ -37,6 +37,8 @@ export interface Cluster {
 	/** People without a value for the lens gather in one loose cluster. */
 	loose: boolean;
 	memberIds: string[];
+	/** Mentors, sponsors, jurados: their own blob, never “sin equipo” / “sin reto”. */
+	staff?: boolean;
 }
 
 /** A cluster's home on the canvas, in world units. */
@@ -125,16 +127,32 @@ export function uniqueParticipants(
 	].toSorted((a, b) => a.id.localeCompare(b.id));
 }
 
+/** Team and track are competing groupings: staff without one get their type blob. */
+const STAFF_LENSES = new Set<Lens>(["team", "track"]);
+
+function staffEntry(person: DirectoryParticipant): LensEntry | undefined {
+	const type = person.userType;
+	if (!type || type.isDefault) {
+		return;
+	}
+	return { key: `type:${type.slug}`, label: type.label };
+}
+
 /**
- * Group people by the lens values. Largest clusters first, the loose one last.
- * A person with several values appears in each of those clusters.
+ * Group people by the lens values. Largest clusters first, staff types after
+ * those, the loose one last. A person with several values appears in each.
  */
 export function clusterParticipants(
 	participants: DirectoryParticipant[],
 	lens: Lens,
 ): Cluster[] {
 	const clusters = new Map<string, Cluster>();
-	const add = (id: string, entry: LensEntry | undefined, personId: string) => {
+	const add = (
+		id: string,
+		entry: LensEntry | undefined,
+		personId: string,
+		staff = false,
+	) => {
 		const cluster = clusters.get(id) ?? {
 			id,
 			label: entry?.label ?? LENS_LABELS[lens].loose,
@@ -142,6 +160,7 @@ export function clusterParticipants(
 			logoUrl: entry?.logoUrl,
 			loose: !entry,
 			memberIds: [],
+			...(staff ? { staff: true } : {}),
 		};
 		cluster.memberIds.push(personId);
 		clusters.set(id, cluster);
@@ -149,7 +168,12 @@ export function clusterParticipants(
 	for (const person of uniqueParticipants(participants)) {
 		const entries = lensValues(person, lens);
 		if (!entries.length) {
-			add(`cluster:${lens}:`, undefined, person.id);
+			const staff = STAFF_LENSES.has(lens) ? staffEntry(person) : undefined;
+			if (staff) {
+				add(`cluster:${lens}:${staff.key}`, staff, person.id, true);
+			} else {
+				add(`cluster:${lens}:`, undefined, person.id);
+			}
 		}
 		for (const entry of new Map(entries.map((e) => [e.key, e])).values()) {
 			add(`cluster:${lens}:${entry.key}`, entry, person.id);
@@ -158,6 +182,7 @@ export function clusterParticipants(
 	return [...clusters.values()].toSorted(
 		(a, b) =>
 			Number(a.loose) - Number(b.loose) ||
+			Number(Boolean(a.staff)) - Number(Boolean(b.staff)) ||
 			b.memberIds.length - a.memberIds.length ||
 			a.label.localeCompare(b.label, "es"),
 	);

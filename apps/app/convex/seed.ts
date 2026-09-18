@@ -12,7 +12,13 @@ import {
   UNIVERSITY_OPTIONS,
 } from "./lib/directoryOptions";
 import { JUDGING_SETTINGS_KEY } from "./lib/judging";
-import { PARTICIPANT_SECTIONS, slugify } from "./lib/userTypes";
+import {
+  JURADO_SECTIONS,
+  MENTOR_SECTIONS,
+  PARTICIPANT_SECTIONS,
+  slugify,
+  SPONSOR_SECTIONS,
+} from "./lib/userTypes";
 import type { Sections } from "./lib/userTypes";
 import { seedDefaults as seedTracks } from "./tracks";
 
@@ -262,9 +268,9 @@ const USER_TYPES: {
   isDefault: boolean;
 }[] = [
   { label: "Hacker", description: "Participa en la hackathon.", sections: PARTICIPANT_SECTIONS, isDefault: true },
-  { label: "Jurado", description: "Puntúa proyectos en el panel del jurado.", sections: ["judging"], isDefault: false },
-  { label: "Mentor", description: "Acompaña a los equipos durante el evento.", sections: ["tracks", "participantes", "cli"], isDefault: false },
-  { label: "Sponsor", description: "Partner del evento: retos y perks.", sections: ["tracks", "perks", "participantes"], isDefault: false },
+  { label: "Jurado", description: "Puntúa proyectos en el panel del jurado.", sections: JURADO_SECTIONS, isDefault: false },
+  { label: "Mentor", description: "Acompaña a los equipos durante el evento.", sections: MENTOR_SECTIONS, isDefault: false },
+  { label: "Sponsor", description: "Partner del evento: retos y perks.", sections: SPONSOR_SECTIONS, isDefault: false },
 ];
 
 // ---------- helpers ----------
@@ -630,6 +636,12 @@ async function runSeed(
   const juradoType = typeIds.get("Jurado");
   const mentorType = typeIds.get("Mentor");
   const sponsorType = typeIds.get("Sponsor");
+  if (hackerType) {
+    await ctx.db.patch(hackerType, {
+      sections: PARTICIPANT_SECTIONS,
+      updatedAt: now,
+    });
+  }
 
   const settings = await ctx.db
     .query("settings")

@@ -15,7 +15,7 @@ export const SECTION_NAV: Record<
   participantes: {
     href: "/participantes",
     label: "Participantes",
-    hint: "Directorio de la comunidad. Solo quien tiene acceso.",
+    hint: "Directorio y grafos. Mentores, sponsors y organización.",
     private: true,
   },
   judging: {

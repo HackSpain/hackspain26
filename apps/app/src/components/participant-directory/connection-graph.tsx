@@ -87,7 +87,16 @@ function ProfilePanel({
 						{person.displayName}
 						{person.isMe ? <span className="pg-me-chip">Tú</span> : null}
 					</h2>
-					<p>{person.role}</p>
+					<p>
+						{[
+							person.userType && !person.userType.isDefault
+								? person.userType.label
+								: null,
+							person.role,
+						]
+							.filter(Boolean)
+							.join(" · ")}
+					</p>
 				</div>
 				<button type="button" aria-label="Cerrar perfil" onClick={onClose}>
 					<X size={18} />

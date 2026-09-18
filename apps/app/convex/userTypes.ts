@@ -1,10 +1,14 @@
 import { v } from "convex/values";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import {
+  isHackerType,
+  JURADO_SECTIONS,
+  MENTOR_SECTIONS,
   normalizeSections,
   PARTICIPANT_SECTIONS,
   sectionsValidator,
   slugify,
+  SPONSOR_SECTIONS,
   userTypeSummaryValidator,
 } from "./lib/userTypes";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -107,9 +111,10 @@ async function seedType(
 }
 
 /**
- * Idempotent bootstrap: seeds "Hacker" (default) and "Jurado" the first time,
- * and moves anyone still carrying the legacy `judge` role onto "Jurado".
- * Admin pages call it on load, so it also serves as the migration.
+ * Idempotent bootstrap: seeds Hacker / Jurado / Mentor / Sponsor the first
+ * time, strips the directory from an existing Hacker type (hackers browse
+ * via staff), and moves anyone still carrying the legacy `judge` role onto
+ * "Jurado". Admin pages call it on load, so it also serves as the migration.
  */
 export const ensureDefaults = adminMutation({
   args: {},
@@ -127,19 +132,43 @@ export const ensureDefaults = adminMutation({
       .query("users")
       .withIndex("by_role", (q) => q.eq("role", "judge"))
       .collect();
-    if (before.length === 0 || legacyJudges.length > 0) {
-      const juradoId = await seedType(ctx, ctx.user._id, {
-        description: "Puntúa proyectos en el panel del jurado.",
-        isDefault: false,
-        label: "Jurado",
-        sections: ["judging"],
-      });
+    const juradoId = await seedType(ctx, ctx.user._id, {
+      description: "Puntúa proyectos en el panel del jurado.",
+      isDefault: false,
+      label: "Jurado",
+      sections: JURADO_SECTIONS,
+    });
+    await seedType(ctx, ctx.user._id, {
+      description: "Acompaña a los equipos durante el evento.",
+      isDefault: false,
+      label: "Mentor",
+      sections: MENTOR_SECTIONS,
+    });
+    await seedType(ctx, ctx.user._id, {
+      description: "Partner del evento: retos y perks.",
+      isDefault: false,
+      label: "Sponsor",
+      sections: SPONSOR_SECTIONS,
+    });
+    if (legacyJudges.length > 0) {
       for (const user of legacyJudges) {
         await ctx.db.patch(user._id, {
           role: "user",
           userTypeId: user.userTypeId ?? juradoId,
         });
       }
+    }
+    const now = Date.now();
+    for (const row of await allTypes(ctx)) {
+      if (!isHackerType(row) || !row.sections.includes("participantes")) {
+        continue;
+      }
+      await ctx.db.patch(row._id, {
+        sections: normalizeSections(
+          row.sections.filter((section) => section !== "participantes")
+        ),
+        updatedAt: now,
+      });
     }
     return { migratedJudges: legacyJudges.length };
   },

@@ -5,6 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
+import { PARTICIPANT_SECTIONS } from "@convex/lib/userTypes";
 import type { SectionKey } from "@convex/lib/userTypes";
 import {
   EmptyState,
@@ -105,13 +106,7 @@ function SectionPicker({
   );
 }
 
-const NEW_DEFAULT_SECTIONS: SectionKey[] = [
-  "teams",
-  "tracks",
-  "perks",
-  "participantes",
-  "cli",
-];
+const NEW_DEFAULT_SECTIONS: SectionKey[] = [...PARTICIPANT_SECTIONS];
 
 function NewTypeCard() {
   const create = useMutation(api.userTypes.create);
