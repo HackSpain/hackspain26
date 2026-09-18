@@ -19,7 +19,7 @@ import {
   MilestoneChart,
   CostChart,
 } from "./evolution-charts";
-import { compact, number, percent } from "./mock-data";
+import { compact, number, percent, sumSamples } from "./mock-data";
 import type { Sample, TeamRow } from "./mock-data";
 import {
   concurrencyRows,
@@ -121,7 +121,7 @@ export function LiveTechnologyStacks() {
         </>
       )}
       <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
-        Datos reales del repo. El resto de insights de esta página es una demo.
+        Datos reales del repo.
       </p>
     </Panel>
   );
@@ -152,6 +152,13 @@ export function EventInsights({
     () => concurrencyRows(scopedSamples),
     [scopedSamples]
   );
+  if (samples.length === 0) {
+    return (
+      <Panel title="Evolución del evento" eyebrow="Actividad del evento">
+        <p className="text-sm text-hs-brown">Sin datos de actividad todavía.</p>
+      </Panel>
+    );
+  }
   const peak = Math.max(...concurrency.map((row) => row.total), 0);
   const snapshot = concurrency[SNAPSHOT_MINUTE]?.total ?? 0;
   const milestones = MILESTONES.filter((milestone) =>
@@ -162,18 +169,17 @@ export function EventInsights({
   );
   const costRows = scopedTeams
     .map((team) => ({
-      cost: usageUsd(
-        scopedSamples.filter((sample) => sample.teamId === team.id)
-      ),
+      cost: usageUsd(team),
       team,
     }))
     .toSorted((a, b) => b.cost - a.cost);
-  const meanCost = usageUsd(scopedSamples) / Math.max(scopedTeams.length, 1);
+  const totalCost = usageUsd(sumSamples(scopedSamples));
+  const meanCost = totalCost / Math.max(scopedTeams.length, 1);
   const ratio = phases[0].hourlyTokens
     ? phases[2].hourlyTokens / phases[0].hourlyTokens
     : 0;
   const color = selectedTeam?.color ?? "#1e3958";
-  const benchmark = usageUsd(samples) / Math.max(teams.length, 1);
+  const benchmark = usageUsd(sumSamples(samples)) / Math.max(teams.length, 1);
 
   return (
     <div className="space-y-5">
@@ -304,7 +310,7 @@ export function EventInsights({
         <Tabs.Content value="cost">
           <Panel
             title="Gasto estimado de usage"
-            eyebrow={`${money(meanCost)} de media por equipo · ${money(usageUsd(scopedSamples))} en total`}
+            eyebrow={`${money(meanCost)} de media por equipo · ${money(totalCost)} en total`}
           >
             <CostChart
               rows={costRows}

@@ -53,16 +53,7 @@ async function uniqueJoinCode(ctx: MutationCtx): Promise<string> {
 }
 
 function normalizeRepoUrls(raw: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const entry of raw) {
-    const url = canonicalRepoUrl(entry);
-    if (!url || seen.has(url)) {
-      continue;
-    }
-    seen.add(url);
-    out.push(url);
-  }
+  const out = [...new Set(raw.map(canonicalRepoUrl).filter((url) => url !== null))];
   if (out.length > MAX_REPOS) {
     fail("VALIDATION", `Máximo ${MAX_REPOS} repositorios`);
   }
