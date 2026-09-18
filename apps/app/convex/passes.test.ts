@@ -9,11 +9,9 @@ import { reconcileArrivals } from "../src/lib/arrival-queue";
 type Row = Record<string, unknown> & { _id: string; table: string };
 
 function reception(t: TestContext) {
-  let now = Date.parse("2026-09-18T12:00:00Z");
+  let now = Date.parse("2026-09-01T12:00:00Z");
   t.mock.method(Date, "now", () => now);
-  const rows = new Map<string, Row>([
-    ["settings", { _id: "settings", table: "eventSettings", key: "main", phase: "live" }],
-  ]);
+  const rows = new Map<string, Row>();
   for (const [index, code] of ["AB7K", "CD8M"].entries()) {
     const suffix = String(index);
     rows.set(`signup${suffix}`, {
@@ -60,7 +58,7 @@ function reception(t: TestContext) {
   return { ctx, rows, tick: () => { now += 1000; } };
 }
 
-test("validating a reception code persists check-in and supplies the real TV profile", async (t) => {
+test("reception stays open without a date or event phase gate", async (t) => {
   const { ctx, rows, tick } = reception(t);
   const baseline = await arrivals._handler(ctx, {});
   assert.deepEqual(baseline.entries, []);
