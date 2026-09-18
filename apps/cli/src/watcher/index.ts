@@ -16,9 +16,11 @@ import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
 import { createBatcher } from "./batcher";
+import { antigravityCollector } from "./collectors/antigravity";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
+import { devinCollector } from "./collectors/devin";
 import { geminiCliCollector } from "./collectors/gemini-cli";
 import { kiloCodeCollector } from "./collectors/kilo-code";
 import { openCodeCollector } from "./collectors/opencode";
@@ -63,6 +65,8 @@ export const COLLECTORS: Collector[] = [
   clineCollector,
   piCollector,
   ompCollector,
+  antigravityCollector,
+  devinCollector,
 ];
 
 export type WatchOptions = {

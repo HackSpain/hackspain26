@@ -27,6 +27,8 @@ const HARNESSES = [
   "kilo-code",
   "pi",
   "omp",
+  "antigravity",
+  "devin",
 ] as const;
 
 type EventType = (typeof EVENT_TYPES)[number];

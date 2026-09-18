@@ -40,6 +40,8 @@ export const HARNESSES = [
   "kilo-code",
   "pi",
   "omp",
+  "antigravity",
+  "devin",
 ] as const;
 export type HarnessId = (typeof HARNESSES)[number];
 
