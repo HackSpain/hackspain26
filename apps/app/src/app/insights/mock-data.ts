@@ -35,6 +35,25 @@ export const HARNESSES = [
     mark: "Co",
     name: "Copilot",
   },
+  // The rest of the harnesses the watcher collects (apps/cli/src/watcher).
+  {
+    color: "#3f6fd1",
+    id: "gemini-cli",
+    mark: "Ge",
+    name: "Gemini CLI",
+  },
+  {
+    color: "#6a4bc4",
+    id: "qwen-code",
+    mark: "Qw",
+    name: "Qwen Code",
+  },
+  {
+    color: "#b8432f",
+    id: "kilo-code",
+    mark: "Ki",
+    name: "Kilo Code",
+  },
 ] as const;
 
 export const TRACKS: string[] = [];
@@ -80,16 +99,18 @@ export function getSamples(): Sample[] {
   return [];
 }
 
+/** `teams` defaults to the static list; live callers pass the real ones. */
 export function filterSamples(
   samples: Sample[],
   period: Period,
-  track: string
+  track: string,
+  teams: Team[] = TEAMS
 ): Sample[] {
   const buckets = PERIODS.find((item) => item.id === period)?.buckets ?? 24;
   const ids = new Set(
-    TEAMS.filter((team) => track === "all" || team.track === track).map(
-      (team) => team.id
-    )
+    teams
+      .filter((team) => track === "all" || team.track === track)
+      .map((team) => team.id)
   );
   return samples.filter(
     (sample) => sample.bucket >= 24 - buckets && ids.has(sample.teamId)
@@ -129,8 +150,8 @@ export function bucketTotals(samples: Sample[]): Totals[] {
   );
 }
 
-export function teamRows(samples: Sample[]) {
-  return TEAMS.filter((team) =>
+export function teamRows(samples: Sample[], teams: Team[] = TEAMS) {
+  return teams.filter((team) =>
     samples.some((sample) => sample.teamId === team.id)
   ).map((team) => ({
     ...team,
@@ -151,8 +172,29 @@ export function harnessRows(samples: Sample[]) {
 }
 export type HarnessRow = ReturnType<typeof harnessRows>[number];
 
-export function timeLabel(bucket: number): string {
-  return `${String(9 + Math.floor(bucket / 2)).padStart(2, "0")}:${bucket % 2 ? "30" : "00"}`;
+/**
+ * Where the buckets sit in real time. Without one, charts keep the 12-hour
+ * day of the static layout (09:00, 30 minutes a bucket).
+ */
+export type Timeline = { startsAt?: number; bucketMinutes: number };
+
+const REAL_TIME = new Intl.DateTimeFormat("es-ES", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Madrid",
+  weekday: "short",
+});
+
+/** Minutes since the start as a clock time: "sáb 10:30" on a real timeline. */
+export function minuteLabel(minutes: number, timeline?: Timeline): string {
+  if (timeline?.startsAt === undefined) {
+    return `${String(9 + Math.floor(minutes / 60)).padStart(2, "0")}:${String(Math.round(minutes % 60)).padStart(2, "0")}`;
+  }
+  return REAL_TIME.format(new Date(timeline.startsAt + minutes * 60_000));
+}
+
+export function timeLabel(bucket: number, timeline?: Timeline): string {
+  return minuteLabel(bucket * (timeline?.bucketMinutes ?? 30), timeline);
 }
 
 export function compact(value: number): string {

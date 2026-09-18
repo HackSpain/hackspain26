@@ -19,8 +19,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { HARNESSES, compact, number, sumSamples } from "./mock-data";
-import type { Sample, TeamRow } from "./mock-data";
+import {
+  HARNESSES,
+  compact,
+  minuteLabel,
+  number,
+  sumSamples,
+} from "./mock-data";
+import type { Sample, TeamRow, Timeline } from "./mock-data";
 import type { concurrencyRows } from "./event-data";
 import { elapsed, eventTime, MILESTONES, money, PHASES } from "./event-data";
 
@@ -56,21 +62,31 @@ function PhaseStrip() {
 export function ConsumptionChart({
   samples,
   color,
+  timeline,
 }: {
   samples: Sample[];
   color: string;
+  /** Real start and bucket size; without it, the static 12-hour day. */
+  timeline?: Timeline;
 }) {
   const [view, setView] = useState("harnesses");
+  const bucketMinutes = timeline?.bucketMinutes ?? 30;
+  const perHour = 60 / bucketMinutes;
+  const totalMinutes = bucketMinutes * 24;
+  const ticks = timeline
+    ? Array.from({ length: 7 }, (_, index) => (totalMinutes / 6) * index)
+    : HOURS;
+  const clock = (minutes: number) => minuteLabel(minutes, timeline);
   const buckets = Array.from({ length: 24 }, (_, bucket) => {
     const rows = samples.filter((sample) => sample.bucket === bucket);
     return {
-      minute: bucket * 30 + 15,
-      rate: sumSamples(rows).tokens * 2,
+      minute: bucket * bucketMinutes + bucketMinutes / 2,
+      rate: sumSamples(rows).tokens * perHour,
       ...Object.fromEntries(
         HARNESSES.map((harness) => [
           harness.id,
           sumSamples(rows.filter((sample) => sample.harness === harness.id))
-            .tokens * 2,
+            .tokens * perHour,
         ])
       ),
     };
@@ -132,9 +148,9 @@ export function ConsumptionChart({
             <XAxis
               dataKey="minute"
               type="number"
-              domain={[0, 720]}
-              ticks={HOURS}
-              tickFormatter={eventTime}
+              domain={[0, totalMinutes]}
+              ticks={ticks}
+              tickFormatter={clock}
               tick={TICK}
               tickLine={false}
               axisLine={false}
@@ -147,20 +163,22 @@ export function ConsumptionChart({
               tickFormatter={compact}
               width={58}
             />
-            {PHASES.map((phase) => (
-              <ReferenceArea
-                key={phase.id}
-                x1={phase.start}
-                x2={phase.end}
-                fill={phase.color}
-                fillOpacity={0.035}
-                strokeOpacity={0}
-              />
-            ))}
+            {/* The phases belong to the static 12-hour day, not to a real timeline. */}
+            {!timeline &&
+              PHASES.map((phase) => (
+                <ReferenceArea
+                  key={phase.id}
+                  x1={phase.start}
+                  x2={phase.end}
+                  fill={phase.color}
+                  fillOpacity={0.035}
+                  strokeOpacity={0}
+                />
+              ))}
             <Tooltip
               contentStyle={TOOLTIP}
               labelFormatter={(value) =>
-                `${eventTime(Number(value) - 15)}–${eventTime(Number(value) + 15)}`
+                `${clock(Number(value) - bucketMinutes / 2)}–${clock(Number(value) + bucketMinutes / 2)}`
               }
               formatter={(value, name) => [
                 `${number(Number(value))} tokens/h`,
