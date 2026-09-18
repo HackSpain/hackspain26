@@ -30,19 +30,37 @@ type TeamSummary = FunctionReturnType<typeof api.teams.list>[number];
  * Small team avatars under a track. Clicking one opens that team's roster
  * inline; clicking it again (or another team) closes it.
  */
-function TrackTeams({ teams, trackSlug }: { teams: TeamSummary[]; trackSlug: string }) {
+function TrackTeams({
+  teams,
+  trackSlug,
+  teamCount,
+  teamLimit,
+}: {
+  teams: TeamSummary[];
+  trackSlug: string;
+  teamCount: number;
+  teamLimit: number;
+}) {
   const [openId, setOpenId] = useState<TeamSummary["_id"] | null>(null);
   const open = teams.find((team) => team._id === openId) ?? null;
 
   if (teams.length === 0) {
-    return <p className="text-xs text-hs-brown">Ningún equipo todavía.</p>;
+    return (
+      <p className="text-xs text-hs-brown">
+        {teamCount === 0
+          ? `Ningún equipo todavía. Caben ${teamLimit}.`
+          : `${teamCount}/${teamLimit} plazas ocupadas.`}
+      </p>
+    );
   }
   const rosterId = `track-${trackSlug}-roster`;
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-bungee text-[11px] uppercase text-hs-brown">
-          {teams.length === 1 ? "1 equipo" : `${teams.length} equipos`}
+          {teamCount >= teamLimit
+            ? `Completo · ${teamCount}/${teamLimit} equipos`
+            : `${teamCount}/${teamLimit} equipos`}
         </span>
         <ul className="flex flex-wrap items-center gap-1.5" aria-label="Equipos en este reto">
           {teams.map((team) => {
@@ -114,6 +132,8 @@ type TrackRow = {
   note: string;
   logoUrl?: string;
   website?: string;
+  teamCount: number;
+  teamLimit: number;
 };
 
 const PLACEHOLDER_SLUGS = new Set(["ml", "non-tech"]);
@@ -347,6 +367,8 @@ export default function TracksPage() {
                   ) : (
                     <TrackTeams
                       trackSlug={track.slug}
+                      teamCount={track.teamCount}
+                      teamLimit={track.teamLimit}
                       teams={teams.filter((team) =>
                         team.tracks.some((chosen) => chosen.slug === track.slug),
                       )}

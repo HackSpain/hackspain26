@@ -13,7 +13,11 @@ import {
 } from "./lib/judging";
 import { submissionStatusValidator } from "./lib/validators";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
-import { submissionsAreOpen } from "./tracks";
+import {
+  MAX_TEAMS_PER_TRACK,
+  submissionsAreOpen,
+  trackEntryCounts,
+} from "./tracks";
 import { findOwnedSubmission, membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { scheduleStackScan } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -108,9 +112,16 @@ async function hydrateSubmission(
 async function resolveChallengeIds(
   ctx: MutationCtx,
   challengeIds: Id<"tracks">[],
-  requireActive: boolean
+  requireActive: boolean,
+  existing: Doc<"submissions"> | null
 ): Promise<Id<"tracks">[]> {
   const unique = [...new Set(challengeIds)];
+  // A project keeps the places it already holds; only new entries need room.
+  const added = unique.filter(
+    (trackId) => !existing?.challengeIds.includes(trackId)
+  );
+  const counts =
+    added.length > 0 ? await trackEntryCounts(ctx, existing?._id) : null;
   for (const trackId of unique) {
     const track = await ctx.db.get(trackId);
     if (!track) {
@@ -118,6 +129,14 @@ async function resolveChallengeIds(
     }
     if (requireActive && !track.active) {
       throw new Error(`${track.label} no está abierto`);
+    }
+    if (
+      added.includes(trackId) &&
+      (counts?.get(trackId) ?? 0) >= MAX_TEAMS_PER_TRACK
+    ) {
+      throw new Error(
+        `${track.label} está completo (${MAX_TEAMS_PER_TRACK} equipos)`
+      );
     }
   }
   return unique;
@@ -197,7 +216,8 @@ async function upsertProject(
   const challengeIds = await resolveChallengeIds(
     ctx,
     args.challengeIds,
-    mode === "submit"
+    mode === "submit",
+    existing
   );
   const perkIds = await resolvePerkIds(ctx, args.perkIds);
 
