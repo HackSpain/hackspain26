@@ -36,8 +36,9 @@ type Submission = FunctionReturnType<typeof api.submissions.adminList>[number];
 
 const TRACK_PARAM = "track";
 
-function projectCount(count: number) {
-  return `${count} ${count === 1 ? "proyecto" : "proyectos"}`;
+function projectCount(count: number, limit: number) {
+  const full = count >= limit ? " · lleno" : "";
+  return `${count}/${limit} ${count === 1 ? "proyecto" : "proyectos"}${full}`;
 }
 
 export default function AdminTracksPage() {
@@ -138,7 +139,7 @@ function TracksAdmin() {
                     <span>{track.label}</span>
                     <span className="text-xs text-hs-brown tabular-nums">
                       · {track.active ? "visible" : "oculto"} ·{" "}
-                      {projectCount(countFor(track))}
+                      {projectCount(countFor(track), settings.teamLimit)}
                     </span>
                   </SelectItem>
                 ))}
@@ -149,6 +150,7 @@ function TracksAdmin() {
           <TrackEditor
             key={selected._id}
             track={selected}
+            teamLimit={settings.teamLimit}
             submissions={submissions.filter((row) =>
               row.challengeIds.includes(selected._id),
             )}
@@ -162,9 +164,11 @@ function TracksAdmin() {
 function TrackEditor({
   track,
   submissions,
+  teamLimit,
 }: {
   track: Track;
   submissions: Submission[];
+  teamLimit: number;
 }) {
   const update = useMutation(api.tracks.adminUpdate);
   const [label, setLabel] = useState(track.label);
@@ -203,7 +207,7 @@ function TrackEditor({
           <TrackLogo track={{ label: track.label, logoUrl: logoUrl.trim() || undefined }} className="h-7" />
           <Badge>{track.active ? "Activo" : "Oculto"}</Badge>
           <Badge variant="gold" className="tabular-nums">
-            {projectCount(submissions.length)}
+            {projectCount(submissions.length, teamLimit)}
           </Badge>
         </CardTitle>
       </CardHeader>

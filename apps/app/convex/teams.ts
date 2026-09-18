@@ -286,56 +286,67 @@ export const mineId = anytimeOnboardedQuery({
 export const list = onboardedQuery({
   args: {},
   handler: async (ctx) => {
-    const membership = await membershipForUser(ctx, ctx.user._id);
-    const teams = await ctx.db.query("teams").collect();
-    const result = [];
-    for (const team of teams) {
-      const members = await ctx.db
-        .query("teamMembers")
-        .withIndex("by_team", (q) => q.eq("teamId", team._id))
-        .collect();
-      const submission = await ctx.db
-        .query("submissions")
-        .withIndex("by_team", (q) => q.eq("teamId", team._id))
-        .first();
-      const tracks = [];
-      for (const trackId of submission?.challengeIds ?? []) {
-        const track = await ctx.db.get(trackId);
-        if (track) {
-          tracks.push({ label: track.label, logoUrl: track.logoUrl, slug: track.slug });
-        }
-      }
-      const people = [];
-      for (const member of members) {
-        if (member.status !== "member") {
-          continue;
-        }
-        const user = member.userId ? await ctx.db.get(member.userId) : null;
-        const signup = member.signupId ? await ctx.db.get(member.signupId) : null;
-        people.push({
-          _id: member._id,
-          avatarUrl: user ? avatarUrlFor(user) : undefined,
-          isOwner: member.userId === team.ownerId,
-          name: user?.name ?? signup?.fullName ?? member.identifier,
-          userId: member.userId,
-        });
-      }
-      result.push({
-        _id: team._id,
-        name: team.name,
-        isMine: membership?.teamId === team._id,
-        logoUrl: teamLogoUrlFor(team),
-        memberCount: people.length,
-        members: people.toSorted((a, b) => Number(b.isOwner) - Number(a.isOwner)),
-        pendingCount: members.filter((m) => m.status === "pending").length,
-        projectName: submission?.name?.trim() || undefined,
-        repoUrl: team.repoUrl,
-        repoUrls: teamRepoList(team),
-        techStack: team.techStack ?? [],
-        tracks,
-        submissionStatus: submission?.status,
-      });
-    }
+    const [membership, teams] = await Promise.all([
+      membershipForUser(ctx, ctx.user._id),
+      ctx.db.query("teams").collect(),
+    ]);
+    const result = await Promise.all(
+      teams.map(async (team) => {
+        const [members, submission] = await Promise.all([
+          ctx.db
+            .query("teamMembers")
+            .withIndex("by_team", (q) => q.eq("teamId", team._id))
+            .collect(),
+          ctx.db
+            .query("submissions")
+            .withIndex("by_team", (q) => q.eq("teamId", team._id))
+            .first(),
+        ]);
+        const tracks = (
+          await Promise.all(
+            (submission?.challengeIds ?? []).map((trackId) =>
+              ctx.db.get(trackId)
+            )
+          )
+        )
+          .filter((track) => track !== null)
+          .map(({ label, logoUrl, slug }) => ({ label, logoUrl, slug }));
+        const people = await Promise.all(
+          members
+            .filter((member) => member.status === "member")
+            .map(async (member) => {
+              const [user, signup] = await Promise.all([
+                member.userId ? ctx.db.get(member.userId) : null,
+                member.signupId ? ctx.db.get(member.signupId) : null,
+              ]);
+              return {
+                _id: member._id,
+                avatarUrl: user ? avatarUrlFor(user) : undefined,
+                isOwner: member.userId === team.ownerId,
+                name: user?.name ?? signup?.fullName ?? member.identifier,
+                userId: member.userId,
+              };
+            })
+        );
+        return {
+          _id: team._id,
+          name: team.name,
+          isMine: membership?.teamId === team._id,
+          logoUrl: teamLogoUrlFor(team),
+          memberCount: people.length,
+          members: people.toSorted(
+            (a, b) => Number(b.isOwner) - Number(a.isOwner)
+          ),
+          pendingCount: members.filter((m) => m.status === "pending").length,
+          projectName: submission?.name?.trim() || undefined,
+          repoUrl: team.repoUrl,
+          repoUrls: teamRepoList(team),
+          techStack: team.techStack ?? [],
+          tracks,
+          submissionStatus: submission?.status,
+        };
+      })
+    );
     return result.toSorted((a, b) => a.name.localeCompare(b.name, "es"));
   },
   returns: v.array(teamSummaryReturn),

@@ -118,13 +118,10 @@ nombre, rol, ciudad, empresa, universidad y hasta tres especialidades según su 
 Los campos vacíos no se muestran; sin foto aparecen sus iniciales. Las franjas cubren
 el cambio y siguen en bucle si no hay entradas pendientes. Respeta movimiento reducido.
 
-El check-in está disponible siempre, independientemente de la fase o fecha del evento.
-Abre la pantalla **antes** de validar el código en recepción. `passes.staffScan`
-guarda `checkedInAt` y `passes.arrivals` transmite la entrada al monitor, sin recargas
-ni acciones adicionales allí. Entradas simultáneas se encolan; repetir el código no
-repite la presentación. Deshacer una entrada la retira. Al abrir o recargar se empieza
-desde ese momento; la reconexión de la misma vista recupera entradas pendientes.
-No se publican emails, teléfonos ni códigos de acreditación.
+La antigua estación web de recepción está retirada: su página responde 404 y
+`/api/reception` responde 410. Sus operaciones de Convex son internas. La proyección
+`passes.arrivals` se conserva para la pantalla de entradas y no publica emails,
+teléfonos ni códigos de acreditación.
 
 `/tv?view=entradas&demo=1` reproduce ejemplos sin consultar entradas ni hacer check-ins.
 La foto/cargo de Mark Villacampa son públicos; los demás perfiles son ficticios.

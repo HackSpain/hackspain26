@@ -30,6 +30,8 @@ Add an entry only for an evidenced, non-obvious project fact that helps prevent 
 
 **Prevention and verification.** When catching and normalizing an exception at an API boundary, retain safe diagnostics for unexpected server failures. Use [reportServerEvent](../apps/app/src/lib/server-observability.ts), which flushes before a Vercel function can freeze. Review error messages as well as structured fields for secrets; never log whole requests, bodies, cookies, OTPs, or tokens. Preserve client error envelopes and expected validation outcomes. Confirm the next failure identifies the operation and cause. Instrumentation makes a failure diagnosable; it does not repair the underlying 500. Post-deploy recurrence/root-cause verification remained outstanding at the end of this investigation.
 
+The same rule applies to the authenticated image proxy. A burst of 154 upstream 502 responses could not be separated into network failure, upstream status, or missing response body. Log those categories and thumbnail conversion failures without recording storage URLs, ids, credentials, or request data. This instrumentation makes the next occurrence diagnosable; it is not evidence that the upstream failure has been repaired.
+
 ## 2026-09-18 — Classify expected auth failures and extension noise precisely
 
 **Evidence.** The log window included 34 `BAD_OTP`, four `OTP_EXPIRED`, and 12 errors attributed to injected MetaMask code. These should not all count as application server failures, but genuine auth delivery/transport failures must remain visible.
@@ -39,6 +41,12 @@ Add an entry only for an evidenced, non-obvious project fact that helps prevent 
 [PR #155](https://github.com/HackSpain/hackspain26/pull/155) added a browser-only filter in [telemetry-sanitize.ts](../apps/app/src/lib/telemetry-sanitize.ts) for known extension URL schemes and the observed exact `app:///scripts/inpage.js` frame. Application request sanitization remains in place; focused tests cover filtering and preservation of ordinary errors.
 
 **Prevention and verification.** Read dependency behavior and peer requirements before patching around SDK errors. Keep domain error codes intact. Filter noise using narrow source/stack evidence, not broad message matches such as “Failed to fetch” or “MetaMask.” Inspect mixed application/extension stacks before expanding a filter: extension presence alone does not prove every failure is harmless. Verify genuine application errors still arrive and retain request sanitization in browser/server/edge hooks.
+
+## 2026-09-18 — Request sanitization does not cover every URL
+
+**Evidence.** Better Stack contained CLI handoff credentials in Vercel proxy paths and referers, and browser error breadcrumbs retained the same query parameters. The existing sanitizer removed request query strings but did not inspect breadcrumbs. No credential values belong in this file, and the observation does not establish misuse.
+
+**Correction and prevention.** New CLI links place `hs-code` and `hs-token` in URL fragments, which browsers do not send in HTTP requests. The dashboard still accepts query links from older CLI versions and removes either form after reading it. Error breadcrumbs redact the known authentication parameters as a second layer. Old CLI links can still reach the proxy log before client code scrubs them, so verify the result after the updated CLI is distributed and handle retention of historical logs separately.
 
 ## 2026-09-18 — A GitHub 404 can be repository configuration or access
 
@@ -53,6 +61,12 @@ Add an entry only for an evidenced, non-obvious project fact that helps prevent 
 **Prevention.** Inspect checks for the current commit and identify failed steps before recommending a merge. Do not report inherited failures as new regressions or claim all checks passed. Do not add unrelated formatting or harness changes to make an incident PR green. Run tests with the correct runner (`bun:test` needs Bun).
 
 **Deployment verification.** The dashboard's [Vercel configuration](../apps/app/vercel.json) runs `pnpm vercel-build`, which deploys Convex and builds Next.js using the configured deployment key. Production keys belong only to the Production environment; previews need separate preview configuration. Do not run an extra laptop production deploy merely because a dependency changed. Verify the production deployment and user-facing behavior after merge. PRs #153–#156 were present in `master` at `5bec539` when this document was written; that establishes merge status, not production recovery. Firewall publication and code deployment are separate operations.
+
+## 2026-09-18 — Team listing latency came from sequential reads
+
+**Evidence.** In a production sample of 1,984 Convex completions, teams:list ran 396 times. Its 339 uncached executions had a 1,975 ms median, 2,629 ms p95, and up to 909 documents read. The handler waited for each team's members, submission, tracks, and profiles before starting the next team's reads.
+
+**Correction and verification.** Keep the response and access wrapper unchanged, but start independent reads together with Promise.all. The change reduces serialized wait time rather than document count. Compare uncached execution time after deployment; do not claim fewer database reads or treat this latency as the cause of unrelated browser disconnects.
 
 ## 2026-09-18 — Stale agent instructions can reintroduce removed behavior
 

@@ -46,3 +46,43 @@ test("keeps and sanitizes application errors", () => {
     },
   });
 });
+
+test("redacts auth handoff values from breadcrumbs", () => {
+  const event = {
+    breadcrumbs: [
+      {
+        category: "navigation",
+        data: {
+          from: "/cli-auth?hs-code=secret-code",
+          to: "/cli-auth/handoff?hs-token=secret-token&step=done",
+        },
+      },
+      {
+        category: "fetch",
+        data: {
+          url: "https://storage.example/file?token=storage-token&width=80",
+        },
+        message: "GET /callback?code=oauth-code",
+      },
+    ],
+  };
+
+  assert.deepEqual(prepareTelemetryEvent(event), {
+    breadcrumbs: [
+      {
+        category: "navigation",
+        data: {
+          from: "/cli-auth?hs-code=[Filtered]",
+          to: "/cli-auth/handoff?hs-token=[Filtered]&step=done",
+        },
+      },
+      {
+        category: "fetch",
+        data: {
+          url: "https://storage.example/file?token=[Filtered]&width=80",
+        },
+        message: "GET /callback?code=[Filtered]",
+      },
+    ],
+  });
+});

@@ -70,10 +70,10 @@ export function handoffUrl(
   path: string
 ): string {
   const url = new URL(HANDOFF_PATH, appUrl);
-  url.searchParams.set("hs-token", token);
   if (path !== "/") {
     url.searchParams.set("next", path);
   }
+  url.hash = new URLSearchParams({ "hs-token": token }).toString();
   return url.toString();
 }
 

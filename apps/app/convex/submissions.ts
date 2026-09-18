@@ -138,8 +138,9 @@ async function resolveChallengeIds(
       added.includes(trackId) &&
       (counts?.get(trackId) ?? 0) >= MAX_TEAMS_PER_TRACK
     ) {
-      throw new Error(
-        `${track.label} está completo (${MAX_TEAMS_PER_TRACK} equipos)`
+      fail(
+        "TRACK_FULL",
+        `${track.label} ya tiene ${MAX_TEAMS_PER_TRACK} equipos. Únete a otro track.`
       );
     }
   }
