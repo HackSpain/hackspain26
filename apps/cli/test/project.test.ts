@@ -51,33 +51,33 @@ const tracks: Track[] = [
 ];
 
 describe("planTracks", () => {
-  test("register adds in catalogue order and ignores duplicates", () => {
-    const plan = planTracks([id("t3")], tracks, { add: ["MAISA", "theker"] });
-    expect(plan.next).toEqual([id("t1"), id("t3")]);
+  test("register uses only the first slug and replaces the rest", () => {
+    const plan = planTracks([id("t3")], tracks, { add: ["MAISA", "embat"] });
+    expect(plan.next).toEqual([id("t1")]);
     expect(plan.added.map((t) => t.slug)).toEqual(["maisa"]);
+    expect(plan.removed.map((t) => t.slug)).toEqual(["theker"]);
     expect(plan.unknown).toEqual([]);
   });
 
-  test("unregister removes only what was there", () => {
-    const plan = planTracks([id("t1"), id("t2")], tracks, {
-      remove: ["embat", "theker"],
-    });
+  test("register of the same track still drops extras already stored", () => {
+    const plan = planTracks([id("t1"), id("t2")], tracks, { add: ["maisa"] });
     expect(plan.next).toEqual([id("t1")]);
+    expect(plan.added).toEqual([]);
     expect(plan.removed.map((t) => t.slug)).toEqual(["embat"]);
   });
 
-  test("move swaps one for another", () => {
-    const plan = planTracks([id("t1")], tracks, {
-      add: ["embat"],
-      remove: ["maisa"],
+  test("unregister clears the track", () => {
+    const plan = planTracks([id("t1"), id("t2")], tracks, {
+      remove: ["embat"],
     });
-    expect(plan.next).toEqual([id("t2")]);
+    expect(plan.next).toEqual([]);
+    expect(plan.removed.map((t) => t.slug)).toEqual(["embat"]);
   });
 
   test("reports unknown slugs instead of dropping them", () => {
     const plan = planTracks([], tracks, { add: ["nope", "maisa"] });
     expect(plan.unknown).toEqual(["nope"]);
-    expect(plan.next).toEqual([id("t1")]);
+    expect(plan.next).toEqual([]);
   });
 });
 

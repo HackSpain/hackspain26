@@ -5,7 +5,7 @@ import { CliError, usageError } from "../lib/errors";
 import { uiFor } from "../lib/output";
 import { openParticipant } from "../lib/participant";
 import { alreadySubmitted, projectArgsFrom } from "../lib/project";
-import { confirmOrFlag, pickMany, textOrFlag } from "../lib/prompts";
+import { confirmOrFlag, pickMany, pickOne, textOrFlag } from "../lib/prompts";
 import { c, highlight } from "../lib/style";
 import { renderSubmission } from "./project";
 
@@ -23,7 +23,7 @@ type SubmitOptions = {
   repo?: string;
   demo?: string;
   video?: string;
-  track: string[];
+  track?: string;
   perk: string[];
   yes?: boolean;
 };
@@ -38,12 +38,7 @@ export function registerSubmit(program: Command): void {
     .option("--repo <url>", "public GitHub repository URL")
     .option("--demo <url>", "demo URL")
     .option("--video <url>", "YouTube, Loom, or MP4 URL for judges")
-    .option(
-      "--track <slug>",
-      "track to enter (repeatable)",
-      collect,
-      [] as string[]
-    )
+    .option("--track <slug>", "track to enter")
     .option(
       "--perk <id>",
       "partner perk used (repeatable, id from `hackspain perk list`)",
@@ -126,37 +121,31 @@ export function registerSubmit(program: Command): void {
       });
 
       const bySlug = new Map(tracks.map((t) => [t.slug, t]));
-      const unknownTracks = opts.track.filter((s) => !bySlug.has(s));
-      if (unknownTracks.length > 0) {
+      if (opts.track && !bySlug.has(opts.track)) {
         throw usageError(
-          `Unknown track: ${unknownTracks.join(", ")}.`,
+          `Unknown track: ${opts.track}.`,
           `Known: ${tracks.map((t) => t.slug).join(", ")}.`
         );
       }
-      const trackSlugs = await pickMany(
-        ctx,
-        opts.track.length > 0 ? opts.track : undefined,
-        {
-          choices: tracks.map((t) => ({
-            value: t.slug,
-            label: t.label,
-            hint: t.note,
-          })),
-          flag: "--track",
-          initial: tracks
-            .filter((t) => existing.challengeIds.includes(t._id))
-            .map((t) => t.slug),
-          message: "Tracks to enter",
-          required: mode === "submit",
-        }
-      );
-      const challengeIds = trackSlugs.flatMap((slug) => {
-        const t = bySlug.get(slug);
-        return t ? [t._id] : [];
+      const currentSlug = tracks.find(
+        (t) => t._id === existing.challengeIds[0]
+      )?.slug;
+      const trackSlug = await pickOne(ctx, opts.track, {
+        choices: tracks.map((t) => ({
+          hint: `${t.teamCount}/${t.teamLimit}`,
+          label: t.label,
+          value: t.slug,
+        })),
+        flag: "--track",
+        initialValue: currentSlug,
+        message: "Track to enter",
+        optional: mode === "draft",
       });
+      const selected = trackSlug ? bySlug.get(trackSlug) : undefined;
+      const challengeIds = selected ? [selected._id] : [];
       if (mode === "submit" && challengeIds.length === 0) {
         throw usageError(
-          "Pick at least one track.",
+          "Pick a track.",
           "Pass --track <slug> or run interactively."
         );
       }
@@ -200,8 +189,8 @@ export function registerSubmit(program: Command): void {
         ui.kv([
           ["Project", highlight(args.name)],
           [
-            "Tracks",
-            trackSlugs.map((s) => bySlug.get(s)?.label ?? s).join(", "),
+            "Track",
+            selected?.label ?? c.dim("–"),
           ],
           ["Repo", args.repoUrl ?? c.dim("–")],
           ["Demo", args.demoUrl ?? c.dim("–")],
@@ -265,7 +254,7 @@ export function registerSubmit(program: Command): void {
       } else {
         ui.next([
           ["hackspain submit", "when you are ready to lock it in"],
-          ["hackspain track list", "double-check the tracks you are entering"],
+          ["hackspain track list", "double-check the track you are entering"],
         ]);
         ui.outro("Draft saved. Keep building.");
       }

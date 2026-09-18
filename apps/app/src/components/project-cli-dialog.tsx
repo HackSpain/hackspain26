@@ -34,15 +34,15 @@ export function ProjectCliDialog({ children }: { children: ReactNode }) {
         </div>
 
         <div className="space-y-2">
-          <p className="font-bungee text-xs">2 · Entra en los retos</p>
+          <p className="font-bungee text-xs">2 · Entra en un reto</p>
           <CodeBlock>
             {
-              "hackspain track list                 # los retos y en cuáles estás\nhackspain track register maisa embat  # entra en uno o varios\nhackspain track unregister embat      # sal de uno\nhackspain track move embat theker     # cambia uno por otro"
+              "hackspain track list              # los retos y en cuál estás\nhackspain track register maisa    # entra; si ya estabas en otro, te cambia\nhackspain track unregister        # sal"
             }
           </CodeBlock>
           <p className="text-sm text-hs-brown">
-            Un proyecto puede entrar en tantos retos como quieras. Los slugs
-            son los de <code className="font-mono text-xs">hackspain track list</code>.
+            Un equipo entra en un solo reto. El slug es el de{" "}
+            <code className="font-mono text-xs">hackspain track list</code>.
           </p>
         </div>
 
