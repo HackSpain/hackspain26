@@ -1,14 +1,15 @@
 import { api } from "@convex/_generated/api";
 import { closedMessage } from "@convex/lib/eventWindow";
-import { RawTreeError } from "@rawtree/sdk";
 import { fetchQuery } from "convex/nextjs";
 import { reportServerEvent } from "@/lib/server-observability";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
 import {
+  exportTelemetryAsOtlpLogs,
+  RawTreeOtlpConfigurationError,
+} from "./otlp";
+import {
   occurredInWindow,
   parseTelemetryEvent,
-  RawTreeConfigurationError,
-  storeTelemetryEvents,
   TELEMETRY_BATCH_MAX,
   TELEMETRY_EVENT_MAX_BYTES,
 } from "./rawtree";
@@ -49,9 +50,9 @@ function rejection(
  * POST application/x-ndjson from `hackspain watch`, one canonical
  * `hackspain.telemetry.v2` event per line (v1 is upgraded) (apps/cli/docs/telemetry-schema.md).
  *
- * The participant session is verified before canonical events are inserted in
- * RawTree. The RawTree API key stays server-side. Events also stay in the
- * participant's local spool.
+ * The participant session is verified before canonical events are exported
+ * to RawTree as OTLP logs. The API key stays server-side. Events also stay in
+ * the participant's local spool.
  */
 export async function POST(request: Request) {
   const token = bearerToken(request);
@@ -132,16 +133,14 @@ export async function POST(request: Request) {
     }
   }
   try {
-    await storeTelemetryEvents(accepted);
+    await exportTelemetryAsOtlpLogs(accepted);
   } catch (error) {
-    await reportServerEvent("error", "RawTree telemetry insert failed", {
+    await reportServerEvent("error", "RawTree OTLP logs export failed", {
       batchSize: accepted.length,
       kind: error instanceof Error ? error.name : "unknown",
-      ...(error instanceof RawTreeError
-        ? { code: error.error, hint: error.hint, status: error.status }
-        : {}),
+      message: error instanceof Error ? error.message : "unknown",
     });
-    const status = error instanceof RawTreeConfigurationError ? 503 : 502;
+    const status = error instanceof RawTreeOtlpConfigurationError ? 503 : 502;
     return fail("No se pudo guardar la telemetría; se reintentará", status);
   }
 

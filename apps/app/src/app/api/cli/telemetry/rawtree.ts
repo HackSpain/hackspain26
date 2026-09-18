@@ -1,6 +1,3 @@
-import { createHash } from "node:crypto";
-import { RawTree } from "@rawtree/sdk";
-import type { JsonObject } from "@rawtree/sdk";
 import type { CanonicalModel, TokenCounts } from "./canonical";
 import {
   canonicalModel,
@@ -8,8 +5,6 @@ import {
   TELEMETRY_SCHEMA_V1,
   totalTokens,
 } from "./canonical";
-
-const DEFAULT_TELEMETRY_TABLE = "hackspain_telemetry";
 
 export const TELEMETRY_BATCH_MAX = 200;
 export const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
@@ -58,13 +53,6 @@ export type TelemetryEvent = {
   /** Harness-specific, never comparable across harnesses. */
   native?: { requestId?: string; costUsd?: number };
 };
-
-export class RawTreeConfigurationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RawTreeConfigurationError";
-  }
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -285,87 +273,4 @@ export function parseTelemetryEvent(
     },
     ...(native ? { native } : {}),
   };
-}
-
-function toJsonObject(event: TelemetryEvent): JsonObject {
-  return structuredClone(event) as JsonObject;
-}
-
-function sortedUniqueEvents(events: TelemetryEvent[]): TelemetryEvent[] {
-  const sorted = [...events].toSorted((left, right) =>
-    left.eventId.localeCompare(right.eventId)
-  );
-  for (let index = 1; index < sorted.length; index++) {
-    if (sorted[index - 1]?.eventId === sorted[index]?.eventId) {
-      throw new Error(
-        `Duplicate telemetry event id: ${sorted[index]?.eventId}`
-      );
-    }
-  }
-  return sorted;
-}
-
-function deduplicatingFetch(
-  fetchImpl: typeof fetch,
-  token: string
-): typeof fetch {
-  return ((input, init) => {
-    const inputUrl = input instanceof Request ? input.url : String(input);
-    const url = new URL(inputUrl);
-    url.searchParams.set("deduplicate_insert", "enable");
-    url.searchParams.set("insert_deduplication_token", token);
-    return fetchImpl(url.toString(), init);
-  }) as typeof fetch;
-}
-
-export async function storeTelemetryEvents(
-  events: TelemetryEvent[],
-  fetchImpl: typeof fetch = fetch
-): Promise<void> {
-  if (events.length === 0) {
-    return;
-  }
-
-  const apiKey = process.env.RAWTREE_API_KEY;
-  const database = process.env.RAWTREE_DATABASE;
-  if (!apiKey || !database) {
-    throw new RawTreeConfigurationError(
-      "RAWTREE_API_KEY and RAWTREE_DATABASE are required"
-    );
-  }
-
-  const table = process.env.RAWTREE_TELEMETRY_TABLE ?? DEFAULT_TELEMETRY_TABLE;
-  const orderedEvents = sortedUniqueEvents(events);
-  const token = createHash("sha256")
-    .update("hackspain.telemetry.insert.v1\0")
-    .update(database)
-    .update("\0")
-    .update(table)
-    .update("\0")
-    .update(
-      JSON.stringify(
-        orderedEvents.map(({ eventId, identity }) => [identity.userId, eventId])
-      )
-    )
-    .digest("hex");
-
-  const rawtree = new RawTree({
-    apiKey,
-    database,
-    ...(process.env.RAWTREE_BASE_URL
-      ? { baseUrl: process.env.RAWTREE_BASE_URL }
-      : {}),
-    fetch: deduplicatingFetch(fetchImpl, token),
-    userAgent: "hackspain-dashboard/1.0",
-  });
-  const result = await rawtree.insert({
-    signal: AbortSignal.timeout(10_000),
-    table,
-    values: orderedEvents.map(toJsonObject),
-  });
-  if (result.inserted !== 0 && result.inserted !== orderedEvents.length) {
-    throw new Error(
-      `RawTree inserted ${result.inserted} of ${orderedEvents.length} telemetry events`
-    );
-  }
 }

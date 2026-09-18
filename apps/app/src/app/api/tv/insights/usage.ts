@@ -1,6 +1,6 @@
 import { RawTree, RawTreeError } from "@rawtree/sdk";
 
-const DEFAULT_TELEMETRY_TABLE = "hackspain_telemetry";
+const DEFAULT_OTLP_LOGS_TABLE = "logs";
 const TABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /** AI usage of one team on one harness in one bucket of the hackathon. */
@@ -18,18 +18,14 @@ export type UsageRow = {
 export type UsageWindow = { startsAt: number; endsAt: number; buckets: number };
 
 /**
- * One aggregate over the canonical table (`hackspain.telemetry.v2`, see
- * apps/cli/docs/telemetry-schema.md). RawTree stores the JSON as it came, so
- * every field is read through `toString` and cast: that holds whether a
- * column was inferred as a number, a string or a dynamic value.
+ * One aggregate over the OTLP logs table (see
+ * apps/cli/docs/telemetry-schema.md). RawTree's `otlp-logs` transform flattens
+ * resource and record attributes into top-level dotted columns.
  *
- * - `events` keeps one row per (`identity.userId`, `eventId`), the permanent
- *   logical key: insert deduplication only covers the retry window.
- * - Buckets are counted from the hackathon's start on `occurredAt` (the
- *   harness's time); ingestion already refuses anything outside the window,
- *   the range check here is the same rule on the way out.
- * - `tokens.total` is input + output + cache reads + cache writes, and
- *   `cachedTokens` the cache half of it, for every harness alike.
+ * - `events` keeps one row per (`hackspain.user.id`, `event.id`), because a
+ *   retried OTLP batch can be stored more than once.
+ * - Buckets use `timeUnixNano`, which the exporter sets from `occurredAt`.
+ * - `hackspain.usage.total_tokens` is input + output + both cache fields.
  */
 export function usageSql(table: string, window: UsageWindow): string {
   if (!TABLE_NAME.test(table)) {
@@ -41,16 +37,16 @@ export function usageSql(table: string, window: UsageWindow): string {
   return `
 WITH events AS (
   SELECT
-    toString(identity.userId) AS userId,
-    toString(eventId) AS id,
-    any(toString(identity.teamId)) AS teamId,
-    any(toString(harness)) AS harness,
-    any(toString(sessionId)) AS sessionId,
-    any(toUnixTimestamp(parseDateTimeBestEffortOrZero(toString(occurredAt)))) AS at,
-    any(toInt64OrZero(toString(tokens.total))) AS total,
-    any(toInt64OrZero(toString(tokens.cacheRead)) + toInt64OrZero(toString(tokens.cacheWrite))) AS cached
+    toString(\`hackspain.user.id\`) AS userId,
+    toString(\`event.id\`) AS id,
+    any(toString(\`hackspain.team.id\`)) AS teamId,
+    any(toString(\`hackspain.harness\`)) AS harness,
+    any(toString(\`gen_ai.conversation.id\`)) AS sessionId,
+    any(intDiv(toInt64OrZero(toString(timeUnixNano)), 1000000000)) AS at,
+    any(toInt64OrZero(toString(\`hackspain.usage.total_tokens\`))) AS total,
+    any(toInt64OrZero(toString(\`hackspain.usage.cache_read_tokens\`)) + toInt64OrZero(toString(\`hackspain.usage.cache_write_tokens\`))) AS cached
   FROM ${table}
-  WHERE toString(type) = 'usage'
+  WHERE toString(eventName) = 'hackspain.usage'
   GROUP BY userId, id
 ),
 bucketed AS (
@@ -128,7 +124,7 @@ export async function fetchUsage(
   if (!apiKey || !database) {
     return { rows: [], status: "unconfigured" };
   }
-  const table = process.env.RAWTREE_TELEMETRY_TABLE ?? DEFAULT_TELEMETRY_TABLE;
+  const table = process.env.RAWTREE_OTLP_LOGS_TABLE ?? DEFAULT_OTLP_LOGS_TABLE;
   const rawtree = new RawTree({
     apiKey,
     database,
