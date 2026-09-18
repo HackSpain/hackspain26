@@ -56,6 +56,12 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 
 **Deployment verification.** The dashboard's [Vercel configuration](../apps/app/vercel.json) runs `pnpm vercel-build`, which deploys Convex and builds Next.js using the configured deployment key. Production keys belong only to the Production environment; previews need separate preview configuration. Do not run an extra laptop production deploy merely because a dependency changed. Verify the production deployment and user-facing behavior after merge. PRs #153–#156 were present in `master` at `5bec539` when this document was written; that establishes merge status, not production recovery. Firewall publication and code deployment are separate operations.
 
+## 2026-09-18 — Team listing latency came from sequential reads
+
+**Evidence.** In a production sample of 1,984 Convex completions, teams:list ran 396 times. Its 339 uncached executions had a 1,975 ms median, 2,629 ms p95, and up to 909 documents read. The handler waited for each team's members, submission, tracks, and profiles before starting the next team's reads.
+
+**Correction and verification.** Keep the response and access wrapper unchanged, but start independent reads together with Promise.all. The change reduces serialized wait time rather than document count. Compare uncached execution time after deployment; do not claim fewer database reads or treat this latency as the cause of unrelated browser disconnects.
+
 ## 2026-09-18 — Stale agent instructions can reintroduce removed behavior
 
 **Evidence.** The previous `AGENTS.md` simultaneously called Insights mock-only and described live insights, documented a superseded RawTree dual-write path, and said projects could enter multiple tracks despite the current one-track validation. The dashboard README also explicitly forbade the auth bypass needed to correct the observed firewall problem.

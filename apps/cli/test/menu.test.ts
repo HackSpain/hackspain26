@@ -235,9 +235,9 @@ describe("buildMainMenu", () => {
   test("submitted project: track is view-only, project listing stays", () => {
     const track = itemOf(buildMainMenu(READY_SUBMITTED), "tracks");
     expect(track.submenu).toBeUndefined();
-    expect(values(submenuOf(buildMainMenu(READY_SUBMITTED), "project"))).toEqual(
-      ["project-list"]
-    );
+    expect(
+      values(submenuOf(buildMainMenu(READY_SUBMITTED), "project"))
+    ).toEqual(["project-list"]);
   });
 
   test("top level stays tight: no static hint on perks or feed", () => {
