@@ -109,21 +109,21 @@ export function parseUsageRows(data: unknown[]): UsageRow[] {
 
 export type UsageResult =
   | { status: "ok"; rows: UsageRow[] }
-  /** No read key on this deployment. */
+  /** No RawTree key on this deployment. */
   | { status: "unconfigured"; rows: [] }
   /** The table does not exist until the first event of the hackathon lands. */
   | { status: "empty"; rows: [] };
 
 /**
- * Reads need their own key: the dashboard's RAWTREE_API_KEY is `write_only`.
- * Set RAWTREE_READ_API_KEY to a `read_only` key. Throws on anything that is
- * neither "not configured" nor "no table yet", so the caller can report it.
+ * The dashboard uses one `read_write` RawTree key for ingestion and queries.
+ * Throws on anything that is neither "not configured" nor "no table yet", so
+ * the caller can report it.
  */
 export async function fetchUsage(
   window: UsageWindow,
   fetchImpl: typeof fetch = fetch
 ): Promise<UsageResult> {
-  const apiKey = process.env.RAWTREE_READ_API_KEY;
+  const apiKey = process.env.RAWTREE_API_KEY;
   const database = process.env.RAWTREE_DATABASE;
   if (!apiKey || !database) {
     return { rows: [], status: "unconfigured" };
