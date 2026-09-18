@@ -141,7 +141,8 @@ export default function CliPage() {
             Muestra (o regenera) el código de invitación.
           </CommandRow>
           <CommandRow command="hackspain team repo [url…] [--clear]">
-            Vincula el repositorio (o varios) de GitHub; su actividad aparece en el feed.
+            Vincula el repositorio público (o varios) de GitHub; su actividad
+            aparece en el feed. Hazlo público antes de vincularlo.
           </CommandRow>
           <CommandRow command="hackspain team leave">Sal del equipo.</CommandRow>
           <CommandRow command="hackspain team transfer [member]">

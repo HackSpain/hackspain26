@@ -10,7 +10,7 @@ import { canonicalizeTags, detectStack, selectStackFiles } from "./lib/stack";
 const MAX_FILE_BYTES = 80_000;
 const MAX_REPOS = 5;
 
-type GitHubRepo = { default_branch?: string };
+type GitHubRepo = { default_branch?: string; private?: boolean };
 type GitHubTree = {
   tree?: { path?: string; type?: string }[];
 };
@@ -63,7 +63,15 @@ async function scanOneRepo(
     token
   );
   if (!repoInfo.ok) {
-    console.warn(`github stack: repo ${repo} answered ${repoInfo.status}`);
+    console.warn(
+      `github stack: public repo ${repo} answered ${repoInfo.status}`
+    );
+    return [];
+  }
+  // Fail closed for tokens issued before the OAuth scope was reduced: even if
+  // an old token can still see a private repo, never inspect its tree or files.
+  if (repoInfo.value.private !== false) {
+    console.warn(`github stack: refusing to scan non-public repo ${repo}`);
     return [];
   }
   const branch = repoInfo.value.default_branch ?? "main";

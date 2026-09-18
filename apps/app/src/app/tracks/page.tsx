@@ -262,7 +262,9 @@ function MyProject({
                 ))}
               </span>
             ) : (
-              <span className="text-hs-brown">Se detecta al vincular el repo del equipo.</span>
+              <span className="text-hs-brown">
+                Se detecta al vincular el repo público del equipo.
+              </span>
             )}
           </MetaRow>
         </div>

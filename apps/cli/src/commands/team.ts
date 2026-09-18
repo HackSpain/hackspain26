@@ -307,7 +307,8 @@ export function registerTeam(program: Command): void {
                 await textOrFlag(ctx, undefined, {
                   flag: "<urls>",
                   initialValue: mine.repoUrls.join(", ") || mine.repoUrl,
-                  message: "Team project repo(s), GitHub URLs or org/name",
+                  message:
+                    "Public team project repo(s), GitHub URLs or org/name",
                   placeholder: "org/repo, org/other",
                 })
               )

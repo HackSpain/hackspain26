@@ -340,7 +340,7 @@ export default function TeamsPage() {
                   <MetaLink href={team.repoUrl}>{team.repoUrl}</MetaLink>
                 ) : (
                   <>
-                    Sin vincular. Usa{" "}
+                    Sin vincular. El repo debe ser público. Usa{" "}
                     <code className="font-mono text-xs">
                       hackspain team repo &lt;url&gt;
                     </code>
@@ -356,7 +356,7 @@ export default function TeamsPage() {
                   </span>
                 ) : (
                   <>
-                    Se detecta al vincular el repo con{" "}
+                    Se detecta al vincular el repo público con{" "}
                     <code className="font-mono text-xs">
                       hackspain team repo
                     </code>

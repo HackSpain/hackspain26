@@ -35,7 +35,7 @@ export function registerSubmit(program: Command): void {
     .option("--draft", "save without submitting; everything stays editable")
     .option("--name <name>", "project name")
     .option("--description <text>", "what it does, at least 10 characters")
-    .option("--repo <url>", "GitHub repository URL")
+    .option("--repo <url>", "public GitHub repository URL")
     .option("--demo <url>", "demo URL")
     .option("--video <url>", "YouTube, Loom, or MP4 URL for judges")
     .option(
@@ -102,7 +102,7 @@ export function registerSubmit(program: Command): void {
       const repoUrl = await textOrFlag(ctx, opts.repo, {
         flag: "--repo",
         initialValue: existing.repoUrl ?? team?.repoUrl ?? "",
-        message: "GitHub repository",
+        message: "Public GitHub repository",
         optional: true,
         placeholder: "https://github.com/org/repo",
         validate: (v) =>
