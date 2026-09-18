@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
 import { directoryValidator } from "./lib/directory";
 import { sectionsValidator } from "./lib/userTypes";
+import { screenPresetValidator } from "./lib/tvScreens";
 import { tvWidgetFields, tvWidgetValidator } from "./lib/tvValidators";
 import {
   claimTypeValidator,
@@ -16,6 +17,15 @@ import {
 
 export default defineSchema({
   tvPlaybackControl: defineTable({ key: v.string(), reloadVersion: v.number() }).index("by_key", ["key"]),
+  tvScreens: defineTable({
+    key: v.string(), preset: screenPresetValidator, message: v.string(),
+    revision: v.number(), reloadVersion: v.number(),
+  }).index("by_key", ["key"]),
+  tvScreenConnections: defineTable({
+    screenId: v.id("tvScreens"), clientId: v.string(), url: v.string(),
+    width: v.number(), height: v.number(), lastSeenAt: v.number(),
+    receivedRevision: v.number(), receivedReloadVersion: v.number(),
+  }).index("by_client", ["clientId"]).index("by_screen", ["screenId"]),
   ...authTables,
   ambassadorApplications: defineTable({
     email: v.string(),

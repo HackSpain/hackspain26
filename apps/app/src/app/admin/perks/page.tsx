@@ -17,6 +17,7 @@ import {
   RecordCard,
   errorMessage,
 } from "@/components/page";
+import { LinkedText } from "@/components/linked-text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -284,7 +285,9 @@ export default function AdminPerksPage() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {perk.description ? (
-                  <p className="min-w-0 break-words">{perk.description}</p>
+                  <p className="min-w-0 whitespace-pre-wrap break-words">
+                    <LinkedText text={perk.description} />
+                  </p>
                 ) : null}
                 <p className="text-hs-brown tabular-nums">
                   {perk.type === "external" ? (

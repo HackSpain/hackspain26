@@ -9,7 +9,10 @@ import { api } from "@convex/_generated/api";
 import type { Arrival, ArrivalQueue } from "@/lib/arrival-queue";
 import { reconcileArrivals } from "@/lib/arrival-queue";
 
-const PRESENTATION_MS = 10_000;
+const REVEAL_MS = 1100;
+const HOLD_MS = 3000;
+const CLOSE_MS = 900;
+const PRESENTATION_MS = REVEAL_MS + HOLD_MS + CLOSE_MS;
 const BAND_TONES = ["bg-hs-navy", "bg-hs-teal", "bg-hs-gold", "bg-hs-orange", "bg-hs-red"] as const;
 
 const DEMO: Arrival[] = [
@@ -52,12 +55,12 @@ function ArenaLights() {
 function Portrait({ person }: { person: Arrival }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="arena-portrait absolute top-0 right-0 bottom-0 w-[1070px]">
+    <div className="arena-portrait absolute top-0 right-0 bottom-0 w-[56%]">
       {person.image && !failed ? (
         <Image src={person.image} alt={person.name} fill unoptimized priority onError={() => setFailed(true)} className="object-cover object-top saturate-[0.7] sepia-[0.25] contrast-[1.08]" />
       ) : (
         <div className="arena-monogram absolute inset-0 flex items-center justify-center">
-          <span className="arena-type -rotate-6 text-[460px] leading-none text-hs-paper">{person.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span>
+          <span className="arena-type -rotate-6 text-[min(24cqw,46cqh)] leading-none text-hs-paper">{person.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span>
         </div>
       )}
       <div className="arena-portrait-shade absolute inset-0" />
@@ -72,17 +75,17 @@ function Player({ person }: { person: Arrival }) {
     media.add("(prefers-reduced-motion: no-preference)", () => {
       const tl = gsap.timeline();
       tl.from(".arena-portrait", {
-        autoAlpha: 0, x: 100, scale: 1.06, duration: 1.2, ease: "expo.out",
+        autoAlpha: 0, x: 100, scale: 1.06, duration: 0.7, ease: "expo.out",
       }, 0.2)
         .from(".arena-first, .arena-last", {
-          autoAlpha: 0, yPercent: 110, skewY: 4, duration: 0.9, stagger: 0.12, ease: "expo.out",
-        }, 0.4)
+          autoAlpha: 0, yPercent: 110, skewY: 4, duration: 0.6, stagger: 0.08, ease: "expo.out",
+        }, 0.35)
         .from(".arena-affiliation, .arena-number", {
-          autoAlpha: 0, y: 20, duration: 0.7, stagger: 0.08, ease: "power3.out",
-        }, 0.8);
+          autoAlpha: 0, y: 20, duration: 0.45, stagger: 0.05, ease: "power3.out",
+        }, 0.55);
       const portrait = root.current?.querySelector(".arena-portrait img");
       if (portrait) {
-        tl.to(portrait, { scale: 1.045, duration: 8, ease: "none" }, 1.2);
+        tl.to(portrait, { scale: 1.045, duration: HOLD_MS / 1000, ease: "none" }, REVEAL_MS / 1000);
       }
     });
     media.add("(prefers-reduced-motion: reduce)", () => {
@@ -97,40 +100,40 @@ function Player({ person }: { person: Arrival }) {
   const number = String(person.number).padStart(3, "0");
   return (
     <article ref={root} className="arena-player absolute inset-0" aria-label={`Entra ${person.name}`}>
-      <div aria-hidden className="arena-brand-panel absolute top-0 right-0 h-full w-[780px]" />
+      <div aria-hidden className="arena-brand-panel absolute top-0 right-0 h-full w-[41%]" />
       <Portrait person={person} />
-      <div className="absolute top-[290px] left-[88px] z-10 w-[1120px]">
+      <div className="arena-details absolute inset-y-0 left-[4.6%] z-10 flex w-[59%] flex-col justify-center py-[14cqh]">
         <h1 className="arena-type uppercase leading-[0.98] tracking-[-0.025em] text-hs-paper">
-          <span className="block overflow-hidden pb-2"><span className="arena-first block text-hs-gold" style={{ fontSize: firstName.length > 14 || lastName.length > 15 ? 96 : 132 }}>{firstName}</span></span>
-          {lastName ? <span className="block overflow-hidden pb-5"><span className="arena-last block text-balance break-words" style={{ fontSize: nameSize }}>{lastName}</span></span> : null}
+          <span className="block overflow-hidden pb-[0.7cqh]"><span className="arena-first block text-hs-gold" style={{ fontSize: firstName.length > 14 || lastName.length > 15 ? "min(5cqw,9cqh)" : "min(6.9cqw,12cqh)" }}>{firstName}</span></span>
+          {lastName ? <span className="block overflow-hidden pb-[1.4cqh]"><span className="arena-last block text-balance break-words" style={{ fontSize: `min(${nameSize / 19.2}cqw,${nameSize / 10.8}cqh)` }}>{lastName}</span></span> : null}
         </h1>
-        <div className="arena-affiliation mt-8 max-w-[940px]">
-          <p className="flex items-baseline gap-5 text-[24px] leading-snug">
+        <div className="arena-affiliation mt-[2.5cqh] max-w-full">
+          <p className="flex flex-wrap items-baseline gap-x-[1cqw] gap-y-1 text-[min(1.5cqw,2.5cqh)] leading-snug">
             <span className="font-semibold uppercase tracking-[0.08em] text-hs-gold">{person.role}</span>
-            {person.city ? <span className="shrink-0 text-hs-paper/65"><span aria-hidden className="mr-5 text-hs-gold/50">·</span>{person.city}</span> : null}
+            {person.city ? <span className="text-hs-paper/65"><span aria-hidden className="mr-[1cqw] text-hs-gold/50">·</span>{person.city}</span> : null}
           </p>
           {person.company || person.university ? (
-            <dl className={`mt-7 grid gap-x-10 gap-y-5 ${person.company && person.university ? "grid-cols-2" : "grid-cols-1"}`}>
+            <dl className={`mt-[2.3cqh] grid gap-x-[2cqw] gap-y-[1.5cqh] ${person.company && person.university ? "grid-cols-2" : "grid-cols-1"}`}>
               {person.company ? (
                 <div>
-                  <dt className="text-[17px] font-medium uppercase tracking-[0.16em] text-hs-paper/45">Empresa</dt>
-                  <dd className="mt-2 line-clamp-2 text-[32px] leading-tight text-hs-paper">{person.company}</dd>
+                  <dt className="text-[min(1cqw,1.8cqh)] font-medium uppercase tracking-[0.16em] text-hs-paper/45">Empresa</dt>
+                  <dd className="mt-[0.7cqh] line-clamp-2 text-[min(1.9cqw,3.2cqh)] leading-tight text-hs-paper">{person.company}</dd>
                 </div>
               ) : null}
               {person.university ? (
                 <div>
-                  <dt className="text-[17px] font-medium uppercase tracking-[0.16em] text-hs-paper/45">Universidad</dt>
-                  <dd className="mt-2 line-clamp-2 text-[32px] leading-tight text-hs-paper">{person.university}</dd>
+                  <dt className="text-[min(1cqw,1.8cqh)] font-medium uppercase tracking-[0.16em] text-hs-paper/45">Universidad</dt>
+                  <dd className="mt-[0.7cqh] line-clamp-2 text-[min(1.9cqw,3.2cqh)] leading-tight text-hs-paper">{person.university}</dd>
                 </div>
               ) : null}
             </dl>
           ) : null}
           {person.skills.length > 0 ? (
-            <p className="mt-6 line-clamp-2 text-[23px] leading-relaxed text-hs-paper/60" aria-label="Especialidades">{person.skills.slice(0, 3).join(" · ")}</p>
+            <p className="mt-[2cqh] line-clamp-2 text-[min(1.35cqw,2.4cqh)] leading-relaxed text-hs-paper/60" aria-label="Especialidades">{person.skills.slice(0, 3).join(" · ")}</p>
           ) : null}
         </div>
       </div>
-      <p className="arena-number arena-type absolute right-[88px] bottom-[64px] z-10 text-[76px] leading-none tracking-[-0.02em] text-hs-paper/65"><span className="mr-1 text-hs-gold">#</span>{number}</p>
+      <p className="arena-number arena-type absolute right-[4.6%] bottom-[6%] z-10 text-[min(4cqw,7cqh)] leading-none tracking-[-0.02em] text-hs-paper/65"><span className="mr-1 text-hs-gold">#</span>{number}</p>
 
     </article>
   );
@@ -156,11 +159,11 @@ function ArrivalBands({ personId }: { personId?: string }) {
       }
       gsap.timeline()
         .to(".arena-color-band", {
-          yPercent: -100, duration: 0.75, stagger: 0.06, ease: "expo.inOut",
-        }, 0.2)
+          yPercent: -100, duration: 0.65, stagger: 0.05, ease: "expo.inOut",
+        }, 0.1)
         .fromTo(".arena-color-band", { yPercent: 100 }, {
-          yPercent: 0, duration: 0.65, stagger: 0.06, ease: "expo.out", immediateRender: false,
-        }, PRESENTATION_MS / 1000 - 1);
+          yPercent: 0, duration: 0.6, stagger: 0.06, ease: "expo.out", immediateRender: false,
+        }, (REVEAL_MS + HOLD_MS) / 1000);
     });
     media.add("(prefers-reduced-motion: reduce)", () => {
       gsap.set(root.current, { autoAlpha: personId ? 0 : 1 });
@@ -178,17 +181,14 @@ function ArrivalBands({ personId }: { personId?: string }) {
 
 export function ArrivalStage({ person, demo = false, connected = true }: { person: Arrival | null; demo?: boolean; connected?: boolean }) {
   const viewport = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState(false);
   useEffect(() => {
     const element = viewport.current;
     if (!element) { return; }
-    const observer = new ResizeObserver(([entry]) => setScale(Math.min(entry.contentRect.width / 1920, entry.contentRect.height / 1080)));
-    observer.observe(element);
     const onFullscreen = () => setFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener("fullscreenchange", onFullscreen);
-    return () => { observer.disconnect(); document.removeEventListener("fullscreenchange", onFullscreen); };
+    return () => { document.removeEventListener("fullscreenchange", onFullscreen); };
   }, []);
   async function toggleFullscreen() {
     try {
@@ -199,13 +199,13 @@ export function ArrivalStage({ person, demo = false, connected = true }: { perso
   }
   return (
     <div ref={viewport} className="group relative flex h-dvh w-full items-center justify-center overflow-hidden bg-hs-ink">
-      <main className="arena-stage relative h-[1080px] w-[1920px] shrink-0 overflow-hidden bg-hs-ink text-hs-paper" style={{ transform: `scale(${scale})` }} aria-label="Bienvenida de participantes">
+      <main className="arena-stage relative h-full w-full overflow-hidden bg-hs-ink text-hs-paper [container-type:size]" aria-label="Bienvenida de participantes">
         <ArenaLights />
         {person ? <Player key={person.id} person={person} /> : null}
         <ArrivalBands personId={person?.id} />
-        <header className="absolute top-[48px] right-[88px] left-[88px] z-50 flex h-[75px] items-center justify-between">
-          <Image src="/logo.svg" alt="HackSpain" width={190} height={62} className="h-auto w-[190px]" />
-          {demo || !connected ? <p className="font-mono text-[15px] uppercase tracking-[0.2em] text-hs-paper/45">{demo ? "Demo" : "Reconectando"}</p> : null}
+        <header className="absolute top-[4.4%] right-[4.6%] left-[4.6%] z-50 flex h-[7%] items-center justify-between">
+          <Image src="/logo.svg" alt="HackSpain" width={190} height={62} className="h-auto w-[clamp(90px,10cqw,240px)]" />
+          {demo || !connected ? <p className="font-mono text-[clamp(10px,0.8cqw,18px)] uppercase tracking-[0.2em] text-hs-paper/45">{demo ? "Demo" : "Reconectando"}</p> : null}
         </header>
       </main>
       <button type="button" onClick={() => void toggleFullscreen()} className="absolute right-4 bottom-4 flex size-11 items-center justify-center rounded bg-hs-ink text-hs-paper opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}>{fullscreen ? <Minimize size={20} /> : <Maximize size={20} />}</button>

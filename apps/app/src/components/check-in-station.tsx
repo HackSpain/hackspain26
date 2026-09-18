@@ -55,7 +55,6 @@ export function CheckInStation() {
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-
   const loadStatus = useCallback(async () => {
     try {
       const next = await receptionRequest<StaffStatus>();
@@ -163,6 +162,7 @@ export function CheckInStation() {
           <Monitor aria-hidden /> Abrir pantalla de bienvenida
         </a>
       </Button>
+
       <Card>
         <CardHeader className="gap-1">
           <CardDescription>Check-ins completados</CardDescription>
