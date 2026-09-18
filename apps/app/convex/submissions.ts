@@ -14,7 +14,6 @@ import {
 import { submissionStatusValidator } from "./lib/validators";
 import { fail } from "./lib/errors";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
-import { fail } from "./lib/errors";
 import {
   MAX_TEAMS_PER_TRACK,
   submissionsAreOpen,
