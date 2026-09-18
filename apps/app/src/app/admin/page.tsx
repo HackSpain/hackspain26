@@ -9,6 +9,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, RefObject } from "react";
 import { api } from "@convex/_generated/api";
+import { AddPeopleDialog } from "@/components/admin/add-people-dialog";
 import {
   ParticipantDetail,
   participantHref,
@@ -201,7 +202,14 @@ function AdminCrm() {
 
   return (
     <Page
-      title="Participantes"
+      title={
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-bungee text-2xl leading-tight sm:text-3xl">
+            Participantes
+          </h1>
+          <AddPeopleDialog />
+        </div>
+      }
       className="flex h-[calc(100dvh-11rem)] flex-col gap-4 space-y-0 sm:h-[calc(100dvh-12rem)]"
     >
       <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">

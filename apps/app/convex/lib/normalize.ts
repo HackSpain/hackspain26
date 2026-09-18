@@ -2,6 +2,45 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isLikelyEmail(value: string): boolean {
+  return EMAIL_RE.test(value);
+}
+
+export function parseEmailList(values: readonly string[]): {
+  emails: string[];
+  invalid: string[];
+} {
+  const seen = new Set<string>();
+  const emails: string[] = [];
+  const invalid: string[] = [];
+  const invalidSeen = new Set<string>();
+
+  for (const value of values) {
+    for (const part of value.split(/[\s,;]+/)) {
+      const trimmed = part.trim();
+      if (!trimmed) {
+        continue;
+      }
+      const email = normalizeEmail(trimmed);
+      if (!isLikelyEmail(email)) {
+        if (!invalidSeen.has(email)) {
+          invalidSeen.add(email);
+          invalid.push(email);
+        }
+        continue;
+      }
+      if (seen.has(email)) {
+        continue;
+      }
+      seen.add(email);
+      emails.push(email);
+    }
+  }
+  return { emails, invalid };
+}
+
 function firstPathSegment(pathname: string): string {
   return pathname.replace(/^\/+/, "").split("/")[0]?.toLowerCase() ?? "";
 }
