@@ -31,6 +31,7 @@ import type * as lib_normalize from "../lib/normalize.js";
 import type * as lib_perkInputs from "../lib/perkInputs.js";
 import type * as lib_stack from "../lib/stack.js";
 import type * as lib_team from "../lib/team.js";
+import type * as lib_tvLayouts from "../lib/tvLayouts.js";
 import type * as lib_urls from "../lib/urls.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as migrations from "../migrations.js";
@@ -45,7 +46,6 @@ import type * as teams from "../teams.js";
 import type * as tracks from "../tracks.js";
 import type * as tv from "../tv.js";
 import type * as tvPlayback from "../tvPlayback.js";
-import type * as lib_tvLayouts from "../lib/tvLayouts.js";
 import type * as users from "../users.js";
 
 import type {
@@ -78,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   "lib/perkInputs": typeof lib_perkInputs;
   "lib/stack": typeof lib_stack;
   "lib/team": typeof lib_team;
+  "lib/tvLayouts": typeof lib_tvLayouts;
   "lib/urls": typeof lib_urls;
   "lib/validators": typeof lib_validators;
   migrations: typeof migrations;
@@ -92,7 +93,6 @@ declare const fullApi: ApiFromModules<{
   tracks: typeof tracks;
   tv: typeof tv;
   tvPlayback: typeof tvPlayback;
-  "lib/tvLayouts": typeof lib_tvLayouts;
   users: typeof users;
 }>;
 

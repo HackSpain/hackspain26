@@ -1,11 +1,11 @@
 import { v } from "convex/values";
 import type { Infer } from "convex/values";
 import { query } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { getSignupForUser } from "./lib/auth";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
-import { INSIGHTS_LAYOUT } from "./lib/tvLayouts";
+import { INSIGHTS_LAYOUT, PANEL_V2_LAYOUT } from "./lib/tvLayouts";
 
 export const tvZoneValidator = v.union(
   v.literal("banner"),
@@ -659,12 +659,35 @@ export const adminRemoveWidget = adminMutation({
   },
 });
 
+async function ensureNamedLayout(
+  ctx: { db: MutationCtx["db"]; user: { _id: Id<"users"> } },
+  name: string,
+  widgets: Omit<Infer<typeof widgetReturn>, "_id">[],
+) {
+  const rows = await ctx.db.query("tvLayouts").collect();
+  if (rows.some((row) => row.name === name)) {
+    return;
+  }
+  const now = Date.now();
+  await ctx.db.insert("tvLayouts", {
+    name,
+    isLive: false,
+    widgets,
+    createdBy: ctx.user._id,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
 export const adminEnsureLayout = adminMutation({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
+    await ensureNamedLayout(ctx, "panelv2", PANEL_V2_LAYOUT);
     const existing = await ctx.db.query("tvWidgets").collect();
-    if (existing.length > 0) return existing.length;
+    if (existing.length > 0) {
+      return existing.length;
+    }
 
     const messages = await ctx.db.query("tvMessages").collect();
     const active = messages.filter((row) => row.active).sort(byZoneOrder);
@@ -839,10 +862,16 @@ export const adminSaveLayout = adminMutation({
 });
 
 export const adminLoadLayout = adminMutation({
-  args: { layoutId: v.optional(v.id("tvLayouts")) },
+  args: {
+    layoutId: v.optional(v.id("tvLayouts")),
+    preset: v.optional(v.union(v.literal("insights"), v.literal("panelv2"))),
+  },
   returns: v.array(widgetReturn),
   handler: async (ctx, args) => {
-    const layout: { widgets: Omit<Infer<typeof widgetReturn>, "_id">[] } | null = args.layoutId ? await ctx.db.get(args.layoutId) : { widgets: INSIGHTS_LAYOUT };
+    const presetWidgets =
+      args.preset === "panelv2" ? PANEL_V2_LAYOUT : INSIGHTS_LAYOUT;
+    const layout: { widgets: Omit<Infer<typeof widgetReturn>, "_id">[] } | null =
+      args.layoutId ? await ctx.db.get(args.layoutId) : { widgets: presetWidgets };
     if (!layout) throw new Error("Estado no encontrado");
     const current = await ctx.db.query("tvWidgets").collect();
     if (!args.layoutId && current.length > 0) {

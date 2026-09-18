@@ -174,49 +174,9 @@
   animation: tv-ticker 30s linear infinite;
 }
 
-@keyframes tv-stream-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.tv-stream-row {
-  animation: tv-stream-in 280ms ease-out both;
-}
-
-@keyframes tv-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}
-
-.tv-pulse {
-  animation: tv-pulse 1.2s ease-in-out infinite;
-}
-
-.tv-odometer-digit {
-  transition-property: transform;
-  transition-duration: 280ms;
-  transition-timing-function: ease-out;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .tv-ticker,
-  .tv-stream-row,
-  .tv-pulse {
+  .tv-ticker {
     animation: none;
-  }
-  .tv-odometer-digit {
-    transition-duration: 0ms;
   }
 }
 

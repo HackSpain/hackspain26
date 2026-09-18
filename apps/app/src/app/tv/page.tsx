@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import type { TvSnapshot } from "@convex/tvPlayback";
 import { TvStage } from "@/components/tv/stage";
 import { PlaybackBoundary, useTvPlayback } from "@/components/tv/playback";
+import { tvPresetWidgets } from "@convex/lib/tvLayouts";
 
 type Zone = "banner" | "left" | "right" | "ticker";
 
@@ -169,7 +170,7 @@ function TvComposition({ showBackLink, widgets }: { showBackLink: boolean; widge
       {widgets === undefined ? (
         <div className="h-full bg-hs-ink" />
       ) : (
-        <TvStage widgets={widgets} fill />
+        <TvStage widgets={widgets} fill enter />
       )}
     </div>
   );
@@ -182,6 +183,12 @@ function TvScreen({ snapshot }: { snapshot: TvSnapshot | undefined }) {
 
   if (view === "messages") {
     return <TvMessagesBoard showBackLink={fromApp} messages={snapshot?.messages} />;
+  }
+
+  if (view === "panelv2") {
+    return (
+      <TvComposition showBackLink={fromApp} widgets={tvPresetWidgets("panelv2")} />
+    );
   }
 
   return <TvComposition showBackLink={fromApp} widgets={snapshot?.widgets} />;

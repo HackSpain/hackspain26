@@ -17,6 +17,7 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
+import { useBarWidth, useCountUp } from "./gsap";
 
 function useInsightSnapshot() {
   const [tick, setTick] = useState(0);
@@ -60,16 +61,22 @@ function TvInsightPanel({
 function MiniStat({
   label,
   value,
+  format,
   detail,
   trend,
   highlight = false,
 }: {
   label: string;
-  value: string;
+  value: number;
+  format: (value: number) => string;
   detail: string;
   trend: number[];
   highlight?: boolean;
 }) {
+  const counter = useCountUp<HTMLParagraphElement>(value, format, {
+    fromZero: true,
+    duration: 1.4,
+  });
   return (
     <div
       className={cn(
@@ -81,8 +88,11 @@ function MiniStat({
         {label}
       </p>
       <div className="flex items-end justify-between gap-2">
-        <p className="font-sans text-[2.8cqw] leading-none font-black tracking-[-0.06em] tabular-nums">
-          {value}
+        <p
+          ref={counter}
+          className="font-sans text-[2.8cqw] leading-none font-black tracking-[-0.06em] tabular-nums"
+        >
+          {format(value)}
         </p>
         <Sparkline values={trend} color={highlight ? "#4a2c1f" : "#35858a"} />
       </div>
@@ -106,26 +116,30 @@ export function InsightsStatsBox() {
     <div className="grid h-full grid-cols-4 gap-[0.7cqw]">
       <MiniStat
         label="Tokens procesados"
-        value={compact(totals.tokens)}
+        value={totals.tokens}
+        format={compact}
         detail={`${percent(totals.cachedTokens, totals.tokens)} reutilizados desde caché`}
         trend={trend("tokens")}
         highlight
       />
       <MiniStat
         label="Commits publicados"
-        value={number(totals.commits)}
+        value={totals.commits}
+        format={number}
         detail={`${teams.length} equipos · ${number(totals.commits / Math.max(teams.length, 1))} commits por equipo`}
         trend={trend("commits")}
       />
       <MiniStat
         label="Sesiones de agentes"
-        value={number(totals.sessions)}
+        value={totals.sessions}
+        format={number}
         detail={`${tools.filter((tool) => tool.sessions > 0).length} herramientas en uso`}
         trend={trend("sessions")}
       />
       <MiniStat
         label="Pull requests"
-        value={number(totals.pullRequests)}
+        value={totals.pullRequests}
+        format={number}
         detail="Contribuciones durante el evento"
         trend={trend("pullRequests")}
       />
@@ -145,6 +159,37 @@ export function InsightsActivityBox() {
   );
 }
 
+function ShareRow({
+  name,
+  label,
+  ratio,
+  color,
+  thick = false,
+}: {
+  name: string;
+  label: string;
+  ratio: number;
+  color: string;
+  thick?: boolean;
+}) {
+  const bar = useBarWidth(ratio);
+  return (
+    <div className="space-y-[0.25cqw]">
+      <div className="flex items-center justify-between text-[0.85cqw]">
+        <span className="font-semibold">{name}</span>
+        <span className="tabular-nums text-hs-brown">{label}</span>
+      </div>
+      <div className={cn("bg-hs-ink/5", thick ? "h-[0.3cqw]" : "h-[0.25cqw]")}>
+        <div
+          ref={bar}
+          className="h-full w-0"
+          style={{ backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function InsightsHarnessBox() {
   const { tools } = useInsightSnapshot();
   const sorted = [...tools].sort((a, b) => b.tokens - a.tokens);
@@ -153,23 +198,13 @@ export function InsightsHarnessBox() {
     <TvInsightPanel title="Herramientas de IA" subtitle="Cuota de tokens">
       <div className="grid h-full grid-cols-2 content-between gap-x-[2cqw] gap-y-[0.5cqw]">
         {sorted.map((row) => (
-          <div key={row.id} className="space-y-[0.25cqw]">
-            <div className="flex items-center justify-between text-[0.85cqw]">
-              <span className="font-semibold">{row.name}</span>
-              <span className="tabular-nums text-hs-brown">
-                {percent(row.tokens, total)}
-              </span>
-            </div>
-            <div className="h-[0.25cqw] bg-hs-ink/5">
-              <div
-                className="h-full"
-                style={{
-                  width: `${total ? (row.tokens / total) * 100 : 0}%`,
-                  backgroundColor: row.color,
-                }}
-              />
-            </div>
-          </div>
+          <ShareRow
+            key={row.id}
+            name={row.name}
+            label={percent(row.tokens, total)}
+            ratio={total ? row.tokens / total : 0}
+            color={row.color}
+          />
         ))}
       </div>
     </TvInsightPanel>
@@ -189,23 +224,14 @@ export function InsightsStacksBox() {
     >
       <div className="grid h-full grid-cols-2 content-between gap-x-[2cqw] gap-y-[0.5cqw]">
         {rows.map((row) => (
-          <div key={row.name} className="space-y-[0.25cqw]">
-            <div className="flex items-center justify-between text-[0.85cqw]">
-              <span className="font-semibold">{row.name}</span>
-              <span className="tabular-nums text-hs-brown">
-                {row.teams.length} / {teams.length}
-              </span>
-            </div>
-            <div className="h-[0.3cqw] bg-hs-ink/5">
-              <div
-                className="h-full"
-                style={{
-                  width: `${(row.teams.length / Math.max(teams.length, 1)) * 100}%`,
-                  backgroundColor: row.color,
-                }}
-              />
-            </div>
-          </div>
+          <ShareRow
+            key={row.name}
+            name={row.name}
+            label={`${row.teams.length} / ${teams.length}`}
+            ratio={row.teams.length / Math.max(teams.length, 1)}
+            color={row.color}
+            thick
+          />
         ))}
         <p className="self-center text-[0.65cqw] text-hs-brown">
           Cada equipo puede usar varias tecnologías.
