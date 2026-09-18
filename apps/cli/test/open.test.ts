@@ -30,14 +30,15 @@ describe("normalizeDashboardPath", () => {
 });
 
 describe("handoffUrl", () => {
-  test("puts the token under hs-token and the page under next", () => {
+  test("keeps the token out of the request and the page under next", () => {
     const url = new URL(handoffUrl("https://app.test", "t0k_en-1", "/feed"));
     expect(url.origin).toBe("https://app.test");
     expect(url.pathname).toBe("/cli-auth/handoff");
-    expect(url.searchParams.get("hs-token")).toBe("t0k_en-1");
+    expect(url.searchParams.has("hs-token")).toBe(false);
     expect(url.searchParams.get("next")).toBe("/feed");
-    // Convex Auth's middleware consumes a `code` param on every route.
-    expect(url.searchParams.has("code")).toBe(false);
+    expect(new URLSearchParams(url.hash.slice(1)).get("hs-token")).toBe(
+      "t0k_en-1"
+    );
   });
 
   test("omits next for the home page", () => {

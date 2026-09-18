@@ -152,11 +152,12 @@ async function browserLogin(
     () => deviceStart(url, secret),
     "Browser sign-in ready"
   );
-  // `hs-code`, not `code`: Convex Auth's middleware eats a `code` param.
-  const authorizeUrl = `${url}/cli-auth?hs-code=${code}`;
-  const opened = openInBrowser(authorizeUrl);
+  const authorizeUrl = new URL("/cli-auth", url);
+  authorizeUrl.hash = new URLSearchParams({ "hs-code": code }).toString();
+  const authorizeHref = authorizeUrl.toString();
+  const opened = openInBrowser(authorizeHref);
   ui.note(
-    `${authorizeUrl}\n\n${
+    `${authorizeHref}\n\n${
       opened
         ? "We tried to open it for you. Sign in there"
         : "Open that link, sign in"

@@ -7,6 +7,10 @@ type RequestTelemetry = {
 };
 
 type TelemetryEvent = {
+  breadcrumbs?: {
+    data?: Record<string, unknown>;
+    message?: string;
+  }[];
   exception?: {
     values?: {
       stacktrace?: { frames?: { filename?: string }[] };
@@ -16,6 +20,8 @@ type TelemetryEvent = {
 };
 
 const PRIVATE_HEADERS = new Set(["authorization", "cookie", "set-cookie"]);
+const PRIVATE_QUERY_PARAMETER =
+  /([?&](?:code|hs-code|hs-token|token)=)[^&#]*/gi;
 const EXTENSION_FRAME_PREFIXES = [
   "chrome-extension://",
   "moz-extension://",
@@ -33,6 +39,10 @@ function comesFromBrowserExtension(event: TelemetryEvent): boolean {
   );
 }
 
+function redactPrivateQueryParameters(value: string): string {
+  return value.replace(PRIVATE_QUERY_PARAMETER, "$1[Filtered]");
+}
+
 /** Drop failures raised by injected browser extensions before error tracking. */
 export function prepareTelemetryEvent<T extends TelemetryEvent>(
   event: T
@@ -45,6 +55,22 @@ export function prepareTelemetryEvent<T extends TelemetryEvent>(
 
 /** Keep errors useful without exporting auth codes, form bodies or sessions. */
 export function sanitizeTelemetryEvent<T extends TelemetryEvent>(event: T): T {
+  for (const breadcrumb of event.breadcrumbs ?? []) {
+    if (breadcrumb.message) {
+      breadcrumb.message = redactPrivateQueryParameters(breadcrumb.message);
+    }
+    if (breadcrumb.data) {
+      breadcrumb.data = Object.fromEntries(
+        Object.entries(breadcrumb.data).map(([key, value]) => [
+          key,
+          typeof value === "string"
+            ? redactPrivateQueryParameters(value)
+            : value,
+        ])
+      );
+    }
+  }
+
   const request = event.request;
   if (!request) {
     return event;
