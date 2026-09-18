@@ -30,6 +30,8 @@ Add an entry only for an evidenced, non-obvious project fact that helps prevent 
 
 **Prevention and verification.** When catching and normalizing an exception at an API boundary, retain safe diagnostics for unexpected server failures. Use [reportServerEvent](../apps/app/src/lib/server-observability.ts), which flushes before a Vercel function can freeze. Review error messages as well as structured fields for secrets; never log whole requests, bodies, cookies, OTPs, or tokens. Preserve client error envelopes and expected validation outcomes. Confirm the next failure identifies the operation and cause. Instrumentation makes a failure diagnosable; it does not repair the underlying 500. Post-deploy recurrence/root-cause verification remained outstanding at the end of this investigation.
 
+The same rule applies to the authenticated image proxy. A burst of 154 upstream 502 responses could not be separated into network failure, upstream status, or missing response body. Log those categories and thumbnail conversion failures without recording storage URLs, ids, credentials, or request data. This instrumentation makes the next occurrence diagnosable; it is not evidence that the upstream failure has been repaired.
+
 ## 2026-09-18 — Classify expected auth failures and extension noise precisely
 
 **Evidence.** The log window included 34 `BAD_OTP`, four `OTP_EXPIRED`, and 12 errors attributed to injected MetaMask code. These should not all count as application server failures, but genuine auth delivery/transport failures must remain visible.
