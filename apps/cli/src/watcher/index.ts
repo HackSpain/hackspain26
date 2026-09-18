@@ -20,6 +20,7 @@ import { antigravityCollector } from "./collectors/antigravity";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
+import { devinCollector } from "./collectors/devin";
 import { geminiCliCollector } from "./collectors/gemini-cli";
 import { kiloCodeCollector } from "./collectors/kilo-code";
 import { openCodeCollector } from "./collectors/opencode";
@@ -65,6 +66,7 @@ export const COLLECTORS: Collector[] = [
   piCollector,
   ompCollector,
   antigravityCollector,
+  devinCollector,
 ];
 
 export type WatchOptions = {

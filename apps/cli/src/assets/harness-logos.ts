@@ -121,6 +121,27 @@ const LOGOS: Record<string, string> = {
     "y/zhsMPLINDbyoUmKNuZesVd+xML3ut89JB9BjQwlEAwGL+VG7LxHR7X0AT2o3ztmx73ctLJgkO8Dagug70kQauPt4UmHTW26Qt+" +
     "RF15YmCa26oV6wiSWwTGGMQRn9UZJ5iLHMScMDzGrb0bIyhyCo2SaEfulyMFriaxYRiNK9ri7sT+QXScR2Xs3IKgdL4YVo0pfXHj" +
     "47CCV08CMwvxU40KXj1ZPKcVH2sznDT7g8Ev37m+8g/ld+neL9DWIwAAAABJRU5ErkJggg==",
+  devin:
+    "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAAB+FBMVEVMaXE7gvYAf/8A//87gfU8gvU6gvY7gvY7gfY7f/Y6gfY7" +
+    "gvY8g/Q7gvU7gfU4f/c6gfU7gvY8h/Aqf/87gfY/f/88gvY8f/c6gfY/f/I4jf88f/g7g/U/f/86gvY6gvU6gvY5f/g6gvYzmf87" +
+    "gfU/f+86gvU5f/M5g/Y6gfU6gfY5g/Y7gfU7gvY6gfU6gvY7gvU6gfU6gfdIkf87gvY/f/Q/f/87gvU6gfY7gvY7gfY6gvg8gfY8" +
+    "f/M6gfY6gvU7gfU6gfY6gfU6gfY6gPQ7gfY7gvU6f/Q6gvU6gvU6gfU7gfU6gvQzf/83hfM6gvYziO46if87gvU6gfU7gvU6gvU7" +
+    "gvU7gfU3f/c7hPU5gfQ7gvU7gfY8gfY7gvU7gvY6gfY7gfU9f/Q4hPU8gfY7gvY6gvQ6gvY7gvY7gfY6gvc6gvY6gvY7gvY6gvU6" +
+    "gvY6gvU6gvY7gvU6f/U7gvQ5gfU2f/86gvU4gvM7gvY6gfU6gfU7gfU9g/c6g/c7gfU8gvQ7gvU6gvU6gfY7gvY7gfU8g/c6gfY7" +
+    "gfU7gfY6gfU6g/U7gvU8gfU6gvY8gvU6gfY+gvg8hfI6gvY7gfY6gvU7g/c1hvE6gfU6gfU6hPU6gvY6gfY6gvU6gvU7gfY7gvVV" +
+    "qv87gvNFi/87g/Y6gvY6gvU7gvaf31wVAAAAp3RSTlMAkQIB/maqsJIePe1I+YAk+HkRBs4IdyLqFAkmZwzn+9EozQWnEPcWOsOt" +
+    "H/rK9Hvx/EEH5RgEqJjPyydVLn7z1jni1GXo9TCg3U/FSgoXzA8NiYiNvFJNIDhH/fA/1+OQhDI2O7Rktl7JYI9/mtnvg+vGGi81" +
+    "DuEt6bva2CEj4Eyei3Zz9kTHn+xoacI3lVCvJRWZjsRAE4xTNMhyusB4hQMrCzxc1Yk+5wMAAAAJcEhZcwAACxMAAAsTAQCanBgA" +
+    "AALXSURBVGiB7ZhnVxpBFIavtEDokAgEUFAjaELUaLClaGyJpmiKJmqMxp7ee++9997v38zZgY3ssixu++A58366M8y8D+wOc+8M" +
+    "ABUVFRUVFdXC09kx/6dB7exLjR2IiLsPaOQ/cImxR0SDyaeB/fg9nJPr/TK1/ftWZfgj4i61ASu4/riIAvh6oc0j8m1jow+5APqg" +
+    "/AXlNBnsr9+RsLYpB6C1B62FtbLsA+aVjNOxW70Avi8oCIiaSOOcUSfZfqu7mvW6E7ls4PtjFQCcelXMNpveSvTfsh/FVPRQB1DV" +
+    "yflJHkkAK9/SXvb58Gw63uAIA0AXb4RDEoDvX7eO6bVFELG4YQ0Zspg3pEARwJbq1h0sqY+mh6gK6BAYoiqgUWCITU3AErY/PPOb" +
+    "Db9rAEiGihCnz5M4Wq0IUMOdXEI6n42QxtD9j95YKGshH5IEKONOXg8AeytQTK59kgD6tZvn5m5fDQBPs7eLDBlMTkn+AOA1+lNz" +
+    "N5KdLJbl2dbeOrCJ7IeIj5+ADHl2liNaC5eShoXvP0n6mysRsaUbZGrPDvfydMgHlMfSH8QbppKggiw8QIUapmKAN6q4ijwiF5ut" +
+    "40dCpTLtxV/yNMn1QeYlH+2XY89bpi+zlmnLo4ludpn2xKXaZ//RzKJ/NKwMgtKt4sxXUYKd+RYKN7vrf0mj5kZX0tN+gk8YlQQQ" +
+    "3q5/TNUhTv4kcXCYN8asAgDg158JNjyuJqBxHilTEeCCPn/SVwTAwfxli1nrwsssCZCVcV31tx0JTul4WlHpmK/4DekA3JyD53N2" +
+    "W5RevndGRoYEy/dAwf/yPSEt5RMFzHZm6vC3XoCrF4UPIM2pA8i1GYFVNs8j1GiAhN6EIIAUMw9kHqEYXUktGADozwEAvTOVMJTK" +
+    "mQugliwUkE9hra9zYPxkhr3rpuoXUgBwt03TKzVgLgWLNL0UBIC+Mf9s+kRLRUVFRUVFtbD0D4eNo0EpQs12AAAAAElFTkSuQmCC",
   "gemini-cli":
     "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAMAAADVRocKAAABtlBMVEVMaXE/hfNBhPRBhPMzmf9BhfNBhPMA//9Vqv88h/BBhfND" +
     "hvE/h/dChPNChfNChPM/f/9ChPVEgvI/f+lBhfNBhPNBhfRChPRDhvVChfRBhPRBhfRChfNBh/VChfRChfNChPRBhfNChPNChPNC" +
