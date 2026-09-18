@@ -108,7 +108,8 @@ export default function CliPage() {
 
         <CommandCard title="Perfil">
           <CommandRow command="hackspain profile">
-            Nombre, dieta, viaje, teléfono, avisos y GitHub.
+            Nombre, dieta, viaje, teléfono, avisos, GitHub y X. La foto y la
+            ficha se completan en el dashboard.
           </CommandRow>
           <CommandRow command="hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]">
             Edita los datos de tu perfil.
@@ -121,6 +122,9 @@ export default function CliPage() {
           </CommandRow>
           <CommandRow command="hackspain profile github [--unlink]">
             Imprime el enlace para autorizar GitHub en el navegador.
+          </CommandRow>
+          <CommandRow command="hackspain profile x [@usuario] [--clear]">
+            Guarda tu usuario de X, igual que en el dashboard.
           </CommandRow>
         </CommandCard>
 
@@ -208,9 +212,10 @@ export default function CliPage() {
           title="Watcher"
           description="Pensado para quedarse abierto en su propia terminal todo el fin de semana: detecta tus harnesses de IA (Claude Code, Codex, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline), muestra el feed y los avisos de la organización, y reporta uso. Nunca salen prompts ni rutas completas de tu máquina."
         >
-          <CommandRow command="hackspain watch [--interval 30] [--backfill <hours>] [--no-upload] [--no-images] [--once]">
-            Arranca el watcher; recuerda lo reportado entre sesiones y recoge
-            el uso que hubo mientras estaba cerrado.{" "}
+          <CommandRow command="hackspain watch [--interval 30] [--no-upload] [--no-images] [--once]">
+            Arranca el watcher; reporta todo el uso de IA de la ventana de la
+            hackathon, también el de cuando estaba cerrado, y nada de fuera de
+            ella.{" "}
             <code className="font-mono text-xs">q</code> sale,{" "}
             <code className="font-mono text-xs">p</code> pausa,{" "}
             <code className="font-mono text-xs">↑↓</code> recorren el feed y{" "}
@@ -230,7 +235,7 @@ export default function CliPage() {
 
         <CommandCard
           title="Códigos de salida"
-          description="Los comandos que necesitan equipo, solicitud aceptada u onboarding completo fallan rápido con el siguiente paso a dar. Fuera de la ventana de la hackathon solo funciona hackspain profile."
+          description="Los comandos que necesitan equipo, solicitud aceptada u onboarding completo fallan rápido con el siguiente paso a dar. Fuera de la ventana de la hackathon siguen funcionando hackspain profile, hackspain perk list y hackspain open participantes."
         >
           <div>
             {EXIT_CODES.map((row) => (

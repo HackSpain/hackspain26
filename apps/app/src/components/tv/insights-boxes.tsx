@@ -9,7 +9,6 @@ import {
   bucketTotals,
   compact,
   filterSamples,
-  getSamples,
   harnessRows,
   number,
   percent,
@@ -17,15 +16,36 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
+import {
+  NO_TEAM_ID,
+  useLiveInsights,
+} from "@/app/insights/use-live-insights";
 
-function insightSnapshot() {
-  const samples = filterSamples(getSamples(), "event", "all");
+/**
+ * Everything on these boxes is real: AI usage from RawTree, teams and GitHub
+ * activity from Convex (use-live-insights.ts). `teams` leaves out the usage of
+ * people without a team, which still counts in the totals.
+ */
+function useInsightSnapshot() {
+  const data = useLiveInsights();
+  const samples = filterSamples(data.samples, "event", "all", data.teams);
   return {
+    bucketMinutes: data.bucketMinutes,
     samples,
-    teams: teamRows(samples),
+    startsAt: data.startsAt,
+    teams: teamRows(samples, data.teams).filter(
+      (team) => team.id !== NO_TEAM_ID
+    ),
     tools: harnessRows(samples),
     totals: sumSamples(samples),
   };
+}
+
+function bucketLabel(minutes: number): string {
+  const rounded = Math.round(minutes);
+  return rounded >= 60 && rounded % 60 === 0
+    ? `${rounded / 60} h`
+    : `${rounded} min`;
 }
 
 function TvInsightPanel({
@@ -85,7 +105,7 @@ function MiniStat({
 }
 
 export function InsightsStatsBox() {
-  const { samples, teams, tools, totals } = insightSnapshot();
+  const { samples, teams, tools, totals } = useInsightSnapshot();
   const buckets = bucketTotals(samples);
   const trend = (metric: "tokens" | "commits" | "sessions" | "pullRequests") =>
     buckets.map((bucket) => bucket[metric]);
@@ -99,9 +119,9 @@ export function InsightsStatsBox() {
         highlight
       />
       <MiniStat
-        label="Commits publicados"
+        label="Pushes a GitHub"
         value={number(totals.commits)}
-        detail={`${teams.length} equipos · ${number(totals.commits / Math.max(teams.length, 1))} commits por equipo`}
+        detail={`${teams.length} equipos · ${number(totals.commits / Math.max(teams.length, 1))} pushes por equipo`}
         trend={trend("commits")}
       />
       <MiniStat
@@ -121,24 +141,36 @@ export function InsightsStatsBox() {
 }
 
 export function InsightsActivityBox() {
-  const { samples } = insightSnapshot();
+  const { samples, bucketMinutes, startsAt } = useInsightSnapshot();
   return (
     <TvInsightPanel
       title="El pulso del evento"
-      subtitle="Tokens · intervalos de 30 min"
+      subtitle={`Tokens · intervalos de ${bucketLabel(bucketMinutes)}`}
     >
-      <ActivityChart samples={samples} metric="tokens" mode="tv" />
+      <ActivityChart
+        samples={samples}
+        metric="tokens"
+        mode="tv"
+        timeline={{ bucketMinutes, startsAt }}
+      />
     </TvInsightPanel>
   );
 }
 
 export function InsightsHarnessBox() {
-  const { tools } = insightSnapshot();
-  const sorted = [...tools].sort((a, b) => b.tokens - a.tokens);
+  const { tools } = useInsightSnapshot();
+  // Only what is in use: nine harnesses do not fit, and idle ones say nothing.
+  const sorted = tools
+    .filter((row) => row.tokens > 0)
+    .toSorted((a, b) => b.tokens - a.tokens)
+    .slice(0, 8);
   const total = sorted.reduce((sum, row) => sum + row.tokens, 0);
   return (
     <TvInsightPanel title="Herramientas de IA" subtitle="Cuota de tokens">
       <div className="grid h-full grid-cols-2 content-between gap-x-[2cqw] gap-y-[0.5cqw]">
+        {sorted.length === 0 && (
+          <p className="text-[0.75cqw] text-hs-brown">Sin datos todavía.</p>
+        )}
         {sorted.map((row) => (
           <div key={row.id} className="space-y-[0.25cqw]">
             <div className="flex items-center justify-between text-[0.85cqw]">
@@ -164,7 +196,7 @@ export function InsightsHarnessBox() {
 }
 
 export function InsightsStacksBox() {
-  const { teams } = insightSnapshot();
+  const { teams } = useInsightSnapshot();
   const rows = technologyRows(
     teams.map((team) => team.id),
     "all",
@@ -203,7 +235,7 @@ export function InsightsStacksBox() {
 }
 
 export function InsightsScatterBox() {
-  const { teams } = insightSnapshot();
+  const { teams } = useInsightSnapshot();
   return (
     <Panel
       title="Tokens vs. commits"
@@ -216,7 +248,7 @@ export function InsightsScatterBox() {
 }
 
 export function InsightsLeaderboardBox() {
-  const { teams } = insightSnapshot();
+  const { teams } = useInsightSnapshot();
   const ranked = [...teams]
     .sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
     .slice(0, 8);
@@ -260,7 +292,7 @@ export function InsightsLeaderboardBox() {
 }
 
 export function InsightsEvolutionBox() {
-  const { samples } = insightSnapshot();
+  const { samples, bucketMinutes, startsAt } = useInsightSnapshot();
   return (
     <Panel
       title="Evolución del evento"
@@ -268,7 +300,11 @@ export function InsightsEvolutionBox() {
       className="h-full overflow-hidden border-hs-ink/20 py-3"
     >
       {samples.length ? (
-        <ConsumptionChart samples={samples} color="#1e3958" />
+        <ConsumptionChart
+          samples={samples}
+          color="#1e3958"
+          timeline={{ bucketMinutes, startsAt }}
+        />
       ) : (
         <p className="text-sm text-hs-brown">Sin datos de actividad todavía.</p>
       )}

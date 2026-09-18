@@ -312,12 +312,9 @@ export const adminCreate = adminMutation({
       updatedAt: now,
     });
     if (args.type === "code") {
-      const unique = new Set(
-        (args.codes ?? [])
-          .map((code) => code.trim())
-          .filter((code) => code.length > 0),
-      );
-      for (const code of unique) {
+      for (const raw of args.codes ?? []) {
+        const code = raw.trim();
+        if (!code) continue;
         await ctx.db.insert("perkCodes", {
           perkId,
           code,
@@ -375,20 +372,14 @@ export const adminUpdate = adminMutation({
     await ctx.db.patch(perk._id, patch);
 
     if (perk.type === "code" && args.codesToAdd) {
-      const existing = await ctx.db
-        .query("perkCodes")
-        .withIndex("by_perk", (q) => q.eq("perkId", perk._id))
-        .collect();
-      const have = new Set(existing.map((row) => row.code));
       for (const raw of args.codesToAdd) {
         const code = raw.trim();
-        if (!code || have.has(code)) continue;
+        if (!code) continue;
         await ctx.db.insert("perkCodes", {
           perkId: perk._id,
           code,
           available: true,
         });
-        have.add(code);
       }
     }
     return null;
@@ -415,8 +406,14 @@ async function attachCodeToClaim(
     .query("perkCodes")
     .withIndex("by_perk", (q) => q.eq("perkId", claim.perkId))
     .collect();
-  const match = existing.find((row) => row.code === code);
+  const copies = existing.filter((row) => row.code === code);
+  const match =
+    copies.find((row) => row.assignedTo === claim.userId) ??
+    copies.find((row) => row.available);
   const now = Date.now();
+  if (copies.length > 0 && !match) {
+    throw new Error("Ese código ya está asignado a otra persona");
+  }
   if (match) {
     if (match.assignedTo && match.assignedTo !== claim.userId) {
       throw new Error("Ese código ya está asignado a otra persona");
@@ -504,6 +501,52 @@ export const adminRequests = adminQuery({
       });
     }
     return rows.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+/** Every code in a perk pool, with who claimed it when assigned. */
+export const adminCodes = adminQuery({
+  args: { perkId: v.id("perks") },
+  returns: v.array(
+    v.object({
+      _id: v.id("perkCodes"),
+      code: v.string(),
+      available: v.boolean(),
+      userId: v.optional(v.id("users")),
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      teamName: v.optional(v.string()),
+      assignedAt: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const codes = await ctx.db
+      .query("perkCodes")
+      .withIndex("by_perk", (q) => q.eq("perkId", args.perkId))
+      .collect();
+    const rows = [];
+    for (const row of codes) {
+      const user = row.assignedTo ? await ctx.db.get(row.assignedTo) : null;
+      rows.push({
+        _id: row._id,
+        code: row.code,
+        available: row.available,
+        userId: row.assignedTo,
+        name: user?.name,
+        email: user?.email,
+        teamName: row.assignedTo ? await teamNameFor(ctx, row.assignedTo) : undefined,
+        assignedAt: row.assignedAt,
+      });
+    }
+    return rows.toSorted((a, b) => {
+      if (a.available !== b.available) {
+        return a.available ? 1 : -1;
+      }
+      if (!a.available) {
+        return (b.assignedAt ?? 0) - (a.assignedAt ?? 0);
+      }
+      return a.code.localeCompare(b.code, "es");
+    });
   },
 });
 

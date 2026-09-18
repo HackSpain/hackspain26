@@ -9,13 +9,16 @@ import {
   bucketTotals,
   compact,
   filterSamples,
-  getSamples,
   HARNESSES,
   harnessRows,
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
 import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
+import {
+  NO_TEAM_ID,
+  useLiveInsights,
+} from "@/app/insights/use-live-insights";
 
 type CommitRow = {
   instance: string;
@@ -91,11 +94,11 @@ export function LiveCommitsBox() {
 export function LiveAgentsBox() {
   const reduced = usePrefersReducedMotion();
   const visible = usePageVisible();
-  const samples = filterSamples(getSamples(), "event", "all");
+  const data = useLiveInsights();
+  const samples = filterSamples(data.samples, "event", "all", data.teams);
+  // Every harness the watcher reports, busiest first; idle ones stay off.
   const tools = harnessRows(samples)
-    .filter((row) =>
-      ["claude-code", "codex", "cursor", "opencode", "cline"].includes(row.id),
-    )
+    .filter((row) => row.sessions > 0)
     .sort((a, b) => b.sessions - a.sessions);
 
   return (
@@ -174,7 +177,8 @@ function Odometer({ value }: { value: number }) {
 }
 
 export function LiveTokensBox() {
-  const samples = filterSamples(getSamples(), "event", "all");
+  const data = useLiveInsights();
+  const samples = filterSamples(data.samples, "event", "all", data.teams);
   const totals = samples.reduce((sum, sample) => sum + sample.tokens, 0);
   const trend = bucketTotals(samples).map((bucket) => bucket.tokens);
   return (
@@ -191,7 +195,12 @@ export function LiveTokensBox() {
 
 export function LiveLeaderboardBox() {
   const reduced = usePrefersReducedMotion();
-  const teams = teamRows(filterSamples(getSamples(), "event", "all"))
+  const data = useLiveInsights();
+  const teams = teamRows(
+    filterSamples(data.samples, "event", "all", data.teams),
+    data.teams,
+  )
+    .filter((team) => team.id !== NO_TEAM_ID)
     .sort((a, b) => b.tokens - a.tokens)
     .slice(0, 6);
 

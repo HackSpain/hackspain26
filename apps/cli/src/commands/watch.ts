@@ -4,19 +4,19 @@ import { api, openSession } from "../lib/api";
 import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
-import { requireOnboarded } from "../lib/me";
-import { firstName, formatWhen, uiFor } from "../lib/output";
+import { formatEventDate, requireOnboarded } from "../lib/me";
+import { firstName, uiFor } from "../lib/output";
 import { c } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
 import { acquireWatchLock, runWatch } from "../watcher";
-import { catchUpSince, openMemory } from "../watcher/memory";
+import { openMemory } from "../watcher/memory";
 import { startScreen, summaryLines } from "../watcher/screen";
 import { createState, feedLive, scrollFeed } from "../watcher/state";
+import { collectionWindow, windowNotice } from "../watcher/window";
 
 type WatchFlags = {
   once?: boolean;
   interval: string;
-  backfill?: string;
   toast: boolean;
   upload: boolean;
   sinkUrl?: string;
@@ -41,10 +41,6 @@ export function registerWatch(program: Command): void {
     )
     .option("--once", "scan once, flush, and exit")
     .option("-i, --interval <seconds>", "seconds between scans", "30")
-    .option(
-      "--backfill <hours>",
-      "also report usage from the last N hours (default: since the last run, or from now the first time)"
-    )
     .option("--no-toast", "print notifications only, no desktop toast")
     .option("--no-upload", "keep events in the local spool only")
     .option(
@@ -58,22 +54,22 @@ export function registerWatch(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const intervalMs = positiveNumber("--interval", flags.interval) * 1000;
-      const backfillMs = flags.backfill
-        ? positiveNumber("--backfill", flags.backfill) * 3_600_000
-        : undefined;
       const memory = openMemory();
-      // Default: everything since the last scan, so usage while the watcher
-      // was closed is reported too. An explicit --backfill overrides it.
-      const since = catchUpSince(memory.data, backfillMs);
-      const catchingUp =
-        backfillMs === undefined && since < Date.now() - 60_000;
-
       const session = await openSession(ctx, { requireAuth: true });
-      const me = await requireOnboarded(session);
-      const [team, submission] = await Promise.all([
-        session.client.query(api.teams.mine, {}),
-        session.client.query(api.submissions.mine, {}),
-      ]);
+      // Outside the hackathon the watcher still runs and says it is not
+      // recording: opened early it starts on its own at the opening time,
+      // opened late it delivers what the window holds and was never sent.
+      const me = await requireOnboarded(session, { allowClosed: true });
+      // The whole hackathon window, whenever the watcher was opened, and
+      // nothing outside it for anybody. No schedule, nothing recorded.
+      const window = collectionWindow(me);
+      // Team and project are hackathon-window functions; closed means none.
+      const [team, submission] = me.event.open
+        ? await Promise.all([
+            session.client.query(api.teams.mine, {}),
+            session.client.query(api.submissions.mine, {}),
+          ])
+        : [null, null];
       const releaseLock = acquireWatchLock();
       const uploadUrl = flags.upload
         ? (flags.sinkUrl ??
@@ -87,8 +83,8 @@ export function registerWatch(program: Command): void {
       const options = {
         intervalMs,
         once: Boolean(flags.once),
-        since,
         toast: flags.toast,
+        window,
         uploadUrl,
         verbose: Boolean(flags.verbose),
       };
@@ -116,6 +112,7 @@ export function registerWatch(program: Command): void {
               }
             : undefined,
           uploadEnabled: Boolean(uploadUrl),
+          window,
         });
         const screen = startScreen(state, {
           intervalMs,
@@ -200,8 +197,16 @@ export function registerWatch(program: Command): void {
             )
           );
         }
-        if (catchingUp) {
-          ui.line(c.dim(`Catching up on usage since ${formatWhen(since)}.`));
+        const notice = windowNotice(window, Date.now(), formatEventDate);
+        if (notice) {
+          ui.warn(notice);
+        }
+        if (window) {
+          ui.line(
+            c.dim(
+              `Reporting AI usage from ${formatEventDate(window.since)} to ${formatEventDate(window.until)}, including what happened while this was closed. Nothing outside that window is recorded or sent.`
+            )
+          );
         }
         const code = await runWatch(options, {
           announce,

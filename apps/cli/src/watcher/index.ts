@@ -11,6 +11,7 @@ import {
 import { CliError, EXIT } from "../lib/errors";
 import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
+import { fetchMe } from "../lib/me";
 import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
@@ -33,7 +34,7 @@ import {
 import type { Toaster } from "./notify";
 import { platformToaster } from "./notify";
 import type { RawEvent, TelemetryEvent } from "./schema";
-import { SCHEMA, validateEvent } from "./schema";
+import { canonicalize, SCHEMA, validateEvent } from "./schema";
 import { httpSink } from "./sinks/http";
 import type { Sink } from "./sinks/spool";
 import { readSpool, spoolSink } from "./sinks/spool";
@@ -48,6 +49,8 @@ import {
   WATCH_IMAGE_BOUNDS,
 } from "./state";
 import type { Collector, CollectorContext } from "./types";
+import type { CollectionWindow } from "./window";
+import { collectionWindow, inWindow, windowPhase } from "./window";
 
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
@@ -62,7 +65,8 @@ export const COLLECTORS: Collector[] = [
 export type WatchOptions = {
   once: boolean;
   intervalMs: number;
-  since: number;
+  /** The hackathon as scheduled when the watcher started; null when there is none. */
+  window: CollectionWindow | null;
   toast: boolean;
   /** Where batches are uploaded; undefined disables the upload sink. */
   uploadUrl?: string;
@@ -197,7 +201,7 @@ export function stamp(
 ): TelemetryEvent {
   return {
     schema: SCHEMA,
-    ...raw,
+    ...canonicalize(raw),
     observedAt: observedAt.toISOString(),
     identity,
   };
@@ -225,6 +229,12 @@ export async function scanOnce(
     try {
       for await (const raw of collector.collect(ctx)) {
         if (recent.has(raw.eventId)) {
+          result.skipped++;
+          continue;
+        }
+        // Collectors drop what is older than `since` themselves; the end of
+        // the window is enforced here, on the harness's own timestamp.
+        if (!inWindow(raw.occurredAt, ctx)) {
           result.skipped++;
           continue;
         }
@@ -304,7 +314,32 @@ export async function runWatch(
     ...(teamId ? { teamId } : {}),
     clientVersion: VERSION,
   });
-  const ctx: CollectorContext = { cursors, log, since: options.since };
+  // Nobody records outside the hackathon window, and without a window
+  // nothing is recorded at all; `ctx` is only ever scanned with one set.
+  let { window } = options;
+  const ctx: CollectorContext = { cursors, log, since: 0 };
+  const applyWindow = (next: CollectionWindow | null): void => {
+    window = next;
+    if (state) {
+      state.window = next;
+    }
+    if (!next) {
+      return;
+    }
+    ctx.since = next.since;
+    ctx.until = next.until;
+    // An earlier `since` than the cursors were built with (the first
+    // windowed run, or organisers moving the start) means reading the logs
+    // again. What this machine already reported is in the spool, so it is
+    // not sent twice.
+    if (cursors.coverFrom(next.since)) {
+      for (const event of deps.history ?? readSpool()) {
+        recent.add(event.eventId);
+      }
+      log("reading harness logs again to cover the whole hackathon window");
+    }
+  };
+  applyWindow(window);
 
   const discovered: string[] = [];
   for (const c of collectors) {
@@ -481,8 +516,38 @@ export async function runWatch(
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
 
+  // Team, announcements and the feed are hackathon-window functions on the
+  // server: before and after it they only answer "closed", so they are not
+  // asked. Organisers are never closed out, and neither is anybody while no
+  // hackathon is scheduled.
+  const inEvent = (): boolean => {
+    const phase = windowPhase(window, Date.now());
+    return me.role === "admin" || phase === "during" || phase === "unscheduled";
+  };
+  let wasInEvent = inEvent();
+  let windowCheckedAt = Date.now();
+
   const tick = async (): Promise<ScanResult> => {
-    if (Date.now() - teamCheckedAt > TEAM_REFRESH_MS) {
+    // Organisers may schedule or move the hackathon while this is open.
+    if (Date.now() - windowCheckedAt > TEAM_REFRESH_MS) {
+      windowCheckedAt = Date.now();
+      try {
+        const latest = await fetchMe(session);
+        if (latest) {
+          const next = collectionWindow(latest);
+          if (next?.since !== window?.since || next?.until !== window?.until) {
+            applyWindow(next);
+          }
+        }
+      } catch (error) {
+        log(`hackathon window lookup failed: ${String(error)}`);
+      }
+    }
+    // The doors just opened with the watcher already running: pick the team
+    // up now rather than at the next refresh.
+    const opened = inEvent() && !wasInEvent;
+    wasInEvent = inEvent();
+    if (inEvent() && (opened || Date.now() - teamCheckedAt > TEAM_REFRESH_MS)) {
       teamCheckedAt = Date.now();
       try {
         teamId = (await session.client.query(api.teams.mine, {}))?._id;
@@ -493,13 +558,10 @@ export async function runWatch(
     if (state) {
       state.scanning = true;
     }
-    const scanned = await scanOnce(
-      collectors,
-      ctx,
-      recording,
-      identity(),
-      recent
-    );
+    // Without a scheduled hackathon there is no window to read for.
+    const scanned: ScanResult = window
+      ? await scanOnce(collectors, ctx, recording, identity(), recent)
+      : { byHarness: {}, events: 0, skipped: 0 };
     const ok = await batcher.flush();
     if (ok) {
       cursors.save();
@@ -542,8 +604,10 @@ export async function runWatch(
         Date.now(),
         startedAt
       );
-    await pollNotifications();
-    await pollFeed();
+    if (inEvent()) {
+      await pollNotifications();
+      await pollFeed();
+    }
     let nextScan = Date.now() + interval();
     if (state) {
       state.nextScanAt = nextScan;
@@ -559,8 +623,10 @@ export async function runWatch(
           if (scanned.events > 0) {
             lastEventAt = Date.now();
           }
-          await pollNotifications();
-          await pollFeed();
+          if (inEvent()) {
+            await pollNotifications();
+            await pollFeed();
+          }
           nextScan = Date.now() + interval();
         }
         if (state) {
@@ -571,8 +637,10 @@ export async function runWatch(
       await sleepOrWake(state, state?.paused ? 5000 : 1000);
       // Scrolling past the loaded posts asks for an older page; pictures
       // for anything loaded trickle in a few per turn.
-      await fetchOlderFeed();
-      await loadFeedImages();
+      if (inEvent()) {
+        await fetchOlderFeed();
+        await loadFeedImages();
+      }
     }
     say("Stopping, flushing…");
     await batcher.flush();

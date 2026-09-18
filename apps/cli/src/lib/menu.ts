@@ -216,6 +216,17 @@ function buildProfileMenu(): MenuItem[] {
       argv: ["profile", "github"],
     },
     {
+      value: "profile-x",
+      label: "Set my X handle",
+      argv: ["profile", "x"],
+    },
+    {
+      value: "profile-card",
+      label: "Photo and participant card",
+      hint: "opens the dashboard",
+      argv: ["open", "profile"],
+    },
+    {
       value: "profile-notify",
       label: "Event notices",
       submenu: [

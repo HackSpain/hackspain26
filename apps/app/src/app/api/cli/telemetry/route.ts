@@ -4,7 +4,9 @@ import { RawTreeError } from "@rawtree/sdk";
 import { fetchQuery } from "convex/nextjs";
 import { reportServerEvent } from "@/lib/server-observability";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
+import { exportTelemetryAsOtlpLogs, otlpLogsEnabled } from "./otlp";
 import {
+  occurredInWindow,
   parseTelemetryEvent,
   RawTreeConfigurationError,
   storeTelemetryEvents,
@@ -18,7 +20,8 @@ type RejectionReason =
   | "duplicate_event_id"
   | "event_too_large"
   | "invalid_event"
-  | "invalid_json";
+  | "invalid_json"
+  | "outside_event_window";
 
 type Rejection = {
   line: number;
@@ -45,7 +48,7 @@ function rejection(
 
 /**
  * POST application/x-ndjson from `hackspain watch`, one canonical
- * `hackspain.telemetry.v1` event per line (apps/cli/docs/telemetry-schema.md).
+ * `hackspain.telemetry.v2` event per line (v1 is upgraded) (apps/cli/docs/telemetry-schema.md).
  *
  * The participant session is verified before canonical events are inserted in
  * RawTree. The RawTree API key stays server-side. Events also stay in the
@@ -68,10 +71,11 @@ export async function POST(request: Request) {
     if (!me) {
       return fail("No has iniciado sesión", 401);
     }
-    if (!me.event.open) {
-      // Same rule as the Convex wrappers: nothing but the profile runs
-      // outside the hackathon window. teams.mineId would throw the same
-      // error; short-circuit so the watcher sees a clear 403.
+    if (me.event.phase === "before") {
+      // Nothing can have happened inside the window yet, organisers
+      // included. After it the watcher may still deliver what happened
+      // inside and was never sent; the per-event check below keeps
+      // everything else out.
       return fail(closedMessage(me.event.phase, me.event), 403);
     }
     teamId = await fetchQuery(api.teams.mineId, {}, { token });
@@ -114,6 +118,10 @@ export async function POST(request: Request) {
         rejections.push(rejection(entry.number, "invalid_event", value));
         continue;
       }
+      if (!occurredInWindow(event.occurredAt, me.event)) {
+        rejections.push(rejection(entry.number, "outside_event_window", event));
+        continue;
+      }
       if (seenEventIds.has(event.eventId)) {
         rejections.push(rejection(entry.number, "duplicate_event_id", event));
         continue;
@@ -136,6 +144,19 @@ export async function POST(request: Request) {
     });
     const status = error instanceof RawTreeConfigurationError ? 503 : 502;
     return fail("No se pudo guardar la telemetría; se reintentará", status);
+  }
+
+  // The explorer copy is best effort: the canonical insert above is what the
+  // receipt answers for, so a failure here is reported and nothing more.
+  if (otlpLogsEnabled()) {
+    try {
+      await exportTelemetryAsOtlpLogs(accepted);
+    } catch (error) {
+      await reportServerEvent("warn", "RawTree OTLP logs export failed", {
+        batchSize: accepted.length,
+        message: error instanceof Error ? error.message : "unknown",
+      });
+    }
   }
 
   return ok(

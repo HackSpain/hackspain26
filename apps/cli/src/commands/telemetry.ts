@@ -37,7 +37,7 @@ function add(totals: Totals, event: TelemetryEvent): void {
   totals.output += event.tokens.output;
   totals.cacheRead += event.tokens.cacheRead;
   totals.cacheWrite += event.tokens.cacheWrite;
-  totals.costUsd += event.costUsd ?? 0;
+  totals.costUsd += event.native?.costUsd ?? 0;
 }
 
 export function summarize(events: Iterable<TelemetryEvent>): {

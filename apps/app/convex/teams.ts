@@ -1,7 +1,11 @@
 import { v } from "convex/values";
 import { imagePathFor } from "./lib/files";
 import { avatarUrlFor } from "./users";
-import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
+import {
+  anytimeOnboardedQuery,
+  onboardedMutation,
+  onboardedQuery,
+} from "./lib/customFunctions";
 import {
   identifierTypeValidator,
   teamMemberStatusValidator,
@@ -256,8 +260,11 @@ export const mine = onboardedQuery({
   returns: v.union(teamReturn, v.null()),
 });
 
-/** Cheap server-side identity lookup for telemetry and similar ingestion paths. */
-export const mineId = onboardedQuery({
+/**
+ * Cheap server-side identity lookup for telemetry and similar ingestion paths.
+ * Anytime: the telemetry route stamps it on uploads that arrive after the end.
+ */
+export const mineId = anytimeOnboardedQuery({
   args: {},
   handler: async (ctx) => {
     const membership = await membershipForUser(ctx, ctx.user._id);

@@ -19,16 +19,18 @@ Binaries are self-contained; nothing else to install.
 hackspain                       # where you stand, then a navigable menu (interactive terminals only)
 hackspain auth login            # sign in via the browser (approve on the dashboard's /cli-auth page),
                                 # or --email/--code for the 8-digit email code; then asks for a missing
-                                # name, phone or GitHub
+                                # name, phone, GitHub or X
 hackspain auth status | logout
-hackspain open [feed|teams|tracks|perks|profile|/path] [--print]
+hackspain open [feed|teams|tracks|perks|profile|onboarding|/path] [--print]
                                 # the dashboard in your browser, already signed in (link works once, 2 min)
 
-hackspain profile               # name, diet, travel, phone, notices, GitHub
+hackspain profile               # name, diet, travel, phone, notices, GitHub, X; photo and
+                                # participant card show as done/missing (they need the dashboard)
 hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]
 hackspain profile notify on|off
 hackspain profile phone [+34…]  # contact number, same as the dashboard
 hackspain profile github [--unlink]         # prints the link to authorise in a browser
+hackspain profile x [@handle] [--clear]     # X handle, same rules as the dashboard
 
 hackspain team create <name> [-m github:x -m a@b.c]
 hackspain team join <code>      # 8-character code from the owner
@@ -52,7 +54,7 @@ hackspain feed [-n 20] [--no-images] [--before <cursor>]
                                 # on a TTY it offers the next older page, scripts get a --before cursor
 hackspain post "text" [--image photo.jpg]   # ≤500 chars; jpeg/png/webp/gif ≤5 MB
 
-hackspain watch [--interval 30] [--backfill <hours>] [--no-toast] [--no-upload] [--no-images] [--once]
+hackspain watch [--interval 30] [--no-toast] [--no-upload] [--no-images] [--once]
 hackspain telemetry stats       # what the watcher recorded on this machine
 
 hackspain --json <command>      # one JSON object on stdout, prompts disabled
@@ -107,15 +109,21 @@ laptop all weekend: one wakeup per second, the screen repaints only the rows tha
 one network round trip per scan, and after ten minutes without new usage the scan slows to once a
 minute until activity resumes. No prompt text or full
 paths ever leave the machine; only token counts, model, session ids, and a hash of the project
-directory. By default only usage after the watcher starts is reported; `--backfill 6` includes
-the last six hours.
+directory. The watcher records the hackathon window organisers scheduled, all of it and nothing
+else, for everybody (organiser accounts included): usage from before the start or after the end
+is never recorded or sent, and usage from inside it is picked up even if the watcher was opened
+late or not at all until the end. Every event keeps the time the harness recorded, not the time
+the watcher read it. The watcher runs outside the window too: opened early it waits and starts
+recording on its own, opened after the end it delivers what is left, and while no hackathon is
+scheduled it records nothing. In all three cases an orange "Not recording" line under the header
+and in the status bar says so. The window is checked again every five minutes, so a schedule set
+or moved while the watcher is open is picked up.
 
 The watcher remembers. `~/.local/state/hackspain/watch-memory.json` keeps the first start, the
 last scan and the latest organiser announcements, and the local spool keeps every usage event, so
 reopening it shows the harness table and recent requests for everything since the first run (the
 Harnesses box says "since …"), the last announcements are back on screen, and the first scan reads
-harness logs written while the watcher was closed instead of skipping them. `--backfill <hours>`
-still overrides that start point. Announcements caught up on start stay on screen but do not
+harness logs written while the watcher was closed instead of skipping them. Announcements caught up on start stay on screen but do not
 toast; only ones from the last ten minutes do.
 
 One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.

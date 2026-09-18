@@ -273,7 +273,12 @@ describe("scanOnce", () => {
     const result = await scanOnce(
       [good, broken],
       {
-        cursors: { get: () => undefined, save: () => {}, set: () => {} },
+        cursors: {
+          coverFrom: () => false,
+          get: () => undefined,
+          save: () => {},
+          set: () => {},
+        },
         log: (m) => logs.push(m),
         since: 0,
       },
@@ -287,9 +292,61 @@ describe("scanOnce", () => {
       skipped: 2,
     });
     expect(pushed[0]?.identity).toEqual({ clientVersion: "t", userId: "u" });
-    expect(pushed[0]?.schema).toBe("hackspain.telemetry.v1");
+    expect(pushed[0]?.schema).toBe("hackspain.telemetry.v2");
     expect(logs.some((l) => l.includes("dropped bad"))).toBe(true);
     expect(logs.some((l) => l.includes("collector failed"))).toBe(true);
+  });
+
+  test("keeps the harness's own time and drops what falls outside the window", async () => {
+    const raw: RawEvent = (({
+      schema: _s,
+      observedAt: _o,
+      identity: _i,
+      ...rest
+    }) => rest)(validEvent);
+    const at = (iso: string, id: string): RawEvent => ({
+      ...raw,
+      eventId: id,
+      occurredAt: iso,
+    });
+    const collector: Collector = {
+      async *collect() {
+        yield at("2026-10-03T07:00:00.000Z", "before");
+        yield at("2026-10-03T09:00:00.000Z", "inside");
+        yield at("2026-10-05T16:00:00.000Z", "after");
+      },
+      discover: async () => ["/x"],
+      id: "claude-code",
+    };
+    const pushed: TelemetryEvent[] = [];
+    const result = await scanOnce(
+      [collector],
+      {
+        cursors: {
+          coverFrom: () => false,
+          get: () => undefined,
+          save: () => {},
+          set: () => {},
+        },
+        log: () => {},
+        since: Date.parse("2026-10-03T08:00:00Z"),
+        until: Date.parse("2026-10-05T16:00:00Z"),
+      },
+      {
+        dropped: () => 0,
+        flush: async () => true,
+        push: (e: TelemetryEvent) => pushed.push(e),
+        size: () => pushed.length,
+      },
+      { clientVersion: "t", userId: "u" },
+      new Set()
+    );
+    expect(result.events).toBe(1);
+    expect(result.skipped).toBe(2);
+    // Read days later: the event still carries when it happened.
+    expect(pushed[0]?.eventId).toBe("inside");
+    expect(pushed[0]?.occurredAt).toBe("2026-10-03T09:00:00.000Z");
+    expect(pushed[0]?.observedAt).not.toBe(pushed[0]?.occurredAt);
   });
 });
 
@@ -299,7 +356,12 @@ describe("telemetry stats", () => {
       event(1),
       event(2, {
         harness: "codex",
-        model: { family: "gpt", raw: "gpt-5" },
+        model: {
+          family: "gpt",
+          name: "gpt-5",
+          provider: "openai",
+          raw: "gpt-5",
+        },
         sessionId: "s2",
       }),
       stamp(

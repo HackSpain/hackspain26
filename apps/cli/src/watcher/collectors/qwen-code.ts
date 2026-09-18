@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { projectRef } from "../project";
 import type { RawEvent } from "../schema";
-import { eventId, modelFamily } from "../schema";
+import { eventId, modelFamily, outputWithReasoning } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
@@ -76,12 +76,20 @@ export function normalizeQwenCode(value: unknown): RawEvent | null {
   const u = value.usageMetadata;
   const prompt = count(u.promptTokenCount);
   const cached = Math.min(count(u.cachedContentTokenCount), prompt);
-  const output = count(u.candidatesTokenCount);
+  const reasoning = count(u.thoughtsTokenCount);
+  // Qwen Code converts OpenAI-style usage, where completion tokens already
+  // include reasoning; only a total that says otherwise adds them.
+  const output = outputWithReasoning({
+    output: count(u.candidatesTokenCount),
+    prompt,
+    reasoning,
+    separateByDefault: false,
+    total: count(u.totalTokenCount),
+  });
   if (prompt === 0 && output === 0 && count(u.totalTokenCount) === 0) {
     return null;
   }
   const model = value.model ?? "qwen";
-  const reasoning = count(u.thoughtsTokenCount);
   return {
     eventId: eventId(QWEN_CODE, value.sessionId, value.uuid),
     harness: QWEN_CODE,

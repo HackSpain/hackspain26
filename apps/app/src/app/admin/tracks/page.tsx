@@ -14,6 +14,7 @@ import {
   Page,
   errorMessage,
 } from "@/components/page";
+import { TrackBrief, TrackBriefLink } from "@/components/markdown";
 import { TrackLogo, TrackTag } from "@/components/track-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -169,6 +170,7 @@ function TrackEditor({
   const [label, setLabel] = useState(track.label);
   const [note, setNote] = useState(track.note);
   const [body, setBody] = useState(track.body);
+  const [markdown, setMarkdown] = useState(track.markdown ?? "");
   const [logoUrl, setLogoUrl] = useState(track.logoUrl ?? "");
   const [website, setWebsite] = useState(track.website ?? "");
   const [pending, setPending] = useState<"text" | "visibility" | null>(null);
@@ -178,6 +180,7 @@ function TrackEditor({
     label.trim() !== track.label ||
     note.trim() !== track.note ||
     body.trim() !== track.body ||
+    markdown.trim() !== (track.markdown ?? "").trim() ||
     logoUrl.trim() !== (track.logoUrl ?? "") ||
     website.trim() !== (track.website ?? "");
 
@@ -228,6 +231,26 @@ function TrackEditor({
             onChange={(event) => setBody(event.target.value)}
           />
         </Field>
+        <Field
+          label="Enunciado"
+          htmlFor="track-markdown"
+          hint="Markdown del reto, o una URL https:// que se abre en otra pestaña."
+        >
+          <Textarea
+            id="track-markdown"
+            value={markdown}
+            onChange={(event) => setMarkdown(event.target.value)}
+            className="min-h-48 font-mono text-sm"
+          />
+        </Field>
+        <div className="border-[3px] border-hs-ink/20 p-4">
+          <p className="mb-3 font-bungee text-[11px] uppercase text-hs-brown">
+            Vista previa
+          </p>
+          <div className="max-w-prose">
+            <TrackBrief markdown={markdown} body={body} />
+          </div>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <Field
             label="Logo del sponsor"
@@ -258,7 +281,15 @@ function TrackEditor({
             disabled={!dirty || pending !== null}
             onClick={() =>
               void run("text", () =>
-                update({ trackId: track._id, label, body, note, logoUrl, website }),
+                update({
+                  trackId: track._id,
+                  label,
+                  body,
+                  markdown,
+                  note,
+                  logoUrl,
+                  website,
+                }),
               )
             }
           >
@@ -276,6 +307,13 @@ function TrackEditor({
           >
             {track.active ? "Ocultar" : "Mostrar"}
           </Button>
+          {track.active ? (
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <TrackBriefLink track={{ slug: track.slug, markdown }}>
+                Ver ficha
+              </TrackBriefLink>
+            </Button>
+          ) : null}
         </div>
         {submissions.length === 0 ? (
           <p className="text-sm text-hs-brown">Aún no hay proyectos en este reto.</p>

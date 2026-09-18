@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
 import { directoryValidator } from "./lib/directory";
 import { sectionsValidator } from "./lib/userTypes";
+import { screenPresetValidator } from "./lib/tvScreens";
 import { tvWidgetFields, tvWidgetValidator } from "./lib/tvValidators";
 import {
   claimTypeValidator,
@@ -16,6 +17,15 @@ import {
 
 export default defineSchema({
   tvPlaybackControl: defineTable({ key: v.string(), reloadVersion: v.number() }).index("by_key", ["key"]),
+  tvScreens: defineTable({
+    key: v.string(), preset: screenPresetValidator, message: v.string(),
+    revision: v.number(), reloadVersion: v.number(),
+  }).index("by_key", ["key"]),
+  tvScreenConnections: defineTable({
+    screenId: v.id("tvScreens"), clientId: v.string(), url: v.string(),
+    width: v.number(), height: v.number(), lastSeenAt: v.number(),
+    receivedRevision: v.number(), receivedReloadVersion: v.number(),
+  }).index("by_client", ["clientId"]).index("by_screen", ["screenId"]),
   ...authTables,
   ambassadorApplications: defineTable({
     email: v.string(),
@@ -34,6 +44,31 @@ export default defineSchema({
     code: v.string(),
     expiresAt: v.number(),
   }).index("by_email", ["email"]),
+
+  eventPasses: defineTable({
+    userId: v.optional(v.id("users")),
+    signupId: v.optional(v.id("signups")),
+    code: v.string(),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    codeSentAt: v.optional(v.number()),
+    checkedInAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_signup", ["signupId"])
+    .index("by_code", ["code"]),
+
+  eventSettings: defineTable({
+    key: v.string(),
+    phase: v.union(
+      v.literal("pre_event"),
+      v.literal("live"),
+      v.literal("ended")
+    ),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  }).index("by_key", ["key"]),
 
   githubLinkStates: defineTable({
     userId: v.id("users"),
@@ -249,6 +284,8 @@ export default defineSchema({
     label: v.string(),
     body: v.string(),
     note: v.string(),
+    /** Challenge brief: markdown on /tracks/<slug>, or a lone http(s) URL opened in a new tab. */
+    markdown: v.optional(v.string()),
     /** Sponsor logo: a path under /public (e.g. /tracks/maisa.png) or an absolute URL. */
     logoUrl: v.optional(v.string()),
     /** Sponsor website. */

@@ -3,6 +3,7 @@ import { LOGO_HEIGHT, LOGO_WIDTH, logoPng } from "../assets/logo";
 import { WORDMARK_WIDTH, wordmarkLines } from "../lib/banner";
 import type { FeedItem } from "../lib/feed-format";
 import { postLines } from "../lib/feed-format";
+import { formatEventDate } from "../lib/me";
 import { compactNumber, formatAgo, renderTable } from "../lib/output";
 import { BRAND, c, colorEnabled, width } from "../lib/style";
 import { imageCells } from "../lib/term-images";
@@ -11,6 +12,7 @@ import type { ImageSlot } from "./images";
 import { ScreenImages } from "./images";
 import type { WatchState } from "./state";
 import { WATCH_IMAGE_BOUNDS } from "./state";
+import { windowNotice, windowPhase } from "./window";
 
 /**
  * Full-terminal live view for `hackspain watch`: a grid of rounded boxes
@@ -479,6 +481,10 @@ function statusLine(
   intervalMs: number
 ): string {
   const parts: string[] = [];
+  const phase = windowPhase(state.window, now);
+  if (phase !== undefined && phase !== "during") {
+    parts.push(rgb(ORANGE, "■ not recording"));
+  }
   if (state.paused) {
     parts.push(rgb(ORANGE, "⏸ paused"));
   } else if (state.scanning) {
@@ -592,8 +598,14 @@ export function frameWithSlots(
   const tall = h >= 44 && w >= WORDMARK_WIDTH + 2;
   const head = header(state, now, w, tall);
   const status = statusLine(state, now, tick, w, intervalMs);
-  const lines: string[] = [...head.lines];
-  const available = h - head.lines.length - 1;
+  // Outside the hackathon window nothing is recorded; say so under the
+  // header, where it cannot be missed, for as long as it is true.
+  const notice = windowNotice(state.window, now, formatEventDate);
+  const lines: string[] = [
+    ...head.lines,
+    ...(notice ? [rgb(ORANGE, `■ ${notice}`)] : []),
+  ];
+  const available = h - lines.length - 1;
   const slots: ImageSlot[] = head.slot ? [head.slot] : [];
   /** Body slots of a box whose top border sits on screen row `top`. */
   const place = (top: number, bodySlots: BodySlot[]) => {
