@@ -112,13 +112,15 @@ function AccountMenu({
 }
 
 /** Every page except the home gets a way back to the tiles. */
-function BackToHome() {
+function BackToHome({ pathname }: { pathname: string }) {
+  const toTracks = pathname.startsWith("/tracks/");
   return (
     <Link
-      href="/"
+      href={toTracks ? "/tracks" : "/"}
       className="inline-flex min-h-11 items-center gap-2 font-bungee text-xs uppercase text-hs-brown underline-offset-4 outline-none hover:text-hs-ink hover:underline focus-visible:text-hs-ink focus-visible:underline motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
     >
-      <ArrowLeft className="size-4" aria-hidden /> Volver al inicio
+      <ArrowLeft className="size-4" aria-hidden />
+      {toTracks ? "Volver a retos" : "Volver al inicio"}
     </Link>
   );
 }
@@ -216,7 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Suspense>
           {pathname === "/" ? null : (
             <div className="hs-enter mb-4">
-              <BackToHome />
+              <BackToHome pathname={pathname} />
             </div>
           )}
         </div>

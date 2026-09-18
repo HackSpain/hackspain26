@@ -15,6 +15,7 @@ import {
   Page,
   errorMessage,
 } from "@/components/page";
+import { TrackBrief } from "@/components/markdown";
 import { TrackLogo, TrackTag } from "@/components/track-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -243,6 +244,14 @@ function TrackEditor({
             className="min-h-48 font-mono text-sm"
           />
         </Field>
+        <div className="border-[3px] border-hs-ink/20 p-4">
+          <p className="mb-3 font-bungee text-[11px] uppercase text-hs-brown">
+            Vista previa
+          </p>
+          <div className="max-w-prose">
+            <TrackBrief markdown={markdown} body={body} />
+          </div>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <Field
             label="Logo del sponsor"
