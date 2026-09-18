@@ -186,6 +186,26 @@ function parseTokens(
   };
 }
 
+/**
+ * Nothing outside the hackathon window is stored, for anybody: organisers
+ * included, and nothing at all while no hackathon is scheduled. Judged on
+ * the time the harness recorded (`occurredAt`), not on when the watcher read
+ * or sent it. The CLI applies the same window
+ * (apps/cli/src/watcher/window.ts); older binaries do not, and this is the
+ * check that keeps RawTree clean either way.
+ */
+export function occurredInWindow(
+  occurredAt: string,
+  window: { startsAt?: number; endsAt?: number }
+): boolean {
+  const { startsAt, endsAt } = window;
+  if (startsAt === undefined || endsAt === undefined) {
+    return false;
+  }
+  const at = Date.parse(occurredAt);
+  return at >= startsAt && at < endsAt;
+}
+
 export function parseTelemetryEvent(
   value: unknown,
   authenticated: { userId: string; teamId?: string }

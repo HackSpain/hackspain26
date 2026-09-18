@@ -72,18 +72,22 @@ OpenAI-style usage, where completion tokens include reasoning).
 
 ## Collection window
 
-With a scheduled hackathon (`users.me.event.startsAt` / `endsAt`) the watcher reports `[startsAt,
-endsAt)` on `occurredAt`, whole, no matter when it was opened: `since` is the start of the
-hackathon rather than the last run, `--backfill` is ignored, and the watcher also runs before the
-start (waiting) and after the end (to deliver what was never sent), showing "Not recording" while
-the clock is outside the window and leaving the dashboard's closed functions alone. The cursor store remembers the earliest `since` it was read
-with (`coveredSince`); an earlier one (the first windowed run, or organisers moving the start)
-starts the cursors over, and event ids already in the local spool are skipped so nothing is sent
-twice. The server applies the same window per event and rejects the rest with
-`outside_event_window`, which also covers older binaries. Organisers and servers without a
-schedule keep the catch-up rule (`catchUpSince`); an organiser's watcher still knows the window
-(`CollectionWindow.hackathon`) and says when the clock is outside it, so their pre-event test
-usage is in the data and any query about the hackathon filters on `occurredAt`.
+Nobody records outside the hackathon window, and nothing outside it is stored. The window is
+`[startsAt, endsAt)` from `users.me.event`, applied to `occurredAt`, for every account (organisers
+included). No scheduled hackathon means no window and nothing recorded.
+
+- CLI (`watcher/window.ts`): `since` is the start of the hackathon rather than the last run, so
+  the whole window is reported no matter when the watcher was opened. It runs before the start
+  (waiting), after the end (delivering what was never sent) and without a schedule (idle), showing
+  "Not recording" in all three, and re-reads the window every five minutes. The cursor store
+  remembers the earliest `since` it was read with (`coveredSince`); an earlier one (the first
+  windowed run, or organisers moving the start) starts the cursors over, and event ids already in
+  the local spool are skipped so nothing is sent twice.
+- Server (`occurredInWindow` in `telemetry/rawtree.ts`): the route answers 403 before the start
+  and rejects every event outside the window with `outside_event_window`, whatever the binary.
+  Both the canonical table and the OpenTelemetry copy only ever receive accepted events.
+
+Moving the window later does not remove rows stored under the old one; clean those in RawTree.
 
 ## OpenTelemetry copy
 
@@ -117,9 +121,8 @@ canonical table stays the source of truth, and queries on the logs table dedupe 
 - Working directories are hashed; only the last path segment is kept.
 - No harness account ids. Identity is the HackSpain user and team.
 - `native` keys are allowlisted in both CLI and server validation; unknown keys are rejected.
-- Only the hackathon window is reported once it is scheduled; nothing from before or after it
-  leaves the machine. Without a schedule, `--backfill <hours>` is opt-in and by default only usage
-  after the watcher starts is reported.
+- Only the hackathon window is recorded; nothing from before or after it leaves the machine, and
+  nothing at all while no hackathon is scheduled.
 
 ## Example
 

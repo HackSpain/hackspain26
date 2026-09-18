@@ -11,6 +11,7 @@ import {
 import { CliError, EXIT } from "../lib/errors";
 import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
+import { fetchMe } from "../lib/me";
 import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
@@ -49,7 +50,7 @@ import {
 } from "./state";
 import type { Collector, CollectorContext } from "./types";
 import type { CollectionWindow } from "./window";
-import { inWindow, isRecording } from "./window";
+import { collectionWindow, inWindow, windowPhase } from "./window";
 
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
@@ -64,11 +65,8 @@ export const COLLECTORS: Collector[] = [
 export type WatchOptions = {
   once: boolean;
   intervalMs: number;
-  since: number;
-  /** Exclusive end of the collection window (the hackathon's end). */
-  until?: number;
-  /** The scheduled hackathon window; the dashboard's functions are closed outside it. */
-  window?: CollectionWindow;
+  /** The hackathon as scheduled when the watcher started; null when there is none. */
+  window: CollectionWindow | null;
   toast: boolean;
   /** Where batches are uploaded; undefined disables the upload sink. */
   uploadUrl?: string;
@@ -316,21 +314,32 @@ export async function runWatch(
     ...(teamId ? { teamId } : {}),
     clientVersion: VERSION,
   });
-  const ctx: CollectorContext = {
-    cursors,
-    log,
-    since: options.since,
-    until: options.until,
-  };
-  // An earlier `since` than the cursors were built with (the first windowed
-  // run, or organisers moving the start) means reading the logs again. What
-  // this machine already reported is in the spool, so it is not sent twice.
-  if (cursors.coverFrom(options.since)) {
-    for (const event of deps.history ?? readSpool()) {
-      recent.add(event.eventId);
+  // Nobody records outside the hackathon window, and without a window
+  // nothing is recorded at all; `ctx` is only ever scanned with one set.
+  let { window } = options;
+  const ctx: CollectorContext = { cursors, log, since: 0 };
+  const applyWindow = (next: CollectionWindow | null): void => {
+    window = next;
+    if (state) {
+      state.window = next;
     }
-    log("reading harness logs again to cover the whole hackathon window");
-  }
+    if (!next) {
+      return;
+    }
+    ctx.since = next.since;
+    ctx.until = next.until;
+    // An earlier `since` than the cursors were built with (the first
+    // windowed run, or organisers moving the start) means reading the logs
+    // again. What this machine already reported is in the spool, so it is
+    // not sent twice.
+    if (cursors.coverFrom(next.since)) {
+      for (const event of deps.history ?? readSpool()) {
+        recent.add(event.eventId);
+      }
+      log("reading harness logs again to cover the whole hackathon window");
+    }
+  };
+  applyWindow(window);
 
   const discovered: string[] = [];
   for (const c of collectors) {
@@ -508,12 +517,32 @@ export async function runWatch(
   process.once("SIGTERM", stop);
 
   // Team, announcements and the feed are hackathon-window functions on the
-  // server: outside it they only answer "closed", so they are not asked.
-  // Organisers are never closed out, so for them this is always true.
-  const inEvent = (): boolean => isRecording(options.window, Date.now());
+  // server: before and after it they only answer "closed", so they are not
+  // asked. Organisers are never closed out, and neither is anybody while no
+  // hackathon is scheduled.
+  const inEvent = (): boolean => {
+    const phase = windowPhase(window, Date.now());
+    return me.role === "admin" || phase === "during" || phase === "unscheduled";
+  };
   let wasInEvent = inEvent();
+  let windowCheckedAt = Date.now();
 
   const tick = async (): Promise<ScanResult> => {
+    // Organisers may schedule or move the hackathon while this is open.
+    if (Date.now() - windowCheckedAt > TEAM_REFRESH_MS) {
+      windowCheckedAt = Date.now();
+      try {
+        const latest = await fetchMe(session);
+        if (latest) {
+          const next = collectionWindow(latest);
+          if (next?.since !== window?.since || next?.until !== window?.until) {
+            applyWindow(next);
+          }
+        }
+      } catch (error) {
+        log(`hackathon window lookup failed: ${String(error)}`);
+      }
+    }
     // The doors just opened with the watcher already running: pick the team
     // up now rather than at the next refresh.
     const opened = inEvent() && !wasInEvent;
@@ -529,13 +558,10 @@ export async function runWatch(
     if (state) {
       state.scanning = true;
     }
-    const scanned = await scanOnce(
-      collectors,
-      ctx,
-      recording,
-      identity(),
-      recent
-    );
+    // Without a scheduled hackathon there is no window to read for.
+    const scanned: ScanResult = window
+      ? await scanOnce(collectors, ctx, recording, identity(), recent)
+      : { byHarness: {}, events: 0, skipped: 0 };
     const ok = await batcher.flush();
     if (ok) {
       cursors.save();

@@ -12,7 +12,7 @@ import type { ImageSlot } from "./images";
 import { ScreenImages } from "./images";
 import type { WatchState } from "./state";
 import { WATCH_IMAGE_BOUNDS } from "./state";
-import { isRecording, windowNotice, windowPhase } from "./window";
+import { windowNotice, windowPhase } from "./window";
 
 /**
  * Full-terminal live view for `hackspain watch`: a grid of rounded boxes
@@ -482,15 +482,8 @@ function statusLine(
 ): string {
   const parts: string[] = [];
   const phase = windowPhase(state.window, now);
-  if (phase === "before" || phase === "after") {
-    parts.push(
-      rgb(
-        ORANGE,
-        isRecording(state.window, now)
-          ? "■ outside the window · organiser"
-          : "■ not recording"
-      )
-    );
+  if (phase !== undefined && phase !== "during") {
+    parts.push(rgb(ORANGE, "■ not recording"));
   }
   if (state.paused) {
     parts.push(rgb(ORANGE, "⏸ paused"));

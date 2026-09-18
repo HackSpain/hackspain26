@@ -3,7 +3,6 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  catchUpSince,
   ephemeralMemory,
   openMemory,
   rememberNotification,
@@ -55,17 +54,6 @@ describe("watch memory file", () => {
     const loaded = openMemory(path, NOW).data;
     expect(loaded.firstStartedAt).toBe(NOW);
     expect(loaded.notifications).toEqual([]);
-  });
-});
-
-describe("catchUpSince", () => {
-  test("backfill wins, then the last scan, then now", () => {
-    const memory = ephemeralMemory(NOW).data;
-    expect(catchUpSince(memory, 2 * 3_600_000, NOW)).toBe(NOW - 2 * 3_600_000);
-    expect(catchUpSince(memory, undefined, NOW)).toBe(NOW);
-    memory.lastActiveAt = NOW - 5 * 3_600_000;
-    expect(catchUpSince(memory, undefined, NOW)).toBe(NOW - 5 * 3_600_000);
-    expect(catchUpSince(memory, 3_600_000, NOW)).toBe(NOW - 3_600_000);
   });
 });
 
