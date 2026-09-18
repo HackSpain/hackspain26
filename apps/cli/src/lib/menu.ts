@@ -35,6 +35,7 @@ export type MenuProject = {
   name: string | null;
   submitted: boolean;
   tracks: number;
+  track?: string | null;
 };
 
 export type MenuStatus = {
@@ -105,7 +106,8 @@ function projectHint(project: MenuProject | null | undefined): string {
   if (project.submitted) {
     return `${project.name ?? "project"} · submitted`;
   }
-  return `${project.name ?? "untitled draft"} · draft · ${plural(project.tracks, "track")}`;
+  const track = project.track ?? "no track yet";
+  return `${project.name ?? "untitled draft"} · draft · ${track}`;
 }
 
 function buildTeamMenu(team: MenuTeam): MenuItem[] {
@@ -151,30 +153,33 @@ function buildTeamMenu(team: MenuTeam): MenuItem[] {
   return items;
 }
 
+function buildTrackMenu(status: MenuStatus): MenuItem[] {
+  const project = status.project ?? null;
+  if (project?.submitted) {
+    return [];
+  }
+  const items: MenuItem[] = [
+    {
+      value: "track-register",
+      label: project?.track ? "Switch track" : "Enter a track",
+      argv: ["track", "register"],
+    },
+  ];
+  if (project?.track) {
+    items.push({
+      value: "track-unregister",
+      label: "Leave the track",
+      argv: ["track", "unregister"],
+    });
+  }
+  return items;
+}
+
 function buildProjectMenu(status: MenuStatus): MenuItem[] {
   const project = status.project ?? null;
   const submitted = Boolean(project?.submitted);
   const items: MenuItem[] = [];
   if (!submitted) {
-    items.push({
-      value: "track-register",
-      label: "Enter a track",
-      hint: "slug from the list above",
-      argv: ["track", "register"],
-      input: {
-        message: "Track slug(s), separated by spaces",
-        placeholder: "ai-agents",
-        split: true,
-      },
-    });
-    if ((project?.tracks ?? 0) > 0) {
-      items.push({
-        value: "track-unregister",
-        label: "Leave a track",
-        argv: ["track", "unregister"],
-        input: { message: "Track slug(s) to leave", split: true },
-      });
-    }
     items.push(
       {
         value: "submit-draft",
@@ -323,15 +328,20 @@ function buildReadyMenu(status: MenuStatus): MenuItem[] {
       }
     );
   }
+  const trackMenu = buildTrackMenu(status);
   items.push(
     {
       value: "tracks",
-      label: "Tracks & project",
+      label: "Track",
+      hint: status.project?.track ?? "not in a track yet",
+      preview: [["track", "list"]],
+      submenu: trackMenu.length > 0 ? trackMenu : undefined,
+    },
+    {
+      value: "project",
+      label: "Project",
       hint: projectHint(status.project),
-      preview: [
-        ["track", "list"],
-        ...(status.project ? [["project", "show"]] : []),
-      ],
+      preview: status.project ? [["project", "show"]] : undefined,
       submenu: buildProjectMenu(status),
     },
     {
@@ -447,9 +457,10 @@ export function menuStatusFrom(
   submission: {
     name?: string | null;
     status: string;
-    challenges: unknown[];
+    challenges: { label?: string }[];
   } | null
 ): MenuStatus {
+  const track = submission?.challenges[0]?.label ?? null;
   return {
     loggedIn: true,
     gate: gate.state,
@@ -469,7 +480,8 @@ export function menuStatusFrom(
       ? {
           name: submission.name || null,
           submitted: submission.status === "submitted",
-          tracks: submission.challenges.length,
+          track,
+          tracks: track ? 1 : 0,
         }
       : null,
   };
@@ -541,7 +553,16 @@ function renderHome(status: MenuStatus): void {
         ? openingBoardRows({
             email: status.email,
             team: status.team,
-            project: status.project,
+            project: status.project
+              ? {
+                  name: status.project.name,
+                  submitted: status.project.submitted,
+                  tracks: status.project.tracks,
+                  trackLabels: status.project.track
+                    ? [status.project.track]
+                    : [],
+                }
+              : undefined,
           })
         : undefined,
       message,

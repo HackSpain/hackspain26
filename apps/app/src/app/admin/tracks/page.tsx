@@ -90,7 +90,7 @@ function TracksAdmin() {
   return (
     <Page
       title="Retos y proyectos"
-      description="Los retos viven en Convex. Un proyecto puede entrar en todos los retos que elijas."
+      description="Los retos viven en Convex. Un equipo entra en un solo reto."
     >
       <Card>
         <CardHeader>

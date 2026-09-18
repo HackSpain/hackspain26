@@ -31,7 +31,7 @@ const READY_OWNER: MenuStatus = {
   gate: "ready",
   email: "ana@example.com",
   team: { name: "Los Increíbles", isOwner: true, members: 3, hasRepo: false },
-  project: { name: "Quijote", submitted: false, tracks: 2 },
+  project: { name: "Quijote", submitted: false, tracks: 1, track: "Maisa" },
 };
 
 const READY_MEMBER: MenuStatus = {
@@ -41,7 +41,7 @@ const READY_MEMBER: MenuStatus = {
 
 const READY_SUBMITTED: MenuStatus = {
   ...READY_OWNER,
-  project: { name: "Quijote", submitted: true, tracks: 2 },
+  project: { name: "Quijote", submitted: true, tracks: 1, track: "Maisa" },
 };
 
 const ALL_STATUSES = [
@@ -187,7 +187,8 @@ describe("buildMainMenu", () => {
     expect(labels).toEqual([
       "Join a team",
       "Create a team",
-      "Tracks & project",
+      "Track",
+      "Project",
       "Feed",
       "Profile",
       "Perks",
@@ -210,32 +211,33 @@ describe("buildMainMenu", () => {
     expect(values(buildMainMenu(READY_NO_TEAM))).not.toContain("account");
   });
 
-  test("tracks show the state first: track list plus the project when it exists", () => {
-    const withProject = itemOf(buildMainMenu(READY_OWNER), "tracks");
-    expect(withProject.preview).toEqual([
-      ["track", "list"],
-      ["project", "show"],
-    ]);
+  test("tracks show the list first; project is its own item", () => {
+    const track = itemOf(buildMainMenu(READY_OWNER), "tracks");
+    expect(track.preview).toEqual([["track", "list"]]);
+    const project = itemOf(buildMainMenu(READY_OWNER), "project");
+    expect(project.preview).toEqual([["project", "show"]]);
     const withoutProject = itemOf(buildMainMenu(READY_NO_TEAM), "tracks");
     expect(withoutProject.preview).toEqual([["track", "list"]]);
   });
 
-  test("draft project: can register, unregister, draft and submit", () => {
-    const subValues = values(submenuOf(buildMainMenu(READY_OWNER), "tracks"));
-    expect(subValues).toEqual([
+  test("draft project: track picker has no submit; project has draft and submit", () => {
+    expect(values(submenuOf(buildMainMenu(READY_OWNER), "tracks"))).toEqual([
       "track-register",
       "track-unregister",
+    ]);
+    expect(values(submenuOf(buildMainMenu(READY_OWNER), "project"))).toEqual([
       "submit-draft",
       "submit",
       "project-list",
     ]);
   });
 
-  test("submitted project: editing actions disappear, viewing stays", () => {
-    const subValues = values(
-      submenuOf(buildMainMenu(READY_SUBMITTED), "tracks")
+  test("submitted project: track is view-only, project listing stays", () => {
+    const track = itemOf(buildMainMenu(READY_SUBMITTED), "tracks");
+    expect(track.submenu).toBeUndefined();
+    expect(values(submenuOf(buildMainMenu(READY_SUBMITTED), "project"))).toEqual(
+      ["project-list"]
     );
-    expect(subValues).toEqual(["project-list"]);
   });
 
   test("top level stays tight: no static hint on perks or feed", () => {

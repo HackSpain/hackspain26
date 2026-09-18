@@ -40,7 +40,7 @@ hackspain team dissolve          # owner deletes a team nobody else is in
 hackspain stack set nextjs convex claude-code
 
 hackspain track list
-hackspain track register <slug…> | unregister <slug…> | move <from> <to>
+hackspain track register [slug] | unregister
 hackspain submit [--draft]      # interactive form; flags for scripts
 hackspain project show | list
 hackspain perk list

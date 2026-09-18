@@ -79,8 +79,8 @@ describe("openingBoardRows", () => {
       project: {
         name: "Quijote",
         submitted: false,
-        tracks: 2,
-        trackLabels: ["AI Agents", "Climate"],
+        tracks: 1,
+        trackLabels: ["AI Agents"],
       },
     });
     const values = rows.map(([, value]) => stripAnsi(value));

@@ -86,7 +86,7 @@ function nextSteps(
       ]);
     }
     if (!submission || submission.challenges.length === 0) {
-      steps.push(["hackspain track list", "pick the tracks you are going for"]);
+      steps.push(["hackspain track list", "pick a track"]);
     }
     if (submission?.status !== "submitted") {
       steps.push(["hackspain submit --draft", "save your project as you go"]);
@@ -133,8 +133,10 @@ function renderReady(
             ? {
                 name: submission.name || null,
                 submitted: submission.status === "submitted",
-                tracks: submission.challenges.length,
-                trackLabels: submission.challenges.map((item) => item.label),
+                tracks: submission.challenges.length > 0 ? 1 : 0,
+                trackLabels: submission.challenges[0]
+                  ? [submission.challenges[0].label]
+                  : [],
               }
             : null,
         })

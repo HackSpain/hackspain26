@@ -12,6 +12,7 @@ import {
   pickBalancedGroup,
 } from "./lib/judging";
 import { submissionStatusValidator } from "./lib/validators";
+import { fail } from "./lib/errors";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import {
   MAX_TEAMS_PER_TRACK,
@@ -116,7 +117,10 @@ async function resolveChallengeIds(
   existing: Doc<"submissions"> | null
 ): Promise<Id<"tracks">[]> {
   const unique = [...new Set(challengeIds)];
-  // A project keeps the places it already holds; only new entries need room.
+  if (unique.length > 1) {
+    fail("VALIDATION", "Un equipo solo puede entrar en un track.");
+  }
+  // A project keeps the place it already holds; only a new entry needs room.
   const added = unique.filter(
     (trackId) => !existing?.challengeIds.includes(trackId)
   );
