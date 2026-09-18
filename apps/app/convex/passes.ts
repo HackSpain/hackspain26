@@ -3,7 +3,7 @@ import { Resend as ResendAPI } from "resend";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { internalAction, internalMutation, mutation, query } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
 import {
   ACCESS_CODE_EMAIL_SUBJECT,
   accessCodeEmailHtml,
@@ -172,7 +172,7 @@ export const scan = adminMutation({
   returns: scanReturn,
 });
 
-export const staffStatus = query({
+export const staffStatus = internalQuery({
   args: {},
   handler: async (ctx) => {
     const passes = await ctx.db.query("eventPasses").collect();
@@ -244,7 +244,7 @@ export const arrivals = query({
   },
 });
 
-export const staffScan = mutation({
+export const staffScan = internalMutation({
   args: { value: v.string() },
   handler: async (ctx, args) => {
     const result = await checkIn(ctx, args.value);
@@ -253,7 +253,7 @@ export const staffScan = mutation({
   returns: scanReturn,
 });
 
-export const staffUndoCheckIn = mutation({
+export const staffUndoCheckIn = internalMutation({
   args: { passId: v.id("eventPasses") },
   handler: async (ctx, args) => {
     const pass = await ctx.db.get(args.passId);
