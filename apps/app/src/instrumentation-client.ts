@@ -3,14 +3,17 @@ import {
   init,
   replayIntegration,
 } from "@sentry/nextjs";
-import { sanitizeTelemetryEvent } from "@/lib/telemetry-sanitize";
+import {
+  prepareTelemetryEvent,
+  sanitizeTelemetryEvent,
+} from "@/lib/telemetry-sanitize";
 
 const dsn = process.env.NEXT_PUBLIC_BETTER_STACK_ERRORS_DSN;
 
 if (dsn) {
   init({
     dsn,
-    beforeSend: sanitizeTelemetryEvent,
+    beforeSend: prepareTelemetryEvent,
     beforeSendTransaction: sanitizeTelemetryEvent,
     integrations: [
       replayIntegration({
