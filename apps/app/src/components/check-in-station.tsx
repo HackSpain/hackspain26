@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, KeyRound, RotateCcw, X } from "lucide-react";
+import { Check, KeyRound, Monitor, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoadingText, Page, errorMessage } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -186,6 +186,11 @@ export function CheckInStation() {
       title="Entrada HackSpain"
       description="Introduce el código de cuatro caracteres que recibió el participante por email."
     >
+      <Button asChild variant="outline">
+        <a href="/tv?view=entradas" target="_blank" rel="noreferrer">
+          <Monitor aria-hidden /> Abrir pantalla de bienvenida
+        </a>
+      </Button>
       {!live ? (
         <Card className="border-hs-gold bg-hs-gold/15">
           <CardHeader>

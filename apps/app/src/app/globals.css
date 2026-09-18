@@ -273,3 +273,54 @@
     animation-delay: 0ms;
   }
 }
+
+/* Full-HD arrival broadcast. GSAP owns transforms and opacity. */
+.arena-type {
+  font-family: var(--font-bungee);
+  font-weight: 400;
+  font-style: normal;
+}
+.arena-stage { isolation: isolate; }
+.arena-light {
+  position: absolute;
+  top: -200px;
+  width: 800px;
+  height: 1560px;
+  transform-origin: 50% 0;
+  background: conic-gradient(from 165deg at 50% 0, transparent 0deg, #f4ecd80a 3deg, #f4ecd860 12deg, #f4ecd82e 20deg, transparent 30deg);
+  mask-image: linear-gradient(black 35%, transparent 100%);
+  filter: blur(12px);
+}
+.arena-light-left { left: -100px; transform: rotate(-27deg); }
+.arena-light-right {
+  right: -80px;
+  transform: rotate(26deg);
+  background: conic-gradient(from 165deg at 50% 0, transparent 0deg, #eab6190a 3deg, #eab61980 12deg, #eab61938 20deg, transparent 30deg);
+}
+.arena-light-center {
+  left: 600px;
+  opacity: 0.45;
+  transform: rotate(-12deg);
+  background: conic-gradient(from 170deg at 50% 0, transparent, #8fb8d155 8deg, #8fb8d122 13deg, transparent 20deg);
+}
+.arena-light-pool {
+  position: absolute;
+  bottom: -150px;
+  left: 350px;
+  width: 1300px;
+  height: 400px;
+  opacity: 0.3;
+  background: radial-gradient(ellipse, #eab61966, transparent 65%);
+}
+.arena-brand-panel {
+  background: var(--color-hs-gold);
+  clip-path: polygon(35% 0, 100% 0, 100% 100%, 0 100%);
+}
+.arena-portrait { mask-image: linear-gradient(90deg, transparent, black 27%, black 96%, transparent); }
+.arena-portrait-shade {
+  background: linear-gradient(90deg, var(--color-hs-ink) 0%, #2a170fcc 13%, transparent 45%), linear-gradient(0deg, var(--color-hs-ink) 0%, #2a170fdd 12%, transparent 48%, #2a170f22 100%);
+}
+.arena-monogram { background: var(--color-hs-teal); }
+@media (prefers-reduced-motion: reduce) {
+  .arena-light { opacity: 0.2; }
+}

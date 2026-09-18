@@ -1,6 +1,6 @@
 import type { AnyDataModel, GenericMutationCtx } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import {
   ambassadorFieldsValidator,
@@ -384,4 +384,30 @@ export const setAvatarThumbnail = mutation({
     return true;
   },
   returns: v.boolean(),
+});
+
+/** Run with the old optional fields still in the deployed schema, then remove them. */
+export const dropCheckInMetadata = internalMutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    let cleared = 0;
+    for (const pass of await ctx.db.query("eventPasses").collect()) {
+      if (!("checkedInBy" in pass) && !("checkedInVia" in pass)) {
+        continue;
+      }
+      await ctx.db.replace(pass._id, {
+        userId: pass.userId,
+        signupId: pass.signupId,
+        code: pass.code,
+        status: pass.status,
+        codeSentAt: pass.codeSentAt,
+        checkedInAt: pass.checkedInAt,
+        createdAt: pass.createdAt,
+        updatedAt: pass.updatedAt,
+      });
+      cleared += 1;
+    }
+    return cleared;
+  },
 });
