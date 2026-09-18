@@ -5,11 +5,11 @@ import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
 import { formatEventDate, requireOnboarded } from "../lib/me";
-import { firstName, formatWhen, uiFor } from "../lib/output";
+import { firstName, uiFor } from "../lib/output";
 import { c } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
 import { acquireWatchLock, runWatch } from "../watcher";
-import { catchUpSince, openMemory } from "../watcher/memory";
+import { openMemory } from "../watcher/memory";
 import { startScreen, summaryLines } from "../watcher/screen";
 import { createState, feedLive, scrollFeed } from "../watcher/state";
 import { collectionWindow, windowNotice } from "../watcher/window";
@@ -17,7 +17,6 @@ import { collectionWindow, windowNotice } from "../watcher/window";
 type WatchFlags = {
   once?: boolean;
   interval: string;
-  backfill?: string;
   toast: boolean;
   upload: boolean;
   sinkUrl?: string;
@@ -42,10 +41,6 @@ export function registerWatch(program: Command): void {
     )
     .option("--once", "scan once, flush, and exit")
     .option("-i, --interval <seconds>", "seconds between scans", "30")
-    .option(
-      "--backfill <hours>",
-      "also report usage from the last N hours (default: since the last run, or from now the first time)"
-    )
     .option("--no-toast", "print notifications only, no desktop toast")
     .option("--no-upload", "keep events in the local spool only")
     .option(
@@ -59,27 +54,15 @@ export function registerWatch(program: Command): void {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
       const intervalMs = positiveNumber("--interval", flags.interval) * 1000;
-      const backfillMs = flags.backfill
-        ? positiveNumber("--backfill", flags.backfill) * 3_600_000
-        : undefined;
       const memory = openMemory();
       const session = await openSession(ctx, { requireAuth: true });
       // Outside the hackathon the watcher still runs and says it is not
       // recording: opened early it starts on its own at the opening time,
       // opened late it delivers what the window holds and was never sent.
       const me = await requireOnboarded(session, { allowClosed: true });
-      // With a scheduled hackathon: the whole window, whenever the watcher
-      // was opened. Otherwise everything since the last scan, so usage while
-      // the watcher was closed is reported too; --backfill overrides that.
-      const window = collectionWindow(
-        me,
-        catchUpSince(memory.data, backfillMs)
-      );
-      const { since } = window;
-      const catchingUp =
-        !window.scheduled &&
-        backfillMs === undefined &&
-        since < Date.now() - 60_000;
+      // The whole hackathon window, whenever the watcher was opened, and
+      // nothing outside it for anybody. No schedule, nothing recorded.
+      const window = collectionWindow(me);
       // Team and project are hackathon-window functions; closed means none.
       const [team, submission] = me.event.open
         ? await Promise.all([
@@ -100,9 +83,7 @@ export function registerWatch(program: Command): void {
       const options = {
         intervalMs,
         once: Boolean(flags.once),
-        since,
         toast: flags.toast,
-        until: window.until,
         window,
         uploadUrl,
         verbose: Boolean(flags.verbose),
@@ -216,17 +197,14 @@ export function registerWatch(program: Command): void {
             )
           );
         }
-        if (catchingUp) {
-          ui.line(c.dim(`Catching up on usage since ${formatWhen(since)}.`));
-        }
         const notice = windowNotice(window, Date.now(), formatEventDate);
         if (notice) {
           ui.warn(notice);
         }
-        if (window.scheduled && window.until !== undefined) {
+        if (window) {
           ui.line(
             c.dim(
-              `Reporting AI usage from ${formatEventDate(since)} to ${formatEventDate(window.until)}, including what happened while this was closed. Nothing outside that window is sent.`
+              `Reporting AI usage from ${formatEventDate(window.since)} to ${formatEventDate(window.until)}, including what happened while this was closed. Nothing outside that window is recorded or sent.`
             )
           );
         }

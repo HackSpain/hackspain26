@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { projectRef } from "../project";
 import type { HarnessId, RawEvent } from "../schema";
-import { eventId, modelFamily } from "../schema";
+import { eventId, modelFamily, outputWithReasoning } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 
 export const OPENCODE = "opencode" as const;
@@ -26,6 +26,7 @@ type MessageData = {
     input?: number;
     output?: number;
     reasoning?: number;
+    total?: number;
     cache?: { read?: number; write?: number };
   };
   time?: { created?: number; completed?: number };
@@ -53,6 +54,19 @@ export function normalizeOpenCode(
     return null;
   }
   const model = data.modelID ?? "unknown";
+  const cacheRead = data.tokens.cache?.read ?? 0;
+  const cacheWrite = data.tokens.cache?.write ?? 0;
+  const input = data.tokens.input ?? 0;
+  // OpenCode keeps reasoning next to the output, not inside it: a real
+  // record reads total 31456 = input 39 + output 74 + reasoning 111 + cache
+  // read 31232. The canonical `output` includes it, like every harness.
+  const output = outputWithReasoning({
+    output: data.tokens.output ?? 0,
+    prompt: input + cacheRead + cacheWrite,
+    reasoning: data.tokens.reasoning ?? 0,
+    separateByDefault: true,
+    total: data.tokens.total ?? 0,
+  });
   return {
     eventId: eventId(harness, row.session_id, row.id),
     harness,
@@ -65,10 +79,10 @@ export function normalizeOpenCode(
     project: projectRef(data.path?.cwd),
     sessionId: row.session_id,
     tokens: {
-      cacheRead: data.tokens.cache?.read ?? 0,
-      cacheWrite: data.tokens.cache?.write ?? 0,
-      input: data.tokens.input ?? 0,
-      output: data.tokens.output ?? 0,
+      cacheRead,
+      cacheWrite,
+      input,
+      output,
       ...(data.tokens.reasoning === undefined
         ? {}
         : { reasoning: data.tokens.reasoning }),

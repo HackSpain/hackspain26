@@ -4,46 +4,50 @@ import type { Me } from "../lib/me";
  * What the watcher may report: `[since, until)` on the time the harness
  * recorded the event (`occurredAt`), never on when the watcher read it.
  */
-export type CollectionWindow = {
-  since: number;
-  /** Exclusive upper bound; undefined while no end is scheduled. */
-  until?: number;
-  /** True when the bounds come from the organisers' hackathon window. */
-  scheduled: boolean;
-};
+export type CollectionWindow = { since: number; until: number };
 
 /**
- * With a scheduled hackathon the window is the hackathon itself, whole: a
- * watcher first opened on Sunday still reports Saturday's usage, and nothing
- * from before the start or after the end is reported at all. `--backfill`
- * and the last-run catch-up only matter on a server without a schedule (dev)
- * and for organisers, who test before the doors open.
+ * The window is the hackathon as organisers scheduled it, whole and for
+ * everyone: a watcher first opened on Sunday still reports Saturday's usage,
+ * and nothing from before the start or after the end is reported by anybody,
+ * organisers included. No schedule means no window, so nothing is recorded
+ * (null). The server enforces the same rule on every upload.
  */
 export function collectionWindow(
-  me: Pick<Me, "event" | "role">,
-  fallbackSince: number
-): CollectionWindow {
+  me: Pick<Me, "event">
+): CollectionWindow | null {
   const { startsAt, endsAt } = me.event;
-  if (me.role === "admin" || startsAt === undefined || endsAt === undefined) {
-    return { scheduled: false, since: fallbackSince };
+  if (startsAt === undefined || endsAt === undefined) {
+    return null;
   }
-  return { scheduled: true, since: startsAt, until: endsAt };
+  return { since: startsAt, until: endsAt };
 }
 
-export type WindowPhase = "before" | "during" | "after";
+export type WindowPhase = "unscheduled" | "before" | "during" | "after";
 
-/** Where `now` falls; undefined without a scheduled window. */
+/** Where `now` falls. `null` is "no hackathon scheduled"; `undefined` is "not known". */
 export function windowPhase(
-  window: Pick<CollectionWindow, "since" | "until" | "scheduled"> | undefined,
+  window: CollectionWindow | null | undefined,
   now: number
 ): WindowPhase | undefined {
-  if (!window?.scheduled || window.until === undefined) {
+  if (window === undefined) {
     return;
+  }
+  if (window === null) {
+    return "unscheduled";
   }
   if (now < window.since) {
     return "before";
   }
   return now < window.until ? "during" : "after";
+}
+
+/** Whether usage happening right now is recorded: only during the hackathon. */
+export function isRecording(
+  window: CollectionWindow | null | undefined,
+  now: number
+): boolean {
+  return windowPhase(window, now) === "during";
 }
 
 /**
@@ -52,12 +56,15 @@ export function windowPhase(
  * this module free of the CLI's copy helpers.
  */
 export function windowNotice(
-  window: CollectionWindow | undefined,
+  window: CollectionWindow | null | undefined,
   now: number,
   formatDate: (ms: number) => string
 ): string | undefined {
   const phase = windowPhase(window, now);
-  if (!window || window.until === undefined || !phase || phase === "during") {
+  if (phase === "unscheduled") {
+    return "Not recording: no hackathon is scheduled on this server yet. Leave this open, it starts once there is one.";
+  }
+  if (!window || phase === undefined || phase === "during") {
     return;
   }
   return phase === "before"
@@ -67,7 +74,7 @@ export function windowNotice(
 
 export function inWindow(
   occurredAt: string,
-  window: Pick<CollectionWindow, "since" | "until">
+  window: { since: number; until?: number }
 ): boolean {
   const at = Date.parse(occurredAt);
   if (Number.isNaN(at) || at < window.since) {

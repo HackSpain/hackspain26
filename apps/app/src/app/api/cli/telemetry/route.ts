@@ -6,6 +6,7 @@ import { reportServerEvent } from "@/lib/server-observability";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
 import { exportTelemetryAsOtlpLogs, otlpLogsEnabled } from "./otlp";
 import {
+  occurredInWindow,
   parseTelemetryEvent,
   RawTreeConfigurationError,
   storeTelemetryEvents,
@@ -46,25 +47,6 @@ function rejection(
 }
 
 /**
- * Only what happened during the hackathon counts, judged on the time the
- * harness recorded (`occurredAt`), not on when the watcher read or sent it.
- * The CLI applies the same window (apps/cli/src/watcher/window.ts); older
- * binaries do not, hence the check here. Organisers test before the doors
- * open, and a server without a schedule has no window to enforce.
- */
-function occurredInWindow(
-  occurredAt: string,
-  me: { role: string; event: { startsAt?: number; endsAt?: number } }
-): boolean {
-  const { startsAt, endsAt } = me.event;
-  if (me.role === "admin" || startsAt === undefined || endsAt === undefined) {
-    return true;
-  }
-  const at = Date.parse(occurredAt);
-  return at >= startsAt && at < endsAt;
-}
-
-/**
  * POST application/x-ndjson from `hackspain watch`, one canonical
  * `hackspain.telemetry.v1` event per line (apps/cli/docs/telemetry-schema.md).
  *
@@ -89,10 +71,11 @@ export async function POST(request: Request) {
     if (!me) {
       return fail("No has iniciado sesión", 401);
     }
-    if (!me.event.open && me.event.phase !== "after") {
-      // Before the hackathon there is nothing to report. After it the
-      // watcher may still deliver what happened inside the window and was
-      // never sent; the per-event check below keeps everything else out.
+    if (me.event.phase === "before") {
+      // Nothing can have happened inside the window yet, organisers
+      // included. After it the watcher may still deliver what happened
+      // inside and was never sent; the per-event check below keeps
+      // everything else out.
       return fail(closedMessage(me.event.phase, me.event), 403);
     }
     teamId = await fetchQuery(api.teams.mineId, {}, { token });
@@ -135,7 +118,7 @@ export async function POST(request: Request) {
         rejections.push(rejection(entry.number, "invalid_event", value));
         continue;
       }
-      if (!occurredInWindow(event.occurredAt, me)) {
+      if (!occurredInWindow(event.occurredAt, me.event)) {
         rejections.push(rejection(entry.number, "outside_event_window", event));
         continue;
       }

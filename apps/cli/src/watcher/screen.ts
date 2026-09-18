@@ -482,7 +482,7 @@ function statusLine(
 ): string {
   const parts: string[] = [];
   const phase = windowPhase(state.window, now);
-  if (phase === "before" || phase === "after") {
+  if (phase !== undefined && phase !== "during") {
     parts.push(rgb(ORANGE, "■ not recording"));
   }
   if (state.paused) {

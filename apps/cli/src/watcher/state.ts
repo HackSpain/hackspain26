@@ -9,8 +9,8 @@ export type WatchState = {
   startedAt: number;
   /** First run on this machine; the totals cover everything since then. */
   trackedSince?: number;
-  /** The hackathon window, when scheduled; the screen warns while outside it. */
-  window?: CollectionWindow;
+  /** The hackathon window (null: none scheduled); the screen warns while outside it. */
+  window?: CollectionWindow | null;
   me: { name: string; email?: string };
   team?: { name: string; isOwner: boolean; repoUrl?: string; members: number };
   project?: {

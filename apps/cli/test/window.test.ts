@@ -4,6 +4,7 @@ import { outputWithReasoning } from "../src/watcher/schema";
 import {
   collectionWindow,
   inWindow,
+  isRecording,
   windowNotice,
   windowPhase,
 } from "../src/watcher/window";
@@ -18,28 +19,21 @@ const scheduled = {
 };
 
 describe("collectionWindow", () => {
-  test("a scheduled hackathon is reported whole, whenever the watcher opens", () => {
-    const lastRun = Date.parse("2026-10-04T12:00:00Z");
-    expect(
-      collectionWindow({ event: scheduled, role: "user" }, lastRun)
-    ).toEqual({ scheduled: true, since: START, until: END });
+  test("the hackathon, whole, whenever the watcher opens", () => {
+    expect(collectionWindow({ event: scheduled })).toEqual({
+      since: START,
+      until: END,
+    });
   });
 
-  test("without a schedule, and for organisers, the catch-up rule stays", () => {
+  test("no schedule, no window: nothing is recorded", () => {
     const unscheduled = {
       endsAt: undefined,
       open: true,
       phase: "unscheduled" as const,
       startsAt: undefined,
     };
-    expect(collectionWindow({ event: unscheduled, role: "user" }, 42)).toEqual({
-      scheduled: false,
-      since: 42,
-    });
-    expect(collectionWindow({ event: scheduled, role: "admin" }, 42)).toEqual({
-      scheduled: false,
-      since: 42,
-    });
+    expect(collectionWindow({ event: unscheduled })).toBeNull();
   });
 
   test("the window is on the harness's timestamp, end exclusive", () => {
@@ -49,23 +43,29 @@ describe("collectionWindow", () => {
     expect(inWindow("2026-10-05T15:59:59.999Z", window)).toBe(true);
     expect(inWindow("2026-10-05T16:00:00.000Z", window)).toBe(false);
     expect(inWindow("not a date", window)).toBe(false);
-    expect(inWindow("2030-01-01T00:00:00Z", { since: START })).toBe(true);
   });
 });
 
-describe("windowPhase and windowNotice", () => {
-  const window = { scheduled: true, since: START, until: END };
+describe("windowPhase, isRecording and windowNotice", () => {
+  const window = { since: START, until: END };
   const date = (ms: number) => `<${new Date(ms).toISOString()}>`;
 
   test("before, during and after, on the current clock", () => {
     expect(windowPhase(window, START - 1)).toBe("before");
     expect(windowPhase(window, START)).toBe("during");
     expect(windowPhase(window, END)).toBe("after");
-    expect(windowPhase({ scheduled: false, since: 0 }, START)).toBeUndefined();
+    expect(windowPhase(null, START)).toBe("unscheduled");
     expect(windowPhase(undefined, START)).toBeUndefined();
   });
 
-  test("a notice only while outside, with the date that matters", () => {
+  test("recording happens only during the hackathon, for everybody", () => {
+    expect(isRecording(window, START - 1)).toBe(false);
+    expect(isRecording(window, START)).toBe(true);
+    expect(isRecording(window, END)).toBe(false);
+    expect(isRecording(null, START)).toBe(false);
+  });
+
+  test("a notice whenever it is not recording, with the date that matters", () => {
     expect(windowNotice(window, START, date)).toBeUndefined();
     expect(windowNotice(window, START - 1, date)).toContain(
       "starts <2026-10-03T08:00:00.000Z>"
@@ -73,9 +73,10 @@ describe("windowPhase and windowNotice", () => {
     expect(windowNotice(window, END, date)).toContain(
       "ended <2026-10-05T16:00:00.000Z>"
     );
-    expect(
-      windowNotice({ scheduled: false, since: 0 }, 1, date)
-    ).toBeUndefined();
+    expect(windowNotice(null, START, date)).toContain(
+      "no hackathon is scheduled"
+    );
+    expect(windowNotice(undefined, START, date)).toBeUndefined();
   });
 });
 

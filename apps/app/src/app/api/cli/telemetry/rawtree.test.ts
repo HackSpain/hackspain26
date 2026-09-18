@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { parseTelemetryEvent, storeTelemetryEvents } from "./rawtree";
+import {
+  occurredInWindow,
+  parseTelemetryEvent,
+  storeTelemetryEvents,
+} from "./rawtree";
 import type { TelemetryEvent } from "./rawtree";
 
 const originalEnvironment = {
@@ -127,5 +131,26 @@ describe("RawTree telemetry", () => {
     await expect(
       storeTelemetryEvents([event, second], fetchImpl)
     ).rejects.toThrow("RawTree inserted 1 of 2 telemetry events");
+  });
+});
+
+describe("occurredInWindow", () => {
+  const window = {
+    endsAt: Date.parse("2026-09-20T16:00:00Z"),
+    startsAt: Date.parse("2026-09-18T16:45:00Z"),
+  };
+
+  test("only the hackathon, on the harness's time, end exclusive", () => {
+    expect(occurredInWindow("2026-09-18T16:44:59.999Z", window)).toBe(false);
+    expect(occurredInWindow("2026-09-18T16:45:00.000Z", window)).toBe(true);
+    expect(occurredInWindow("2026-09-20T15:59:59.999Z", window)).toBe(true);
+    expect(occurredInWindow("2026-09-20T16:00:00.000Z", window)).toBe(false);
+  });
+
+  test("no scheduled hackathon, nothing is stored", () => {
+    expect(occurredInWindow("2026-09-19T10:00:00Z", {})).toBe(false);
+    expect(
+      occurredInWindow("2026-09-19T10:00:00Z", { startsAt: window.startsAt })
+    ).toBe(false);
   });
 });

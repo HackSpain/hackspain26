@@ -92,22 +92,6 @@ export function ephemeralMemory(now = Date.now()): MemoryStore {
   return { data: fresh(now), save: () => undefined };
 }
 
-/**
- * Where a run starts reading harness logs. An explicit `--backfill` wins;
- * otherwise everything since the last scan, so nothing written while the
- * watcher was closed is skipped; a first run starts from now.
- */
-export function catchUpSince(
-  memory: WatchMemory,
-  backfillMs: number | undefined,
-  now = Date.now()
-): number {
-  if (backfillMs !== undefined) {
-    return now - backfillMs;
-  }
-  return memory.lastActiveAt ?? now;
-}
-
 /** Remember an announcement, newest first, deduplicated, capped. */
 export function rememberNotification(
   memory: WatchMemory,

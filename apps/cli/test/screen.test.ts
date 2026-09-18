@@ -159,12 +159,10 @@ describe("frame", () => {
   test("outside the hackathon window the board says it is not recording", () => {
     const state = sampleState();
     const hour = 3_600_000;
-    const render = (window: { since: number; until: number }) =>
-      frame(
-        { ...state, window: { ...window, scheduled: true } },
-        { columns: 120, rows: 30 },
-        { now: NOW }
-      ).map((line) => stripAnsi(line));
+    const render = (window: { since: number; until: number } | null) =>
+      frame({ ...state, window }, { columns: 120, rows: 30 }, { now: NOW }).map(
+        (line) => stripAnsi(line)
+      );
 
     const before = render({ since: NOW + hour, until: NOW + 49 * hour });
     expect(before[1]).toContain("Not recording yet: the hackathon starts");
@@ -173,6 +171,10 @@ describe("frame", () => {
     const after = render({ since: NOW - 49 * hour, until: NOW - hour });
     expect(after[1]).toContain("Not recording: the hackathon ended");
     expect(after.at(-1)).toContain("not recording");
+
+    const unscheduled = render(null);
+    expect(unscheduled[1]).toContain("no hackathon is scheduled");
+    expect(unscheduled.at(-1)).toContain("not recording");
 
     const during = render({ since: NOW - hour, until: NOW + hour });
     expect(during.join("\n")).not.toContain("ot recording");
