@@ -28,7 +28,7 @@ function Activity() {
 export function PresetScreen({ config, demo = false }: { config: ScreenConfig; demo?: boolean }) {
   const now = useClock();
   if (config.preset === "entradas") { return demo ? <ArrivalDemo /> : <LiveArrivals />; }
-  if (config.preset === "espera") { return <ArrivalStage person={null} />; }
+  if (config.preset === "espera") { return <ArrivalStage person={null} waiting />; }
   return (
     <main className="flex h-dvh w-full flex-col gap-[4vmin] overflow-hidden bg-hs-ink p-[4vmin] text-hs-paper">
       <header className="flex shrink-0 items-center justify-between gap-6">

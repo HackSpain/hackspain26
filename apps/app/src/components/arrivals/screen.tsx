@@ -140,9 +140,10 @@ function Player({ person }: { person: Arrival }) {
 }
 
 /** One continuous backdrop: covers the swap, then opens onto the next person. */
-function ArrivalBands({ personId }: { personId?: string }) {
+function ArrivalBands({ personId, static: isStatic = false }: { personId?: string; static?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
+    if (isStatic) { return; }
     const media = gsap.matchMedia(root);
     media.add("(prefers-reduced-motion: no-preference)", () => {
       gsap.set(".arena-color-band", { y: 0, yPercent: 0 });
@@ -169,7 +170,7 @@ function ArrivalBands({ personId }: { personId?: string }) {
       gsap.set(root.current, { autoAlpha: personId ? 0 : 1 });
     });
     return () => media.revert();
-  }, [personId]);
+  }, [personId, isStatic]);
   return (
     <div ref={root} aria-hidden className="arena-color-curtain pointer-events-none absolute inset-0 z-40 overflow-hidden">
       {BAND_TONES.map((tone, column) => (
@@ -179,7 +180,7 @@ function ArrivalBands({ personId }: { personId?: string }) {
   );
 }
 
-export function ArrivalStage({ person, demo = false, connected = true }: { person: Arrival | null; demo?: boolean; connected?: boolean }) {
+export function ArrivalStage({ person, demo = false, connected = true, waiting = false }: { person: Arrival | null; demo?: boolean; connected?: boolean; waiting?: boolean }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState(false);
@@ -200,13 +201,18 @@ export function ArrivalStage({ person, demo = false, connected = true }: { perso
   return (
     <div ref={viewport} className="group relative flex h-dvh w-full items-center justify-center overflow-hidden bg-hs-ink">
       <main className="arena-stage relative h-full w-full overflow-hidden bg-hs-ink text-hs-paper [container-type:size]" aria-label="Bienvenida de participantes">
-        <ArenaLights />
+        {!waiting ? <ArenaLights /> : null}
         {person ? <Player key={person.id} person={person} /> : null}
-        <ArrivalBands personId={person?.id} />
-        <header className="absolute top-[4.4%] right-[4.6%] left-[4.6%] z-50 flex h-[7%] items-center justify-between">
+        <ArrivalBands personId={person?.id} static={waiting} />
+        {waiting ? (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-[6cqh] px-[8cqw]">
+            <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-auto w-[min(62cqw,110cqh)]" />
+            <h1 className="text-center font-bungee text-[min(4cqw,7cqh)] leading-tight text-balance text-hs-paper">EMPEZAMOS EN POCO</h1>
+          </div>
+        ) : <header className="absolute top-[4.4%] right-[4.6%] left-[4.6%] z-50 flex h-[7%] items-center justify-between">
           <Image src="/logo.svg" alt="HackSpain" width={190} height={63} className="h-auto w-[clamp(90px,10cqw,240px)]" />
           {demo || !connected ? <p className="font-mono text-[clamp(10px,0.8cqw,18px)] uppercase tracking-[0.2em] text-hs-paper/45">{demo ? "Demo" : "Reconectando"}</p> : null}
-        </header>
+        </header>}
       </main>
       <button type="button" onClick={() => void toggleFullscreen()} className="absolute right-4 bottom-4 flex size-11 items-center justify-center rounded bg-hs-ink text-hs-paper opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}>{fullscreen ? <Minimize size={20} /> : <Maximize size={20} />}</button>
       {fullscreenError ? <p role="status" className="absolute right-4 bottom-16 bg-hs-ink p-3 text-hs-paper">Usa la opción de pantalla completa de tu navegador.</p> : null}
