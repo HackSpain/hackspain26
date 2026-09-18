@@ -26,6 +26,9 @@ importers:
       '@convex-dev/auth':
         specifier: ^0.0.95
         version: 0.0.95(@auth/core@0.41.3)(convex@1.45.0(react@19.2.8))(react@19.2.8)
+      '@gsap/react':
+        specifier: ^2.1.2
+        version: 2.1.2(gsap@3.15.0)(react@19.2.8)
       '@logtail/next':
         specifier: 0.4.0
         version: 0.4.0(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
@@ -1382,6 +1385,12 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
+
+  '@gsap/react@2.1.2':
+    resolution: {integrity: sha512-JqliybO1837UcgH2hVOM4VO+38APk3ECNrsuSM4MuXp+rbf+/2IG2K1YJiqfTcXQHH7XlA0m3ykniFYstfq0Iw==}
+    peerDependencies:
+      gsap: ^3.12.5
+      react: '>=17'
 
   '@hono/node-server@2.1.1':
     resolution: {integrity: sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg==}
@@ -8203,6 +8212,11 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
 
   '@floating-ui/utils@0.2.12': {}
+
+  '@gsap/react@2.1.2(gsap@3.15.0)(react@19.2.8)':
+    dependencies:
+      gsap: 3.15.0
+      react: 19.2.8
 
   '@hono/node-server@2.1.1(hono@4.13.7)':
     dependencies:

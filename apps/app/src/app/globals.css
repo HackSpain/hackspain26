@@ -310,9 +310,6 @@
   .hsx-progress {
     animation: none;
   }
-  .tv-odometer-digit {
-    transition-duration: 0ms;
-  }
 }
 
 @media (hover: hover) and (pointer: fine) {

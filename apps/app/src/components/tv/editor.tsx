@@ -146,7 +146,7 @@ export function TvEditor() {
   useEffect(() => {
     if (widgets === undefined || seeded.current) {return;}
     seeded.current = true;
-    if (widgets.length === 0) {void ensure({});}
+    void ensure({});
   }, [ensure, widgets]);
 
   const displayed: TvWidget[] = useMemo(

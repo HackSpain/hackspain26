@@ -5,10 +5,12 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { ScreenConfig } from "@convex/lib/tvScreens";
 import { ArrivalDemo, ArrivalStage, LiveArrivals } from "@/components/arrivals/screen";
+import { tvPresetWidgets } from "@convex/lib/tvLayouts";
 import { MarketScreen } from "./market";
 import { TeamsScreen } from "./teams";
 import { useClock } from "./motion";
 import { SponsorsScreen } from "./sponsors-screen";
+import { TvStage } from "./stage";
 
 function Activity() {
   const posts = useQuery(api.tv.listFeed, { source: "all" });
@@ -32,6 +34,9 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
   if (config.preset === "entradas") { return demo ? <ArrivalDemo /> : <LiveArrivals />; }
   if (config.preset === "espera") { return <ArrivalStage person={null} waiting />; }
   if (config.preset === "panel") { return <MarketScreen demo={demo} />; }
+  if (config.preset === "panelv2") {
+    return <TvStage widgets={tvPresetWidgets("panelv2")} fill enter />;
+  }
   if (config.preset === "equipos") { return <TeamsScreen demo={demo} />; }
   if (config.preset === "patrocinadores") { return <SponsorsScreen />; }
   return (

@@ -1,8 +1,11 @@
 "use client";
 
+import { useRef } from "react";
 import type { TvFontWeight, TvWidget } from "@/lib/tv";
 import { tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from "@/lib/tv";
 import { cn } from "@/lib/utils";
+import { gsap, SplitText, TV_EASE_OUT, useGSAP } from "./gsap";
+import { usePrefersReducedMotion } from "./motion";
 import {
   InsightsActivityBox,
   InsightsEvolutionBox,
@@ -33,6 +36,32 @@ function BannerWidget({
   fontWeight?: TvFontWeight;
   background?: boolean;
 }) {
+  const reduced = usePrefersReducedMotion();
+  const ref = useRef<HTMLParagraphElement>(null);
+
+  useGSAP(
+    () => {
+      if (reduced || !ref.current) {
+        return;
+      }
+      SplitText.create(ref.current, {
+        type: "lines,words,chars",
+        mask: "lines",
+        autoSplit: true,
+        onSplit: (self) =>
+          gsap.from(self.chars, {
+            yPercent: 110,
+            opacity: 0,
+            duration: 0.8,
+            ease: TV_EASE_OUT,
+            stagger: 0.02,
+            delay: 0.45,
+          }),
+      });
+    },
+    { dependencies: [text, reduced], revertOnUpdate: true },
+  );
+
   return (
     <div
       className={cn(
@@ -41,6 +70,7 @@ function BannerWidget({
       )}
     >
       <p
+        ref={ref}
         style={tvFontSizeStyle(fontSize)}
         className={cn(
           "font-bungee leading-tight text-balance text-hs-gold uppercase",
