@@ -125,10 +125,11 @@ export function useBarWidth<T extends HTMLElement = HTMLDivElement>(
  * reordering never remounts anything. Each row must be absolutely positioned
  * with height = 100% / rows.
  */
-export function useRankRows(order: readonly string[]) {
+export function useRankRows(order: readonly string[], epoch = 0) {
   const reduced = usePrefersReducedMotion();
   const nodes = useRef(new Map<string, HTMLElement>());
   const placed = useRef(new Set<string>());
+  const seenEpoch = useRef(epoch);
   const key = order.join("|");
 
   const register = useCallback(
@@ -140,6 +141,11 @@ export function useRankRows(order: readonly string[]) {
   );
 
   useLayoutEffect(() => {
+    // A new epoch (leaderboard page) replays the entrance for every row.
+    if (seenEpoch.current !== epoch) {
+      seenEpoch.current = epoch;
+      placed.current.clear();
+    }
     const ids = key ? key.split("|") : [];
     const tweens: gsap.core.Tween[] = [];
     for (const [rank, id] of ids.entries()) {
@@ -157,10 +163,13 @@ export function useRankRows(order: readonly string[]) {
         tweens.push(
           gsap.from(el, {
             x: -28,
+            rotationX: -55,
+            transformPerspective: 700,
+            transformOrigin: "0% 0%",
             opacity: 0,
-            duration: 0.7,
+            duration: 0.75,
             ease: TV_EASE_OUT,
-            delay: 0.3 + rank * 0.06,
+            delay: 0.25 + rank * 0.07,
             clearProps: "opacity",
           }),
         );
@@ -178,7 +187,7 @@ export function useRankRows(order: readonly string[]) {
     return () => {
       for (const tween of tweens) {settle(tween);}
     };
-  }, [key, reduced]);
+  }, [key, reduced, epoch]);
 
   return register;
 }
@@ -254,10 +263,11 @@ export function useStreamShift(
     );
     timeline.fromTo(
       entering,
-      { opacity: 0, x: -18 },
+      { opacity: 0, x: -18, rotationX: -40, transformPerspective: 600, transformOrigin: "0% 0%" },
       {
         opacity: 1,
         x: 0,
+        rotationX: 0,
         duration: 0.6,
         ease: TV_EASE_OUT,
         stagger: 0.05,

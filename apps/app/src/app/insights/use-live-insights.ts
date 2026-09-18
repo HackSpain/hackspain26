@@ -189,10 +189,20 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+let override: LiveInsightData | null = null;
+
+/** Demo screens feed every live widget synthetic numbers instead of `/api/tv/insights`. */
+export function setLiveInsightsOverride(data: LiveInsightData | null): void {
+  override = data;
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
 export function useLiveInsights(): LiveInsightData {
   return useSyncExternalStore(
     subscribe,
-    () => current,
+    () => override ?? current,
     () => EMPTY
   );
 }

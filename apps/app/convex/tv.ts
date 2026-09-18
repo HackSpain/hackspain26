@@ -229,6 +229,8 @@ const tvFeedPostReturn = v.object({
   text: v.string(),
   hasImage: v.boolean(),
   createdAt: v.number(),
+  repo: v.optional(v.string()),
+  sha: v.optional(v.string()),
 });
 
 async function toTvFeedPost(ctx: QueryCtx, post: Doc<"posts">) {
@@ -247,6 +249,12 @@ async function toTvFeedPost(ctx: QueryCtx, post: Doc<"posts">) {
     text: post.text,
     hasImage: Boolean(post.imageId),
     createdAt: post.createdAt,
+    ...(post.kind === "github"
+      ? {
+          repo: post.github?.repo ?? "",
+          sha: (post.externalId ?? post._id).slice(-7),
+        }
+      : {}),
   };
 }
 

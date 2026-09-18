@@ -262,6 +262,9 @@ export function timeLabel(bucket: number, timeline?: Timeline): string {
 }
 
 export function compact(value: number): string {
+  if (value >= 1_000_000_000) {
+    return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 }).format(value / 1_000_000_000)} B`;
+  }
   if (value >= 1_000_000) {
     return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(value / 1_000_000)} M`;
   }

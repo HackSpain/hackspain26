@@ -63,12 +63,20 @@ function useStageEntrance(
         }
         timeline.fromTo(
           boxes,
-          { clipPath: "inset(0% 0% 100% 0%)", y: 36, opacity: 0 },
+          {
+            clipPath: "inset(0% 0% 100% 0%)",
+            y: 48,
+            rotationX: -14,
+            transformPerspective: 1400,
+            transformOrigin: "50% 100%",
+            opacity: 0,
+          },
           {
             clipPath: "inset(0% 0% 0% 0%)",
             y: 0,
+            rotationX: 0,
             opacity: 1,
-            duration: 0.8,
+            duration: 0.9,
             stagger: 0.07,
             clearProps: "clipPath,opacity,transform",
           },

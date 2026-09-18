@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
 import { Sparkline } from "@/app/insights/charts";
@@ -191,7 +191,7 @@ function AgentRow({
       <span className="w-[6.5cqw] shrink-0 truncate text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold">
         {row.name}
       </span>
-      <span className="relative h-[0.55cqw] min-w-0 flex-1 bg-hs-ink/8">
+      <span className="relative h-[0.7cqw] min-w-0 flex-1 bg-hs-ink/8">
         <span
           ref={bar}
           className="absolute inset-y-0 left-0 w-0"
@@ -277,7 +277,7 @@ export function LiveAgentsBox() {
               key={tool.id}
               row={live}
               share={live.sessions / max}
-              rows={stable.length}
+              rows={Math.max(stable.length, 6)}
               rowRef={register(tool.id)}
             />
           );
@@ -295,6 +295,7 @@ function odometerParts(value: number): { text: string; unit: string } {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     }).format(input);
+  if (value >= 1_000_000_000) {return { text: locale(value / 1_000_000_000, 2), unit: "B" };}
   if (value >= 1_000_000) {return { text: locale(value / 1_000_000, 2), unit: "M" };}
   if (value >= 1000) {return { text: locale(value / 1000, 1), unit: "k" };}
   return { text: locale(value, 0), unit: "" };
@@ -345,11 +346,55 @@ function OdometerDigit({ digit }: { digit: number }) {
   );
 }
 
+/**
+ * Ink and paper shards fly out from the delta chip in random directions and
+ * remove themselves when done. Returns the timeline so the caller can sync it.
+ */
+function burst(root: HTMLElement | null, origin: HTMLElement, count: number) {
+  const timeline = gsap.timeline();
+  if (!root) {return timeline;}
+  const box = root.getBoundingClientRect();
+  const from = origin.getBoundingClientRect();
+  const x = from.left - box.left + from.width / 2;
+  const y = from.top - box.top + from.height / 2;
+  const random = gsap.utils.random;
+  for (let index = 0; index < count; index += 1) {
+    const shard = document.createElement("span");
+    shard.setAttribute("aria-hidden", "true");
+    shard.className = cn(
+      "pointer-events-none absolute left-0 top-0 block",
+      index % 3 === 0 ? "bg-hs-paper" : "bg-hs-ink",
+    );
+    const size = random(4, 10);
+    shard.style.width = `${size}px`;
+    shard.style.height = `${index % 4 === 0 ? size * 2.2 : size}px`;
+    root.append(shard);
+    const angle = random(0, Math.PI * 2);
+    const distance = random(40, 130);
+    timeline.fromTo(
+      shard,
+      { x, y, opacity: 1, scale: 1, rotation: random(0, 180) },
+      {
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance + 30,
+        rotation: `+=${random(90, 360)}`,
+        scale: 0.2,
+        opacity: 0,
+        duration: random(0.55, 0.95),
+        ease: "power3.out",
+        onComplete: () => shard.remove(),
+      },
+      random(0, 0.08),
+    );
+  }
+  return timeline;
+}
+
 function Odometer({ value }: { value: number }) {
   const { text, unit } = odometerParts(value);
   return (
     <span className="inline-flex items-end font-sans font-black tracking-[-0.06em] tabular-nums">
-      <span className="inline-flex text-[clamp(1.6rem,3.6cqw,5rem)] leading-none">
+      <span className="inline-flex text-[clamp(1.6rem,4.6cqw,6.5rem)] leading-none">
         {[...text].map((char, index) =>
           /\d/.test(char) ? (
             <OdometerDigit key={`${index}-d`} digit={Number(char)} />
@@ -361,7 +406,7 @@ function Odometer({ value }: { value: number }) {
         )}
       </span>
       {unit ? (
-        <span className="mb-[0.45cqw] ml-[0.3cqw] font-bungee text-[clamp(0.9rem,1.6cqw,2.2rem)] leading-none">
+        <span className="mb-[0.55cqw] ml-[0.3cqw] font-bungee text-[clamp(0.9rem,2cqw,2.8rem)] leading-none">
           {unit}
         </span>
       ) : null}
@@ -389,13 +434,39 @@ export function LiveTokensBox() {
     const delta = totals.tokens - before;
     const chipEl = chip.current;
     const ringEl = ring.current;
-    if (!chipEl || !ringEl) {return;}
+    const odometer = root.current?.querySelector<HTMLElement>("[data-odometer]");
+    if (!chipEl || !ringEl || !odometer) {return;}
     chipEl.textContent = `+${compact(delta)}`;
+    // Bigger jumps shake harder; the hit is random every time so it never loops.
+    const punch = gsap.utils.clamp(0.5, 1.6, Math.log10(Math.max(delta, 10)) / 4);
+    const random = gsap.utils.random;
     const timeline = gsap.timeline();
+    timeline.to(
+      odometer,
+      {
+        keyframes: [
+          ...Array.from({ length: 6 }, () => ({
+            x: random(-9, 9) * punch,
+            y: random(-5, 5) * punch,
+            rotation: random(-2.5, 2.5) * punch,
+            duration: 0.045,
+          })),
+          { x: 0, y: 0, rotation: 0, duration: 0.7, ease: "elastic.out(1, 0.35)" },
+        ],
+      },
+      0,
+    );
+    timeline.fromTo(
+      odometer,
+      { scale: 1 + 0.05 * punch },
+      { scale: 1, duration: 0.8, ease: "elastic.out(1, 0.4)" },
+      0.05,
+    );
     timeline.fromTo(
       chipEl,
       { opacity: 0, y: 10, scale: 0.92 },
       { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: TV_EASE_POP },
+      0.1,
     );
     timeline.to(chipEl, { opacity: 0, y: -10, duration: 0.25, ease: "power2.in" }, "+=1.4");
     timeline.fromTo(
@@ -404,7 +475,10 @@ export function LiveTokensBox() {
       { opacity: 0, scale: 1.015, duration: 1.1, ease: TV_EASE_OUT },
       0,
     );
+    const shards = burst(root.current, chipEl, Math.round(6 + 8 * punch));
+    timeline.add(shards, 0.02);
     return () => {
+      // progress(1) fires each shard's onComplete, which removes it.
       settle(timeline);
     };
   }, [totals.tokens, reduced]);
@@ -431,7 +505,9 @@ export function LiveTokensBox() {
       <div className="flex items-end justify-between gap-[1cqw]">
         <div className="min-w-0">
           <div className="flex items-start gap-[0.6cqw]">
-            <Odometer value={totals.tokens} />
+            <span data-odometer className="inline-block will-change-transform">
+              <Odometer value={totals.tokens} />
+            </span>
             <span
               ref={chip}
               aria-hidden
@@ -451,11 +527,13 @@ export function LiveTokensBox() {
 function TeamRowView({
   team,
   rank,
+  offset = 0,
   rows,
   rowRef,
 }: {
   team: TeamRow;
   rank: number;
+  offset?: number;
   rows: number;
   rowRef: (node: HTMLElement | null) => void;
 }) {
@@ -484,10 +562,10 @@ function TeamRowView({
       <span
         className={cn(
           "flex size-[1.8cqw] shrink-0 items-center justify-center font-bungee text-[clamp(0.55rem,0.8cqw,1.1rem)]",
-          rank === 0 ? "bg-hs-ink text-hs-gold" : "text-hs-brown",
+          rank + offset === 0 ? "bg-hs-ink text-hs-gold" : "text-hs-brown",
         )}
       >
-        {rank + 1}
+        {rank + offset + 1}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[clamp(0.6rem,0.9cqw,1.2rem)] font-bold">
@@ -507,29 +585,99 @@ function TeamRowView({
   );
 }
 
+const LEADERBOARD_PAGE = 6;
+const LEADERBOARD_PAGE_MS = 9000;
+
+/**
+ * Teams paginate like a departures board: the current page folds away from
+ * the top, the next one drops its rows in one by one. The `ol` is keyed by
+ * visit so the folded node is discarded instead of reset.
+ */
 export function LiveLeaderboardBox() {
+  const reduced = usePrefersReducedMotion();
   const data = useLiveInsights();
   const ranked = teamRows(
     filterSamples(data.samples, "event", "all", data.teams),
     data.teams,
   )
     .filter((team) => team.id !== NO_TEAM_ID)
-    .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
-    .slice(0, 6);
-  const order = useMemo(() => ranked.map((team) => team.id), [ranked]);
-  const register = useRankRows(order);
+    .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name));
+  const pages = Math.max(1, Math.ceil(ranked.length / LEADERBOARD_PAGE));
+  const tick = useTick(LEADERBOARD_PAGE_MS);
+  const target = tick % pages;
+  const [visit, setVisit] = useState({ page: 0, id: 0 });
+  const page = Math.min(visit.page, pages - 1);
+  const list = useRef<HTMLOListElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (target === page) {return;}
+    const turn = () => setVisit((current) => ({ page: target, id: current.id + 1 }));
+    if (!list.current || reduced) {
+      turn();
+      return;
+    }
+    const tween = gsap.to(list.current, {
+      rotationX: 18,
+      yPercent: -6,
+      opacity: 0,
+      transformPerspective: 900,
+      transformOrigin: "50% 0%",
+      duration: 0.32,
+      ease: "power2.in",
+      onComplete: turn,
+    });
+    return () => {
+      tween.kill();
+    };
+  }, [target, page, reduced]);
+
+  useGSAP(
+    () => {
+      if (!bar.current || pages <= 1) {return;}
+      gsap.fromTo(
+        bar.current,
+        { scaleX: 0 },
+        {
+          scaleX: 1,
+          duration: (LEADERBOARD_PAGE_MS - 400) / 1000,
+          ease: "none",
+          transformOrigin: "0% 50%",
+        },
+      );
+    },
+    { dependencies: [visit.id, pages], revertOnUpdate: true },
+  );
+
+  const shown = ranked.slice(page * LEADERBOARD_PAGE, (page + 1) * LEADERBOARD_PAGE);
+  const order = useMemo(() => shown.map((team) => team.id), [shown]);
+  const register = useRankRows(order, visit.id);
   const rankOf = new Map(order.map((id, index) => [id, index]));
-  const stable = ranked.toSorted((a, b) => a.id.localeCompare(b.id));
+  const stable = shown.toSorted((a, b) => a.id.localeCompare(b.id));
+  const offset = page * LEADERBOARD_PAGE;
 
   return (
     <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
-      <LiveHeader title="Equipos" aside="por tokens" />
-      <ol className="relative mt-[0.5cqw] min-h-0 flex-1">
+      <LiveHeader
+        title="Equipos"
+        aside={pages > 1 ? `${page + 1} / ${pages} · por tokens` : "por tokens"}
+      />
+      {pages > 1 ? (
+        <div className="mt-[0.4cqw] h-[0.25cqw] shrink-0 bg-hs-ink/10">
+          <div ref={bar} className="h-full w-full origin-left scale-x-0 bg-hs-gold" />
+        </div>
+      ) : null}
+      <ol
+        key={visit.id}
+        ref={list}
+        className="relative mt-[0.5cqw] min-h-0 flex-1 will-change-transform"
+      >
         {stable.map((team) => (
           <TeamRowView
             key={team.id}
             team={team}
             rank={rankOf.get(team.id) ?? 0}
+            offset={offset}
             rows={stable.length}
             rowRef={register(team.id)}
           />
