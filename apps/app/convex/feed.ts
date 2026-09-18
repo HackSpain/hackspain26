@@ -222,10 +222,17 @@ export const imageUrl = authedQuery({
       }
       return await ctx.storage.getUrl(args.imageId);
     }
-    const avatarOwner = await ctx.db
-      .query("users")
-      .withIndex("by_avatar", (q) => q.eq("avatarId", args.imageId))
-      .first();
+    const avatarOwner =
+      (await ctx.db
+        .query("users")
+        .withIndex("by_avatar", (q) => q.eq("avatarId", args.imageId))
+        .first()) ??
+      (await ctx.db
+        .query("users")
+        .withIndex("by_avatar_thumb", (q) =>
+          q.eq("avatarThumbId", args.imageId)
+        )
+        .first());
     const logoTeam = avatarOwner
       ? null
       : await ctx.db

@@ -5,12 +5,57 @@ import { ImagePlus, Trash2 } from "lucide-react";
 import { useRef } from "react";
 import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
+import { PHOTO_WIDTH } from "@convex/lib/photo";
 import type { ActionFeedback } from "@/components/action-feedback";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
 import { uploadToConvex } from "@/lib/upload";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+
+/**
+ * A square, centred copy at the width the participants map draws, made here
+ * so the server never has to resize the full upload. Undefined when the
+ * browser cannot decode the file; the map then falls back to resizing on
+ * demand (convex/lib/photo.ts).
+ */
+async function thumbnailOf(file: File): Promise<File | undefined> {
+  if (typeof createImageBitmap !== "function") {
+    return undefined;
+  }
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    return undefined;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = PHOTO_WIDTH;
+  canvas.height = PHOTO_WIDTH;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    bitmap.close();
+    return undefined;
+  }
+  const side = Math.min(bitmap.width, bitmap.height);
+  context.drawImage(
+    bitmap,
+    (bitmap.width - side) / 2,
+    (bitmap.height - side) / 2,
+    side,
+    side,
+    0,
+    0,
+    PHOTO_WIDTH,
+    PHOTO_WIDTH
+  );
+  bitmap.close();
+  // Browsers without WebP encoding hand back a PNG; the type comes from the blob.
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/webp", 0.85);
+  });
+  return blob ? new File([blob], "avatar-thumb", { type: blob.type }) : undefined;
+}
 
 /** Uploads a picture to Convex storage and makes it the profile photo. */
 export function useAvatarUpload(): (file: File) => Promise<void> {
@@ -24,10 +69,15 @@ export function useAvatarUpload(): (file: File) => Promise<void> {
     if (file.size > MAX_AVATAR_BYTES) {
       throw new Error("La foto no puede superar 2 MB.");
     }
-    const uploadUrl = await generateUploadUrl();
-    await setAvatar({
-      imageId: await uploadToConvex(uploadUrl, file, "No se pudo subir la foto"),
-    });
+    const error = "No se pudo subir la foto";
+    const [imageId, thumbnail] = await Promise.all([
+      generateUploadUrl().then((url) => uploadToConvex(url, file, error)),
+      thumbnailOf(file),
+    ]);
+    const thumbId = thumbnail
+      ? await uploadToConvex(await generateUploadUrl(), thumbnail, error)
+      : undefined;
+    await setAvatar({ imageId, thumbId });
   };
 }
 

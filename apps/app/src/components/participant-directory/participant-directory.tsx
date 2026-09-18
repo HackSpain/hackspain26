@@ -17,7 +17,6 @@ import { cn } from "@/lib/utils";
 import type { DirectoryParticipant } from "./types";
 import { normalize } from "./affinities";
 import { ConnectionGraph } from "./connection-graph";
-import { photoThumbnail } from "./photo";
 import "./participant-directory.css";
 
 type ParticipantView = "graph" | "directory";
@@ -80,7 +79,7 @@ function ParticipantList({
               <div className="pd-person-heading">
                 {participant.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- profile images may use authenticated app URLs or GitHub avatars.
-                  <img src={photoThumbnail(participant.photoUrl)} alt="" />
+                  <img src={participant.photoUrl} alt="" />
                 ) : (
                   <span className="pd-person-initial" aria-hidden="true">
                     {participant.displayName.charAt(0)}

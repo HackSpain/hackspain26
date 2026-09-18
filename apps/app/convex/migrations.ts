@@ -1,6 +1,6 @@
 import type { AnyDataModel, GenericMutationCtx } from "convex/server";
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import {
   ambassadorFieldsValidator,
@@ -320,4 +320,68 @@ export const dropPhoneVerification = mutation({
     usersCleared: v.number(),
     challengesDeleted: v.number(),
   }),
+});
+
+/**
+ * Backfill for profile-picture thumbnails (convex/lib/photo.ts). Uploads
+ * made before the picker produced its own copy have `avatarId` but no
+ * `avatarThumbId`; scripts/backfill-avatar-thumbnails.ts resizes each one
+ * locally with sharp and stores the result through these three endpoints.
+ * Guarded by MIGRATION_SECRET like the Neon import.
+ */
+export const listAvatarsWithoutThumbnail = query({
+  args: { secret: v.string() },
+  handler: async (ctx, args) => {
+    assertMigrationSecret(args.secret);
+    const users = await ctx.db.query("users").collect();
+    const out: { userId: Id<"users">; avatarId: Id<"_storage">; url: string }[] =
+      [];
+    for (const user of users) {
+      if (!user.avatarId || user.avatarThumbId) {
+        continue;
+      }
+      const url = await ctx.storage.getUrl(user.avatarId);
+      if (url) {
+        out.push({ avatarId: user.avatarId, url, userId: user._id });
+      }
+    }
+    return out;
+  },
+  returns: v.array(
+    v.object({
+      avatarId: v.id("_storage"),
+      url: v.string(),
+      userId: v.id("users"),
+    })
+  ),
+});
+
+export const avatarThumbnailUploadUrl = mutation({
+  args: { secret: v.string() },
+  handler: async (ctx, args) => {
+    assertMigrationSecret(args.secret);
+    return await ctx.storage.generateUploadUrl();
+  },
+  returns: v.string(),
+});
+
+/** Attaches the thumbnail, unless the person changed their picture meanwhile. */
+export const setAvatarThumbnail = mutation({
+  args: {
+    avatarId: v.id("_storage"),
+    secret: v.string(),
+    thumbId: v.id("_storage"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    assertMigrationSecret(args.secret);
+    const user = await ctx.db.get(args.userId);
+    if (!user || user.avatarId !== args.avatarId || user.avatarThumbId) {
+      await ctx.storage.delete(args.thumbId);
+      return false;
+    }
+    await ctx.db.patch(user._id, { avatarThumbId: args.thumbId });
+    return true;
+  },
+  returns: v.boolean(),
 });
