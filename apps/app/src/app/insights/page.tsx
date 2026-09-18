@@ -49,6 +49,7 @@ import { ActivityChart, Sparkline, TeamScatter, UsageDonut } from "./charts";
 import {
   bucketTotals,
   compact,
+  bucketSpan,
   filterSamples,
   harnessRows,
   HARNESSES,
@@ -843,7 +844,7 @@ export function InsightsView() {
             <div className="min-w-0 space-y-5">
               <Panel
                 title="Actividad del evento"
-                eyebrow="Actividad por intervalos de 30 minutos"
+                eyebrow={`Actividad por intervalos de ${bucketSpan(timeline)}`}
                 action={
                   <MetricSwitch
                     value={chartMetric}

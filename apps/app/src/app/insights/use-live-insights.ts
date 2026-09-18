@@ -135,7 +135,13 @@ const listeners = new Set<() => void>();
 let timer: ReturnType<typeof setInterval> | null = null;
 
 async function refresh(): Promise<void> {
-  if (typeof document !== "undefined" && document.hidden) {
+  // A background tab skips the periodic refresh, never the first load: a
+  // page opened in another tab must not sit on "Cargando…" until looked at.
+  if (
+    typeof document !== "undefined" &&
+    document.hidden &&
+    current.status !== "loading"
+  ) {
     return;
   }
   try {
@@ -155,17 +161,26 @@ async function refresh(): Promise<void> {
   }
 }
 
+// Coming back to the tab shows fresh numbers at once, not up to 30 s later.
+function onVisibilityChange(): void {
+  if (!document.hidden) {
+    void refresh();
+  }
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   if (!timer) {
     void refresh();
     timer = setInterval(() => void refresh(), POLL_MS);
+    document.addEventListener("visibilitychange", onVisibilityChange);
   }
   return () => {
     listeners.delete(listener);
     if (listeners.size === 0 && timer) {
       clearInterval(timer);
       timer = null;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     }
   };
 }

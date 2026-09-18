@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { phaseRows, usageUsd } from "./event-data";
 import {
+  bucketSpan,
   bucketTotals,
   filterSamples,
   getSamples,
@@ -91,4 +92,11 @@ test("time labels: real Madrid time on a timeline, the static day otherwise", ()
   assert.ok(timeLabel(0, TIMELINE).includes("18:45"));
   assert.equal(timeLabel(0), "09:00");
   assert.equal(timeLabel(3), "10:30");
+});
+
+test("bucketSpan: says how long a bucket really lasts", () => {
+  assert.equal(bucketSpan(), "30 minutos");
+  assert.equal(bucketSpan(TIMELINE), "1 h 58 min");
+  assert.equal(bucketSpan({ bucketMinutes: 120 }), "2 horas");
+  assert.equal(bucketSpan({ bucketMinutes: 60 }), "1 hora");
 });

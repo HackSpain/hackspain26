@@ -211,6 +211,20 @@ const REAL_TIME = new Intl.DateTimeFormat("es-ES", {
   weekday: "short",
 });
 
+/** "30 minutos", "2 horas", "1 h 58 min": how long one bucket lasts. */
+export function bucketSpan(timeline?: Timeline): string {
+  const minutes = Math.round(timeline?.bucketMinutes ?? 30);
+  if (minutes < 60) {
+    return `${minutes} minutos`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (rest === 0) {
+    return hours === 1 ? "1 hora" : `${hours} horas`;
+  }
+  return `${hours} h ${rest} min`;
+}
+
 /** Minutes since the start as a clock time: "sáb 10:30" on a real timeline. */
 export function minuteLabel(minutes: number, timeline?: Timeline): string {
   if (timeline?.startsAt === undefined) {
