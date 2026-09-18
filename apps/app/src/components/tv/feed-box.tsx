@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { ImageIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import type { TvFeedMode, TvFeedSource } from "@/lib/tv";
@@ -52,7 +52,7 @@ function timeAgo(at: number, now: number): string {
   });
 }
 
-type FeedPost = {
+export type FeedPost = {
   _id: string;
   kind: "post" | "github";
   authorName: string;
@@ -60,13 +60,18 @@ type FeedPost = {
   text: string;
   hasImage: boolean;
   createdAt: number;
+  repo?: string;
+  sha?: string;
 };
 
-function FeedHeader({ aside }: { aside?: string }) {
+/** Demo screens hand the feed canned posts instead of the Convex query. */
+export const FeedDemoContext = createContext<FeedPost[] | null>(null);
+
+function FeedHeader({ title = "Feed", aside }: { title?: string; aside?: string }) {
   return (
     <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-hs-ink/15 pb-[0.5cqw]">
       <p className="font-bungee text-[clamp(0.6rem,1.05cqw,1.4rem)] leading-none">
-        Feed
+        {title}
       </p>
       {aside ? (
         <p className="text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown tabular-nums">
@@ -77,7 +82,37 @@ function FeedHeader({ aside }: { aside?: string }) {
   );
 }
 
+function CommitCard({ post, now }: { post: FeedPost; now: number }) {
+  return (
+    <article className="relative border-l-[3px] border-hs-navy bg-hs-sand/40 px-[0.7cqw] py-[0.45cqw] text-hs-ink">
+      <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
+      <p className="flex items-baseline justify-between gap-[0.5cqw] text-[clamp(0.5rem,0.7cqw,0.95rem)] text-hs-brown">
+        <span className="truncate">
+          <span className="font-bold uppercase text-hs-navy">Commit</span>
+          {" · "}
+          {post.repo || post.teamName || "repo"} · {post.authorName}
+        </span>
+        <span className="shrink-0">{timeAgo(post.createdAt, now)}</span>
+      </p>
+      <p className="mt-[0.15cqw] truncate text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold">
+        {post.text}
+      </p>
+      {post.sha ? (
+        <p
+          data-sha={post.sha}
+          className="font-mono text-[clamp(0.5rem,0.65cqw,0.9rem)] tabular-nums text-hs-navy"
+        >
+          {post.sha}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
 function FeedCard({ post, now }: { post: FeedPost; now: number }) {
+  if (post.kind === "github") {
+    return <CommitCard post={post} now={now} />;
+  }
   return (
     <article className="relative border-l-[3px] border-hs-ink/15 bg-hs-sand/40 px-[0.7cqw] py-[0.5cqw] text-hs-ink">
       <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
@@ -103,18 +138,41 @@ function FeedCard({ post, now }: { post: FeedPost; now: number }) {
   );
 }
 
-function FeedStream({ posts, now }: { posts: FeedPost[]; now: number }) {
+function FeedStream({
+  posts,
+  now,
+  source,
+}: {
+  posts: FeedPost[];
+  now: number;
+  source: TvFeedSource;
+}) {
   const listRef = useRef<HTMLOListElement>(null);
-  const shown = posts.slice(0, 6);
+  const shown = posts.slice(0, source === "all" ? 8 : 6);
   const ids = useMemo(() => shown.map((post) => post._id), [shown]);
   const onEnter = useCallback((rows: HTMLElement[]) => {
     flashGold(rows, 1.8);
+    for (const row of rows) {
+      const sha = row.querySelector<HTMLElement>("[data-sha]");
+      if (!sha?.dataset.sha) {continue;}
+      gsap.to(sha, {
+        duration: 0.9,
+        scrambleText: { text: sha.dataset.sha, chars: "0123456789abcdef", speed: 0.5 },
+      });
+    }
   }, []);
   useStreamShift(listRef, ids, onEnter);
+  const commits = posts.filter((post) => post.kind === "github").length;
+  const aside =
+    source === "all"
+      ? `${posts.length - commits} posts · ${commits} commits`
+      : source === "github"
+        ? `${posts.length} commits`
+        : `${posts.length} publicaciones`;
 
   return (
     <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
-      <FeedHeader aside={`${posts.length} publicaciones`} />
+      <FeedHeader title={source === "all" ? "Feed · Commits" : "Feed"} aside={aside} />
       <ol
         ref={listRef}
         className="mt-[0.6cqw] min-h-0 flex-1 space-y-[0.4cqw] overflow-hidden"
@@ -306,7 +364,13 @@ export function FeedBox({
   mode?: TvFeedMode;
   source?: TvFeedSource;
 }) {
-  const posts = useQuery(api.tv.listFeed, { source });
+  const demo = useContext(FeedDemoContext);
+  const remote = useQuery(api.tv.listFeed, demo ? "skip" : { source });
+  const posts = demo
+    ? demo.filter((post) =>
+        source === "all" ? true : post.kind === (source === "github" ? "github" : "post"),
+      )
+    : remote;
   const now = useNow(30_000);
   const rotateTick = useTick(ROTATE_MS);
 
@@ -326,7 +390,7 @@ export function FeedBox({
     return <FeedSpotlight posts={posts} index={rotateTick} now={now} />;
   }
 
-  return <FeedStream posts={posts} now={now} />;
+  return <FeedStream posts={posts} now={now} source={source} />;
 }
 
 const MODES: { id: TvFeedMode; label: string }[] = [

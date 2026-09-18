@@ -140,6 +140,7 @@ const KIND_DEFAULTS: Record<
   liveCommits: { x: 6, y: 16, w: 40, h: 72, text: "" },
   liveAgents: { x: 50, y: 16, w: 44, h: 28, text: "" },
   liveTokens: { x: 50, y: 48, w: 44, h: 28, text: "" },
+  liveModels: { x: 6, y: 48, w: 40, h: 40, text: "" },
   liveLeaderboard: { x: 8, y: 16, w: 50, h: 68, text: "" },
   feed: { x: 52, y: 16, w: 42, h: 72, text: "" },
   sponsorGrid: { x: 8, y: 28, w: 84, h: 40, text: "" },
@@ -229,6 +230,8 @@ const tvFeedPostReturn = v.object({
   text: v.string(),
   hasImage: v.boolean(),
   createdAt: v.number(),
+  repo: v.optional(v.string()),
+  sha: v.optional(v.string()),
 });
 
 async function toTvFeedPost(ctx: QueryCtx, post: Doc<"posts">) {
@@ -247,6 +250,12 @@ async function toTvFeedPost(ctx: QueryCtx, post: Doc<"posts">) {
     text: post.text,
     hasImage: Boolean(post.imageId),
     createdAt: post.createdAt,
+    ...(post.kind === "github"
+      ? {
+          repo: post.github?.repo ?? "",
+          sha: (post.externalId ?? post._id).slice(-7),
+        }
+      : {}),
   };
 }
 

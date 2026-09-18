@@ -21,6 +21,7 @@ import {
   LiveAgentsBox,
   LiveCommitsBox,
   LiveLeaderboardBox,
+  LiveModelsBox,
   LiveTokensBox,
 } from "./live-boxes";
 import { SponsorGridBox, SponsorTickerBox } from "./sponsor-boxes";
@@ -168,16 +169,23 @@ function EventClock() {
       timeZone: "Europe/Madrid",
     }) ?? "--:--";
 
+  const countdown =
+    left === null
+      ? "--:--:--"
+      : `${padClock(Math.floor(left / 3600))}:${padClock(Math.floor(left / 60) % 60)}:${padClock(left % 60)}`;
+
   return (
-    <div className="grid h-full grid-cols-2">
+    <div className="grid h-full grid-cols-[minmax(0,0.9fr)_minmax(0,1.5fr)_minmax(0,1.1fr)] gap-[0.3cqw] bg-hs-ink">
+      <p className="flex items-center justify-center gap-[0.5cqw] bg-hs-red px-[0.6cqw] font-bungee text-[clamp(0.7rem,1.3cqw,1.8rem)] uppercase text-hs-paper">
+        <span className="tv-pulse size-[0.7cqw] shrink-0 rounded-full bg-hs-paper" aria-hidden />
+        En directo
+      </p>
       <div className="flex flex-col items-center justify-center bg-hs-gold px-[0.6cqw] leading-none text-hs-ink">
         <span className="text-[clamp(0.5rem,0.7cqw,0.95rem)] font-bold tracking-[0.12em] uppercase">
           {label}
         </span>
         <span className="mt-[0.35cqw] font-bungee text-[clamp(1.1rem,2.4cqw,3.2rem)] tabular-nums">
-          {left === null
-            ? "--:--:--"
-            : `${padClock(Math.floor(left / 3600))}:${padClock(Math.floor(left / 60) % 60)}:${padClock(left % 60)}`}
+          {countdown}
         </span>
       </div>
       <div className="flex flex-col items-center justify-center bg-hs-teal px-[0.6cqw] leading-none text-hs-paper">
@@ -309,6 +317,8 @@ export function TvWidgetView({
       return <LiveAgentsBox />;
     case "liveTokens":
       return <LiveTokensBox />;
+    case "liveModels":
+      return <LiveModelsBox />;
     case "liveLeaderboard":
       return <LiveLeaderboardBox />;
     case "feed":
@@ -325,6 +335,7 @@ export function TvWidgetView({
           sponsors={widget.sponsors ?? []}
           speed={widget.tickerSpeed}
           editor={editor}
+          logosOnly={widget.text === "logos"}
         />
       );
   }

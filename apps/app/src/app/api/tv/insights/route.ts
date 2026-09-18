@@ -5,7 +5,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { NextResponse } from "next/server";
 import { reportServerEvent } from "@/lib/server-observability";
 import { fetchUsage } from "./usage";
-import type { UsageRow } from "./usage";
+import type { ModelRow, UsageRow } from "./usage";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,8 @@ export type TvInsights = {
   buckets: number;
   teams: { id: string; name: string; project: string; members: number }[];
   samples: UsageRow[];
+  /** Tokens per normalised model name over the window; empty unless `usage` is "ok". */
+  models: ModelRow[];
   activity: {
     teamId: string;
     bucket: number;
@@ -55,7 +57,7 @@ async function load(): Promise<TvInsights> {
     window: base.window,
   };
   if (startsAt === undefined || endsAt === undefined || endsAt <= startsAt) {
-    return { ...shared, samples: [], usage: "unscheduled" };
+    return { ...shared, models: [], samples: [], usage: "unscheduled" };
   }
   try {
     const usage = await fetchUsage({
@@ -63,7 +65,7 @@ async function load(): Promise<TvInsights> {
       endsAt,
       startsAt,
     });
-    return { ...shared, samples: usage.rows, usage: usage.status };
+    return { ...shared, models: usage.models, samples: usage.rows, usage: usage.status };
   } catch (error) {
     await reportServerEvent("error", "RawTree TV insights query failed", {
       kind: error instanceof Error ? error.name : "unknown",
@@ -73,7 +75,7 @@ async function load(): Promise<TvInsights> {
         : {}),
     });
     // The rest of the TV keeps working; usage boxes fall back to "Sin datos".
-    return { ...shared, samples: [], usage: "unavailable" };
+    return { ...shared, models: [], samples: [], usage: "unavailable" };
   }
 }
 

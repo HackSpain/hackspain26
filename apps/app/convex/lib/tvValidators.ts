@@ -15,6 +15,7 @@ export const tvWidgetKindValidator = v.union(
   v.literal("liveCommits"),
   v.literal("liveAgents"),
   v.literal("liveTokens"),
+  v.literal("liveModels"),
   v.literal("liveLeaderboard"),
   v.literal("feed"),
   v.literal("sponsorGrid"),

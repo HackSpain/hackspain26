@@ -173,6 +173,12 @@ const DEMO_HARNESSES: [HarnessId, number][] = [
   ["gemini-cli", 0.07], ["copilot", 0.04], ["cline", 0.03],
 ];
 const DEMO_BUCKET = 15;
+const DEMO_MODELS: [name: string, family: string, provider: string, share: number][] = [
+  ["claude-sonnet-4-5", "claude", "anthropic", 0.31], ["gpt-5-codex", "gpt", "openai", 0.22],
+  ["claude-opus-4-1", "claude", "anthropic", 0.14], ["gemini-2-5-pro", "gemini", "google", 0.11],
+  ["gpt-5", "gpt", "openai", 0.08], ["qwen3-coder", "qwen", "alibaba", 0.05],
+  ["kimi-k2", "other", "moonshot", 0.04], ["gemini-2-5-flash", "gemini", "google", 0.03],
+];
 
 /**
  * Invented teams and numbers for `/tv?view=panel&demo=1`, never mixed with real
@@ -207,8 +213,18 @@ export function demoInsights(step: number, now: number): LiveInsightData {
   }
   const bucketMs = 2 * 3_600_000;
   const startsAt = now - (DEMO_BUCKET + 0.6) * bucketMs;
+  const total = samples.reduce((sum, sample) => sum + sample.tokens, 0);
+  // Shares drift with `step` so the ranking visibly trades places.
+  const models = DEMO_MODELS.map(([name, family, provider, share], index) => {
+    const wobble = 1 + 0.18 * Math.sin((step + index * 5) / 3);
+    return {
+      family, name, provider,
+      requests: Math.round(total * share * wobble / 38_000),
+      tokens: Math.round(total * share * wobble),
+    };
+  }).toSorted((a, b) => b.tokens - a.tokens);
   return {
-    bucketMinutes: bucketMs / 60_000, endsAt: startsAt + MARKET_BUCKETS * bucketMs, samples,
+    bucketMinutes: bucketMs / 60_000, endsAt: startsAt + MARKET_BUCKETS * bucketMs, models, samples,
     stacks: {
       auto: 14, total: DEMO_TEAMS.length,
       rows: [

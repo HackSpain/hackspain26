@@ -19,7 +19,7 @@ import {
   NO_TEAM_ID,
   useLiveInsights,
 } from "@/app/insights/use-live-insights";
-import { useBarWidth, useCountUp } from "./gsap";
+import { useBarScale, useCountUp } from "./gsap";
 
 /**
  * Everything on these boxes is real: AI usage from RawTree, teams and GitHub
@@ -184,7 +184,7 @@ function ShareRow({
   color: string;
   thick?: boolean;
 }) {
-  const bar = useBarWidth(ratio);
+  const bar = useBarScale(ratio);
   return (
     <div className="space-y-[0.25cqw]">
       <div className="flex items-center justify-between text-[0.85cqw]">
@@ -194,7 +194,7 @@ function ShareRow({
       <div className={cn("bg-hs-ink/5", thick ? "h-[0.3cqw]" : "h-[0.25cqw]")}>
         <div
           ref={bar}
-          className="h-full w-0"
+          className="h-full w-full origin-left scale-x-0"
           style={{ backgroundColor: color }}
         />
       </div>

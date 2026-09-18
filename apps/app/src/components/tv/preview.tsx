@@ -315,6 +315,22 @@ export const TvWidgetPreview = memo(function TvWidgetPreview({
         </Frame>
       );
     }
+    case "liveModels": {
+      return (
+        <Frame title="Modelos">
+          <div className="space-y-2">
+            {["claude-sonnet-4-5", "gpt-5-codex", "gemini-2-5-pro"].map((name, index) => (
+              <div key={name}>
+                <p className="font-mono text-xs">{name}</p>
+                <span className="mt-1 block h-1.5 bg-hs-ink/10">
+                  <span className="block h-full bg-hs-ink/50" style={{ width: `${90 - index * 28}%` }} />
+                </span>
+              </div>
+            ))}
+          </div>
+        </Frame>
+      );
+    }
     case "liveTokens": {
       return (
         <div className="flex h-full flex-col justify-between bg-hs-gold p-3 text-hs-ink">
