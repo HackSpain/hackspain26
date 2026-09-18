@@ -4,6 +4,7 @@ import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import { getEventWindow } from "./lib/eventWindow";
+import { GITHUB_FEED_EVENTS } from "./lib/github";
 import { histogramReturn, stackHistogram } from "./stack";
 import { messageReturn, widgetReturn } from "./tv";
 import { SCREEN_OFFLINE_MS, screenConfig, screenConfigValidator, screenKey, screenPresetValidator } from "./lib/tvScreens";
@@ -175,6 +176,18 @@ export const removeScreen = adminMutation({
 /** The TV charts split the hackathon into this many equal buckets. */
 export const INSIGHT_BUCKETS = 24;
 
+export function githubActivityKind(
+  event: string
+): typeof GITHUB_FEED_EVENTS.push | typeof GITHUB_FEED_EVENTS.pullRequest | null {
+  if (event === GITHUB_FEED_EVENTS.push) {
+    return GITHUB_FEED_EVENTS.push;
+  }
+  if (event === GITHUB_FEED_EVENTS.pullRequest) {
+    return GITHUB_FEED_EVENTS.pullRequest;
+  }
+  return null;
+}
+
 /**
  * What the TV's insight boxes need from Convex, next to the AI usage that
  * /api/tv/insights reads from RawTree: the hackathon window, the teams as
@@ -225,9 +238,8 @@ export const insightsBase = query({
         if (post.kind !== "github" || !post.teamId || !post.github) {
           continue;
         }
-        const push = post.github.event === "PushEvent";
-        const pullRequest = post.github.event === "PullRequestEvent";
-        if (!(push || pullRequest)) {
+        const event = githubActivityKind(post.github.event);
+        if (!event) {
           continue;
         }
         const bucket = Math.floor((post.createdAt - startsAt) / bucketMs);
@@ -238,8 +250,8 @@ export const insightsBase = query({
           pushes: 0,
           teamId: post.teamId,
         };
-        row.pushes += push ? 1 : 0;
-        row.pullRequests += pullRequest ? 1 : 0;
+        row.pushes += event === GITHUB_FEED_EVENTS.push ? 1 : 0;
+        row.pullRequests += event === GITHUB_FEED_EVENTS.pullRequest ? 1 : 0;
         activity.set(key, row);
       }
     }

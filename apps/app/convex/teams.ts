@@ -682,6 +682,7 @@ async function writeTeamRepos(
     JSON.stringify(teamRepoList(team)) !== JSON.stringify(urls);
   await ctx.db.patch(team._id, {
     githubEtag: changed ? undefined : team.githubEtag,
+    githubEtags: changed ? undefined : team.githubEtags,
     repoUrl: primary,
     repoUrls: urls,
     updatedAt: Date.now(),
@@ -704,6 +705,7 @@ export const setRepoUrl = onboardedMutation({
     if (args.url === null || args.url.trim() === "") {
       await ctx.db.patch(team._id, {
         githubEtag: undefined,
+        githubEtags: undefined,
         repoUrl: undefined,
         repoUrls: undefined,
         updatedAt: Date.now(),
@@ -737,6 +739,7 @@ export const setRepoUrls = onboardedMutation({
     if (urls.length === 0) {
       await ctx.db.patch(team._id, {
         githubEtag: undefined,
+        githubEtags: undefined,
         repoUrl: undefined,
         repoUrls: undefined,
         updatedAt: Date.now(),
@@ -746,6 +749,35 @@ export const setRepoUrls = onboardedMutation({
     return await writeTeamRepos(ctx, team, urls);
   },
   returns: v.array(v.string()),
+});
+
+/**
+ * A watcher saw this sanitized GitHub origin in an agent session. Observed
+ * repos never override the project/team configuration; the feed only uses
+ * them as a fallback while no official repo has been declared.
+ */
+export const observeRepo = onboardedMutation({
+  args: { repo: v.string() },
+  handler: async (ctx, args) => {
+    const team = await requireMemberTeam(ctx);
+    const url = canonicalRepoUrl(args.repo);
+    if (!url) {
+      fail("VALIDATION", "Repositorio de GitHub no válido");
+    }
+    const observed = [
+      ...(team.observedRepoUrls ?? []).filter(
+        (existing) => canonicalRepoUrl(existing) !== url
+      ),
+      url,
+    ].slice(-MAX_REPOS);
+    if (
+      JSON.stringify(observed) !== JSON.stringify(team.observedRepoUrls ?? [])
+    ) {
+      await ctx.db.patch(team._id, { observedRepoUrls: observed });
+    }
+    return url;
+  },
+  returns: v.string(),
 });
 
 export const setTechStack = onboardedMutation({

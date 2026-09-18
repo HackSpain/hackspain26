@@ -44,6 +44,7 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "teams:create": mutation(api.teams.create),
   "teams:join": mutation(api.teams.join),
   "teams:leave": mutation(api.teams.leave),
+  "teams:observeRepo": mutation(api.teams.observeRepo),
   "teams:regenerateCode": mutation(api.teams.regenerateCode),
   "teams:setRepoUrl": mutation(api.teams.setRepoUrl),
   "teams:setRepoUrls": mutation(api.teams.setRepoUrls),
