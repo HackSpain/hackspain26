@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
@@ -15,7 +14,7 @@ import {
   Page,
   errorMessage,
 } from "@/components/page";
-import { TrackBrief } from "@/components/markdown";
+import { TrackBrief, TrackBriefLink } from "@/components/markdown";
 import { TrackLogo, TrackTag } from "@/components/track-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -235,7 +234,7 @@ function TrackEditor({
         <Field
           label="Enunciado"
           htmlFor="track-markdown"
-          hint="Markdown del reto. Se publica en la ficha que ven los equipos."
+          hint="Markdown del reto, o una URL https:// que se abre en otra pestaña."
         >
           <Textarea
             id="track-markdown"
@@ -310,7 +309,9 @@ function TrackEditor({
           </Button>
           {track.active ? (
             <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href={`/tracks/${track.slug}`}>Ver ficha</Link>
+              <TrackBriefLink track={{ slug: track.slug, markdown }}>
+                Ver ficha
+              </TrackBriefLink>
             </Button>
           ) : null}
         </div>
