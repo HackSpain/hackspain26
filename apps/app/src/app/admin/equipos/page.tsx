@@ -13,6 +13,7 @@ import {
   errorMessage,
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -21,20 +22,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type Directory = FunctionReturnType<typeof api.teams.adminDirectory>;
 type TeamRow = Directory["teams"][number];
 type TrackRow = Directory["tracks"][number];
 
 const NONE = "none";
+const ALL = "all";
 
 function occupancy(count: number, limit: number) {
   return `${count}/${limit}`;
 }
 
-function matchesEmail(team: TeamRow, query: string) {
+function matchesSearch(team: TeamRow, query: string) {
   if (!query) {
+    return true;
+  }
+  if (team.name.toLowerCase().includes(query)) {
     return true;
   }
   return team.emails.some((email) => email.toLowerCase().includes(query));
@@ -44,22 +56,40 @@ export default function AdminTeamsPage() {
   const data = useQuery(api.teams.adminDirectory);
   const setTrack = useMutation(api.teams.adminSetTrack);
   const [search, setSearch] = useState("");
+  const [trackFilter, setTrackFilter] = useState<string>(ALL);
   const [savingId, setSavingId] = useState<Id<"teams"> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const query = search.trim().toLowerCase();
-  const teams = useMemo(
-    () => (data?.teams ?? []).filter((team) => matchesEmail(team, query)),
-    [data?.teams, query]
-  );
+  const teams = useMemo(() => {
+    const rows = data?.teams ?? [];
+    return rows.filter((team) => {
+      if (!matchesSearch(team, query)) {
+        return false;
+      }
+      if (trackFilter === ALL) {
+        return true;
+      }
+      if (trackFilter === NONE) {
+        return !team.trackId;
+      }
+      return team.trackId === trackFilter;
+    });
+  }, [data?.teams, query, trackFilter]);
 
   if (data === undefined) {
     return <LoadingText />;
   }
 
-  const countById = new Map(data.tracks.map((track) => [track._id, track.teamCount]));
+  const countById = new Map(
+    data.tracks.map((track) => [track._id, track.teamCount])
+  );
+  const untracked = data.teams.filter((team) => !team.trackId).length;
 
-  const save = async (teamId: Id<"teams">, trackId: Id<"tracks"> | undefined) => {
+  const save = async (
+    teamId: Id<"teams">,
+    trackId: Id<"tracks"> | undefined
+  ) => {
     setSavingId(teamId);
     setError(null);
     try {
@@ -74,41 +104,77 @@ export default function AdminTeamsPage() {
   return (
     <Page
       title="Equipos"
-      description="Busca por email de un participante y asígnale el track. El tope de 15 no aplica aquí."
+      description="Todos los equipos. Asigna un track o quítalos. El tope de 15 no aplica aquí."
+      className="flex h-[calc(100dvh-11rem)] flex-col gap-4 space-y-0 sm:h-[calc(100dvh-12rem)]"
     >
-      <Input
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Email de un participante"
-        aria-label="Buscar por email"
-        className="max-w-md"
-      />
+      <div className="grid shrink-0 gap-3 sm:grid-cols-[minmax(0,1fr)_16rem]">
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Equipo o email"
+          aria-label="Buscar equipo o email"
+        />
+        <Select value={trackFilter} onValueChange={setTrackFilter}>
+          <SelectTrigger aria-label="Filtrar por track">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>
+              Todos · {data.teams.length}
+            </SelectItem>
+            <SelectItem value={NONE}>Sin track · {untracked}</SelectItem>
+            {data.tracks.map((track) => (
+              <SelectItem key={track._id} value={track._id}>
+                <span>{track.label}</span>
+                <span className="text-xs text-hs-brown tabular-nums">
+                  · {occupancy(track.teamCount, data.teamLimit)}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <p className="shrink-0 text-sm text-hs-brown tabular-nums" aria-live="polite">
+        {teams.length === 1 ? "1 equipo" : `${teams.length} equipos`}
+      </p>
       <FormError message={error} />
       {teams.length === 0 ? (
-        <EmptyState title={query ? "Ningún equipo con ese email" : "Aún no hay equipos"} />
+        <EmptyState title="Ningún equipo coincide">
+          Prueba otra búsqueda o quita el filtro de track.
+        </EmptyState>
       ) : (
-        <ul
-          aria-label="Equipos"
-          className="divide-y-2 divide-hs-ink/15 border-[3px] border-hs-ink bg-hs-paper"
+        <Table
+          className="border-separate border-spacing-0"
+          containerClassName="min-h-0 flex-1 overflow-auto overscroll-contain"
         >
-          {teams.map((team) => (
-            <TeamItem
-              key={team._id}
-              countById={countById}
-              disabled={savingId === team._id}
-              team={team}
-              teamLimit={data.teamLimit}
-              tracks={data.tracks}
-              onChange={(trackId) => void save(team._id, trackId)}
-            />
-          ))}
-        </ul>
+          <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+            <TableRow>
+              <TableHead>Equipo</TableHead>
+              <TableHead>Participantes</TableHead>
+              <TableHead>Track</TableHead>
+              <TableHead>Asignar</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {teams.map((team) => (
+              <TeamRowView
+                key={team._id}
+                countById={countById}
+                disabled={savingId === team._id}
+                team={team}
+                teamLimit={data.teamLimit}
+                tracks={data.tracks}
+                onChange={(trackId) => void save(team._id, trackId)}
+              />
+            ))}
+          </TableBody>
+        </Table>
       )}
     </Page>
   );
 }
 
-function TeamItem({
+function TeamRowView({
   countById,
   disabled,
   onChange,
@@ -125,53 +191,71 @@ function TeamItem({
 }) {
   const count = team.trackId ? (countById.get(team.trackId) ?? 0) : 0;
   const over = Boolean(team.trackId) && count > teamLimit;
+  const emails =
+    team.emails.length > 0
+      ? team.emails.join(", ")
+      : team.members.map((member) => member.name).join(", ") || "—";
   return (
-    <li
-      className={cn(
-        "grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)] md:items-center",
-        "transition-[background-color] duration-150 ease-[var(--ease-out)] hover:bg-hs-sand/50",
-        disabled && "opacity-60"
-      )}
+    <TableRow
+      className="[&_td]:border-b [&_td]:border-hs-ink/20"
+      data-disabled={disabled || undefined}
     >
-      <div className="min-w-0 space-y-1.5">
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bungee text-sm leading-tight">
-          <span className="min-w-0 break-words">{team.name}</span>
-          {team.trackLabel ? (
-            <Badge variant={over ? "gold" : "default"} className="tabular-nums">
-              {team.trackLabel} · {occupancy(count, teamLimit)}
-            </Badge>
-          ) : (
-            <Badge>Sin track</Badge>
-          )}
-        </p>
-        <p className="text-pretty text-xs text-hs-ink/70">
-          {team.members
-            .map((member) => member.email ?? member.name)
-            .join(" · ") || "Sin miembros"}
-        </p>
-      </div>
-      <Select
-        value={team.trackId ?? NONE}
-        disabled={disabled}
-        onValueChange={(value) =>
-          onChange(value === NONE ? undefined : (value as Id<"tracks">))
-        }
-      >
-        <SelectTrigger aria-label={`Track de ${team.name}`} className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE}>Sin track</SelectItem>
-          {tracks.map((track) => (
-            <SelectItem key={track._id} value={track._id}>
-              <span>{track.label}</span>
-              <span className="text-xs text-hs-brown tabular-nums">
-                · {occupancy(track.teamCount, teamLimit)}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </li>
+      <TableCell className="font-medium whitespace-normal">
+        {team.name}
+      </TableCell>
+      <TableCell className="max-w-sm whitespace-normal text-hs-ink/80">
+        {emails}
+      </TableCell>
+      <TableCell>
+        {team.trackLabel ? (
+          <Badge variant={over ? "gold" : "default"} className="tabular-nums">
+            {team.trackLabel} · {occupancy(count, teamLimit)}
+          </Badge>
+        ) : (
+          <Badge>Sin track</Badge>
+        )}
+      </TableCell>
+      <TableCell>
+        <div className="flex min-w-56 items-center gap-2">
+          <Select
+            value={team.trackId ?? NONE}
+            disabled={disabled}
+            onValueChange={(value) =>
+              onChange(value === NONE ? undefined : (value as Id<"tracks">))
+            }
+          >
+            <SelectTrigger
+              aria-label={`Track de ${team.name}`}
+              className="min-w-44"
+              size="sm"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>Sin track</SelectItem>
+              {tracks.map((track) => (
+                <SelectItem key={track._id} value={track._id}>
+                  <span>{track.label}</span>
+                  <span className="text-xs text-hs-brown tabular-nums">
+                    · {occupancy(track.teamCount, teamLimit)}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {team.trackId ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              onClick={() => onChange(undefined)}
+            >
+              Quitar
+            </Button>
+          ) : null}
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
