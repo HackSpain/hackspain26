@@ -1,5 +1,5 @@
-import { CheckInStation } from "@/components/check-in-station";
+import { notFound } from "next/navigation";
 
 export default function StaffCheckInPage() {
-  return <CheckInStation />;
+  notFound();
 }
