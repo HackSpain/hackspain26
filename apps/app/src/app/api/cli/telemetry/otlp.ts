@@ -72,7 +72,8 @@ export function toOtlpLogRecord(event: TelemetryEvent): OtlpLogRecord {
     attributes: attributes([
       ["event.id", event.eventId],
       ["gen_ai.conversation.id", event.sessionId],
-      ["gen_ai.request.model", model?.raw],
+      ["gen_ai.request.model", model?.name],
+      ["hackspain.model.raw", model?.raw],
       ["gen_ai.provider.name", model?.provider],
       ["gen_ai.usage.input_tokens", tokens?.input],
       ["gen_ai.usage.output_tokens", tokens?.output],
@@ -83,13 +84,14 @@ export function toOtlpLogRecord(event: TelemetryEvent): OtlpLogRecord {
       ["hackspain.usage.cache_read_tokens", tokens?.cacheRead],
       ["hackspain.usage.cache_write_tokens", tokens?.cacheWrite],
       ["hackspain.usage.reasoning_tokens", tokens?.reasoning],
-      ["hackspain.cost_usd", event.costUsd, "double"],
+      ["hackspain.usage.total_tokens", tokens?.total],
+      ["hackspain.native.cost_usd", event.native?.costUsd, "double"],
       ["hackspain.user.id", event.identity.userId],
       ["hackspain.team.id", event.identity.teamId],
       ["hackspain.project.dir_hash", project?.dirHash],
       ["hackspain.project.name", project?.name],
       ["hackspain.project.git_branch", project?.gitBranch],
-      ["hackspain.request.id", requestId(event)],
+      ["hackspain.native.request_id", event.native?.requestId],
     ]),
     body: { stringValue: event.type },
     eventName: `hackspain.${event.type}`,
@@ -98,11 +100,6 @@ export function toOtlpLogRecord(event: TelemetryEvent): OtlpLogRecord {
     severityText: "INFO",
     timeUnixNano: unixNano(event.occurredAt),
   };
-}
-
-function requestId(event: TelemetryEvent): string | undefined {
-  const value = event.native?.requestId;
-  return typeof value === "string" ? value : undefined;
 }
 
 /** Grouped by CLI version, the one resource-level fact a batch can differ on. */

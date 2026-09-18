@@ -8,6 +8,7 @@ import {
 import { join } from "node:path";
 import { ensureDir, stateDir } from "../../lib/config";
 import type { TelemetryEvent } from "../schema";
+import { upgradeEvent } from "../schema";
 
 export type Sink = {
   name: string;
@@ -90,7 +91,7 @@ export function* readSpool(dir = spoolDir()): Iterable<TelemetryEvent> {
         continue;
       }
       try {
-        yield JSON.parse(line) as TelemetryEvent;
+        yield upgradeEvent(JSON.parse(line));
       } catch {
         // A torn last line from a crash; skip it.
       }

@@ -1,7 +1,16 @@
-# Telemetry schema `hackspain.telemetry.v1`
+# Telemetry schema `hackspain.telemetry.v2`
 
 What `hackspain watch` records and sends, regardless of which AI coding harness produced it.
 Source of truth for the TypeScript type and validator: `apps/cli/src/watcher/schema.ts`.
+
+**One schema, one meaning per field.** Every field below means the same for every harness, and
+every derived field (`model.name`, `model.family`, `model.provider`, `tokens.total`) comes from a
+single pure module, `apps/app/src/app/api/cli/telemetry/canonical.ts`. The CLI runs it when it
+stamps an event (`canonicalize`); the dashboard runs it again on ingestion and never trusts the
+client's values. So stored rows are homogeneous across harnesses and across CLI versions: a
+`hackspain.telemetry.v1` event from a binary up to 0.4.x is still accepted and is stored as the
+same v2 row. What only some harnesses can report lives under `native`, which is explicitly not
+comparable.
 
 The watcher writes every event to a local spool
 (`~/.local/state/hackspain/telemetry/YYYY-MM-DD.ndjson`, one JSON object per line) and, when a URL
@@ -26,7 +35,7 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `schema` | `"hackspain.telemetry.v1"` | Bump for breaking changes |
+| `schema` | `"hackspain.telemetry.v2"` | Bump for breaking changes. v1 is accepted on ingestion and upgraded |
 | `type` | `usage` \| `session.start` \| `session.end` | `session.end` is reserved; no harness emits it yet |
 | `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key for queries and downstream processing |
 | `occurredAt` | ISO-8601 UTC | When the harness recorded it. The hackathon window and every time bucket use this one, so usage read days later still lands when it happened |
@@ -34,15 +43,13 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 | `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
 | `harnessVersion` | string? | e.g. Claude Code `2.1.261`, Codex `0.130.0` |
 | `sessionId` | string | Harness session / task id |
-| `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path |
-| `model` | `{ raw, family, provider? }`? | `family` ∈ `claude` \| `gpt` \| `gemini` \| `qwen` \| `other`; the insights mock still shows four buckets and folds `qwen` into `other` |
-| `tokens` | `{ input, output, cacheRead, cacheWrite, reasoning? }`? | Non-negative integers. Required for `usage`. For every harness `input` excludes cache reads and `output` includes `reasoning` (which is a breakdown, never added on top) |
-| `costUsd` | number? | Only when the harness itself reports a price |
+| `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path. `gitBranch` is the harness's own when it logs one (Claude Code, Codex, Qwen Code), else read from the repository's `.git/HEAD`, so every harness reports it; absent outside a repository or on a detached HEAD |
+| `model` | `{ raw, name, family, provider }` | Required for `usage`. `raw` is exactly what the harness logged. `name` is the grouping key: lower case, no gateway path, variant tag, release date or cloud prefix, version dots as dashes, so `anthropic/claude-sonnet-4.5`, `claude-sonnet-4-5-20250929` and `us.anthropic.claude-sonnet-4-5-20250929-v1:0` are all `claude-sonnet-4-5`. `family` ∈ `claude` \| `gpt` \| `gemini` \| `qwen` \| `other`. `provider` is always set: who served the request when the harness says (as a slug, aliases folded), else who makes the model (`anthropic`, `openai`, `google`, `alibaba`, `unknown`) |
+| `tokens` | `{ input, output, cacheRead, cacheWrite, total, reasoning? }`? | Non-negative integers. Required for `usage`. For every harness: `input` excludes cache reads, `output` includes `reasoning`, `total` = `input + output + cacheRead + cacheWrite`. `reasoning` is a breakdown of `output`, absent when the harness does not report it (Cline) |
 | `identity` | `{ userId, teamId?, clientVersion }` | Stamped by the CLI from the logged-in user and their team at flush time |
-| `native` | object? | Allowlisted harness-specific remainder. Currently only Claude `requestId` |
+| `native` | `{ requestId?, costUsd? }`? | What only some harnesses report, so never comparable across them. `requestId`: Claude Code. `costUsd`: the price OpenCode, Kilo Code and Cline compute themselves (top-level `costUsd` in v1). A cost that compares across harnesses has to be computed from `tokens` and `model.name` |
 
-Derived values for the dashboard: `tokens.total = input + output + cacheRead + cacheWrite`,
-`cachedTokens = cacheRead + cacheWrite`, sessions = distinct `sessionId` per harness, 30-minute
+Derived values for the dashboard: `cachedTokens = cacheRead + cacheWrite`, sessions = distinct `sessionId` per harness, 30-minute
 buckets on `occurredAt`.
 
 ## Per-harness mapping
@@ -70,6 +77,17 @@ input 39 + output 74 + reasoning 111 + cache read 31232. `outputWithReasoning` (
 record from the harness's own total: thoughts are added only when the total counts them apart.
 Without a total, Gemini CLI and OpenCode add them and Qwen Code does not (it converts
 OpenAI-style usage, where completion tokens include reasoning).
+
+## Known limits
+
+- `tokens.cacheWrite` is always 0 for Gemini CLI and Qwen Code: their caching is implicit and no
+  write is billed or reported.
+- `harnessVersion` exists only where the harness logs it (Claude Code, Codex, Qwen Code).
+- Cline reports no reasoning count, and its `tokensIn` follows whatever the provider adapter did
+  with cached tokens; there is no total in the record to check it against.
+- Codex, Gemini CLI, Qwen Code and Kilo Code collectors are written from documented formats, not
+  checked against a local install. Claude Code and OpenCode are checked against real logs.
+- `cursor` and `copilot` keep no local usage logs, so they have no collector.
 
 ## Collection window
 
@@ -101,15 +119,14 @@ OTLP endpoint (`POST /otlp/v1/logs`, OTLP/JSON) for its OpenTelemetry explorer
 | --- | --- |
 | `eventId` | `event.id` |
 | `sessionId` | `gen_ai.conversation.id` |
-| `model.raw` / `model.provider` / `model.family` | `gen_ai.request.model` / `gen_ai.provider.name` / `hackspain.model.family` |
+| `model.name` / `model.provider` / `model.family` / `model.raw` | `gen_ai.request.model` / `gen_ai.provider.name` / `hackspain.model.family` / `hackspain.model.raw` |
 | `tokens.input` / `tokens.output` | `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` |
-| `tokens.cacheRead` / `cacheWrite` / `reasoning` | `hackspain.usage.cache_read_tokens` / `cache_write_tokens` / `reasoning_tokens` |
-| `costUsd` | `hackspain.cost_usd` |
+| `tokens.cacheRead` / `cacheWrite` / `reasoning` / `total` | `hackspain.usage.cache_read_tokens` / `cache_write_tokens` / `reasoning_tokens` / `total_tokens` |
+| `native.costUsd` / `native.requestId` | `hackspain.native.cost_usd` / `hackspain.native.request_id` |
 | `harness` / `harnessVersion` | `hackspain.harness` / `hackspain.harness.version` |
 | `identity.userId` / `teamId` | `hackspain.user.id` / `hackspain.team.id` |
 | `identity.clientVersion` | resource `service.version` (`service.name` is `hackspain-cli`) |
 | `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` |
-| `native.requestId` | `hackspain.request.id` |
 
 The copy is best effort and has no insert deduplication, so a retried batch can land twice: the
 canonical table stays the source of truth, and queries on the logs table dedupe on
@@ -128,5 +145,5 @@ canonical table stays the source of truth, and queries on the logs table dedupe 
 ## Example
 
 ```json
-{"schema":"hackspain.telemetry.v1","type":"usage","eventId":"claude-code:eb2f547c:msg_011CekYx","occurredAt":"2026-09-19T10:18:23.076Z","observedAt":"2026-09-19T10:18:30.002Z","harness":"claude-code","harnessVersion":"2.1.261","sessionId":"eb2f547c","project":{"dirHash":"9f2c1a7b3e4d5c6a","name":"agentos","gitBranch":"main"},"model":{"raw":"claude-fable-5-1","family":"claude","provider":"anthropic"},"tokens":{"input":2,"output":344,"cacheRead":26445,"cacheWrite":13687,"reasoning":127},"identity":{"userId":"j57…","teamId":"k97…","clientVersion":"0.1.0"},"native":{"requestId":"req_011…"}}
+{"schema":"hackspain.telemetry.v2","type":"usage","eventId":"claude-code:eb2f547c:msg_011CekYx","occurredAt":"2026-09-19T10:18:23.076Z","observedAt":"2026-09-19T10:18:30.002Z","harness":"claude-code","harnessVersion":"2.1.261","sessionId":"eb2f547c","project":{"dirHash":"9f2c1a7b3e4d5c6a","name":"agentos","gitBranch":"main"},"model":{"raw":"claude-fable-5-1","name":"claude-fable-5-1","family":"claude","provider":"anthropic"},"tokens":{"input":2,"output":344,"cacheRead":26445,"cacheWrite":13687,"reasoning":127,"total":40478},"identity":{"userId":"j57…","teamId":"k97…","clientVersion":"0.5.0"},"native":{"requestId":"req_011…"}}
 ```

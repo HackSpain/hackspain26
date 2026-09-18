@@ -169,7 +169,7 @@ export function recordEvent(state: WatchState, event: TelemetryEvent): void {
     cached,
     harness: event.harness,
     input: event.tokens.input,
-    model: event.model?.raw ?? "unknown",
+    model: event.model?.name ?? "unknown",
     output: event.tokens.output,
     sessionId: event.sessionId,
   };
