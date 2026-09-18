@@ -35,6 +35,35 @@ export default defineSchema({
     expiresAt: v.number(),
   }).index("by_email", ["email"]),
 
+  eventPasses: defineTable({
+    userId: v.optional(v.id("users")),
+    signupId: v.optional(v.id("signups")),
+    code: v.string(),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    codeSentAt: v.optional(v.number()),
+    checkedInAt: v.optional(v.number()),
+    checkedInBy: v.optional(v.id("users")),
+    checkedInVia: v.optional(
+      v.union(v.literal("admin"), v.literal("reception_url"))
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_signup", ["signupId"])
+    .index("by_code", ["code"]),
+
+  eventSettings: defineTable({
+    key: v.string(),
+    phase: v.union(
+      v.literal("pre_event"),
+      v.literal("live"),
+      v.literal("ended")
+    ),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  }).index("by_key", ["key"]),
+
   githubLinkStates: defineTable({
     userId: v.id("users"),
     state: v.string(),
