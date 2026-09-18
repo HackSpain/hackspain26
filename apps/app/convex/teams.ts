@@ -986,50 +986,41 @@ export const adminDirectory = adminQuery({
 
 export const adminSetTrack = adminMutation({
   args: {
-    teamIds: v.array(v.id("teams")),
-    trackId: v.optional(v.id("tracks")),
+    teamId: v.id("teams"),
+    trackId: v.id("tracks"),
   },
   handler: async (ctx, args) => {
-    if (args.trackId) {
-      const track = await ctx.db.get(args.trackId);
-      if (!track) {
-        throw new Error("Reto no encontrado");
-      }
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Equipo no encontrado");
     }
+    const track = await ctx.db.get(args.trackId);
+    if (!track) {
+      throw new Error("Reto no encontrado");
+    }
+    const existing = await ctx.db
+      .query("submissions")
+      .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+      .first();
     const now = Date.now();
-    const seen = new Set<string>();
-    for (const teamId of args.teamIds) {
-      if (seen.has(teamId)) {
-        continue;
-      }
-      seen.add(teamId);
-      const team = await ctx.db.get(teamId);
-      if (!team) {
-        throw new Error("Equipo no encontrado");
-      }
-      const existing = await ctx.db
-        .query("submissions")
-        .withIndex("by_team", (q) => q.eq("teamId", teamId))
-        .first();
-      const challengeIds = args.trackId
-        ? [...new Set([...(existing?.challengeIds ?? []), args.trackId])]
-        : [];
-      if (existing) {
-        await ctx.db.patch(existing._id, { challengeIds, updatedAt: now });
-      } else {
-        await ctx.db.insert("submissions", {
-          challengeIds,
-          createdAt: now,
-          description: "",
-          name: team.name,
-          perkIds: [],
-          status: "draft",
-          submittedBy: team.ownerId,
-          teamId: team._id,
-          updatedAt: now,
-          urls: [],
-        });
-      }
+    const challengeIds = [
+      ...new Set([...(existing?.challengeIds ?? []), args.trackId]),
+    ];
+    if (existing) {
+      await ctx.db.patch(existing._id, { challengeIds, updatedAt: now });
+    } else {
+      await ctx.db.insert("submissions", {
+        challengeIds,
+        createdAt: now,
+        description: "",
+        name: team.name,
+        perkIds: [],
+        status: "draft",
+        submittedBy: team.ownerId,
+        teamId: team._id,
+        updatedAt: now,
+        urls: [],
+      });
     }
     return null;
   },
@@ -1038,32 +1029,27 @@ export const adminSetTrack = adminMutation({
 
 export const adminRemoveTrack = adminMutation({
   args: {
-    teamIds: v.array(v.id("teams")),
+    teamId: v.id("teams"),
     trackId: v.id("tracks"),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
-    const seen = new Set<string>();
-    for (const teamId of args.teamIds) {
-      if (seen.has(teamId)) {
-        continue;
-      }
-      seen.add(teamId);
-      const existing = await ctx.db
-        .query("submissions")
-        .withIndex("by_team", (q) => q.eq("teamId", teamId))
-        .first();
-      if (!existing) {
-        continue;
-      }
-      const challengeIds = existing.challengeIds.filter(
-        (trackId) => trackId !== args.trackId
-      );
-      if (challengeIds.length === existing.challengeIds.length) {
-        continue;
-      }
-      await ctx.db.patch(existing._id, { challengeIds, updatedAt: now });
+    const existing = await ctx.db
+      .query("submissions")
+      .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+      .first();
+    if (!existing) {
+      return null;
     }
+    const challengeIds = existing.challengeIds.filter(
+      (trackId) => trackId !== args.trackId
+    );
+    if (challengeIds.length === existing.challengeIds.length) {
+      return null;
+    }
+    await ctx.db.patch(existing._id, {
+      challengeIds,
+      updatedAt: Date.now(),
+    });
     return null;
   },
   returns: v.null(),
