@@ -5,6 +5,13 @@ import { Resend as ResendAPI } from "resend";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
+import { fail } from "./lib/errors";
+import {
+  OTP_EMAIL_SUBJECT,
+  otpEmailHtml,
+  otpEmailText,
+} from "./lib/otpEmail";
+import { resendApiKey, resendFrom } from "./lib/resend";
 
 function randomDigits(length: number): string {
   const random: RandomReader = {
@@ -44,27 +51,34 @@ async function sendVerificationRequest(
       );
     } else {
       console.log(
-        "[auth] AUTH_RESEND_KEY is not set. The code was logged instead of emailed."
+        "[auth] RESEND_API_KEY is not set. The code was logged instead of emailed."
       );
     }
     return;
   }
 
   const resend = new ResendAPI(provider.apiKey);
-  const from = process.env.AUTH_EMAIL ?? "HackSpain <onboarding@resend.dev>";
   const { error } = await resend.emails.send({
-    from,
-    subject: "Your HackSpain sign-in code",
-    text: `Your HackSpain dashboard code is ${token}. It expires in 15 minutes.`,
+    from: resendFrom(),
+    html: otpEmailHtml(token),
+    subject: OTP_EMAIL_SUBJECT,
+    text: otpEmailText(token),
     to: [email],
   });
   if (error) {
-    throw new Error(JSON.stringify(error));
+    // One line, no stack: the Resend error name is what an operator needs
+    // (invalid key, unverified domain, quota), and the recipient stays out
+    // of the log. The client only gets the coded error.
+    console.warn(`[auth] Resend rejected the code email: ${error.name}: ${error.message}`);
+    fail(
+      "SEND_FAILED",
+      "No hemos podido enviar el código ahora mismo. Inténtalo en un minuto."
+    );
   }
 }
 
 export const ResendOTP = Email({
-  apiKey: process.env.AUTH_RESEND_KEY,
+  apiKey: resendApiKey(),
   generateVerificationToken() {
     return randomDigits(8);
   },

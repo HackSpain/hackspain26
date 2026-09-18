@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
@@ -9,7 +10,9 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { JudgingContext } from "@convex/lib/validators";
 import { ScoreSlider } from "@/components/judging/score-slider";
+import { TrackTag } from "@/components/track-tag";
 import { VideoFrame } from "@/components/judging/video-frame";
+import { Button } from "@/components/ui/button";
 import {
   EmptyState,
   Field,
@@ -231,6 +234,27 @@ function staffLabel(person: { email?: string; name?: string }) {
   return person.name?.trim() || person.email || "Sin nombre";
 }
 
+function emptyQueueTitle(kind: "general" | "track", view: ViewMode): string {
+  if (view === "clasificacion" && kind === "general") {
+    return "Nada enviado";
+  }
+  return kind === "general" ? "Nada en este grupo" : "Nada en este reto";
+}
+
+function findNextPending(
+  rows: QueueItem[] | undefined,
+  currentId: Id<"submissions"> | null,
+): Id<"submissions"> | undefined {
+  if (!rows || !currentId) {
+    return undefined;
+  }
+  const index = rows.findIndex((row) => row._id === currentId);
+  if (index === -1) {
+    return undefined;
+  }
+  return rows.slice(index + 1).find((row) => row.myScore === null)?._id;
+}
+
 export default function JudgingPage() {
   return (
     <Suspense fallback={<JudgingFallback />}>
@@ -242,10 +266,11 @@ export default function JudgingPage() {
 function JudgingFallback() {
   return (
     <Page title="Juzgar" className="space-y-4">
-      <div className="flex flex-wrap gap-3">
-        <Skeleton className="h-11 w-56" />
-        <Skeleton className="h-11 w-80" />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-11 w-72" />
       </div>
+      <Skeleton className="h-2 w-full" />
       <JudgingListSkeleton ranking />
     </Page>
   );
@@ -253,7 +278,7 @@ function JudgingFallback() {
 
 function JudgingPanel() {
   const me = useQuery(api.users.me);
-  const allowed = me?.role === "judge" || me?.role === "admin";
+  const allowed = me?.canJudge === true;
   const meta = useQuery(api.judging.meta, allowed ? {} : "skip");
   const ensureGroups = useMutation(api.judging.ensureGeneralGroups);
   const ensureAssignments = useMutation(api.judging.ensureAssignmentShape);
@@ -447,20 +472,41 @@ function JudgingPanel() {
           ?.label ?? selectedGroup.slug);
   const showGrupoSelect = meta.isAdmin;
 
+  const scoredCount =
+    view === "puntuar"
+      ? (queueRows?.filter((row) => row.myScore !== null).length ?? 0)
+      : 0;
+  const totalCount = view === "puntuar" ? (queueRows?.length ?? 0) : 0;
+  const queueIds = (view === "puntuar" ? queueRows : rankingRows)?.map(
+    (row) => row._id,
+  );
+  const pendingAfter =
+    view === "puntuar" ? findNextPending(queueRows, projectId) : undefined;
+
   return (
     <Page
-      title="Juzgar"
-      description={
-        <span className="font-medium">
-          Los grupos generales no son retos: son colas de jueces. Los equipos no
-          eligen grupo; el proyecto entra en uno al enviarlo y se queda.
-        </span>
+      title={
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="font-bungee text-2xl leading-tight text-balance sm:text-3xl">
+              Juzgar
+            </h1>
+            <p className="mt-1 text-sm font-medium text-pretty text-hs-brown">
+              {groupLabel}
+              {" · "}
+              {contextHint(selectedGroup.kind, view, meta.isAdmin)}
+            </p>
+          </div>
+          <div className="w-full sm:w-auto sm:min-w-[16rem] sm:max-w-80">
+            <ViewToggle value={view} onChange={setVista} />
+          </div>
+        </div>
       }
       className="space-y-4"
     >
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div className="min-w-[12rem] flex-1 basis-56 sm:max-w-64 sm:flex-none">
-          {showGrupoSelect ? (
+        {showGrupoSelect ? (
+          <div className="min-w-[12rem] flex-1 basis-56 sm:max-w-64 sm:flex-none">
             <Field label="Grupo" htmlFor="judging-group">
               <Select value={selectedGroup.value} onValueChange={setGrupo}>
                 <SelectTrigger id="judging-group" aria-label="Grupo de juzgado">
@@ -479,34 +525,17 @@ function JudgingPanel() {
                 </SelectContent>
               </Select>
             </Field>
-          ) : (
-            <Field label="Grupo">
-              <p className="flex h-11 items-center font-medium">{groupLabel}</p>
-            </Field>
-          )}
-        </div>
-        <div className="min-w-[16rem] flex-1 basis-72 sm:max-w-80 sm:flex-none">
-          <Field label="Vista">
-            <ViewToggle value={view} onChange={setVista} />
-          </Field>
-        </div>
+          </div>
+        ) : null}
+        {view === "puntuar" && !loading && totalCount > 0 ? (
+          <ScoreProgress scored={scoredCount} total={totalCount} />
+        ) : null}
       </div>
-      <p className="text-sm font-medium text-pretty text-hs-brown">
-        {contextHint(selectedGroup.kind, view, meta.isAdmin)}
-      </p>
 
       {loading ? (
         <JudgingListSkeleton ranking={view === "clasificacion"} />
       ) : !rows || rows.length === 0 ? (
-        <EmptyState
-          title={
-            view === "clasificacion" && selectedGroup.kind === "general"
-              ? "Nada enviado"
-              : selectedGroup.kind === "general"
-                ? "Nada en este grupo"
-                : "Nada en este reto"
-          }
-        >
+        <EmptyState title={emptyQueueTitle(selectedGroup.kind, view)}>
           {selectedGroup.kind === "general"
             ? "Los equipos no eligen grupo: el proyecto entra aquí al enviarse."
             : "Aún no hay proyectos enviados a este reto."}
@@ -548,7 +577,10 @@ function JudgingPanel() {
         context={context}
         selected={projectId ? (selected ?? undefined) : null}
         fallbackName={selected?.name}
+        queueIds={queueIds}
+        nextPendingId={pendingAfter}
         onClose={closeProject}
+        onOpen={openProject}
         returnFocusRef={triggerRef}
       />
     </Page>
@@ -566,7 +598,7 @@ function ViewToggle({
     <div
       role="tablist"
       aria-label="Vista de juzgado"
-      className="box-border grid h-11 grid-cols-2 border-[3px] border-hs-ink"
+      className="box-border grid h-11 grid-cols-2 border-[3px] border-hs-ink [&>:first-child]:border-r-[3px] [&>:first-child]:border-hs-ink"
     >
       <ViewTab
         id="vista-puntuar"
@@ -582,6 +614,36 @@ function ViewToggle({
       >
         Clasificación
       </ViewTab>
+    </div>
+  );
+}
+
+function ScoreProgress({ scored, total }: { scored: number; total: number }) {
+  const pct = total === 0 ? 0 : Math.round((scored / total) * 100);
+  return (
+    <div className="min-w-[12rem] flex-1 basis-56 sm:max-w-sm">
+      <p className="font-bungee text-xs uppercase text-hs-brown">
+        <span className="tabular-nums text-hs-ink">{scored}</span>
+        {" / "}
+        <span className="tabular-nums">{total}</span>
+        {" puntuados"}
+      </p>
+      <div
+        className="mt-2 h-4 border-[3px] border-hs-ink bg-hs-sand"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={scored}
+        aria-label="Proyectos puntuados"
+      >
+        <div
+          className="h-full bg-hs-gold motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-[var(--ease-out)]"
+          style={{
+            minWidth: scored > 0 ? 8 : 0,
+            width: `${pct}%`,
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -628,11 +690,10 @@ function AdminSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sección admin</CardTitle>
+        <CardTitle>Jueces y grupos</CardTitle>
         <CardDescription>
-          Al enviar, cada proyecto entra en el grupo general con menos proyectos
-          y no se mueve. Bajar el número no reasigna los ya enviados. Cada juez
-          debería estar en un solo grupo.
+          Cada proyecto entra al enviar en el grupo general con menos equipos y
+          no se mueve. Bajar el número no reasigna los ya enviados.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -833,10 +894,31 @@ function QueueLists({
   showAverages: boolean;
   onOpen: (id: Id<"submissions">, from: HTMLElement | null) => void;
 }) {
+  const pending = rows.filter((row) => row.myScore === null);
+  const scored = rows.filter((row) => row.myScore !== null);
   return (
     <div role="tabpanel" aria-labelledby="vista-puntuar">
       <div className="grid gap-3 md:hidden">
-        {rows.map((row) => (
+        {pending.map((row) => (
+          <ProjectCard
+            key={row._id}
+            name={row.name}
+            teamName={row.teamName}
+            average={row.average}
+            scoreCount={row.scoreCount}
+            challenges={row.challenges}
+            myScore={row.myScore}
+            selected={row._id === projectId}
+            showAverages={showAverages}
+            onOpen={(from) => onOpen(row._id, from)}
+          />
+        ))}
+        {scored.length > 0 && pending.length > 0 ? (
+          <p className="pt-1 font-bungee text-xs uppercase text-hs-brown">
+            Puntuados
+          </p>
+        ) : null}
+        {scored.map((row) => (
           <ProjectCard
             key={row._id}
             name={row.name}
@@ -853,7 +935,8 @@ function QueueLists({
       </div>
       <div className="hidden md:block">
         <ProjectTable
-          rows={rows}
+          pending={pending}
+          scored={scored}
           projectId={projectId}
           showAverages={showAverages}
           onOpen={onOpen}
@@ -981,15 +1064,20 @@ function ProjectCard({
         badges={
           <>
             {rank !== undefined ? <RankMark rank={rank} /> : null}
-            {outside ? (
-              <Badge>Otro grupo</Badge>
-            ) : myScore !== null ? (
-              <Badge variant="gold">Ya puntuado</Badge>
-            ) : null}
-            <Badge className="tabular-nums">
-              <span className="inline-block min-w-[3.5ch] text-center">
-                {formatAverage(showAverages ? average : myScore)}
-              </span>
+            {outside ? <Badge>Otro grupo</Badge> : null}
+            <Badge
+              variant={myScore !== null ? "gold" : "default"}
+              className="tabular-nums"
+            >
+              {myScore !== null ? (
+                <span className="inline-block min-w-[2ch] text-center">
+                  {myScore}
+                </span>
+              ) : showAverages ? (
+                formatAverage(average)
+              ) : (
+                "Puntuar"
+              )}
             </Badge>
           </>
         }
@@ -1012,16 +1100,34 @@ function ProjectCard({
 }
 
 function ProjectTable({
-  rows,
+  pending,
+  scored,
   projectId,
   showAverages,
   onOpen,
 }: {
-  rows: QueueItem[];
+  pending: QueueItem[];
+  scored: QueueItem[];
   projectId: Id<"submissions"> | null;
   showAverages: boolean;
   onOpen: (id: Id<"submissions">, from: HTMLElement | null) => void;
 }) {
+  const scoreCols = showAverages ? 2 : 0;
+  const renderRow = (row: QueueItem) => (
+    <ProjectTableRow
+      key={row._id}
+      name={row.name}
+      teamName={row.teamName}
+      challenges={row.challenges}
+      average={row.average}
+      scoreCount={row.scoreCount}
+      myScore={row.myScore}
+      showAverages={showAverages}
+      status={<ScoreMark score={row.myScore} />}
+      selected={row._id === projectId}
+      onOpen={(from) => onOpen(row._id, from)}
+    />
+  );
   return (
     <Table
       className="border-separate border-spacing-0 font-medium"
@@ -1037,34 +1143,23 @@ function ProjectTable({
               <TableHead className="text-right">Media</TableHead>
               <TableHead className="text-right">Notas</TableHead>
             </>
-          ) : (
-            <TableHead className="text-right">Mi nota</TableHead>
-          )}
-          <TableHead>Estado</TableHead>
+          ) : null}
+          <TableHead className="text-right">Nota</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((row) => (
-          <ProjectTableRow
-            key={row._id}
-            name={row.name}
-            teamName={row.teamName}
-            challenges={row.challenges}
-            average={row.average}
-            scoreCount={row.scoreCount}
-            myScore={row.myScore}
-            showAverages={showAverages}
-            status={
-              row.myScore !== null ? (
-                <Badge variant="gold">Ya puntuado</Badge>
-              ) : (
-                <span className="font-medium text-hs-brown">Pendiente</span>
-              )
-            }
-            selected={row._id === projectId}
-            onOpen={(from) => onOpen(row._id, from)}
-          />
-        ))}
+        {pending.map(renderRow)}
+        {scored.length > 0 && pending.length > 0 ? (
+          <TableRow>
+            <TableCell
+              colSpan={4 + scoreCols}
+              className="bg-hs-sand font-bungee text-xs uppercase"
+            >
+              Puntuados
+            </TableCell>
+          </TableRow>
+        ) : null}
+        {scored.map(renderRow)}
       </TableBody>
     </Table>
   );
@@ -1083,7 +1178,23 @@ function RankingTable({
   showAverages: boolean;
   onOpen: (id: Id<"submissions">, from: HTMLElement | null) => void;
 }) {
-  const scoreCols = showAverages ? 2 : 1;
+  const scoreCols = showAverages ? 2 : 0;
+  const renderRow = (row: RankingItem, rank = row.rank) => (
+    <ProjectTableRow
+      key={row._id}
+      rank={showAverages ? rank : undefined}
+      name={row.name}
+      teamName={row.teamName}
+      challenges={row.challenges}
+      average={row.average}
+      scoreCount={row.scoreCount}
+      myScore={row.canScore ? row.myScore : null}
+      showAverages={showAverages}
+      status={<RankingStatus row={row} />}
+      selected={row._id === projectId}
+      onOpen={(from) => onOpen(row._id, from)}
+    />
+  );
   return (
     <Table
       className="border-separate border-spacing-0 font-medium"
@@ -1102,29 +1213,12 @@ function RankingTable({
               <TableHead className="text-right">Media</TableHead>
               <TableHead className="text-right">Notas</TableHead>
             </>
-          ) : (
-            <TableHead className="text-right">Mi nota</TableHead>
-          )}
-          <TableHead>Estado</TableHead>
+          ) : null}
+          <TableHead className="text-right">Nota</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {scored.map((row) => (
-          <ProjectTableRow
-            key={row._id}
-            rank={showAverages ? row.rank : undefined}
-            name={row.name}
-            teamName={row.teamName}
-            challenges={row.challenges}
-            average={row.average}
-            scoreCount={row.scoreCount}
-            myScore={row.canScore ? row.myScore : null}
-            showAverages={showAverages}
-            status={<RankingStatus row={row} />}
-            selected={row._id === projectId}
-            onOpen={(from) => onOpen(row._id, from)}
-          />
-        ))}
+        {scored.map((row) => renderRow(row))}
         {unscored.length > 0 ? (
           <>
             <TableRow>
@@ -1135,22 +1229,7 @@ function RankingTable({
                 {showAverages ? "Sin notas" : "Pendiente"}
               </TableCell>
             </TableRow>
-            {unscored.map((row) => (
-              <ProjectTableRow
-                key={row._id}
-                rank={showAverages ? null : undefined}
-                name={row.name}
-                teamName={row.teamName}
-                challenges={row.challenges}
-                average={row.average}
-                scoreCount={row.scoreCount}
-                myScore={row.canScore ? row.myScore : null}
-                showAverages={showAverages}
-                status={<RankingStatus row={row} />}
-                selected={row._id === projectId}
-                onOpen={(from) => onOpen(row._id, from)}
-              />
-            ))}
+            {unscored.map((row) => renderRow(row, null))}
           </>
         ) : null}
       </TableBody>
@@ -1162,10 +1241,18 @@ function RankingStatus({ row }: { row: RankingItem }) {
   if (!row.canScore) {
     return <span className="font-medium text-hs-brown">Otro grupo</span>;
   }
-  if (row.myScore !== null) {
-    return <Badge variant="gold">Ya puntuado</Badge>;
+  return <ScoreMark score={row.myScore} />;
+}
+
+function ScoreMark({ score }: { score: number | null }) {
+  if (score === null) {
+    return <span className="font-medium text-hs-brown">Pendiente</span>;
   }
-  return <span className="font-medium text-hs-brown">Pendiente</span>;
+  return (
+    <span className="inline-block min-w-[2ch] font-bungee text-sm tabular-nums">
+      {score}
+    </span>
+  );
 }
 
 function ProjectTableRow({
@@ -1201,7 +1288,11 @@ function ProjectTableRow({
           event.currentTarget.querySelector<HTMLElement>("[data-row-trigger]"),
         );
       }}
-      className="h-11 cursor-pointer motion-safe:transition-colors motion-safe:duration-100 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 [&_td]:border-b [&_td]:border-hs-ink/20"
+      className={cn(
+        "h-11 cursor-pointer motion-safe:transition-colors motion-safe:duration-100 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 [&_td]:border-b [&_td]:border-hs-ink/20",
+        selected && "bg-hs-sand",
+        myScore !== null && !selected && "text-hs-brown",
+      )}
     >
       {rank !== undefined ? (
         <TableCell className="text-right">
@@ -1234,14 +1325,8 @@ function ProjectTableRow({
             <span className="inline-block min-w-[2ch]">{scoreCount ?? "—"}</span>
           </TableCell>
         </>
-      ) : (
-        <TableCell className="text-right tabular-nums">
-          <span className="inline-block min-w-[3.5ch]">
-            {formatAverage(myScore)}
-          </span>
-        </TableCell>
-      )}
-      <TableCell>{status}</TableCell>
+      ) : null}
+      <TableCell className="text-right">{status}</TableCell>
     </TableRow>
   );
 }
@@ -1270,13 +1355,19 @@ function ProjectSheet({
   context,
   selected,
   fallbackName,
+  queueIds,
+  nextPendingId,
   onClose,
+  onOpen,
   returnFocusRef,
 }: {
   context: JudgingContext | null;
   selected: SheetItem | null | undefined;
   fallbackName?: string;
+  queueIds?: Id<"submissions">[];
+  nextPendingId?: Id<"submissions">;
   onClose: () => void;
+  onOpen: (id: Id<"submissions">, from: HTMLElement | null) => void;
   returnFocusRef: RefObject<HTMLElement | null>;
 }) {
   const [shown, setShown] = useState<SheetItem | null>(selected ?? null);
@@ -1289,6 +1380,18 @@ function ProjectSheet({
   const item = selected ?? shown;
   const open = selected !== null && selected !== undefined;
   const canScore = item?.canScore === true && context !== null;
+  const index = item && queueIds ? queueIds.indexOf(item._id) : -1;
+  const prevId = index > 0 ? queueIds?.[index - 1] : undefined;
+  const nextId =
+    index >= 0 && queueIds && index < queueIds.length - 1
+      ? queueIds[index + 1]
+      : undefined;
+
+  const go = (id: Id<"submissions"> | undefined) => {
+    if (id) {
+      onOpen(id, null);
+    }
+  };
 
   return (
     <Sheet
@@ -1309,11 +1412,38 @@ function ProjectSheet({
           }
           returnFocusRef.current = null;
         }}
+        onKeyDown={(event) => {
+          if (event.defaultPrevented) {
+            return;
+          }
+          if (
+            event.target instanceof HTMLElement &&
+            event.target.closest('[role="radiogroup"]')
+          ) {
+            return;
+          }
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            go(prevId);
+            return;
+          }
+          if (event.key === "ArrowRight") {
+            event.preventDefault();
+            go(nextId);
+          }
+        }}
       >
         <SheetHeader>
           <SheetTitle>{item?.name || fallbackName || "Proyecto"}</SheetTitle>
           <SheetDescription className="font-medium">
             {item?.teamName ?? "Sin equipo"}
+            {index >= 0 && queueIds && queueIds.length > 0 ? (
+              <span className="mt-1 block font-bungee text-xs uppercase text-hs-brown">
+                <span className="tabular-nums">{index + 1}</span>
+                {" / "}
+                <span className="tabular-nums">{queueIds.length}</span>
+              </span>
+            ) : null}
           </SheetDescription>
         </SheetHeader>
         <SheetBody className="space-y-4">
@@ -1329,13 +1459,41 @@ function ProjectSheet({
           )}
         </SheetBody>
         {item ? (
-          <SheetFooter className="sm:flex-col sm:items-stretch">
+          <SheetFooter className="flex-col gap-4 sm:flex-col sm:items-stretch">
             <FormError message={saveError} />
+            {queueIds && queueIds.length > 1 ? (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={!prevId}
+                  onClick={() => go(prevId)}
+                >
+                  <ChevronLeft className="size-4" aria-hidden />
+                  Anterior
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={!nextId}
+                  onClick={() => go(nextId)}
+                >
+                  Siguiente
+                  <ChevronRight className="size-4" aria-hidden />
+                </Button>
+              </div>
+            ) : null}
             {canScore && context ? (
               <ScoreSlider
                 value={item.myScore}
                 disabled={saving}
                 onCommit={(score) => {
+                  const advanceTo =
+                    item.myScore === null ? nextPendingId : undefined;
                   setSaveError(null);
                   setSaving(true);
                   void setScore({
@@ -1343,6 +1501,11 @@ function ProjectSheet({
                     score,
                     submissionId: item._id,
                   })
+                    .then(() => {
+                      if (advanceTo) {
+                        onOpen(advanceTo, null);
+                      }
+                    })
                     .catch((error: unknown) =>
                       setSaveError(
                         errorMessage(error, "No se ha podido guardar la nota"),
@@ -1384,7 +1547,7 @@ function ProjectDetails({ item }: { item: SheetItem }) {
       {item.challenges.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {item.challenges.map((challenge) => (
-            <Badge key={challenge._id}>{challenge.label}</Badge>
+            <TrackTag key={challenge._id} track={challenge} />
           ))}
         </div>
       ) : null}

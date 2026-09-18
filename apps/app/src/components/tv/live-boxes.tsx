@@ -1,14 +1,14 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
 import { Sparkline } from "@/app/insights/charts";
 import {
+  bucketTotals,
   compact,
   filterSamples,
-  getSamples,
   harnessRows,
   number,
   percent,
@@ -16,6 +16,10 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import type { HarnessRow, TeamRow } from "@/app/insights/mock-data";
+import {
+  NO_TEAM_ID,
+  useLiveInsights,
+} from "@/app/insights/use-live-insights";
 import { cn } from "@/lib/utils";
 import {
   FLASH_LAYER_CLASS,
@@ -30,51 +34,7 @@ import {
   useRankRows,
   useStreamShift,
 } from "./gsap";
-import { usePageVisible, usePrefersReducedMotion } from "./motion";
-
-const MOCK_COMMITS = [
-  {
-    repo: "tortilla/agentos",
-    actor: "ana",
-    text: "feat: wire Convex auth",
-    sha: "a1b2c3d",
-  },
-  {
-    repo: "siesta/deploy",
-    actor: "leo",
-    text: "fix: retry failed deploys",
-    sha: "c0ffee1",
-  },
-  {
-    repo: "paella/barrio",
-    actor: "marta",
-    text: "docs: add README",
-    sha: "bada55e",
-  },
-  {
-    repo: "gitana/reviewmate",
-    actor: "nico",
-    text: "refactor: extract review agent",
-    sha: "def4567",
-  },
-  {
-    repo: "context/memory",
-    actor: "ira",
-    text: "feat: persist session memory",
-    sha: "feedb0b",
-  },
-];
-
-function useTick(ms: number) {
-  const visible = usePageVisible();
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!visible) {return;}
-    const timer = window.setInterval(() => setTick((value) => value + 1), ms);
-    return () => window.clearInterval(timer);
-  }, [ms, visible]);
-  return tick;
-}
+import { usePrefersReducedMotion, useTick } from "./motion";
 
 function LiveHeader({
   title,
@@ -119,18 +79,13 @@ export function LiveCommitsBox() {
   const listRef = useRef<HTMLOListElement>(null);
   const source = useMemo(
     () =>
-      remote && remote.length > 0
-        ? remote.map((row) => ({
-            id: row._id,
-            repo: row.repo || "repo",
-            actor: row.actor || "github",
-            text: row.text,
-            sha: row.sha,
-          }))
-        : MOCK_COMMITS.map((row, index) => ({
-            id: `${row.sha}-${index}`,
-            ...row,
-          })),
+      (remote ?? []).map((row) => ({
+        id: row._id,
+        repo: row.repo || "repo",
+        actor: row.actor || "github",
+        text: row.text,
+        sha: row.sha,
+      })),
     [remote],
   );
   const queue = useMemo(() => {
@@ -173,6 +128,11 @@ export function LiveCommitsBox() {
   return (
     <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
       <LiveHeader title="Commits en vivo" aside={`${repos} repos`} />
+      {queue.length === 0 ? (
+        <p className="mt-[0.6cqw] text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
+          {remote === undefined ? "Cargando actividad…" : "Sin commits todavía."}
+        </p>
+      ) : null}
       <ol
         ref={listRef}
         className="mt-[0.6cqw] min-h-0 flex-1 space-y-[0.4cqw] overflow-hidden"
@@ -258,12 +218,12 @@ function AgentRow({
 
 export function LiveAgentsBox() {
   const reduced = usePrefersReducedMotion();
-  const tick = useTick(4000);
   const root = useRef<HTMLDivElement>(null);
-  const samples = filterSamples(getSamples(tick), "event", "all");
-  const tools = harnessRows(samples).toSorted(
-    (a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name),
-  );
+  const data = useLiveInsights();
+  const samples = filterSamples(data.samples, "event", "all", data.teams);
+  const tools = harnessRows(samples)
+    .filter((row) => row.sessions > 0)
+    .toSorted((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
   const max = Math.max(1, ...tools.map((tool) => tool.sessions));
   const total = tools.reduce((sum, tool) => sum + tool.sessions, 0);
   const order = useMemo(() => tools.map((tool) => tool.id), [tools]);
@@ -411,20 +371,15 @@ function Odometer({ value }: { value: number }) {
 
 export function LiveTokensBox() {
   const reduced = usePrefersReducedMotion();
-  const tick = useTick(5000);
   const root = useRef<HTMLDivElement>(null);
   const chip = useRef<HTMLSpanElement>(null);
   const ring = useRef<HTMLSpanElement>(null);
-  const samples = filterSamples(getSamples(tick), "event", "all");
+  const data = useLiveInsights();
+  const samples = filterSamples(data.samples, "event", "all", data.teams);
   const totals = sumSamples(samples);
   const previous = useRef<number | null>(null);
-  const trend = [...new Set(samples.map((sample) => sample.bucket))].map(
-    (bucket) =>
-      samples
-        .filter((sample) => sample.bucket === bucket)
-        .reduce((sum, sample) => sum + sample.tokens, 0),
-  );
-  const perMinute = trend.length > 0 ? (trend.at(-1) ?? 0) / 30 : 0;
+  const trend = bucketTotals(samples).map((bucket) => bucket.tokens);
+  const perMinute = trend.length > 0 ? (trend.at(-1) ?? 0) / Math.max(data.bucketMinutes, 1) : 0;
   const rateRef = useCountUp(perMinute, compact, { fromZero: true });
 
   useLayoutEffect(() => {
@@ -553,8 +508,12 @@ function TeamRowView({
 }
 
 export function LiveLeaderboardBox() {
-  const tick = useTick(4500);
-  const ranked = teamRows(filterSamples(getSamples(tick), "event", "all"))
+  const data = useLiveInsights();
+  const ranked = teamRows(
+    filterSamples(data.samples, "event", "all", data.teams),
+    data.teams,
+  )
+    .filter((team) => team.id !== NO_TEAM_ID)
     .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
     .slice(0, 6);
   const order = useMemo(() => ranked.map((team) => team.id), [ranked]);

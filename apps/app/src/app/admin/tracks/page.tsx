@@ -14,6 +14,8 @@ import {
   Page,
   errorMessage,
 } from "@/components/page";
+import { TrackBrief, TrackBriefLink } from "@/components/markdown";
+import { TrackLogo, TrackTag } from "@/components/track-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,8 +36,9 @@ type Submission = FunctionReturnType<typeof api.submissions.adminList>[number];
 
 const TRACK_PARAM = "track";
 
-function projectCount(count: number) {
-  return `${count} ${count === 1 ? "proyecto" : "proyectos"}`;
+function projectCount(count: number, limit: number) {
+  const full = count >= limit ? " · lleno" : "";
+  return `${count}/${limit} ${count === 1 ? "proyecto" : "proyectos"}${full}`;
 }
 
 export default function AdminTracksPage() {
@@ -88,7 +91,7 @@ function TracksAdmin() {
   return (
     <Page
       title="Retos y proyectos"
-      description="Los retos viven en Convex. Un proyecto puede entrar en todos los retos que elijas."
+      description="Los retos viven en Convex. Un equipo entra en un solo reto."
     >
       <Card>
         <CardHeader>
@@ -136,7 +139,7 @@ function TracksAdmin() {
                     <span>{track.label}</span>
                     <span className="text-xs text-hs-brown tabular-nums">
                       · {track.active ? "visible" : "oculto"} ·{" "}
-                      {projectCount(countFor(track))}
+                      {projectCount(countFor(track), settings.teamLimit)}
                     </span>
                   </SelectItem>
                 ))}
@@ -147,6 +150,7 @@ function TracksAdmin() {
           <TrackEditor
             key={selected._id}
             track={selected}
+            teamLimit={settings.teamLimit}
             submissions={submissions.filter((row) =>
               row.challengeIds.includes(selected._id),
             )}
@@ -160,21 +164,29 @@ function TracksAdmin() {
 function TrackEditor({
   track,
   submissions,
+  teamLimit,
 }: {
   track: Track;
   submissions: Submission[];
+  teamLimit: number;
 }) {
   const update = useMutation(api.tracks.adminUpdate);
   const [label, setLabel] = useState(track.label);
   const [note, setNote] = useState(track.note);
   const [body, setBody] = useState(track.body);
+  const [markdown, setMarkdown] = useState(track.markdown ?? "");
+  const [logoUrl, setLogoUrl] = useState(track.logoUrl ?? "");
+  const [website, setWebsite] = useState(track.website ?? "");
   const [pending, setPending] = useState<"text" | "visibility" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const dirty =
     label.trim() !== track.label ||
     note.trim() !== track.note ||
-    body.trim() !== track.body;
+    body.trim() !== track.body ||
+    markdown.trim() !== (track.markdown ?? "").trim() ||
+    logoUrl.trim() !== (track.logoUrl ?? "") ||
+    website.trim() !== (track.website ?? "");
 
   const run = async (kind: "text" | "visibility", work: () => Promise<null>) => {
     setPending(kind);
@@ -191,11 +203,11 @@ function TrackEditor({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          {track.label}
+        <CardTitle className="flex flex-wrap items-center gap-3">
+          <TrackLogo track={{ label: track.label, logoUrl: logoUrl.trim() || undefined }} className="h-7" />
           <Badge>{track.active ? "Activo" : "Oculto"}</Badge>
           <Badge variant="gold" className="tabular-nums">
-            {projectCount(submissions.length)}
+            {projectCount(submissions.length, teamLimit)}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -223,6 +235,48 @@ function TrackEditor({
             onChange={(event) => setBody(event.target.value)}
           />
         </Field>
+        <Field
+          label="Enunciado"
+          htmlFor="track-markdown"
+          hint="Markdown del reto, o una URL https:// que se abre en otra pestaña."
+        >
+          <Textarea
+            id="track-markdown"
+            value={markdown}
+            onChange={(event) => setMarkdown(event.target.value)}
+            className="min-h-48 font-mono text-sm"
+          />
+        </Field>
+        <div className="border-[3px] border-hs-ink/20 p-4">
+          <p className="mb-3 font-bungee text-[11px] uppercase text-hs-brown">
+            Vista previa
+          </p>
+          <div className="max-w-prose">
+            <TrackBrief markdown={markdown} body={body} />
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field
+            label="Logo del sponsor"
+            htmlFor="track-logo"
+            hint="Ruta bajo /public (por ejemplo /tracks/maisa.png) o URL https://."
+          >
+            <Input
+              id="track-logo"
+              value={logoUrl}
+              placeholder="/tracks/maisa.png"
+              onChange={(event) => setLogoUrl(event.target.value)}
+            />
+          </Field>
+          <Field label="Web del sponsor" htmlFor="track-website">
+            <Input
+              id="track-website"
+              value={website}
+              placeholder="https://"
+              onChange={(event) => setWebsite(event.target.value)}
+            />
+          </Field>
+        </div>
         <FormError message={error} />
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button
@@ -231,7 +285,15 @@ function TrackEditor({
             disabled={!dirty || pending !== null}
             onClick={() =>
               void run("text", () =>
-                update({ trackId: track._id, label, body, note }),
+                update({
+                  trackId: track._id,
+                  label,
+                  body,
+                  markdown,
+                  note,
+                  logoUrl,
+                  website,
+                }),
               )
             }
           >
@@ -249,6 +311,13 @@ function TrackEditor({
           >
             {track.active ? "Ocultar" : "Mostrar"}
           </Button>
+          {track.active ? (
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <TrackBriefLink track={{ slug: track.slug, markdown }}>
+                Ver ficha
+              </TrackBriefLink>
+            </Button>
+          ) : null}
         </div>
         {submissions.length === 0 ? (
           <p className="text-sm text-hs-brown">Aún no hay proyectos en este reto.</p>
@@ -290,12 +359,7 @@ function ProjectRow({ row }: { row: Submission }) {
             {row.teamName ?? "Individual"}
           </span>
           {row.challenges.map((challenge) => (
-            <span
-              key={challenge._id}
-              className="border border-hs-ink/30 px-1.5 py-px text-[11px] uppercase tracking-wide"
-            >
-              {challenge.label}
-            </span>
+            <TrackTag key={challenge._id} track={challenge} />
           ))}
         </p>
         {row.perks.length > 0 ? (

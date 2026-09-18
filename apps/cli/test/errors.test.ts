@@ -66,6 +66,60 @@ describe("explainError", () => {
     ).toBe(EXIT.USAGE);
   });
 
+  test("TRACK_FULL tells you to pick another track", () => {
+    const e = explainError(
+      new RemoteError({
+        code: "TRACK_FULL",
+        message: "Maisa ya tiene 15 equipos. Únete a otro track.",
+      })
+    );
+    expect(e.code).toBe("TRACK_FULL");
+    expect(e.exitCode).toBe(EXIT.ERROR);
+    expect(e.message).toBe(
+      "That track already has 15 teams. Join a different one."
+    );
+    expect(e.hint).toContain("track register");
+  });
+
+  test("EVENT_CLOSED is ineligible and gets English copy plus the profile hint", () => {
+    const e = explainError(
+      new RemoteError({
+        code: "EVENT_CLOSED",
+        message:
+          "La hackathon terminó el sábado. Solo puedes editar tu perfil.",
+      })
+    );
+    expect(e.code).toBe("EVENT_CLOSED");
+    expect(e.exitCode).toBe(EXIT.INELIGIBLE);
+    expect(e.message).toBe("The hackathon is not running right now.");
+    expect(e.hint).toContain("hackspain profile");
+  });
+
+  test("email OTP codes get English copy and a hint", () => {
+    const unregistered = explainError(
+      new RemoteError({
+        code: "UNREGISTERED",
+        message: "No hay inscripción a la hackathon con este email",
+      })
+    );
+    expect(unregistered.exitCode).toBe(EXIT.INELIGIBLE);
+    expect(unregistered.message).toBe("This email has no HackSpain signup.");
+    expect(unregistered.hint).toContain("contact the organisers");
+
+    for (const code of [
+      "BAD_OTP",
+      "OTP_EXPIRED",
+      "TOO_MANY_ATTEMPTS",
+      "SEND_FAILED",
+    ]) {
+      const e = explainError(new RemoteError({ code, message: "es" }));
+      expect(e.code).toBe(code);
+      expect(e.exitCode).toBe(EXIT.ERROR);
+      expect(e.message).not.toBe("es");
+      expect(e.hint).toBeTruthy();
+    }
+  });
+
   test("strips the Convex wrapper from unknown server errors", () => {
     const e = explainError(convexWrapped("El dueño no puede salir del equipo"));
     expect(e).toMatchObject({

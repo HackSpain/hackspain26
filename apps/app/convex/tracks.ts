@@ -7,58 +7,85 @@ import {
 } from "./lib/customFunctions";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
-
-const HACKATHON_SETTINGS_KEY = "hackathon";
+import type { Doc, Id } from "./_generated/dataModel";
+import { HACKATHON_SETTINGS_KEY, settingsDoc } from "./lib/eventWindow";
 
 const DEFAULT_TRACKS = [
   {
     body: "Construye «Digital Workers»: agentes de IA auditables que automatizan procesos completos en banca, seguros e industria. Cerró 25M$ liderados por Creandum y Forgepoint para atacar el 95% de proyectos de IA empresarial que fracasan.",
     label: "Maisa",
     note: "Agentes de IA con trazabilidad para la empresa",
+    logoUrl: "/tracks/maisa.png",
     slug: "maisa",
     sortOrder: 0,
+    website: "https://maisa.ai",
   },
   {
     body: "Agentes de IA que ejecutan operaciones completas por voz, email, chat y sistemas empresariales. Con más de 150 grandes clientes y un crecimiento de 5× desde su Serie B, levantó una Serie C de 150M$ que la valora en 1.200M$.",
     label: "HappyRobot",
     note: "El sistema operativo de IA de la economía real",
+    logoUrl: "/tracks/happyrobot.png",
     slug: "happyrobot",
     sortOrder: 1,
+    website: "https://www.happyrobot.ai",
   },
   {
     body: "Automatiza de punta a punta el recorrido del paciente en clínicas de EE. UU.: citas, verificación de seguros y facturación. Gestiona flujos de más de 150.000 médicos y levantó 30M$ liderados por a16z.",
     label: "Prosper AI",
     note: "IA para las operaciones sanitarias",
+    logoUrl: "/tracks/prosper-ai.svg",
     slug: "prosper-ai",
     sortOrder: 2,
+    website: "https://www.getprosper.ai",
   },
   {
     body: "Tesorería en tiempo real con IA para equipos financieros de medianas y grandes empresas. Automatiza hasta el 80% del trabajo manual, con 400 clientes en Europa y una Serie B de 30M€ liderada por Cathay Innovation.",
     label: "Embat",
     note: "El sistema operativo de la tesorería europea",
+    logoUrl: "/tracks/embat.png",
     slug: "embat",
     sortOrder: 3,
+    website: "https://www.embat.io",
   },
   {
     body: "Robots industriales reconfigurables, entrenados con IA para no especializarse en una sola tarea. Desde Barcelona, con la mayor Serie A de robótica de Europa: más de 100M$ liderados por CRV, con Samsung, LVMH e Inditex dentro.",
     label: "THEKER Robotics",
     note: "Robótica de propósito general made in Spain",
+    logoUrl: "/tracks/theker.svg",
     slug: "theker",
     sortOrder: 4,
+    website: "https://www.theker.ai",
   },
 ] as const;
 
 const RETIRED_SLUGS = ["ml", "non-tech"] as const;
+
+/** Projects (team or solo, draft or submitted) one track takes. */
+export const MAX_TEAMS_PER_TRACK = 15;
+
+/** Absolute http(s) URL or a site-relative path; empty clears the field. */
+function parseBrandUrl(raw: string, what: string): string | undefined {
+  const value = raw.trim();
+  if (!value) {
+    return undefined;
+  }
+  if (value.startsWith("/") || /^https?:\/\//.test(value)) {
+    return value;
+  }
+  throw new Error(`${what} debe ser una URL https:// o una ruta que empiece por /`);
+}
 
 const trackReturn = v.object({
   _id: v.id("tracks"),
   active: v.boolean(),
   body: v.string(),
   label: v.string(),
+  logoUrl: v.optional(v.string()),
+  markdown: v.optional(v.string()),
   note: v.string(),
   slug: v.string(),
   sortOrder: v.number(),
+  website: v.optional(v.string()),
 });
 
 function trackFields(track: Doc<"tracks">) {
@@ -67,17 +94,30 @@ function trackFields(track: Doc<"tracks">) {
     active: track.active,
     body: track.body,
     label: track.label,
+    logoUrl: track.logoUrl,
+    markdown: track.markdown,
     note: track.note,
     slug: track.slug,
     sortOrder: track.sortOrder,
+    website: track.website,
   };
 }
 
-async function settingsDoc(ctx: QueryCtx | MutationCtx) {
-  return await ctx.db
-    .query("settings")
-    .withIndex("by_key", (q) => q.eq("key", HACKATHON_SETTINGS_KEY))
-    .unique();
+/** How many projects have entered each track. */
+export async function trackEntryCounts(
+  ctx: QueryCtx | MutationCtx,
+  exceptSubmissionId?: Id<"submissions">
+): Promise<Map<Id<"tracks">, number>> {
+  const counts = new Map<Id<"tracks">, number>();
+  for (const submission of await ctx.db.query("submissions").collect()) {
+    if (submission._id === exceptSubmissionId) {
+      continue;
+    }
+    for (const trackId of new Set(submission.challengeIds)) {
+      counts.set(trackId, (counts.get(trackId) ?? 0) + 1);
+    }
+  }
+  return counts;
 }
 
 export async function submissionsAreOpen(
@@ -98,8 +138,11 @@ export async function seedDefaults(ctx: MutationCtx): Promise<void> {
         active: true,
         body: track.body,
         label: track.label,
+        // Branding only fills in when missing, so an admin-set logo survives.
+        logoUrl: existing.logoUrl ?? track.logoUrl,
         note: track.note,
         sortOrder: track.sortOrder,
+        website: existing.website ?? track.website,
       });
       continue;
     }
@@ -107,9 +150,11 @@ export async function seedDefaults(ctx: MutationCtx): Promise<void> {
       active: true,
       body: track.body,
       label: track.label,
+      logoUrl: track.logoUrl,
       note: track.note,
       slug: track.slug,
       sortOrder: track.sortOrder,
+      website: track.website,
     });
   }
 
@@ -135,23 +180,57 @@ export async function seedDefaults(ctx: MutationCtx): Promise<void> {
 export const list = onboardedQuery({
   args: {},
   handler: async (ctx) => {
-    const tracks = await ctx.db
-      .query("tracks")
-      .withIndex("by_active_and_sort", (q) => q.eq("active", true))
-      .collect();
+    const [tracks, counts] = await Promise.all([
+      ctx.db
+        .query("tracks")
+        .withIndex("by_active_and_sort", (q) => q.eq("active", true))
+        .collect(),
+      trackEntryCounts(ctx),
+    ]);
     return tracks
       .toSorted((a, b) => a.sortOrder - b.sortOrder)
-      .map(trackFields);
+      .map((track) => ({
+        ...trackFields(track),
+        teamCount: counts.get(track._id) ?? 0,
+        teamLimit: MAX_TEAMS_PER_TRACK,
+      }));
   },
-  returns: v.array(trackReturn),
+  returns: v.array(
+    v.object({
+      ...trackReturn.fields,
+      teamCount: v.number(),
+      teamLimit: v.number(),
+    })
+  ),
+});
+
+export const get = onboardedQuery({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const track = await ctx.db
+      .query("tracks")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!track?.active) {
+      return null;
+    }
+    return trackFields(track);
+  },
+  returns: v.union(trackReturn, v.null()),
+});
+
+const settingsReturn = v.object({
+  submissionsOpen: v.boolean(),
+  teamLimit: v.number(),
 });
 
 export const settings = onboardedQuery({
   args: {},
   handler: async (ctx) => ({
     submissionsOpen: await submissionsAreOpen(ctx),
+    teamLimit: MAX_TEAMS_PER_TRACK,
   }),
-  returns: v.object({ submissionsOpen: v.boolean() }),
+  returns: settingsReturn,
 });
 
 export const adminList = adminQuery({
@@ -169,8 +248,9 @@ export const adminSettings = adminQuery({
   args: {},
   handler: async (ctx) => ({
     submissionsOpen: await submissionsAreOpen(ctx),
+    teamLimit: MAX_TEAMS_PER_TRACK,
   }),
-  returns: v.object({ submissionsOpen: v.boolean() }),
+  returns: settingsReturn,
 });
 
 export const adminEnsureDefaults = adminMutation({
@@ -222,9 +302,12 @@ export const adminUpdate = adminMutation({
     active: v.optional(v.boolean()),
     body: v.optional(v.string()),
     label: v.optional(v.string()),
+    logoUrl: v.optional(v.string()),
+    markdown: v.optional(v.string()),
     note: v.optional(v.string()),
     sortOrder: v.optional(v.number()),
     trackId: v.id("tracks"),
+    website: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const track = await ctx.db.get(args.trackId);
@@ -234,10 +317,19 @@ export const adminUpdate = adminMutation({
     const patch: {
       label?: string;
       body?: string;
+      markdown?: string;
       note?: string;
       active?: boolean;
       sortOrder?: number;
+      logoUrl?: string;
+      website?: string;
     } = {};
+    if (args.logoUrl !== undefined) {
+      patch.logoUrl = parseBrandUrl(args.logoUrl, "El logo");
+    }
+    if (args.website !== undefined) {
+      patch.website = parseBrandUrl(args.website, "La web");
+    }
     if (args.label !== undefined) {
       const label = args.label.trim();
       if (!label) {
@@ -247,6 +339,9 @@ export const adminUpdate = adminMutation({
     }
     if (args.body !== undefined) {
       patch.body = args.body.trim();
+    }
+    if (args.markdown !== undefined) {
+      patch.markdown = args.markdown.trim();
     }
     if (args.note !== undefined) {
       patch.note = args.note.trim();

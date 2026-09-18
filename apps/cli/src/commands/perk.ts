@@ -3,7 +3,7 @@ import { api } from "../lib/api";
 import { contextFor } from "../lib/context";
 import { uiFor } from "../lib/output";
 import type { PerkEntry } from "../lib/participant";
-import { openParticipant } from "../lib/participant";
+import { openAnytimeParticipant } from "../lib/participant";
 import { c } from "../lib/style";
 
 function perkStatus(
@@ -13,10 +13,21 @@ function perkStatus(
   if (claim) {
     return claim.code ? `claimed: ${claim.code}` : `claimed (${claim.status})`;
   }
-  if (perk.type === "code") {
-    return `${perk.availableCodes ?? 0} codes left`;
+  switch (perk.type) {
+    case "code": {
+      return `${perk.availableCodes ?? 0} codes left`;
+    }
+    case "email": {
+      return "by email";
+    }
+    case "external": {
+      return "claim on partner site";
+    }
+    default: {
+      const _exhaustive: never = perk.type;
+      return _exhaustive;
+    }
   }
-  return "by email";
 }
 
 export function registerPerk(program: Command): void {
@@ -28,7 +39,7 @@ export function registerPerk(program: Command): void {
     .action(async (_opts: unknown, command: Command) => {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
-      const { session } = await openParticipant(ctx);
+      const { session } = await openAnytimeParticipant(ctx);
       const entries = await ui.spin(
         "Fetching perks…",
         () => session.client.query(api.perks.listCatalog, {}),
@@ -52,7 +63,7 @@ export function registerPerk(program: Command): void {
         ["Partner", "Perk", "Value", "Status", "Id"]
       );
       ui.next([
-        ["app.hackspain.com/perks", "claim a perk from the dashboard"],
+        ["hackspain open perks", "claim a perk from the dashboard, signed in"],
         [
           "hackspain submit --perk <id>",
           "credit the perks you used in your project",

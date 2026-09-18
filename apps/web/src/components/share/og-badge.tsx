@@ -209,8 +209,8 @@ export function OgBadge({ avatarDataUri, fullName }: Props) {
               alt=""
               height={78}
               src={logoWordmarkDataUri()}
-              style={{ height: 78, width: 244 }}
-              width={244}
+              style={{ height: 78, width: 237 }}
+              width={237}
             />
           </div>
 

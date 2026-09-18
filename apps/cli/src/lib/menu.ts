@@ -1,4 +1,4 @@
-import { isCancel, log, outro, select, text } from "@clack/prompts";
+import { isCancel, text } from "@clack/prompts";
 import type { Command } from "commander";
 import { VERSION } from "../version";
 import { api, openSession } from "./api";
@@ -12,6 +12,7 @@ import { describeGate, fetchMe } from "./me";
 import { greetingFor, openingBoardRows, renderOpening } from "./opening";
 import { isCommanderError } from "./run";
 import { c, cmd } from "./style";
+import { cardWidth, isPickCancel, pickInBox } from "./tui";
 
 /**
  * The interactive menu behind bare `hackspain` on a TTY. Every entry maps to
@@ -34,11 +35,14 @@ export type MenuProject = {
   name: string | null;
   submitted: boolean;
   tracks: number;
+  track?: string | null;
 };
 
 export type MenuStatus = {
   loggedIn: boolean;
   gate?: GateState;
+  /** Human line for a gated state (describeGate), shown instead of the board. */
+  gateMessage?: string;
   email?: string;
   name?: string;
   team?: MenuTeam | null;
@@ -78,6 +82,13 @@ const UPDATE_ITEM: MenuItem = {
   argv: ["update"],
 };
 
+const OPEN_ITEM: MenuItem = {
+  value: "open",
+  label: "Open the dashboard",
+  hint: "in your browser, already signed in",
+  argv: ["open"],
+};
+
 const BACK_VALUE = "__back";
 
 function plural(count: number, word: string): string {
@@ -95,7 +106,8 @@ function projectHint(project: MenuProject | null | undefined): string {
   if (project.submitted) {
     return `${project.name ?? "project"} · submitted`;
   }
-  return `${project.name ?? "untitled draft"} · draft · ${plural(project.tracks, "track")}`;
+  const track = project.track ?? "no track yet";
+  return `${project.name ?? "untitled draft"} · draft · ${track}`;
 }
 
 function buildTeamMenu(team: MenuTeam): MenuItem[] {
@@ -141,30 +153,33 @@ function buildTeamMenu(team: MenuTeam): MenuItem[] {
   return items;
 }
 
+function buildTrackMenu(status: MenuStatus): MenuItem[] {
+  const project = status.project ?? null;
+  if (project?.submitted) {
+    return [];
+  }
+  const items: MenuItem[] = [
+    {
+      value: "track-register",
+      label: project?.track ? "Switch track" : "Enter a track",
+      argv: ["track", "register"],
+    },
+  ];
+  if (project?.track) {
+    items.push({
+      value: "track-unregister",
+      label: "Leave the track",
+      argv: ["track", "unregister"],
+    });
+  }
+  return items;
+}
+
 function buildProjectMenu(status: MenuStatus): MenuItem[] {
   const project = status.project ?? null;
   const submitted = Boolean(project?.submitted);
   const items: MenuItem[] = [];
   if (!submitted) {
-    items.push({
-      value: "track-register",
-      label: "Enter a track",
-      hint: "slug from the list above",
-      argv: ["track", "register"],
-      input: {
-        message: "Track slug(s), separated by spaces",
-        placeholder: "ai-agents",
-        split: true,
-      },
-    });
-    if ((project?.tracks ?? 0) > 0) {
-      items.push({
-        value: "track-unregister",
-        label: "Leave a track",
-        argv: ["track", "unregister"],
-        input: { message: "Track slug(s) to leave", split: true },
-      });
-    }
     items.push(
       {
         value: "submit-draft",
@@ -197,13 +212,24 @@ function buildProfileMenu(): MenuItem[] {
     },
     {
       value: "profile-phone",
-      label: "Confirm my phone",
+      label: "Set my phone",
       argv: ["profile", "phone"],
     },
     {
       value: "profile-github",
       label: "Link GitHub",
       argv: ["profile", "github"],
+    },
+    {
+      value: "profile-x",
+      label: "Set my X handle",
+      argv: ["profile", "x"],
+    },
+    {
+      value: "profile-card",
+      label: "Photo and participant card",
+      hint: "opens the dashboard",
+      argv: ["open", "profile"],
     },
     {
       value: "profile-notify",
@@ -302,15 +328,20 @@ function buildReadyMenu(status: MenuStatus): MenuItem[] {
       }
     );
   }
+  const trackMenu = buildTrackMenu(status);
   items.push(
     {
       value: "tracks",
-      label: "Tracks & project",
+      label: "Track",
+      hint: status.project?.track ?? "not in a track yet",
+      preview: [["track", "list"]],
+      submenu: trackMenu.length > 0 ? trackMenu : undefined,
+    },
+    {
+      value: "project",
+      label: "Project",
       hint: projectHint(status.project),
-      preview: [
-        ["track", "list"],
-        ...(status.project ? [["project", "show"]] : []),
-      ],
+      preview: status.project ? [["project", "show"]] : undefined,
       submenu: buildProjectMenu(status),
     },
     {
@@ -327,6 +358,7 @@ function buildReadyMenu(status: MenuStatus): MenuItem[] {
     },
     { value: "perks", label: "Perks", argv: ["perk", "list"] },
     { value: "milestones", label: "Milestones", submenu: buildMilestoneMenu() },
+    OPEN_ITEM,
     {
       value: "watch",
       label: "Start the watcher",
@@ -353,6 +385,31 @@ export function buildMainMenu(status: MenuStatus): MenuItem[] {
       EXIT_ITEM,
     ];
   }
+  if (status.gate === "closed") {
+    // Outside the hackathon window the profile and perks still work; the
+    // participant directory lives on the dashboard.
+    return [
+      {
+        value: "profile",
+        label: "My profile",
+        hint: "available at any time",
+        preview: [["profile", "show"]],
+        submenu: buildProfileMenu(),
+      },
+      { value: "perks", label: "Perks", argv: ["perk", "list"] },
+      {
+        ...OPEN_ITEM,
+        hint: "profile, perks and participant directory, already signed in",
+      },
+      {
+        value: "account",
+        label: "Account",
+        hint: "session, log out, update",
+        submenu: buildAccountMenu(),
+      },
+      EXIT_ITEM,
+    ];
+  }
   if (!isReady(status)) {
     return [
       {
@@ -360,6 +417,10 @@ export function buildMainMenu(status: MenuStatus): MenuItem[] {
         label: "Session status",
         hint: "what the server says about you",
         argv: ["auth", "status"],
+      },
+      {
+        ...OPEN_ITEM,
+        hint: "finish onboarding there, already signed in",
       },
       { value: "auth-logout", label: "Log out", argv: ["auth", "logout"] },
       UPDATE_ITEM,
@@ -376,7 +437,7 @@ export function statusLine(status: MenuStatus): string {
   }
   if (!isReady(status)) {
     return c.dim(
-      `Signed in as ${status.email ?? "?"} · ${status.gate ?? "checking"}`
+      `Signed in as ${status.email ?? "?"} · ${status.gateMessage ?? status.gate ?? "checking"}`
     );
   }
   const team = status.team ? teamHint(status.team) : "no team yet";
@@ -396,12 +457,14 @@ export function menuStatusFrom(
   submission: {
     name?: string | null;
     status: string;
-    challenges: unknown[];
+    challenges: { label?: string }[];
   } | null
 ): MenuStatus {
+  const track = submission?.challenges[0]?.label ?? null;
   return {
     loggedIn: true,
     gate: gate.state,
+    gateMessage: gate.message,
     email: me.email ?? undefined,
     name: me.name ?? undefined,
     team: team
@@ -417,7 +480,8 @@ export function menuStatusFrom(
       ? {
           name: submission.name || null,
           submitted: submission.status === "submitted",
-          tracks: submission.challenges.length,
+          track,
+          tracks: track ? 1 : 0,
         }
       : null,
   };
@@ -440,6 +504,7 @@ export async function fetchMenuStatus(ctx: CliContext): Promise<MenuStatus> {
     return {
       loggedIn: true,
       gate: gate.state,
+      gateMessage: gate.message,
       email: me.email ?? creds.email,
       name: me.name ?? undefined,
     };
@@ -456,7 +521,7 @@ export async function fetchMenuStatus(ctx: CliContext): Promise<MenuStatus> {
   );
 }
 
-/** Wipe the terminal (stdout and stderr — clack may have used either). */
+/** Wipe the terminal (stdout and stderr). */
 function clearTerminal(): void {
   const wipe = "\x1b[2J\x1b[3J\x1b[H";
   if (process.stdout.isTTY) {
@@ -475,7 +540,7 @@ function renderHome(status: MenuStatus): void {
   if (!(ready || status.loggedIn)) {
     message = "Signed out.";
   } else if (!ready) {
-    message = `Signed in as ${status.email ?? "?"} · ${status.gate ?? "checking"}`;
+    message = `Signed in as ${status.email ?? "?"} · ${status.gateMessage ?? status.gate ?? "checking"}`;
   }
   console.log(`\n${banner()}\n`);
   console.log(
@@ -488,7 +553,16 @@ function renderHome(status: MenuStatus): void {
         ? openingBoardRows({
             email: status.email,
             team: status.team,
-            project: status.project,
+            project: status.project
+              ? {
+                  name: status.project.name,
+                  submitted: status.project.submitted,
+                  tracks: status.project.tracks,
+                  trackLabels: status.project.track
+                    ? [status.project.track]
+                    : [],
+                }
+              : undefined,
           })
         : undefined,
       message,
@@ -497,29 +571,24 @@ function renderHome(status: MenuStatus): void {
   console.log();
 }
 
-/** After a menu action, every key (q, Esc, Ctrl+C, anything) resumes the menu. */
-export function isResumeKey(_data: Uint8Array): boolean {
-  return true;
-}
-
 /** Let the user finish reading, then return to the menu. Never process.exit. */
 function pressAnyKey(): Promise<void> {
   return new Promise((resolve) => {
-    process.stdout.write(`\n${c.dim("q · Esc to go back to the menu…")}\n`);
+    process.stdout.write(
+      `\n${c.gold("q")} ${c.dim("· Esc to go back to the menu…")}\n`
+    );
     const stdin = process.stdin;
     const raw = Boolean(stdin.isTTY);
     if (raw) {
       stdin.setRawMode(true);
     }
     stdin.resume();
-    stdin.once("data", (data: Buffer) => {
+    stdin.once("data", () => {
       if (raw) {
         stdin.setRawMode(false);
       }
       stdin.pause();
-      if (isResumeKey(data)) {
-        resolve();
-      }
+      resolve();
     });
   });
 }
@@ -527,11 +596,10 @@ function pressAnyKey(): Promise<void> {
 type Level = { items: MenuItem[]; title: string };
 
 /**
- * Walk the menu tree with clack selects. Entering a submenu first runs its
- * preview commands (show before act). Submenus get a "back" entry. Esc at
- * the top level exits. ← Back / Esc from any submenu returns "home" so the
- * outer loop can wipe the screen and redraw the wordmark — calling select()
- * again in this same frame would leave clack's previous prompt stacked.
+ * Walk the menu tree as watcher-style cards. Entering a submenu first runs
+ * its preview commands (show before act). Submenus get a "back" entry. Esc
+ * at the top level exits. ← Back / Esc from any submenu returns "home" so
+ * the outer loop can wipe the screen and redraw the wordmark.
  */
 async function navigate(
   root: MenuItem[],
@@ -548,15 +616,16 @@ async function navigate(
       stack.length > 1
         ? [...level.items, { value: BACK_VALUE, label: "← Back" }]
         : level.items;
-    const choice = await select<string>({
-      message: level.title,
-      options: items.map((item) => ({
-        value: item.value,
-        label: item.label,
+    const choice = await pickInBox({
+      items: items.map((item) => ({
         hint: item.hint,
+        label: item.label,
+        value: item.value,
       })),
+      title: level.title,
+      width: cardWidth(),
     });
-    if (isCancel(choice) || choice === BACK_VALUE) {
+    if (isPickCancel(choice) || choice === BACK_VALUE) {
       if (stack.length === 1) {
         return null;
       }
@@ -655,7 +724,7 @@ export async function runMenu(options: {
       if (!isCommanderError(error)) {
         const explained = explainError(error);
         const hint = explained.hint ? `\n${c.dim(explained.hint)}` : "";
-        log.error(`${c.red(explained.message)}${hint}`);
+        console.error(`  ${c.red("✗")}  ${explained.message}${hint}`);
       }
     }
   };
@@ -666,18 +735,14 @@ export async function runMenu(options: {
   };
 
   for (;;) {
-    const picked = await navigate(
-      buildMainMenu(status),
-      "What do you want to do?",
-      runPreview
-    );
+    const picked = await navigate(buildMainMenu(status), "menu", runPreview);
     if (picked === "home") {
       renderHome(status);
       continue;
     }
     if (picked === null || picked === "exit") {
-      outro(
-        `See you at the venue ⚡ ${c.dim(`${cmd("hackspain --help")} lists every command.`)}`
+      console.log(
+        `\n  See you at the venue ⚡ ${c.dim(`${cmd("hackspain --help")} lists every command.`)}\n`
       );
       return;
     }

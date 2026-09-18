@@ -7,36 +7,19 @@ import { CliError, usageError } from "../lib/errors";
 import type { Me } from "../lib/me";
 import type { Ui } from "../lib/output";
 import { uiFor } from "../lib/output";
-import { openParticipant } from "../lib/participant";
+import { openProfile } from "../lib/participant";
+import { formatPhone, validatePhone } from "../lib/phone";
 import { confirmOrFlag, textOrFlag } from "../lib/prompts";
 import { c, cmd, highlight } from "../lib/style";
+import { normalizeX, validateX } from "../lib/x-handle";
 
 /**
- * `hackspain profile`: what the dashboard's profile page edits (name, diet
- * and travel, phone, event notices, GitHub), so a hacker never has to leave
- * the terminal to keep organisers informed. Attendance is deliberately not
- * here: this tool is used at the venue.
+ * `hackspain profile`: what the dashboard's profile page edits (name, phone,
+ * event notices, GitHub and X), plus diet and travel, which only the CLI still
+ * asks. The photo and the participant card need the browser, so they show up
+ * here as status with the command that opens them. Attendance is deliberately
+ * not here: this tool is used at the venue.
  */
-const E164 = /^\+[1-9]\d{6,14}$/;
-const PHONE_CODE = /^\d{4,8}$/;
-const PHONE_NOISE = /[\s()-]/g;
-
-const PHONE_FAILURES: Record<string, string> = {
-  expired: "That code has expired. Request a new one.",
-  incorrect: "That code is not right.",
-  no_challenge: "No code was requested. Run `hackspain profile phone` again.",
-  too_many_attempts: "Too many attempts. Request a new code.",
-};
-
-function phoneLabel(me: Me): string {
-  if (!me.phone) {
-    return c.dim("not set · hackspain profile phone <number>");
-  }
-  return me.phoneConfirmed
-    ? `${me.phone} ${c.dim("· confirmed")}`
-    : `${me.phone} ${c.dim("· not confirmed")}`;
-}
-
 function githubLabel(me: Me): string {
   if (me.githubLinked && me.githubUsername) {
     return `${me.githubUsername} ${c.dim("· linked")}`;
@@ -45,6 +28,37 @@ function githubLabel(me: Me): string {
     return `${me.githubUsername} ${c.dim("· from your signup, not linked · hackspain profile github")}`;
   }
   return c.dim("not linked · hackspain profile github");
+}
+
+function xLabel(me: Me): string {
+  if (me.twitterHandle) {
+    return `@${me.twitterHandle}`;
+  }
+  if (me.suggestedTwitterHandle) {
+    return `@${me.suggestedTwitterHandle} ${c.dim("· from your signup, not saved · hackspain profile x")}`;
+  }
+  return c.dim("not set · hackspain profile x <handle>");
+}
+
+/** Photo and card are edited in the browser; here they are done or missing. */
+function dashboardLabel(me: Me, field: "photo" | "directory"): string {
+  return me.profileMissing.includes(field)
+    ? c.dim("missing · hackspain open onboarding")
+    : "done";
+}
+
+/** The dashboard sends anyone with these missing to its wizard; the CLI only says so. */
+export function profileNudge(me: Me): string | undefined {
+  if (me.profileComplete) {
+    return;
+  }
+  const pieces = me.profileMissing.map((field) => {
+    if (field === "name") {
+      return "your name";
+    }
+    return field === "photo" ? "a photo" : "your participant card";
+  });
+  return `The dashboard still needs ${pieces.join(" and ")}. ${cmd("hackspain open onboarding")} takes you straight to those steps.`;
 }
 
 export function profileRows(me: Me): [string, string][] {
@@ -62,7 +76,7 @@ export function profileRows(me: Me): [string, string][] {
       "Travelling from",
       me.travelOrigin ?? c.dim("not set · hackspain profile edit"),
     ],
-    ["Phone", phoneLabel(me)],
+    ["Phone", me.phone ?? c.dim("not set · hackspain profile phone <number>")],
     [
       "Event notices",
       me.notificationConsent
@@ -70,6 +84,9 @@ export function profileRows(me: Me): [string, string][] {
         : c.dim("off · hackspain profile notify on"),
     ],
     ["GitHub", githubLabel(me)],
+    ["X", xLabel(me)],
+    ["Photo", dashboardLabel(me, "photo")],
+    ["Participant card", dashboardLabel(me, "directory")],
   ];
 }
 
@@ -81,20 +98,25 @@ export function profileJson(me: Me) {
     dietaryDetails: me.dietaryDetails,
     travelOrigin: me.travelOrigin,
     phone: me.phone,
-    phoneConfirmed: me.phoneConfirmed,
     notificationConsent: me.notificationConsent,
     githubUsername: me.githubUsername,
     githubLinked: me.githubLinked,
+    twitterHandle: me.twitterHandle,
+    profileMissing: me.profileMissing,
   };
 }
 
 async function showProfile(command: Command): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
-  const { me } = await openParticipant(ctx);
+  const { me } = await openProfile(ctx);
   ui.result(profileJson(me));
   ui.intro("profile");
   ui.kv(profileRows(me));
+  const nudge = profileNudge(me);
+  if (nudge) {
+    ui.warn(nudge);
+  }
   ui.next([
     ["hackspain profile edit", "diet and where you travel from"],
     ["hackspain profile phone <number>", "so we can reach you at the venue"],
@@ -111,7 +133,7 @@ type EditOptions = {
 async function editProfile(opts: EditOptions, command: Command): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
-  const { session, me } = await openParticipant(ctx);
+  const { session, me } = await openProfile(ctx);
   ui.intro("profile · edit");
   const name = await textOrFlag(ctx, opts.name, {
     flag: "--name",
@@ -172,7 +194,7 @@ async function setNotify(
   if (value !== "on" && value !== "off") {
     throw usageError(`Use "on" or "off", got "${value}".`);
   }
-  const { session } = await openParticipant(ctx);
+  const { session } = await openProfile(ctx);
   const consent = value === "on";
   await ui.spin(
     "Saving…",
@@ -183,84 +205,81 @@ async function setNotify(
   ui.result({ notificationConsent: consent });
   ui.success(
     consent
-      ? "Event notices on. Schedule changes and reminders reach you by email and phone."
+      ? "Event notices on. Schedule changes and reminders reach you by email."
       : "Event notices off. You still get announcements in `hackspain watch`."
   );
 }
 
-/** The SMS challenge, shared by `profile phone` and the post-login check. */
-export async function runPhoneConfirmation(
+/** Save the contact number; shared by `profile phone` and the post-login check. */
+export async function savePhone(
   ctx: CliContext,
   ui: Ui,
   session: Session,
   me: Me,
-  number: string | undefined,
-  code: string | undefined
+  number: string | undefined
 ): Promise<string> {
-  const phone = (
+  const phone = formatPhone(
     await textOrFlag(ctx, number, {
       flag: "<number>",
       initialValue: me.phone ?? "",
-      message: "Your mobile number, international format",
+      message: "Your mobile number, with the country code",
       placeholder: "+34 600 111 222",
-      validate: (v) =>
-        E164.test(v.replace(PHONE_NOISE, ""))
-          ? undefined
-          : "Use the international format, like +34600111222.",
+      validate: validatePhone,
     })
-  ).replace(PHONE_NOISE, "");
-  const requested = await ui.spin(
-    "Sending a code…",
-    () => session.client.mutation(api.onboarding.requestPhoneCode, { phone }),
-    "Code sent"
   );
-  if (requested.delivery === "stub") {
-    ui.warn(
-      `SMS is not configured on this server; the code is ${highlight(requested.debugCode ?? "?")}.`
-    );
-  }
-  const entered = await textOrFlag(ctx, code, {
-    flag: "--code",
-    message: `Enter the code we sent to ${phone}`,
-    placeholder: "000000",
-    validate: (v) => (PHONE_CODE.test(v.trim()) ? undefined : "Digits only."),
-  });
-  const verified = await ui.spin(
-    "Checking…",
-    () =>
-      session.client.mutation(api.onboarding.verifyPhoneCode, {
-        code: entered.trim(),
-      }),
-    "Checked"
+  return await ui.spin(
+    "Saving…",
+    () => session.client.mutation(api.users.setPhone, { phone }),
+    "Saved"
   );
-  if (!verified.ok) {
-    throw new CliError(
-      PHONE_FAILURES[verified.reason] ?? "Could not confirm the phone.",
-      { code: "BAD_OTP" }
-    );
-  }
-  return phone;
 }
 
-async function confirmPhone(
+async function setPhoneCommand(
   number: string | undefined,
-  opts: { code?: string },
+  _opts: unknown,
   command: Command
 ): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
-  const { session, me } = await openParticipant(ctx);
+  const { session, me } = await openProfile(ctx);
   ui.intro("profile · phone");
-  const phone = await runPhoneConfirmation(
-    ctx,
-    ui,
-    session,
-    me,
-    number,
-    opts.code
+  const phone = await savePhone(ctx, ui, session, me, number);
+  ui.result({ phone });
+  ui.success(`${phone} saved. Organisers can reach you at the venue.`);
+}
+
+async function setXCommand(
+  handle: string | undefined,
+  opts: { clear?: boolean },
+  command: Command
+): Promise<void> {
+  const ctx = contextFor(command);
+  const ui = uiFor(ctx);
+  const { session, me } = await openProfile(ctx);
+  ui.intro("profile · x");
+  const value = opts.clear
+    ? ""
+    : normalizeX(
+        await textOrFlag(ctx, handle, {
+          flag: "<handle>",
+          initialValue: me.twitterHandle ?? me.suggestedTwitterHandle ?? "",
+          message: "Your X handle",
+          placeholder: "@ana",
+          validate: validateX,
+        })
+      );
+  const saved = await ui.spin(
+    "Saving…",
+    () =>
+      session.client.mutation(api.users.setTwitterHandle, { handle: value }),
+    "Saved"
   );
-  ui.result({ phone, phoneConfirmed: true });
-  ui.celebrate(`${phone} confirmed. Organisers can reach you at the venue.`);
+  ui.result({ twitterHandle: saved });
+  ui.success(
+    saved
+      ? `@${saved} saved. Team invites sent to that handle find you now.`
+      : "X handle cleared."
+  );
 }
 
 async function linkGithub(
@@ -269,7 +288,7 @@ async function linkGithub(
 ): Promise<void> {
   const ctx = contextFor(command);
   const ui = uiFor(ctx);
-  const { session, me } = await openParticipant(ctx);
+  const { session, me } = await openProfile(ctx);
   if (opts.unlink) {
     if (!me.githubLinked) {
       ui.info("No GitHub account is linked.");
@@ -345,7 +364,7 @@ function validateName(value: string): string | undefined {
 
 /**
  * Right after login: ask for whatever organisers need and the profile is
- * still missing (name, a confirmed phone, GitHub). Every step can be skipped
+ * still missing (name, phone, GitHub, X). Every step can be skipped
  * with Enter; nothing runs in --json or non-interactive mode.
  */
 export async function completeProfile(
@@ -369,11 +388,18 @@ export async function completeProfile(
     }
   }
   const askPhone =
-    !current.phoneConfirmed && (current.accepted || current.role === "admin");
+    !current.phone && (current.accepted || current.role === "admin");
+  const askX = !current.twitterHandle;
+  // Photo and directory card are dashboard-only; the wizard there asks for them.
+  const dashboardMissing = current.profileMissing.filter(
+    (field) => field !== "name"
+  );
   const missing = [
     !current.name && "your name",
-    askPhone && "a confirmed phone",
+    askPhone && "a contact phone",
     githubUrl && "your GitHub",
+    askX && "your X handle",
+    dashboardMissing.length > 0 && "your dashboard profile",
   ].filter(Boolean) as string[];
   if (missing.length === 0) {
     return current;
@@ -396,29 +422,20 @@ export async function completeProfile(
     }
   }
   if (askPhone) {
-    const wants = await confirmOrFlag(ctx, undefined, {
+    const phone = await textOrFlag(ctx, undefined, {
       flag: "--phone",
-      initialValue: true,
-      message:
-        "Confirm your mobile now? Organisers use it to reach you at the venue.",
+      initialValue: "",
+      message: "Your mobile number, so organisers can reach you at the venue",
+      optional: true,
+      placeholder: "+34 600 111 222",
+      validate: validatePhone,
     });
-    if (wants) {
-      try {
-        const phone = await runPhoneConfirmation(
-          ctx,
-          ui,
-          session,
-          current,
-          undefined,
-          undefined
-        );
-        current = { ...current, phone, phoneConfirmed: true };
-        ui.success(`${phone} confirmed.`);
-      } catch (error) {
-        ui.warn(
-          `${error instanceof Error ? error.message : String(error)} Try again later with ${cmd("hackspain profile phone")}.`
-        );
-      }
+    if (phone.trim()) {
+      const saved = await session.client.mutation(api.users.setPhone, {
+        phone: formatPhone(phone),
+      });
+      current = { ...current, phone: saved };
+      ui.success(`${saved} saved.`);
     }
   }
   if (githubUrl) {
@@ -426,6 +443,26 @@ export async function completeProfile(
       `${githubUrl}\n\nAuthorise HackSpain there and you are done; it is how your pushes show up on the feed.`,
       "Link your GitHub in the browser"
     );
+  }
+  if (askX) {
+    const handle = await textOrFlag(ctx, undefined, {
+      flag: "--x",
+      initialValue: current.suggestedTwitterHandle ?? "",
+      message: "Your X handle, if you have one",
+      optional: true,
+      placeholder: "@ana",
+      validate: (v) => (v.trim() ? validateX(v) : undefined),
+    });
+    if (handle.trim()) {
+      const saved = await session.client.mutation(api.users.setTwitterHandle, {
+        handle: normalizeX(handle),
+      });
+      current = { ...current, twitterHandle: saved ?? undefined };
+    }
+  }
+  const nudge = profileNudge(current);
+  if (nudge) {
+    ui.note(nudge, "Finish on the dashboard");
   }
   return current;
 }
@@ -457,15 +494,20 @@ export function registerProfile(program: Command): void {
   profile
     .command("notify <on|off>")
     .description(
-      "Event notices by email and phone (announcements in `watch` are always on)"
+      "Event notices by email (announcements in `watch` are always on)"
     )
     .action(setNotify);
 
   profile
     .command("phone [number]")
-    .description("Confirm your mobile number with an SMS code")
-    .option("--code <digits>", "the code, for scripts")
-    .action(confirmPhone);
+    .description("Your contact number for the venue")
+    .action(setPhoneCommand);
+
+  profile
+    .command("x [handle]")
+    .description("Your X handle (or --clear it)")
+    .option("--clear", "remove the handle")
+    .action(setXCommand);
 
   profile
     .command("github")

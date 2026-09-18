@@ -1,5 +1,7 @@
 import { v } from "convex/values";
-import { isAdmin, isJudge } from "./lib/auth";
+import { teamLogoUrlFor } from "./lib/team";
+import { isAdmin } from "./lib/auth";
+import { canJudge, grantsJudging } from "./lib/userTypes";
 import {
   adminMutation,
   adminQuery,
@@ -32,6 +34,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 const challengeSummary = v.object({
   _id: v.id("tracks"),
   label: v.string(),
+  logoUrl: v.optional(v.string()),
   slug: v.string(),
 });
 
@@ -49,6 +52,7 @@ const projectMeta = {
   members: v.array(v.string()),
   name: v.string(),
   perks: v.array(perkSummary),
+  teamLogoUrl: v.optional(v.string()),
   teamName: v.optional(v.string()),
   techStack: v.array(v.string()),
   urls: urlsValidator,
@@ -194,6 +198,7 @@ function projectFields(submission: Doc<"submissions">, catalog: Catalog) {
       challenges.push({
         _id: track._id,
         label: track.label,
+        logoUrl: track.logoUrl,
         slug: track.slug,
       });
     }
@@ -222,8 +227,13 @@ function projectFields(submission: Doc<"submissions">, catalog: Catalog) {
       : [],
     name: submission.name,
     perks,
+    teamLogoUrl: teamLogoUrlFor(team),
     teamName: team?.name,
-    techStack: submission.techStack ?? [],
+    // The scan lands on whichever has the repo; the team's covers a project
+    // that never got its own repo URL.
+    techStack: submission.techStack?.length
+      ? submission.techStack
+      : (team?.techStack ?? []),
     urls: submission.urls,
   };
 }
@@ -370,21 +380,30 @@ async function canScoreContext(
   return await assignedToContext(ctx, user._id, context);
 }
 
+/** Admins plus everyone whose user type switches judging on. */
 async function listStaffUsers(ctx: QueryCtx): Promise<Doc<"users">[]> {
-  const [judges, admins] = await Promise.all([
-    ctx.db
-      .query("users")
-      .withIndex("by_role", (q) => q.eq("role", "judge"))
-      .collect(),
+  const [admins, types] = await Promise.all([
     ctx.db
       .query("users")
       .withIndex("by_role", (q) => q.eq("role", "admin"))
       .collect(),
+    ctx.db.query("userTypes").collect(),
   ]);
+  const typed: Doc<"users">[] = [];
+  for (const type of types) {
+    if (!grantsJudging({ role: "user" }, type)) {
+      continue;
+    }
+    const rows = await ctx.db
+      .query("users")
+      .withIndex("by_user_type", (q) => q.eq("userTypeId", type._id))
+      .collect();
+    typed.push(...rows);
+  }
   const seen = new Set<string>();
   const people = [];
-  for (const user of [...judges, ...admins]) {
-    if (seen.has(user._id) || !isJudge(user)) {
+  for (const user of [...admins, ...typed]) {
+    if (seen.has(user._id)) {
       continue;
     }
     seen.add(user._id);
@@ -442,6 +461,7 @@ export const meta = judgeQuery({
       .map((track) => ({
         _id: track._id,
         label: track.label,
+        logoUrl: track.logoUrl,
         slug: track.slug,
       }));
     const myAssignments = [];
@@ -736,7 +756,7 @@ export const addJudgeToGroup = adminMutation({
   handler: async (ctx, args) => {
     await assertContext(ctx, args.context);
     const user = await ctx.db.get(args.userId);
-    if (!user || !isJudge(user)) {
+    if (!user || !(await canJudge(ctx, user))) {
       throw new Error("Esa persona no es juez");
     }
     const existing = await findAssignment(ctx, args.userId, args.context);

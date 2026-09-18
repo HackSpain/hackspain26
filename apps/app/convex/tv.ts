@@ -4,8 +4,20 @@ import { query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { getSignupForUser } from "./lib/auth";
+import { isDirectoryComplete } from "./lib/directory";
+import { externalThumbnail } from "./lib/photo";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import { INSIGHTS_LAYOUT, PANEL_V2_LAYOUT } from "./lib/tvLayouts";
+import { clampTv, layoutTvBox as layoutBox } from "./lib/tvLayout";
+import {
+  tvFeedModeValidator,
+  tvFeedSourceValidator,
+  tvFontWeightValidator,
+  tvSponsorValidator,
+  tvTickerSpeedValidator,
+  tvWidgetFields,
+  tvWidgetKindValidator,
+} from "./lib/tvValidators";
 
 export const tvZoneValidator = v.union(
   v.literal("banner"),
@@ -46,181 +58,6 @@ export const list = query({
   },
 });
 
-export const adminList = adminQuery({
-  args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("tvMessages"),
-      text: v.string(),
-      zone: tvZoneValidator,
-      order: v.number(),
-      active: v.boolean(),
-      createdAt: v.number(),
-    }),
-  ),
-  handler: async (ctx) => {
-    const rows = await ctx.db.query("tvMessages").collect();
-    return rows.sort(byZoneOrder).map((row) => ({
-      _id: row._id,
-      text: row.text,
-      zone: row.zone,
-      order: row.order,
-      active: row.active,
-      createdAt: row.createdAt,
-    }));
-  },
-});
-
-export const adminCreate = adminMutation({
-  args: { text: v.string(), zone: tvZoneValidator },
-  returns: v.id("tvMessages"),
-  handler: async (ctx, args) => {
-    const text = args.text.trim();
-    if (!text) throw new Error("El mensaje no puede estar vacío");
-    const last = await ctx.db
-      .query("tvMessages")
-      .withIndex("by_zone", (q) => q.eq("zone", args.zone))
-      .order("desc")
-      .first();
-    const now = Date.now();
-    return await ctx.db.insert("tvMessages", {
-      text,
-      zone: args.zone,
-      order: (last?.order ?? -1) + 1,
-      active: true,
-      createdBy: ctx.user._id,
-      createdAt: now,
-      updatedAt: now,
-    });
-  },
-});
-
-export const adminUpdate = adminMutation({
-  args: {
-    messageId: v.id("tvMessages"),
-    text: v.optional(v.string()),
-    zone: v.optional(tvZoneValidator),
-    active: v.optional(v.boolean()),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const message = await ctx.db.get(args.messageId);
-    if (!message) throw new Error("Mensaje no encontrado");
-    const patch: {
-      text?: string;
-      zone?: Doc<"tvMessages">["zone"];
-      order?: number;
-      active?: boolean;
-      updatedAt: number;
-    } = { updatedAt: Date.now() };
-    if (args.text !== undefined) {
-      const text = args.text.trim();
-      if (!text) throw new Error("El mensaje no puede estar vacío");
-      patch.text = text;
-    }
-    if (args.zone !== undefined && args.zone !== message.zone) {
-      const last = await ctx.db
-        .query("tvMessages")
-        .withIndex("by_zone", (q) => q.eq("zone", args.zone!))
-        .order("desc")
-        .first();
-      patch.zone = args.zone;
-      patch.order = (last?.order ?? -1) + 1;
-    }
-    if (args.active !== undefined) patch.active = args.active;
-    await ctx.db.patch(message._id, patch);
-    return null;
-  },
-});
-
-export const adminRemove = adminMutation({
-  args: { messageId: v.id("tvMessages") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const message = await ctx.db.get(args.messageId);
-    if (!message) throw new Error("Mensaje no encontrado");
-    await ctx.db.delete(message._id);
-    return null;
-  },
-});
-
-export const adminMove = adminMutation({
-  args: {
-    messageId: v.id("tvMessages"),
-    direction: v.union(v.literal("up"), v.literal("down")),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const message = await ctx.db.get(args.messageId);
-    if (!message) throw new Error("Mensaje no encontrado");
-    const siblings = await ctx.db
-      .query("tvMessages")
-      .withIndex("by_zone", (q) => q.eq("zone", message.zone))
-      .collect();
-    siblings.sort((a, b) => a.order - b.order);
-    const index = siblings.findIndex((row) => row._id === message._id);
-    const swapWith =
-      args.direction === "up" ? siblings[index - 1] : siblings[index + 1];
-    if (!swapWith) return null;
-    const now = Date.now();
-    await ctx.db.patch(message._id, { order: swapWith.order, updatedAt: now });
-    await ctx.db.patch(swapWith._id, { order: message.order, updatedAt: now });
-    return null;
-  },
-});
-
-export const tvWidgetKindValidator = v.union(
-  v.literal("banner"),
-  v.literal("ticker"),
-  v.literal("clock"),
-  v.literal("message"),
-  v.literal("insightsStats"),
-  v.literal("insightsActivity"),
-  v.literal("insightsHarness"),
-  v.literal("insightsStacks"),
-  v.literal("insightsScatter"),
-  v.literal("insightsLeaderboard"),
-  v.literal("insightsEvolution"),
-  v.literal("liveCommits"),
-  v.literal("liveAgents"),
-  v.literal("liveTokens"),
-  v.literal("liveLeaderboard"),
-  v.literal("feed"),
-  v.literal("sponsorGrid"),
-  v.literal("sponsorTicker"),
-);
-
-export const tvSponsorValidator = v.object({
-  name: v.string(),
-  logoUrl: v.string(),
-  href: v.string(),
-  tier: v.union(v.literal("gold"), v.literal("silver"), v.literal("community")),
-});
-
-export const tvTickerSpeedValidator = v.union(
-  v.literal("slow"),
-  v.literal("normal"),
-  v.literal("fast"),
-);
-
-export const tvFeedModeValidator = v.union(
-  v.literal("latest"),
-  v.literal("rotate"),
-);
-
-export const tvFeedSourceValidator = v.union(
-  v.literal("all"),
-  v.literal("participants"),
-  v.literal("github"),
-);
-
-export const tvFontWeightValidator = v.union(
-  v.literal("normal"),
-  v.literal("medium"),
-  v.literal("semibold"),
-  v.literal("bold"),
-);
-
 const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
 
 function parseFontSize(value: number | undefined): number | undefined {
@@ -239,25 +76,10 @@ function parseFontSize(value: number | undefined): number | undefined {
 
 export const widgetReturn = v.object({
   _id: v.string(),
-  kind: tvWidgetKindValidator,
-  x: v.number(),
-  y: v.number(),
-  w: v.number(),
-  h: v.number(),
-  z: v.number(),
-  text: v.string(),
-  sponsors: v.optional(v.array(tvSponsorValidator)),
-  tickerSpeed: v.optional(tvTickerSpeedValidator),
-  feedMode: v.optional(tvFeedModeValidator),
-  feedSource: v.optional(tvFeedSourceValidator),
-  fontSize: v.optional(v.number()),
-  fontWeight: v.optional(tvFontWeightValidator),
-  background: v.optional(v.boolean()),
+  ...tvWidgetFields,
 });
 
 type WidgetKind = Doc<"tvWidgets">["kind"];
-
-const MIN_SIZE = 8;
 
 const TEXT_KINDS = new Set<WidgetKind>(["banner", "ticker", "message"]);
 const FONT_SIZE_KINDS = new Set<WidgetKind>([
@@ -324,44 +146,10 @@ const KIND_DEFAULTS: Record<
   sponsorTicker: { x: 0, y: 86, w: 100, h: 14, text: "" },
 };
 
-function clamp(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
-
-function layoutBox(input: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}): { x: number; y: number; w: number; h: number } {
-  const w = clamp(input.w, MIN_SIZE, 100);
-  const h = clamp(input.h, MIN_SIZE, 100);
-  return {
-    x: clamp(input.x, 0, 100 - w),
-    y: clamp(input.y, 0, 100 - h),
-    w,
-    h,
-  };
-}
-
 function toPublicWidget(row: Doc<"tvWidgets">) {
   return {
     _id: row._id,
-    kind: row.kind,
-    x: row.x,
-    y: row.y,
-    w: row.w,
-    h: row.h,
-    z: row.z,
-    text: row.text,
-    sponsors: row.sponsors,
-    tickerSpeed: row.tickerSpeed,
-    feedMode: row.feedMode,
-    feedSource: row.feedSource,
-    fontSize: row.fontSize,
-    fontWeight: row.fontWeight,
-    background: row.background,
+    ...snapshotOf(row),
   };
 }
 
@@ -433,21 +221,6 @@ export const listWidgets = query({
   },
 });
 
-export const liveState = query({
-  args: {},
-  returns: v.union(
-    v.object({ _id: v.id("tvLayouts"), name: v.string() }),
-    v.null(),
-  ),
-  handler: async (ctx) => {
-    const live = await ctx.db
-      .query("tvLayouts")
-      .withIndex("by_live", (q) => q.eq("isLive", true))
-      .first();
-    return live ? { _id: live._id, name: live.name } : null;
-  },
-});
-
 const tvFeedPostReturn = v.object({
   _id: v.string(),
   kind: v.union(v.literal("post"), v.literal("github")),
@@ -502,6 +275,63 @@ export const listFeed = query({
       out.push(await toTvFeedPost(ctx, row));
     }
     return out;
+  },
+});
+
+/**
+ * The team-formation screen: who is here and which team each person is in,
+ * and nothing else from their card. Public like the rest of the venue
+ * screens, so photos are storage URLs rather than the app's session-bound
+ * file route, and a missing name never falls back to an email.
+ */
+export const teamFormation = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      name: v.string(),
+      photoUrl: v.optional(v.string()),
+      team: v.optional(v.object({ id: v.string(), name: v.string() })),
+    }),
+  ),
+  handler: async (ctx) => {
+    const [users, teams, memberships] = await Promise.all([
+      ctx.db.query("users").collect(),
+      ctx.db.query("teams").collect(),
+      ctx.db.query("teamMembers").collect(),
+    ]);
+    const teamsById = new Map(teams.map((team) => [team._id, team]));
+    // Same row as membershipForUser: the earliest membership, whatever its status.
+    const membershipByUser = new Map<string, (typeof memberships)[number]>();
+    for (const membership of memberships) {
+      if (membership.userId && !membershipByUser.has(membership.userId)) {
+        membershipByUser.set(membership.userId, membership);
+      }
+    }
+    const people = await Promise.all(
+      users.map(async (user) => {
+        const membership = membershipByUser.get(user._id);
+        const team = membership?.status === "member" ? teamsById.get(membership.teamId) : undefined;
+        // The people on the participants map, plus anyone already in a team.
+        if (!team && !(user.directory && isDirectoryComplete(user.directory))) {
+          return null;
+        }
+        const photoId = user.avatarThumbId ?? user.avatarId;
+        let photoUrl = user.image ? externalThumbnail(user.image) : undefined;
+        if (photoId) {
+          photoUrl = (await ctx.storage.getUrl(photoId)) ?? undefined;
+        }
+        return {
+          id: user._id as string,
+          name: user.name || "Participante",
+          photoUrl,
+          team: team ? { id: team._id as string, name: team.name } : undefined,
+        };
+      }),
+    );
+    return people
+      .filter((person) => person !== null)
+      .toSorted((a, b) => a.id.localeCompare(b.id));
   },
 });
 
@@ -634,7 +464,7 @@ export const adminUpdateWidget = adminMutation({
     await ctx.db.patch(widget._id, {
       ...box,
       text,
-      z: args.z === undefined ? widget.z : clamp(args.z, 0, 10_000),
+      z: args.z === undefined ? widget.z : clampTv(args.z, 0, 10_000),
       sponsors: args.sponsors ?? widget.sponsors,
       tickerSpeed: args.tickerSpeed ?? widget.tickerSpeed,
       feedMode: args.feedMode ?? widget.feedMode,

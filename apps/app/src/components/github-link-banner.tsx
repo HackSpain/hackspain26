@@ -32,7 +32,13 @@ const RESULT_MESSAGES: Record<
   },
 };
 
-export function useGithubLink() {
+/**
+ * Starts the OAuth link. `returnTo` is the dashboard path the callback sends
+ * the browser back to (with `?github=<status>`); the current page by default,
+ * so the result shows where the user was.
+ */
+export function useGithubLink(returnTo?: string) {
+  const pathname = usePathname();
   const startLink = useMutation(api.github.startLink);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +47,7 @@ export function useGithubLink() {
     setError(null);
     setPending(true);
     try {
-      const { url } = await startLink({});
+      const { url } = await startLink({ returnTo: returnTo ?? pathname });
       window.location.assign(url);
     } catch (caughtError: unknown) {
       setError(
@@ -98,7 +104,7 @@ export function GithubLinkBanner() {
 
   return (
     <div className="border-b-[3px] border-hs-ink bg-hs-gold text-hs-ink">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <Github className="mt-0.5 size-5 shrink-0" aria-hidden />
           <div className="min-w-0">

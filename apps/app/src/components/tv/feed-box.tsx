@@ -18,20 +18,9 @@ import {
   useGSAP,
   useStreamShift,
 } from "./gsap";
-import { usePageVisible, usePrefersReducedMotion } from "./motion";
+import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
 
 const ROTATE_MS = 8000;
-
-function useTick(ms: number) {
-  const visible = usePageVisible();
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!visible) {return;}
-    const timer = window.setInterval(() => setTick((value) => value + 1), ms);
-    return () => window.clearInterval(timer);
-  }, [ms, visible]);
-  return tick;
-}
 
 function useNow(ms: number) {
   const visible = usePageVisible();

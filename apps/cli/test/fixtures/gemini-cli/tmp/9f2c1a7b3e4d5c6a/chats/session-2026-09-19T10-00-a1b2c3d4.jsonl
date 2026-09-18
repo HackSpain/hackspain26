@@ -1,0 +1,8 @@
+{"sessionId":"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d","projectHash":"9f2c1a7b3e4d5c6a0000000000000000","startTime":"2026-09-19T10:00:00.000Z","lastUpdated":"2026-09-19T10:00:00.000Z","kind":"main","directories":["/home/hacker/agentos"]}
+{"id":"m1","timestamp":"2026-09-19T10:00:05.000Z","type":"user","content":"add a login page"}
+{"id":"m2","timestamp":"2026-09-19T10:00:09.000Z","type":"gemini","content":"On it.","model":"gemini-2.5-pro","thoughts":[]}
+{"id":"m2","timestamp":"2026-09-19T10:00:09.000Z","type":"gemini","content":"On it.","model":"gemini-2.5-pro","thoughts":[],"tokens":{"input":12000,"output":340,"cached":9000,"thoughts":120,"tool":0,"total":12460}}
+{"$set":{"lastUpdated":"2026-09-19T10:00:10.000Z"}}
+{"id":"m3","timestamp":"2026-09-19T10:01:30.000Z","type":"gemini","content":"Done.","model":"gemini-2.5-flash","tokens":{"input":500,"output":80,"cached":0,"thoughts":0,"tool":0,"total":580}}
+{"id":"m3","timestamp":"2026-09-19T10:01:30.000Z","type":"gemini","content":"Done.","model":"gemini-2.5-flash","toolCalls":[{"id":"t1","name":"write_file"}],"tokens":{"input":500,"output":80,"cached":0,"thoughts":0,"tool":0,"total":580}}
+{"$rewindTo":"m1"}

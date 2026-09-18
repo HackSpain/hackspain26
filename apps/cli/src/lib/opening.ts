@@ -1,32 +1,14 @@
 import { firstName } from "./output";
-import { BRAND, c, highlight, stripAnsi, width } from "./style";
+import { BRAND, c, highlight } from "./style";
+import { box, cardWidth, kvLines, SPINNER } from "./tui";
 
 /**
  * Designed post-banner opening: a short boot (check-in / loaded) and a
- * compact status board. Kept off clack's intro/spinner timeline so those
+ * compact status board. Kept off the prompt timeline so those
  * lines read as UI, not leftover logs.
  */
 
-const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const INDENT = "  ";
-
-function pad(text: string, size: number): string {
-  return text + " ".repeat(Math.max(0, size - width(text)));
-}
-
-function fit(text: string, max: number): string {
-  if (width(text) <= max) {
-    return text;
-  }
-  let out = "";
-  for (const ch of stripAnsi(text)) {
-    if (width(`${out}${ch}`) > Math.max(0, max - 1)) {
-      break;
-    }
-    out += ch;
-  }
-  return `${out}…`;
-}
 
 export function formatVersionLine(version: string): string {
   return `${BRAND} ${c.dim("·")} ${c.dim(`v${version}`)}`;
@@ -99,7 +81,7 @@ export function openingBoardRows(input: OpeningBoardInput): [string, string][] {
   ];
 }
 
-/** Rounded teal card, same language as `hackspain watch`. */
+/** Rounded teal card, same chrome as `hackspain watch`. */
 export function formatStatusBoard(
   rows: [string, string][],
   columns = process.stdout.columns ?? 80
@@ -107,26 +89,10 @@ export function formatStatusBoard(
   if (rows.length === 0) {
     return "";
   }
-  const title = "status";
-  const maxInner = Math.max(24, columns - 8);
-  const keyW = Math.max(...rows.map(([key]) => width(key)));
-  const cells = rows.map(([key, value]) => {
-    const keyPad = `${c.dim(pad(key, keyW))}  `;
-    return `${keyPad}${fit(value, Math.max(8, maxInner - width(keyPad)))}`;
-  });
-  const innerW = Math.min(
-    maxInner,
-    Math.max(width(title) + 4, ...cells.map((cell) => width(cell)))
-  );
-  const boxW = innerW + 4;
-  const prefixCells = 3 + width(title) + 1;
-  const dashes = Math.max(1, boxW - prefixCells - 1);
-  const top = `${c.teal("╭─ ")}${c.bold(c.gold(title))}${c.teal(` ${"─".repeat(dashes)}╮`)}`;
-  const body = cells.map(
-    (cell) => `${c.teal("│")} ${pad(cell, innerW)} ${c.teal("│")}`
-  );
-  const bottom = c.teal(`╰${"─".repeat(boxW - 2)}╯`);
-  return [top, ...body, bottom].map((line) => `${INDENT}${line}`).join("\n");
+  const w = cardWidth(columns);
+  return box({ title: "status" }, kvLines(rows, w - 4), w)
+    .map((line) => `${INDENT}${line}`)
+    .join("\n");
 }
 
 export type OpeningView = {

@@ -63,15 +63,8 @@ export function normalizeCline(
   const models = (task.metadata?.model_usage ?? [])
     .filter((m) => typeof m.model_id === "string")
     .toSorted((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
-  const modelAt = (ts: number) => {
-    let current = models[0];
-    for (const m of models) {
-      if ((m.ts ?? 0) <= ts) {
-        current = m;
-      }
-    }
-    return current;
-  };
+  const modelAt = (ts: number) =>
+    models.findLast((model) => (model.ts ?? 0) <= ts) ?? models[0];
   const cwd = task.metadata?.cwdOnTaskInitialization;
   const sorted = (task.messages as UiMessage[])
     .filter(
@@ -137,23 +130,10 @@ function storageBase(): string {
 }
 
 function globalStorageRoots(): string[] {
-  const roots: string[] = [];
-  for (const base of [storageBase()]) {
-    for (const editor of EDITORS) {
-      const dir = join(
-        base,
-        editor,
-        "User",
-        "globalStorage",
-        EXTENSION,
-        "tasks"
-      );
-      if (existsSync(dir)) {
-        roots.push(dir);
-      }
-    }
-  }
-  return roots;
+  const base = storageBase();
+  return EDITORS.map((editor) =>
+    join(base, editor, "User", "globalStorage", EXTENSION, "tasks")
+  ).filter((dir) => existsSync(dir));
 }
 
 export async function* collectCline(

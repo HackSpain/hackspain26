@@ -119,6 +119,18 @@ export function privacySeo(): PageSeo {
   };
 }
 
+export const CONDUCT_KEYWORDS =
+  "código de conducta HackSpain, normas hackathon Madrid, buena fe, respeto, plazos envío";
+
+export function conductSeo(): PageSeo {
+  return {
+    description:
+      "Normas de HackSpain: el proyecto se construye en el evento, se actúa de buena fe, se respetan los demás equipos, las personas y los plazos.",
+    ogImageAlt: "HackSpain — código de conducta",
+    title: "Código de conducta — HACKSPAIN 2026",
+  };
+}
+
 export const BRAND_KEYWORDS =
   "marca HackSpain, logo HackSpain, identidad visual HackSpain, recursos de prensa HackSpain, brand assets HackSpain";
 

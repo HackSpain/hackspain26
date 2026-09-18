@@ -15,8 +15,9 @@ export function canReadGithubRepos(me: Me): boolean {
 }
 
 /**
- * Stack/repo detection reads GitHub as the participant. Block until their
- * OAuth token is stored; completeProfile may skip this, this flow does not.
+ * Stack/repo detection reads public GitHub repositories as the participant.
+ * Block until their OAuth token is stored; completeProfile may skip this,
+ * this flow does not.
  */
 export async function ensureGithubLinked(
   ctx: CliContext,
@@ -40,7 +41,7 @@ export async function ensureGithubLinked(
     );
   }
   ui.note(
-    `${url}\n\nAuthorise HackSpain there (we need repo read so private team repos work). Come back when the dashboard says you are linked.`,
+    `${url}\n\nAuthorise HackSpain there. We only read public repositories, so make the team repo public first. Come back when the dashboard says you are linked.`,
     "Open this link in your browser"
   );
   return await ui.spin(

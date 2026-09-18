@@ -1,20 +1,28 @@
-# Telemetry schema `hackspain.telemetry.v1`
+# Telemetry schema `hackspain.telemetry.v2`
 
 What `hackspain watch` records and sends, regardless of which AI coding harness produced it.
 Source of truth for the TypeScript type and validator: `apps/cli/src/watcher/schema.ts`.
 
+**One schema, one meaning per field.** Every field below means the same for every harness, and
+every derived field (`model.name`, `model.family`, `model.provider`, `tokens.total`) comes from a
+single pure module, `apps/app/src/app/api/cli/telemetry/canonical.ts`. The CLI runs it when it
+stamps an event (`canonicalize`); the dashboard runs it again on ingestion and never trusts the
+client's values. So exported logs are homogeneous across harnesses and CLI versions: a
+`hackspain.telemetry.v1` event from a binary up to 0.4.x is accepted and canonicalised with the
+same v2 semantics before export. What only some harnesses can report lives under `native`, which
+is explicitly not comparable.
+
 The watcher writes every event to a local spool
 (`~/.local/state/hackspain/telemetry/YYYY-MM-DD.ndjson`, one JSON object per line) and, when a URL
 is configured, POSTs the same lines as `application/x-ndjson` with
-`Authorization: Bearer <Convex JWT>`. The dashboard verifies the participant and inserts accepted
-events through the RawTree TypeScript SDK. RawTree stores the canonical objects in
-`hackspain_telemetry` by default.
+`Authorization: Bearer <Convex JWT>`. The dashboard verifies the participant, converts accepted
+events to OTLP logs and sends them to RawTree's native `POST /otlp/v1/logs` endpoint. RawTree uses
+the fixed `hackspain_otel_logs` table for both ingestion and Insights queries.
 
 Before an HTTP request, the CLI atomically saves the exact batch in a per-user pending-upload file.
 It removes that file only after a successful response, and retries it on the next flush or process
-start. The server sorts the accepted rows and sends RawTree a stable ClickHouse insert-deduplication
-token derived from the authenticated user and event ids. RawTree insert deduplication has a finite
-window, so every downstream query must still treat `(identity.userId, eventId)` as the permanent
+start. Native OTLP ingestion does not promise insert deduplication, so a retry can create another
+physical row. Every downstream query treats (`hackspain.user.id`, `event.id`) as the permanent
 logical key.
 
 The dashboard receipt accounts for every input line as accepted or rejected. Rejections include a
@@ -26,23 +34,21 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `schema` | `"hackspain.telemetry.v1"` | Bump for breaking changes |
+| `schema` | `"hackspain.telemetry.v2"` | Bump for breaking changes. v1 is accepted on ingestion and upgraded |
 | `type` | `usage` \| `session.start` \| `session.end` | `session.end` is reserved; no harness emits it yet |
 | `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key for queries and downstream processing |
-| `occurredAt` | ISO-8601 UTC | When the harness recorded it |
+| `occurredAt` | ISO-8601 UTC | When the harness recorded it. The hackathon window and every time bucket use this one, so usage read days later still lands when it happened |
 | `observedAt` | ISO-8601 UTC | When the watcher read it |
-| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
+| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` \| `pi` \| `omp` \| `antigravity` \| `devin` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
 | `harnessVersion` | string? | e.g. Claude Code `2.1.261`, Codex `0.130.0` |
 | `sessionId` | string | Harness session / task id |
-| `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path |
-| `model` | `{ raw, family, provider? }`? | `family` ∈ `claude` \| `gpt` \| `gemini` \| `other`, the same four buckets as `MODELS` in the insights mock |
-| `tokens` | `{ input, output, cacheRead, cacheWrite, reasoning? }`? | Non-negative integers. Required for `usage`. `input` excludes cache reads for every harness |
-| `costUsd` | number? | Only when the harness itself reports a price |
+| `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path. `gitBranch` is the harness's own when it logs one (Claude Code, Codex, Qwen Code), else read from the repository's `.git/HEAD`, so every harness reports it; absent outside a repository or on a detached HEAD |
+| `model` | `{ raw, name, family, provider }` | Required for `usage`. `raw` is exactly what the harness logged. `name` is the grouping key: lower case, no gateway path, variant tag, release date or cloud prefix, version dots as dashes, so `anthropic/claude-sonnet-4.5`, `claude-sonnet-4-5-20250929` and `us.anthropic.claude-sonnet-4-5-20250929-v1:0` are all `claude-sonnet-4-5`. `family` ∈ `claude` \| `gpt` \| `gemini` \| `qwen` \| `other`. `provider` is always set: who served the request when the harness says (as a slug, aliases folded), else who makes the model (`anthropic`, `openai`, `google`, `alibaba`, `unknown`) |
+| `tokens` | `{ input, output, cacheRead, cacheWrite, total, reasoning? }`? | Non-negative integers. Required for `usage`. For every harness: `input` excludes cache reads, `output` includes `reasoning`, `total` = `input + output + cacheRead + cacheWrite`. `reasoning` is a breakdown of `output`, absent when the harness does not report it (Cline) |
 | `identity` | `{ userId, teamId?, clientVersion }` | Stamped by the CLI from the logged-in user and their team at flush time |
-| `native` | object? | Allowlisted harness-specific remainder. Currently only Claude `requestId` |
+| `native` | `{ requestId?, costUsd? }`? | What only some harnesses report, so never comparable across them. `requestId`: Claude Code. `costUsd`: the price OpenCode, Kilo Code and Cline compute themselves (top-level `costUsd` in v1). A cost that compares across harnesses has to be computed from `tokens` and `model.name` |
 
-Derived values for the dashboard: `tokens.total = input + output + cacheRead + cacheWrite`,
-`cachedTokens = cacheRead + cacheWrite`, sessions = distinct `sessionId` per harness, 30-minute
+Derived values for the dashboard: `cachedTokens = cacheRead + cacheWrite`, sessions = distinct `sessionId` per harness, 30-minute
 buckets on `occurredAt`.
 
 ## Per-harness mapping
@@ -53,11 +59,98 @@ buckets on `occurredAt`.
 | codex | `~/.codex/sessions/**/rollout-*.jsonl`, `event_msg` with `payload.type: "token_count"` | `session_meta.payload.session_id` | line index | `last_token_usage.input_tokens − cached_input_tokens` | `output_tokens` | `cached_input_tokens` | `cache_write_input_tokens` | `turn_context.payload.model` |
 | opencode | `~/.local/share/opencode/opencode.db`, table `message`, assistant rows with `time.completed` | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
 | cline | VS Code globalStorage `saoudrizwan.claude-dev/tasks/<task>/ui_messages.json`, `say: "api_req_started"` | task id | entry `ts` | `tokensIn` | `tokensOut` | `cacheReads` | `cacheWrites` | `task_metadata.json` `model_usage` |
+| gemini-cli | `~/.gemini/tmp/<project>/chats/session-*.jsonl` (subagents one level deeper), records with `type: "gemini"` and a `tokens` object (a turn is appended again with the same `id` once usage arrives: dedupe) | metadata line `sessionId`, else the file name's short id | message `id` | `tokens.input − tokens.cached` | `tokens.output + tokens.thoughts` | `tokens.cached` | 0 (implicit caching) | `model`; `tokens.thoughts` → `reasoning` |
+| kilo-code | `~/.local/share/kilo/kilo*.db` (OpenCode fork, same `message` table; channel builds use `kilo-<channel>.db`) | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
+| qwen-code | `~/.qwen/projects/<slug>/chats/<session>.jsonl` (`QWEN_HOME` overrides), records with `type: "assistant"` and `usageMetadata` | `sessionId` | record `uuid` | `promptTokenCount − cachedContentTokenCount` | `candidatesTokenCount`, plus `thoughtsTokenCount` when the total counts it apart | `cachedContentTokenCount` | 0 | `model`; `thoughtsTokenCount` → `reasoning`; `version` → `harnessVersion` |
+| pi | `~/.pi/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoning` → `reasoning`; `usage.cost.total` → `native.costUsd` |
+| omp | `~/.omp/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoningTokens` → `reasoning`; `usage.cost.total` → `native.costUsd` |
+| antigravity | `~/.gemini/antigravity-cli/conversations/<uuid>.db` (Antigravity CLI, `agy`), table `steps`, rows whose protobuf `metadata` carries a usage message (field 9); `gen_metadata` names the model codes and the sibling `conversation_summaries.db` gives the workspace | the file name's uuid | step `idx` | usage field 2 (already net of cache reads) | usage field 3 (already includes thoughts) | usage field 5 | 0 (implicit caching) | usage field 1 → `gen_metadata` name; usage field 10 (thoughts) → `reasoning` |
+| devin | `~/.local/share/devin/cli/sessions.db` (Devin CLI; `XDG_DATA_HOME` overrides), table `message_nodes`, rows whose `chat_message` JSON is an assistant message with `metadata.metrics` (the same message sits in two chains: dedupe) | `session_id` | `message_id` | `metrics.input_tokens` (already net of cache reads) | `metrics.output_tokens` | `metrics.cache_read_tokens` | `metrics.cache_creation_tokens` | `sessions.model` + `sessions.backend_type` (the session's current model; the message does not name one) |
 
 Reasoning tokens go to `tokens.reasoning` when the harness reports them (Claude thinking,
-Codex `reasoning_output_tokens`, OpenCode `tokens.reasoning`). Codex and OpenCode formats are
-written from their documented shapes and fixtures, not from a local install; collectors log and
-skip anything they cannot parse.
+Codex `reasoning_output_tokens`, OpenCode `tokens.reasoning`, Gemini CLI and Qwen Code thought
+counts). Codex, OpenCode, Gemini CLI and Qwen Code formats are written from their documented
+shapes or recorder source and fixtures, not from a local install; collectors log and skip
+anything they cannot parse. Gemini-style prompt counts include the cached part, so `input` is
+the prompt minus the cache read for those two.
+
+Gemini-style usage and OpenCode (so Kilo Code too) keep reasoning next to the output count, while
+Claude and Codex already include it. OpenCode was checked against a real database: total 31456 =
+input 39 + output 74 + reasoning 111 + cache read 31232. `outputWithReasoning` (`schema.ts`) settles it per
+record from the harness's own total: thoughts are added only when the total counts them apart.
+Without a total, Gemini CLI and OpenCode add them and Qwen Code does not (it converts
+OpenAI-style usage, where completion tokens include reasoning).
+
+Pi and Oh My Pi formats are checked against their upstream sources:
+[Pi session manager](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/src/core/session-manager.ts),
+[Pi usage](https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/types.ts),
+[OMP sessions](https://github.com/can1357/oh-my-pi/blob/main/docs/session.md) and
+[OMP usage](https://github.com/can1357/oh-my-pi/blob/main/packages/catalog/src/types.ts).
+Their header `version` describes the session format, so it is not sent as `harnessVersion`.
+Custom session directories (including OMP profiles or XDG storage) can be selected with
+`HACKSPAIN_PI_SESSION_DIR` and `HACKSPAIN_OMP_SESSION_DIR`, pointing directly to the sessions
+folder. Both tools share `PI_CODING_AGENT_DIR` / `PI_CODING_AGENT_SESSION_DIR`; the watcher
+intentionally uses separate overrides to avoid attributing the same logs to both harnesses.
+Only persisted assistant usage is collected, not compaction summaries or estimated counts.
+
+## Known limits
+
+- `tokens.cacheWrite` is always 0 for Gemini CLI, Qwen Code and Antigravity: their caching is
+  implicit and no write is billed or reported.
+- `harnessVersion` exists only where the harness logs it (Claude Code, Codex, Qwen Code).
+- Devin reports no reasoning count, and its model is the session's at read time: a `/model`
+  switch mid-session is attributed to the new model for every message of that session.
+- Antigravity's step schema is undocumented: the field numbers come from decoding real
+  conversations (output = candidates + thoughts on every one of 7.7k steps checked). A step whose
+  model code no conversation names is reported as `unknown`.
+- Cline reports no reasoning count, and its `tokensIn` follows whatever the provider adapter did
+  with cached tokens; there is no total in the record to check it against.
+- Codex, Gemini CLI, Qwen Code, Kilo Code, Pi and Oh My Pi collectors are written from documented formats, not
+  checked against a local install. Claude Code, OpenCode, Antigravity and Devin are checked against
+  real logs.
+- `cursor` and `copilot` keep no local usage logs, so they have no collector.
+
+## Collection window
+
+Nobody records outside the hackathon window, and nothing outside it is stored. The window is
+`[startsAt, endsAt)` from `users.me.event`, applied to `occurredAt`, for every account (organisers
+included). No scheduled hackathon means no window and nothing recorded.
+
+- CLI (`watcher/window.ts`): `since` is the start of the hackathon rather than the last run, so
+  the whole window is reported no matter when the watcher was opened. It runs before the start
+  (waiting), after the end (delivering what was never sent) and without a schedule (idle), showing
+  "Not recording" in all three, and re-reads the window every five minutes. The cursor store
+  remembers the earliest `since` it was read with (`coveredSince`); an earlier one (the first
+  windowed run, or organisers moving the start) starts the cursors over, and event ids already in
+  the local spool are skipped so nothing is sent twice.
+- Server (`occurredInWindow` in `telemetry/rawtree.ts`): the route answers 403 before the start
+  and rejects every event outside the window with `outside_event_window`, whatever the binary.
+  The OTLP logs table only receives accepted events.
+
+Moving the window later does not remove rows stored under the old one; clean those in RawTree.
+
+## OpenTelemetry storage
+
+The dashboard sends every accepted batch to RawTree's OTLP endpoint as OTLP/JSON
+(`apps/app/src/app/api/cli/telemetry/otlp.ts`). This is the only server-side persistence path.
+There is one log record per event: `timeUnixNano` is `occurredAt`, `observedTimeUnixNano` is
+`observedAt`, and `eventName` is `hackspain.<type>`.
+
+| Event field | Log attribute |
+| --- | --- |
+| `eventId` | `event.id` |
+| `sessionId` | `gen_ai.conversation.id` |
+| `model.name` / `model.provider` / `model.family` / `model.raw` | `gen_ai.request.model` / `gen_ai.provider.name` / `hackspain.model.family` / `hackspain.model.raw` |
+| `tokens.input` / `tokens.output` | `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` |
+| `tokens.cacheRead` / `cacheWrite` / `reasoning` / `total` | `hackspain.usage.cache_read_tokens` / `cache_write_tokens` / `reasoning_tokens` / `total_tokens` |
+| `native.costUsd` / `native.requestId` | `hackspain.native.cost_usd` / `hackspain.native.request_id` |
+| `harness` / `harnessVersion` | `hackspain.harness` / `hackspain.harness.version` |
+| `identity.userId` / `teamId` | `hackspain.user.id` / `hackspain.team.id` |
+| `identity.clientVersion` | resource `service.version` (`service.name` is `hackspain-cli`) |
+| `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` |
+
+Native OTLP has no insert deduplication guarantee, so queries on the logs table dedupe on
+(`hackspain.user.id`, `event.id`).
 
 ## Privacy
 
@@ -66,10 +159,11 @@ skip anything they cannot parse.
 - Working directories are hashed; only the last path segment is kept.
 - No harness account ids. Identity is the HackSpain user and team.
 - `native` keys are allowlisted in both CLI and server validation; unknown keys are rejected.
-- `--backfill <hours>` is opt-in; by default only usage after the watcher starts is reported.
+- Only the hackathon window is recorded; nothing from before or after it leaves the machine, and
+  nothing at all while no hackathon is scheduled.
 
 ## Example
 
 ```json
-{"schema":"hackspain.telemetry.v1","type":"usage","eventId":"claude-code:eb2f547c:msg_011CekYx","occurredAt":"2026-09-19T10:18:23.076Z","observedAt":"2026-09-19T10:18:30.002Z","harness":"claude-code","harnessVersion":"2.1.261","sessionId":"eb2f547c","project":{"dirHash":"9f2c1a7b3e4d5c6a","name":"agentos","gitBranch":"main"},"model":{"raw":"claude-fable-5-1","family":"claude","provider":"anthropic"},"tokens":{"input":2,"output":344,"cacheRead":26445,"cacheWrite":13687,"reasoning":127},"identity":{"userId":"j57…","teamId":"k97…","clientVersion":"0.1.0"},"native":{"requestId":"req_011…"}}
+{"schema":"hackspain.telemetry.v2","type":"usage","eventId":"claude-code:eb2f547c:msg_011CekYx","occurredAt":"2026-09-19T10:18:23.076Z","observedAt":"2026-09-19T10:18:30.002Z","harness":"claude-code","harnessVersion":"2.1.261","sessionId":"eb2f547c","project":{"dirHash":"9f2c1a7b3e4d5c6a","name":"agentos","gitBranch":"main"},"model":{"raw":"claude-fable-5-1","name":"claude-fable-5-1","family":"claude","provider":"anthropic"},"tokens":{"input":2,"output":344,"cacheRead":26445,"cacheWrite":13687,"reasoning":127,"total":40478},"identity":{"userId":"j57…","teamId":"k97…","clientVersion":"0.5.0"},"native":{"requestId":"req_011…"}}
 ```

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import type { TvFontWeight, TvWidget } from "@/lib/tv";
 import { tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from "@/lib/tv";
 import { cn } from "@/lib/utils";
@@ -23,20 +23,7 @@ import {
   LiveTokensBox,
 } from "./live-boxes";
 import { SponsorGridBox, SponsorTickerBox } from "./sponsor-boxes";
-
-function useClock() {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    const tick = () => setNow(new Date());
-    const initial = window.setTimeout(tick, 0);
-    const timer = window.setInterval(tick, 1000);
-    return () => {
-      window.clearTimeout(initial);
-      window.clearInterval(timer);
-    };
-  }, []);
-  return now;
-}
+import { useClock } from "./motion";
 
 function BannerWidget({
   text,

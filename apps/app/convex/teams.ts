@@ -1,5 +1,13 @@
 import { v } from "convex/values";
-import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
+import { imagePathFor } from "./lib/files";
+import { avatarUrlFor } from "./users";
+import {
+  adminMutation,
+  adminQuery,
+  anytimeOnboardedQuery,
+  onboardedMutation,
+  onboardedQuery,
+} from "./lib/customFunctions";
 import {
   identifierTypeValidator,
   teamMemberStatusValidator,
@@ -11,8 +19,9 @@ import {
 } from "./lib/normalize";
 import { canonicalRepoUrl } from "./lib/github";
 import { MAX_TECH_LENGTH, MAX_TECH_STACK } from "./lib/stack";
-import { membershipForUser } from "./lib/team";
+import { membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { fail } from "./lib/errors";
+import { MAX_TEAMS_PER_TRACK } from "./tracks";
 import { scheduleStackScan, teamRepoList } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
@@ -50,21 +59,8 @@ async function uniqueJoinCode(ctx: MutationCtx): Promise<string> {
   throw new Error("No se pudo generar un código de equipo");
 }
 
-export function normalizeRepoUrl(raw: string): string | null {
-  return canonicalRepoUrl(raw);
-}
-
 function normalizeRepoUrls(raw: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const entry of raw) {
-    const url = normalizeRepoUrl(entry);
-    if (!url || seen.has(url)) {
-      continue;
-    }
-    seen.add(url);
-    out.push(url);
-  }
+  const out = [...new Set(raw.map(canonicalRepoUrl).filter((url) => url !== null))];
   if (out.length > MAX_REPOS) {
     fail("VALIDATION", `Máximo ${MAX_REPOS} repositorios`);
   }
@@ -107,6 +103,8 @@ const teamReturn = v.object({
   createdAt: v.number(),
   isOwner: v.boolean(),
   joinCode: v.optional(v.string()),
+  /** /api/files/<id> when the owner uploaded a logo. */
+  logoUrl: v.optional(v.string()),
   members: v.array(memberReturn),
   name: v.string(),
   ownerId: v.id("users"),
@@ -118,16 +116,30 @@ const teamReturn = v.object({
 const teamSummaryReturn = v.object({
   _id: v.id("teams"),
   isMine: v.boolean(),
+  logoUrl: v.optional(v.string()),
   memberCount: v.number(),
+  /** Confirmed members with a display name, owner first. */
+  members: v.array(
+    v.object({
+      _id: v.id("teamMembers"),
+      avatarUrl: v.optional(v.string()),
+      isOwner: v.boolean(),
+      name: v.string(),
+      userId: v.optional(v.id("users")),
+    })
+  ),
   name: v.string(),
   pendingCount: v.number(),
+  projectName: v.optional(v.string()),
   repoUrl: v.optional(v.string()),
   repoUrls: v.array(v.string()),
   submissionStatus: v.optional(
     v.union(v.literal("draft"), v.literal("submitted"))
   ),
   techStack: v.array(v.string()),
-  tracks: v.array(v.object({ slug: v.string(), label: v.string() })),
+  tracks: v.array(
+    v.object({ label: v.string(), logoUrl: v.optional(v.string()), slug: v.string() })
+  ),
 });
 
 async function hydrateMember(
@@ -239,6 +251,7 @@ export const mine = onboardedQuery({
       name: team.name,
       ownerId: team.ownerId,
       isOwner,
+      logoUrl: teamLogoUrlFor(team),
       createdAt: team.createdAt,
       joinCode: isOwner ? team.joinCode : undefined,
       repoUrl: team.repoUrl,
@@ -250,8 +263,11 @@ export const mine = onboardedQuery({
   returns: v.union(teamReturn, v.null()),
 });
 
-/** Cheap server-side identity lookup for telemetry and similar ingestion paths. */
-export const mineId = onboardedQuery({
+/**
+ * Cheap server-side identity lookup for telemetry and similar ingestion paths.
+ * Anytime: the telemetry route stamps it on uploads that arrive after the end.
+ */
+export const mineId = anytimeOnboardedQuery({
   args: {},
   handler: async (ctx) => {
     const membership = await membershipForUser(ctx, ctx.user._id);
@@ -270,41 +286,132 @@ export const mineId = onboardedQuery({
 export const list = onboardedQuery({
   args: {},
   handler: async (ctx) => {
-    const membership = await membershipForUser(ctx, ctx.user._id);
-    const teams = await ctx.db.query("teams").collect();
-    const result = [];
-    for (const team of teams) {
-      const members = await ctx.db
-        .query("teamMembers")
-        .withIndex("by_team", (q) => q.eq("teamId", team._id))
-        .collect();
-      const submission = await ctx.db
-        .query("submissions")
-        .withIndex("by_team", (q) => q.eq("teamId", team._id))
-        .first();
-      const tracks = [];
-      for (const trackId of submission?.challengeIds ?? []) {
-        const track = await ctx.db.get(trackId);
-        if (track) {
-          tracks.push({ slug: track.slug, label: track.label });
-        }
-      }
-      result.push({
-        _id: team._id,
-        name: team.name,
-        isMine: membership?.teamId === team._id,
-        memberCount: members.filter((m) => m.status === "member").length,
-        pendingCount: members.filter((m) => m.status === "pending").length,
-        repoUrl: team.repoUrl,
-        repoUrls: teamRepoList(team),
-        techStack: team.techStack ?? [],
-        tracks,
-        submissionStatus: submission?.status,
-      });
-    }
+    const [membership, teams] = await Promise.all([
+      membershipForUser(ctx, ctx.user._id),
+      ctx.db.query("teams").collect(),
+    ]);
+    const result = await Promise.all(
+      teams.map(async (team) => {
+        const [members, submission] = await Promise.all([
+          ctx.db
+            .query("teamMembers")
+            .withIndex("by_team", (q) => q.eq("teamId", team._id))
+            .collect(),
+          ctx.db
+            .query("submissions")
+            .withIndex("by_team", (q) => q.eq("teamId", team._id))
+            .first(),
+        ]);
+        const tracks = (
+          await Promise.all(
+            (submission?.challengeIds ?? []).map((trackId) =>
+              ctx.db.get(trackId)
+            )
+          )
+        )
+          .filter((track) => track !== null)
+          .map(({ label, logoUrl, slug }) => ({ label, logoUrl, slug }));
+        const people = await Promise.all(
+          members
+            .filter((member) => member.status === "member")
+            .map(async (member) => {
+              const [user, signup] = await Promise.all([
+                member.userId ? ctx.db.get(member.userId) : null,
+                member.signupId ? ctx.db.get(member.signupId) : null,
+              ]);
+              return {
+                _id: member._id,
+                avatarUrl: user ? avatarUrlFor(user) : undefined,
+                isOwner: member.userId === team.ownerId,
+                name: user?.name ?? signup?.fullName ?? member.identifier,
+                userId: member.userId,
+              };
+            })
+        );
+        return {
+          _id: team._id,
+          name: team.name,
+          isMine: membership?.teamId === team._id,
+          logoUrl: teamLogoUrlFor(team),
+          memberCount: people.length,
+          members: people.toSorted(
+            (a, b) => Number(b.isOwner) - Number(a.isOwner)
+          ),
+          pendingCount: members.filter((m) => m.status === "pending").length,
+          projectName: submission?.name?.trim() || undefined,
+          repoUrl: team.repoUrl,
+          repoUrls: teamRepoList(team),
+          techStack: team.techStack ?? [],
+          tracks,
+          submissionStatus: submission?.status,
+        };
+      })
+    );
     return result.toSorted((a, b) => a.name.localeCompare(b.name, "es"));
   },
   returns: v.array(teamSummaryReturn),
+});
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+async function ownedTeam(ctx: MutationCtx, userId: Id<"users">): Promise<Doc<"teams">> {
+  const membership = await membershipForUser(ctx, userId);
+  const team = membership ? await ctx.db.get(membership.teamId) : null;
+  if (!team) {
+    fail("NO_TEAM", "No tienes equipo");
+  }
+  if (team.ownerId !== userId) {
+    fail("NOT_OWNER", "Solo el dueño del equipo puede cambiar el logo");
+  }
+  return team;
+}
+
+/** Upload target for the team logo. POST the file there, then call setLogo. */
+export const generateLogoUploadUrl = onboardedMutation({
+  args: {},
+  handler: async (ctx) => {
+    await ownedTeam(ctx, ctx.user._id);
+    return await ctx.storage.generateUploadUrl();
+  },
+  returns: v.string(),
+});
+
+export const setLogo = onboardedMutation({
+  args: { imageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const team = await ownedTeam(ctx, ctx.user._id);
+    const meta = await ctx.db.system.get(args.imageId);
+    if (!meta) {
+      fail("NOT_FOUND", "La imagen no se ha subido");
+    }
+    if (!meta.contentType?.startsWith("image/")) {
+      fail("VALIDATION", "Solo se admiten imágenes");
+    }
+    if (meta.size > MAX_LOGO_BYTES) {
+      fail("VALIDATION", "El logo no puede superar 2 MB");
+    }
+    const previous = team.logoId;
+    await ctx.db.patch(team._id, { logoId: args.imageId, updatedAt: Date.now() });
+    if (previous && previous !== args.imageId) {
+      await ctx.storage.delete(previous);
+    }
+    return imagePathFor(args.imageId);
+  },
+  returns: v.string(),
+});
+
+export const removeLogo = onboardedMutation({
+  args: {},
+  handler: async (ctx) => {
+    const team = await ownedTeam(ctx, ctx.user._id);
+    if (!team.logoId) {
+      return null;
+    }
+    await ctx.db.patch(team._id, { logoId: undefined, updatedAt: Date.now() });
+    await ctx.storage.delete(team.logoId);
+    return null;
+  },
+  returns: v.null(),
 });
 
 const memberInputValidator = v.object({
@@ -425,51 +532,6 @@ export const create = onboardedMutation({
   returns: v.id("teams"),
 });
 
-export const rename = onboardedMutation({
-  args: { name: v.string(), teamId: v.id("teams") },
-  handler: async (ctx, args) => {
-    const team = await ctx.db.get(args.teamId);
-    if (!team) {
-      throw new Error("Equipo no encontrado");
-    }
-    if (team.ownerId !== ctx.user._id) {
-      throw new Error("Solo el dueño puede cambiar el nombre");
-    }
-    const name = args.name.trim();
-    if (name.length < 2) {
-      throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
-    }
-    await ctx.db.patch(team._id, { name, updatedAt: Date.now() });
-    return null;
-  },
-  returns: v.null(),
-});
-
-export const addMember = onboardedMutation({
-  args: {
-    identifier: v.string(),
-    identifierType: identifierTypeValidator,
-    teamId: v.id("teams"),
-  },
-  handler: async (ctx, args) => {
-    const team = await ctx.db.get(args.teamId);
-    if (!team) {
-      throw new Error("Equipo no encontrado");
-    }
-    if (team.ownerId !== ctx.user._id) {
-      throw new Error("Solo el dueño puede añadir miembros");
-    }
-    return await insertMember(
-      ctx,
-      team,
-      ctx.user._id,
-      args.identifierType,
-      args.identifier
-    );
-  },
-  returns: v.id("teamMembers"),
-});
-
 export const leave = onboardedMutation({
   args: {},
   handler: async (ctx) => {
@@ -482,29 +544,6 @@ export const leave = onboardedMutation({
       throw new Error("El dueño no puede salir del equipo");
     }
     await ctx.db.delete(membership._id);
-    return null;
-  },
-  returns: v.null(),
-});
-
-export const removeMember = onboardedMutation({
-  args: { memberId: v.id("teamMembers") },
-  handler: async (ctx, args) => {
-    const member = await ctx.db.get(args.memberId);
-    if (!member) {
-      throw new Error("Miembro no encontrado");
-    }
-    const team = await ctx.db.get(member.teamId);
-    if (!team) {
-      throw new Error("Equipo no encontrado");
-    }
-    if (team.ownerId !== ctx.user._id) {
-      throw new Error("Solo el dueño puede quitar miembros");
-    }
-    if (member.userId === team.ownerId) {
-      throw new Error("No se puede quitar al dueño");
-    }
-    await ctx.db.delete(member._id);
     return null;
   },
   returns: v.null(),
@@ -671,7 +710,7 @@ export const setRepoUrl = onboardedMutation({
       });
       return null;
     }
-    const repoUrl = normalizeRepoUrl(args.url);
+    const repoUrl = canonicalRepoUrl(args.url);
     if (!repoUrl) {
       fail(
         "VALIDATION",
@@ -717,6 +756,8 @@ export const setTechStack = onboardedMutation({
     await ctx.db.patch(team._id, {
       techStack,
       techStackAt: Date.now(),
+      // Typed by hand from here on, until the next repo scan says otherwise.
+      techStackSource: undefined,
       updatedAt: Date.now(),
     });
     return techStack;
@@ -833,4 +874,187 @@ export const backfillJoinCodes = internalMutation({
     return updated;
   },
   returns: v.number(),
+});
+
+function memberEmails(
+  user: { email?: string } | null,
+  signup: { email?: string } | null,
+  member: Doc<"teamMembers">
+): string[] {
+  const emails = [user?.email, signup?.email];
+  if (member.identifierType === "email") {
+    emails.push(member.identifier);
+  }
+  return [...new Set(emails.filter((email): email is string => Boolean(email)))];
+}
+
+export const adminDirectory = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const [teams, catalog] = await Promise.all([
+      ctx.db.query("teams").collect(),
+      ctx.db.query("tracks").collect(),
+    ]);
+    const tracks = catalog.toSorted((a, b) => a.sortOrder - b.sortOrder);
+    const rows = [];
+    const teamCount = new Map<string, number>();
+    for (const team of teams) {
+      const members = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_team", (q) => q.eq("teamId", team._id))
+        .collect();
+      const submission = await ctx.db
+        .query("submissions")
+        .withIndex("by_team", (q) => q.eq("teamId", team._id))
+        .first();
+      const entered = [];
+      for (const trackId of [...new Set(submission?.challengeIds ?? [])]) {
+        const track = await ctx.db.get(trackId);
+        if (!track) {
+          continue;
+        }
+        entered.push({ _id: track._id, label: track.label });
+        teamCount.set(track._id, (teamCount.get(track._id) ?? 0) + 1);
+      }
+      const people = [];
+      const emails: string[] = [];
+      for (const member of members) {
+        if (member.status !== "member") {
+          continue;
+        }
+        const user = member.userId ? await ctx.db.get(member.userId) : null;
+        const signup = member.signupId ? await ctx.db.get(member.signupId) : null;
+        const found = memberEmails(user, signup, member);
+        emails.push(...found);
+        people.push({
+          email: found[0],
+          isOwner: member.userId === team.ownerId,
+          name: user?.name ?? signup?.fullName ?? member.identifier,
+        });
+      }
+      rows.push({
+        _id: team._id,
+        emails: [...new Set(emails)],
+        members: people.toSorted((a, b) => Number(b.isOwner) - Number(a.isOwner)),
+        entered,
+        name: team.name,
+      });
+    }
+    return {
+      teamLimit: MAX_TEAMS_PER_TRACK,
+      teams: rows.toSorted((a, b) => a.name.localeCompare(b.name, "es")),
+      tracks: tracks.map((track) => ({
+        _id: track._id,
+        label: track.label,
+        slug: track.slug,
+        teamCount: teamCount.get(track._id) ?? 0,
+      })),
+    };
+  },
+  returns: v.object({
+    teamLimit: v.number(),
+    teams: v.array(
+      v.object({
+        _id: v.id("teams"),
+        emails: v.array(v.string()),
+        members: v.array(
+          v.object({
+            email: v.optional(v.string()),
+            isOwner: v.boolean(),
+            name: v.string(),
+          })
+        ),
+        entered: v.array(
+          v.object({
+            _id: v.id("tracks"),
+            label: v.string(),
+          })
+        ),
+        name: v.string(),
+      })
+    ),
+    tracks: v.array(
+      v.object({
+        _id: v.id("tracks"),
+        label: v.string(),
+        slug: v.string(),
+        teamCount: v.number(),
+      })
+    ),
+  }),
+});
+
+export const adminSetTrack = adminMutation({
+  args: {
+    teamId: v.id("teams"),
+    trackId: v.optional(v.id("tracks")),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Equipo no encontrado");
+    }
+    if (args.trackId) {
+      const track = await ctx.db.get(args.trackId);
+      if (!track) {
+        throw new Error("Reto no encontrado");
+      }
+    }
+    const existing = await ctx.db
+      .query("submissions")
+      .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+      .first();
+    const challengeIds = args.trackId ? [args.trackId] : [];
+    const now = Date.now();
+    if (existing) {
+      await ctx.db.patch(existing._id, { challengeIds, updatedAt: now });
+    } else {
+      await ctx.db.insert("submissions", {
+        challengeIds,
+        createdAt: now,
+        description: "",
+        name: team.name,
+        perkIds: [],
+        status: "draft",
+        submittedBy: team.ownerId,
+        teamId: team._id,
+        updatedAt: now,
+        urls: [],
+      });
+    }
+    return null;
+  },
+  returns: v.null(),
+});
+
+export const adminRemoveTrack = adminMutation({
+  args: {
+    teamId: v.id("teams"),
+    trackId: v.id("tracks"),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Equipo no encontrado");
+    }
+    const existing = await ctx.db
+      .query("submissions")
+      .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+      .first();
+    if (!existing) {
+      return null;
+    }
+    const challengeIds = existing.challengeIds.filter(
+      (trackId) => trackId !== args.trackId
+    );
+    if (challengeIds.length === existing.challengeIds.length) {
+      return null;
+    }
+    await ctx.db.patch(existing._id, {
+      challengeIds,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+  returns: v.null(),
 });

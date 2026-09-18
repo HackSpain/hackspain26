@@ -137,6 +137,39 @@
   animation: hs-enter var(--duration-enter) var(--ease-out) both;
 }
 
+/* "Are you sure?" nudge: a quick horizontal shake that settles. */
+@keyframes hs-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-6px);
+  }
+  30% {
+    transform: translateX(5px);
+  }
+  45% {
+    transform: translateX(-4px);
+  }
+  60% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-1px);
+  }
+}
+
+.hs-shake {
+  animation: hs-shake 420ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-shake {
+    animation: none;
+  }
+}
+
 .hs-stagger > * {
   animation: hs-enter var(--duration-enter) var(--ease-out) both;
 }
@@ -174,8 +207,107 @@
   animation: tv-ticker 30s linear infinite;
 }
 
+@keyframes tv-stream-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tv-stream-row {
+  animation: tv-stream-in 280ms ease-out both;
+}
+
+@keyframes tv-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.tv-pulse {
+  animation: tv-pulse 1.2s ease-in-out infinite;
+}
+
+.tv-odometer-digit {
+  transition-property: transform;
+  transition-duration: 280ms;
+  transition-timing-function: ease-out;
+}
+
+/* /tv?view=panel: every size hangs off --u, one hundredth of a 16:9 stage, and
+   the cells sit --line apart on ink, which draws the landing's grid between them. */
+.hsx {
+  --u: min(1cqw, 1.78cqh);
+  --line: calc(var(--u) * 0.26);
+  --hsx-up: var(--color-hs-teal);
+  --hsx-down: var(--color-hs-red);
+  --hsx-flash: var(--color-hs-orange);
+}
+@media (orientation: portrait) {
+  .hsx {
+    --u: min(1.55cqw, 1cqh);
+  }
+}
+.hsx-xs { font-size: calc(var(--u) * 0.74); }
+.hsx-sm { font-size: calc(var(--u) * 0.9); }
+.hsx-md { font-size: calc(var(--u) * 1.1); }
+.hsx-lg { font-size: calc(var(--u) * 1.45); }
+.hsx-xl { font-size: calc(var(--u) * 2); }
+.hsx-2xl { font-size: calc(var(--u) * 3.3); }
+.hsx-num { font-variant-numeric: tabular-nums; }
+.hsx-label {
+  font-size: calc(var(--u) * 0.74);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, currentColor 78%, transparent);
+}
+.hsx-title {
+  font-family: var(--font-bungee);
+  line-height: 1;
+}
+
+/* /tv?view=equipos: the participants map, read from across a hall. */
+.tv-teams .pg-zone-label {
+  font-size: 14px;
+  fill: var(--color-hs-ink);
+}
+.tv-teams .pg-zone[data-loose] .pg-zone-label {
+  fill: var(--color-hs-brown);
+}
+
+@keyframes hsx-flash {
+  from {
+    color: var(--hsx-flash);
+  }
+}
+.hsx-flash {
+  animation: hsx-flash 1400ms ease-out;
+}
+
+@keyframes hsx-progress {
+  from {
+    transform: scaleX(0);
+  }
+}
+.hsx-progress {
+  animation: hsx-progress linear both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tv-ticker {
+  .tv-ticker,
+  .tv-stream-row,
+  .tv-pulse,
+  .hsx-flash,
+  .hsx-progress {
     animation: none;
   }
 }
@@ -199,4 +331,68 @@
   .hs-stagger > *:nth-child(n) {
     animation-delay: 0ms;
   }
+}
+
+/* Viewport-filling arrival broadcast. GSAP owns transforms and opacity. */
+.arena-type {
+  font-family: var(--font-bungee);
+  font-weight: 400;
+  font-style: normal;
+}
+.arena-stage { isolation: isolate; }
+.arena-light {
+  position: absolute;
+  top: -18cqh;
+  width: 42cqw;
+  height: 145cqh;
+  transform-origin: 50% 0;
+  background: conic-gradient(from 165deg at 50% 0, transparent 0deg, #f4ecd80a 3deg, #f4ecd860 12deg, #f4ecd82e 20deg, transparent 30deg);
+  mask-image: linear-gradient(black 35%, transparent 100%);
+  filter: blur(12px);
+}
+.arena-light-left { left: -5cqw; transform: rotate(-27deg); }
+.arena-light-right {
+  right: -4cqw;
+  transform: rotate(26deg);
+  background: conic-gradient(from 165deg at 50% 0, transparent 0deg, #eab6190a 3deg, #eab61980 12deg, #eab61938 20deg, transparent 30deg);
+}
+.arena-light-center {
+  left: 31cqw;
+  opacity: 0.45;
+  transform: rotate(-12deg);
+  background: conic-gradient(from 170deg at 50% 0, transparent, #8fb8d155 8deg, #8fb8d122 13deg, transparent 20deg);
+}
+.arena-light-pool {
+  position: absolute;
+  bottom: -14cqh;
+  left: 18cqw;
+  width: 68cqw;
+  height: 37cqh;
+  opacity: 0.3;
+  background: radial-gradient(ellipse, #eab61966, transparent 65%);
+}
+.arena-brand-panel {
+  background: var(--color-hs-gold);
+  clip-path: polygon(35% 0, 100% 0, 100% 100%, 0 100%);
+}
+.arena-portrait { mask-image: linear-gradient(90deg, transparent, black 27%, black 96%, transparent); }
+.arena-portrait-shade {
+  background: linear-gradient(90deg, var(--color-hs-ink) 0%, #2a170fcc 13%, transparent 45%), linear-gradient(0deg, var(--color-hs-ink) 0%, #2a170fdd 12%, transparent 48%, #2a170f22 100%);
+}
+.arena-monogram { background: var(--color-hs-teal); }
+@media (prefers-reduced-motion: reduce) {
+  .arena-light { opacity: 0.2; }
+}
+
+@container (aspect-ratio < 1) {
+  .arena-details { top: 40%; bottom: 6%; width: 90%; padding: 0; justify-content: end; }
+  .arena-first { font-size: 9cqw !important; }
+  .arena-last { font-size: 10cqw !important; }
+  .arena-affiliation { margin-top: 2cqh; }
+  .arena-affiliation > p { font-size: 3cqw; }
+  .arena-affiliation dt { font-size: 2.3cqw; }
+  .arena-affiliation dd { font-size: 4cqw; }
+  .arena-portrait { width: 100%; height: 65%; mask-image: linear-gradient(black 50%, transparent); }
+  .arena-portrait-shade { background: linear-gradient(0deg, var(--color-hs-ink), transparent 70%); }
+  .arena-number { bottom: auto; top: 14%; font-size: 7cqw; }
 }

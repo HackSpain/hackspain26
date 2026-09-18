@@ -93,11 +93,15 @@ async function finishLogin(
     if (gate.hint) {
       ui.line(c.dim(gate.hint));
     }
+    ui.next([
+      ["hackspain open", "the dashboard in your browser, already signed in"],
+    ]);
     ui.outro("Everything else unlocks once that is sorted.");
     return;
   }
   ui.next([
     ["hackspain", "see where you stand and what to do next"],
+    ["hackspain open", "the dashboard in your browser, no second login"],
     ["hackspain team create <name>", "start a team, or join one with a code"],
     ["hackspain watch", "keep it running in a spare terminal"],
   ]);
@@ -148,11 +152,12 @@ async function browserLogin(
     () => deviceStart(url, secret),
     "Browser sign-in ready"
   );
-  // `hs-code`, not `code`: Convex Auth's middleware eats a `code` param.
-  const authorizeUrl = `${url}/cli-auth?hs-code=${code}`;
-  const opened = openInBrowser(authorizeUrl);
+  const authorizeUrl = new URL("/cli-auth", url);
+  authorizeUrl.hash = new URLSearchParams({ "hs-code": code }).toString();
+  const authorizeHref = authorizeUrl.toString();
+  const opened = openInBrowser(authorizeHref);
   ui.note(
-    `${authorizeUrl}\n\n${
+    `${authorizeHref}\n\n${
       opened
         ? "We tried to open it for you. Sign in there"
         : "Open that link, sign in"

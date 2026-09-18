@@ -1,6 +1,5 @@
 import {
   chmodSync,
-  existsSync,
   mkdirSync,
   readFileSync,
   renameSync,
@@ -43,9 +42,7 @@ export function stateDir(): string {
 }
 
 export function ensureDir(path: string, mode = 0o700): void {
-  if (!existsSync(path)) {
-    mkdirSync(path, { mode, recursive: true });
-  }
+  mkdirSync(path, { mode, recursive: true });
 }
 
 /** Write via a sibling temp file + rename so readers never see a torn file. */
@@ -86,10 +83,6 @@ export function readConfig(): CliConfig {
   return readJsonFile<CliConfig>(configPath()) ?? {};
 }
 
-export function writeConfig(config: CliConfig): void {
-  writeFileAtomic(configPath(), `${JSON.stringify(config, null, 2)}\n`, 0o600);
-}
-
 export type UrlSource = "flag" | "env" | "config" | "default";
 
 export function resolveAppUrl(override?: string): {
@@ -110,13 +103,13 @@ export function resolveAppUrl(override?: string): {
     if (!HTTP_URL_PATTERN.test(url)) {
       throw usageError(
         `Invalid server URL "${url}" (from ${source}).`,
-        "It should look like https://app.hackspain.com or http://localhost:3000"
+        "It should look like https://hackspain.app or http://localhost:3000"
       );
     }
     return { source, url: url.replace(TRAILING_SLASHES, "") };
   }
   throw usageError(
     "No HackSpain server configured.",
-    "Pass --url <https://app.hackspain.com> or set HACKSPAIN_APP_URL."
+    "Pass --url <https://hackspain.app> or set HACKSPAIN_APP_URL."
   );
 }

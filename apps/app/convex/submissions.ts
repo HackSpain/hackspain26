@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { ObjectType } from "convex/values";
 import {
   adminQuery,
   onboardedMutation,
@@ -11,9 +12,14 @@ import {
   pickBalancedGroup,
 } from "./lib/judging";
 import { submissionStatusValidator } from "./lib/validators";
+import { fail } from "./lib/errors";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
-import { submissionsAreOpen } from "./tracks";
-import { findOwnedSubmission, membershipForUser } from "./lib/team";
+import {
+  MAX_TEAMS_PER_TRACK,
+  submissionsAreOpen,
+  trackEntryCounts,
+} from "./tracks";
+import { findOwnedSubmission, membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { scheduleStackScan } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -21,6 +27,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 const challengeSummary = v.object({
   _id: v.id("tracks"),
   label: v.string(),
+  logoUrl: v.optional(v.string()),
   slug: v.string(),
 });
 
@@ -43,15 +50,12 @@ const submissionReturn = v.object({
   submittedAt: v.optional(v.number()),
   submittedBy: v.id("users"),
   teamId: v.optional(v.id("teams")),
+  teamLogoUrl: v.optional(v.string()),
   teamName: v.optional(v.string()),
   techStack: v.array(v.string()),
   updatedAt: v.number(),
   urls: urlsValidator,
 });
-
-function uniqueIds<T extends string>(ids: T[]): T[] {
-  return [...new Set(ids)];
-}
 
 async function hydrateSubmission(
   ctx: QueryCtx | MutationCtx,
@@ -65,6 +69,7 @@ async function hydrateSubmission(
       challenges.push({
         _id: track._id,
         label: track.label,
+        logoUrl: track.logoUrl,
         slug: track.slug,
       });
     }
@@ -93,8 +98,13 @@ async function hydrateSubmission(
     submittedAt: submission.submittedAt,
     submittedBy: submission.submittedBy,
     teamId: submission.teamId,
+    teamLogoUrl: teamLogoUrlFor(team),
     teamName: team?.name,
-    techStack: submission.techStack ?? [],
+    // The scan lands on whichever has the repo; the team's covers a project
+    // that never got its own repo URL.
+    techStack: submission.techStack?.length
+      ? submission.techStack
+      : (team?.techStack ?? []),
     updatedAt: submission.updatedAt,
     urls: submission.urls,
   };
@@ -103,9 +113,19 @@ async function hydrateSubmission(
 async function resolveChallengeIds(
   ctx: MutationCtx,
   challengeIds: Id<"tracks">[],
-  requireActive: boolean
+  requireActive: boolean,
+  existing: Doc<"submissions"> | null
 ): Promise<Id<"tracks">[]> {
-  const unique = uniqueIds(challengeIds);
+  const unique = [...new Set(challengeIds)];
+  if (unique.length > 1) {
+    fail("VALIDATION", "Un equipo solo puede entrar en un track.");
+  }
+  // A project keeps the place it already holds; only a new entry needs room.
+  const added = unique.filter(
+    (trackId) => !existing?.challengeIds.includes(trackId)
+  );
+  const counts =
+    added.length > 0 ? await trackEntryCounts(ctx, existing?._id) : null;
   for (const trackId of unique) {
     const track = await ctx.db.get(trackId);
     if (!track) {
@@ -113,6 +133,15 @@ async function resolveChallengeIds(
     }
     if (requireActive && !track.active) {
       throw new Error(`${track.label} no está abierto`);
+    }
+    if (
+      added.includes(trackId) &&
+      (counts?.get(trackId) ?? 0) >= MAX_TEAMS_PER_TRACK
+    ) {
+      fail(
+        "TRACK_FULL",
+        `${track.label} ya tiene ${MAX_TEAMS_PER_TRACK} equipos. Únete a otro track.`
+      );
     }
   }
   return unique;
@@ -122,7 +151,7 @@ async function resolvePerkIds(
   ctx: MutationCtx,
   perkIds: Id<"perks">[]
 ): Promise<Id<"perks">[]> {
-  const unique = uniqueIds(perkIds);
+  const unique = [...new Set(perkIds)];
   for (const perkId of unique) {
     const perk = await ctx.db.get(perkId);
     if (!perk) {
@@ -179,15 +208,7 @@ const projectArgs = {
 
 async function upsertProject(
   ctx: MutationCtx & { user: Doc<"users"> },
-  args: {
-    name: string;
-    description: string;
-    repoUrl?: string;
-    demoUrl?: string;
-    videoUrl?: string;
-    challengeIds: Id<"tracks">[];
-    perkIds: Id<"perks">[];
-  },
+  args: ObjectType<typeof projectArgs>,
   mode: "draft" | "submit"
 ) {
   const existing = await findOwnedSubmission(ctx, ctx.user._id);
@@ -200,7 +221,8 @@ async function upsertProject(
   const challengeIds = await resolveChallengeIds(
     ctx,
     args.challengeIds,
-    mode === "submit"
+    mode === "submit",
+    existing
   );
   const perkIds = await resolvePerkIds(ctx, args.perkIds);
 
@@ -285,6 +307,7 @@ const publicSubmissionReturn = v.object({
   status: submissionStatusValidator,
   submittedAt: v.optional(v.number()),
   teamId: v.optional(v.id("teams")),
+  teamLogoUrl: v.optional(v.string()),
   teamName: v.optional(v.string()),
   updatedAt: v.number(),
   urls: urlsValidator,
@@ -303,6 +326,7 @@ export const listPublic = onboardedQuery({
       rows.push({
         _id: hydrated._id,
         teamId: hydrated.teamId,
+        teamLogoUrl: hydrated.teamLogoUrl,
         teamName: hydrated.teamName,
         name: hydrated.name,
         description:

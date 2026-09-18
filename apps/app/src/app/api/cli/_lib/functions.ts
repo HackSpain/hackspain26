@@ -31,11 +31,12 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "users:attachAfterLogin": mutation(api.users.attachAfterLogin),
   "users:setName": mutation(api.users.setName),
   "users:setNotificationConsent": mutation(api.users.setNotificationConsent),
+  "users:setPhone": mutation(api.users.setPhone),
+  "users:setTwitterHandle": mutation(api.users.setTwitterHandle),
   "users:updateEventDetails": mutation(api.users.updateEventDetails),
-  "onboarding:requestPhoneCode": mutation(api.onboarding.requestPhoneCode),
-  "onboarding:verifyPhoneCode": mutation(api.onboarding.verifyPhoneCode),
   "github:startLink": mutation(api.github.startLink),
   "github:unlink": mutation(api.github.unlink),
+  "cliAuth:startWebHandoff": mutation(api.cliAuth.startWebHandoff),
 
   // teams
   "teams:mine": query(api.teams.mine),

@@ -28,7 +28,9 @@ export async function detectAndConfirmStack(
   );
   let techStack = detected.techStack;
   if (techStack.length === 0) {
-    ui.warn("No familiar stack tags in that repo yet.");
+    ui.warn(
+      "We could not detect a stack. Make sure the repository exists and is public."
+    );
     return [];
   }
   ui.line(techStack.map((tag) => highlight(tag)).join(c.dim(" · ")));

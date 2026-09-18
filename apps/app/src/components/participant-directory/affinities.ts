@@ -10,7 +10,6 @@ export const AFFINITY_KINDS = [
   "interests",
 ] as const;
 export type AffinityKind = (typeof AFFINITY_KINDS)[number];
-export type AffinityFilter = "all" | AffinityKind;
 
 export interface Affinity {
   kind: AffinityKind;
@@ -37,20 +36,14 @@ export function valuesFor(
   kind: AffinityKind
 ): string[] {
   switch (kind) {
-    case "company": {
-      return participant.company ? [participant.company] : [];
-    }
-    case "degree": {
-      return participant.degree ? [participant.degree] : [];
+    case "company":
+    case "degree":
+    case "university":
+    case "city": {
+      return participant[kind] ? [participant[kind]] : [];
     }
     case "team": {
       return participant.team ? [participant.team.name] : [];
-    }
-    case "university": {
-      return participant.university ? [participant.university] : [];
-    }
-    case "city": {
-      return participant.city ? [participant.city] : [];
     }
     case "skills": {
       return participant.skills;
@@ -75,43 +68,20 @@ export function sharedAffinities(
         : [];
     }
     const other = new Set(valuesFor(b, kind).map(normalize).filter(Boolean));
-    const seen = new Set<string>();
     return valuesFor(a, kind)
-      .filter((value) => {
-        const key = normalize(value);
-        if (!key || seen.has(key) || !other.has(key)) {
-          return false;
-        }
-        seen.add(key);
-        return true;
-      })
+      .filter((value) => other.delete(normalize(value)))
       .map((value) => ({ kind, value }));
   });
 }
 
 export function connectionsFor(
   anchor: DirectoryParticipant,
-  participants: DirectoryParticipant[],
-  filter: AffinityFilter = "all",
-  query = ""
+  participants: DirectoryParticipant[]
 ): Connection[] {
-  const search = normalize(query);
   return participants
     .flatMap((participant) => {
-      const affinities = sharedAffinities(anchor, participant).filter(
-        (item) => filter === "all" || item.kind === filter
-      );
-      const searchable = normalize(
-        [
-          participant.displayName,
-          participant.role,
-          participant.city,
-          participant.university ?? "",
-          ...participant.skills,
-          ...(participant.interests ?? []),
-        ].join(" ")
-      );
-      if (!affinities.length || (search && !searchable.includes(search))) {
+      const affinities = sharedAffinities(anchor, participant);
+      if (!affinities.length) {
         return [];
       }
       return [

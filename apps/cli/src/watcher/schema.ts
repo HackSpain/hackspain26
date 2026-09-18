@@ -1,9 +1,32 @@
+import type {
+  ModelFamily as CanonicalFamily,
+  CanonicalModel,
+  TokenCounts,
+} from "../../../app/src/app/api/cli/telemetry/canonical";
+import {
+  modelFamily as canonicalFamily,
+  canonicalModel,
+  MODEL_FAMILIES,
+  TELEMETRY_SCHEMA,
+  TELEMETRY_SCHEMA_V1,
+  totalTokens,
+} from "../../../app/src/app/api/cli/telemetry/canonical";
+
 /**
  * Canonical telemetry event: the one shape every harness collector produces
  * and every sink consumes. Documented for the backend in
- * apps/cli/docs/telemetry-schema.md. Bump SCHEMA for breaking changes.
+ * apps/cli/docs/telemetry-schema.md. Bump SCHEMA for breaking changes. The
+ * derived fields come from the dashboard's `telemetry/canonical.ts`, which
+ * the server runs again on ingestion.
  */
-export const SCHEMA = "hackspain.telemetry.v1" as const;
+export const SCHEMA = TELEMETRY_SCHEMA;
+
+export type ModelFamily = CanonicalFamily;
+
+/** Collectors may set it; `canonicalize` derives it again either way. */
+export function modelFamily(raw: string): ModelFamily {
+  return canonicalFamily(raw);
+}
 
 export const HARNESSES = [
   "claude-code",
@@ -12,11 +35,15 @@ export const HARNESSES = [
   "opencode",
   "cline",
   "copilot",
+  "gemini-cli",
+  "qwen-code",
+  "kilo-code",
+  "pi",
+  "omp",
+  "antigravity",
+  "devin",
 ] as const;
 export type HarnessId = (typeof HARNESSES)[number];
-
-export const MODEL_FAMILIES = ["claude", "gpt", "gemini", "other"] as const;
-export type ModelFamily = (typeof MODEL_FAMILIES)[number];
 
 export type EventType = "usage" | "session.start" | "session.end";
 
@@ -42,42 +69,103 @@ export type TelemetryEvent = {
   sessionId: string;
   /** sha256 of the working directory plus its basename; never the full path. */
   project?: { dirHash: string; name: string; gitBranch?: string };
-  model?: { raw: string; family: ModelFamily; provider?: string };
-  tokens?: {
-    input: number;
-    output: number;
-    cacheRead: number;
-    cacheWrite: number;
-    reasoning?: number;
-  };
-  /** Only when the harness itself reports a price. */
-  costUsd?: number;
+  /** Derived from what the harness logged, the same way for every harness. */
+  model?: CanonicalModel;
+  /**
+   * For every harness: `input` excludes cache reads, `output` includes
+   * `reasoning` (a breakdown, absent when the harness does not report it),
+   * and `total` is input + output + cacheRead + cacheWrite.
+   */
+  tokens?: TokenCounts & { total: number };
   /** Stamped by the CLI at flush time, never by collectors. */
   identity: { userId: string; teamId?: string; clientVersion: string };
-  /** Small harness-specific remainder; keep it tiny. */
-  native?: Record<string, unknown>;
+  /**
+   * What only some harnesses report, so never comparable across them:
+   * Claude Code's `requestId`, and the `costUsd` OpenCode, Kilo Code,
+   * Cline, Pi and Oh My Pi compute themselves. Allowlisted here and on the server.
+   */
+  native?: { requestId?: string; costUsd?: number };
 };
 
-/** Collector output before identity is stamped. */
-export type RawEvent = Omit<
+/**
+ * What a collector yields: the facts as the harness logged them. `stamp`
+ * derives the rest (`canonicalize`), so no collector decides how a model is
+ * named or what a total is.
+ */
+export type RawEvent = Pick<
   TelemetryEvent,
-  "identity" | "observedAt" | "schema"
->;
+  | "eventId"
+  | "harness"
+  | "harnessVersion"
+  | "occurredAt"
+  | "project"
+  | "sessionId"
+  | "type"
+> & {
+  model?: { raw: string; family?: ModelFamily; provider?: string };
+  tokens?: TokenCounts;
+  /** The harness's own price; ends up in `native.costUsd`. */
+  costUsd?: number;
+  native?: { requestId?: string };
+};
 
-const OPENAI_PATTERN = /\bgpt|o[1-9]-|codex|openai/;
+/** The derived half of an event, shared with the dashboard's ingestion. */
+export function canonicalize(
+  raw: RawEvent
+): Omit<TelemetryEvent, "identity" | "observedAt" | "schema"> {
+  const { costUsd, model, native, tokens, ...facts } = raw;
+  const remainder = {
+    ...native,
+    ...(costUsd === undefined ? {} : { costUsd }),
+  };
+  return {
+    ...facts,
+    ...(model ? { model: canonicalModel(model.raw, model.provider) } : {}),
+    ...(tokens ? { tokens: { ...tokens, total: totalTokens(tokens) } } : {}),
+    ...(Object.keys(remainder).length > 0 ? { native: remainder } : {}),
+  };
+}
 
-export function modelFamily(raw: string): ModelFamily {
-  const model = raw.toLowerCase();
-  if (model.includes("claude")) {
-    return "claude";
+/**
+ * Lines written to the local spool by 0.4.x and earlier are v1. The board
+ * and `hackspain telemetry` read them as v2; anything unrecognisable is
+ * returned as it is and fails validation where that matters.
+ */
+export function upgradeEvent(value: unknown): TelemetryEvent {
+  const event = value as Record<string, unknown>;
+  if (!isRecord(value) || event.schema !== TELEMETRY_SCHEMA_V1) {
+    return value as TelemetryEvent;
   }
-  if (OPENAI_PATTERN.test(model)) {
-    return "gpt";
+  const { schema: _schema, observedAt, identity, ...raw } = event;
+  return {
+    schema: SCHEMA,
+    ...canonicalize(raw as RawEvent),
+    identity: identity as TelemetryEvent["identity"],
+    observedAt: observedAt as string,
+  };
+}
+
+/**
+ * `tokens.output` includes reasoning for every harness. Claude, Codex and
+ * OpenCode report it that way; Gemini-style usage keeps thoughts next to the
+ * candidates count instead. The harness's own total settles which one a
+ * record is: when it only adds up with the thoughts on top, they are added.
+ * Without a total, `separateByDefault` says what the upstream API does.
+ */
+export function outputWithReasoning(usage: {
+  prompt: number;
+  output: number;
+  reasoning: number;
+  total: number;
+  separateByDefault: boolean;
+}): number {
+  const { prompt, output, reasoning, total } = usage;
+  if (reasoning === 0) {
+    return output;
   }
-  if (model.includes("gemini")) {
-    return "gemini";
-  }
-  return "other";
+  const separate =
+    total > 0 ? total >= prompt + output + reasoning : usage.separateByDefault;
+  return separate ? output + reasoning : output;
 }
 
 export function eventId(
@@ -117,8 +205,30 @@ function isValidModel(value: unknown): boolean {
   }
   return (
     isBoundedString(value.raw, MAX_SHORT_STRING_LENGTH) &&
+    isBoundedString(value.name, MAX_SHORT_STRING_LENGTH) &&
     MODEL_FAMILIES.includes(value.family as ModelFamily) &&
-    isOptionalBoundedString(value.provider, MAX_SHORT_STRING_LENGTH)
+    isBoundedString(value.provider, MAX_SHORT_STRING_LENGTH)
+  );
+}
+
+function isValidNative(value: unknown, harness: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const { requestId, costUsd, ...unknown } = value;
+  if (Object.keys(unknown).length > 0 || Object.keys(value).length === 0) {
+    return false;
+  }
+  if (
+    requestId !== undefined &&
+    (harness !== "claude-code" ||
+      !isBoundedString(requestId, MAX_EVENT_ID_LENGTH))
+  ) {
+    return false;
+  }
+  return (
+    costUsd === undefined ||
+    (typeof costUsd === "number" && Number.isFinite(costUsd) && costUsd >= 0)
   );
 }
 
@@ -184,7 +294,10 @@ export function validateEvent(value: unknown): string[] {
     }
   }
   if (e.model !== undefined && !isValidModel(e.model)) {
-    problems.push("model needs raw and a known family");
+    problems.push("model needs raw, name, provider and a known family");
+  }
+  if (e.type === "usage" && e.model === undefined) {
+    problems.push("usage events need a model");
   }
   if (e.type === "usage" && e.tokens === undefined) {
     problems.push("usage events need tokens");
@@ -199,32 +312,23 @@ export function validateEvent(value: unknown): string[] {
     if (t?.reasoning !== undefined && !isInt(t.reasoning)) {
       problems.push("tokens.reasoning must be a non-negative integer");
     }
+    if (
+      problems.length === 0 &&
+      t?.total !== totalTokens(t as unknown as TokenCounts)
+    ) {
+      problems.push(
+        "tokens.total must be input + output + cacheRead + cacheWrite"
+      );
+    }
   }
-  if (
-    e.costUsd !== undefined &&
-    (typeof e.costUsd !== "number" ||
-      !Number.isFinite(e.costUsd) ||
-      e.costUsd < 0)
-  ) {
-    problems.push("costUsd must be a non-negative number");
+  if (e.costUsd !== undefined) {
+    problems.push("costUsd belongs in native.costUsd");
   }
   if (!isValidIdentity(e.identity)) {
     problems.push("identity needs userId and clientVersion");
   }
-  if (e.native !== undefined) {
-    const native = isRecord(e.native) ? e.native : null;
-    const keys = native ? Object.keys(native) : [];
-    if (
-      e.harness !== "claude-code" ||
-      !native ||
-      keys.length !== 1 ||
-      keys[0] !== "requestId" ||
-      !isBoundedString(native.requestId, MAX_EVENT_ID_LENGTH)
-    ) {
-      problems.push(
-        "native contains fields that are not safe for this harness"
-      );
-    }
+  if (e.native !== undefined && !isValidNative(e.native, e.harness)) {
+    problems.push("native contains fields that are not safe for this harness");
   }
   try {
     if (

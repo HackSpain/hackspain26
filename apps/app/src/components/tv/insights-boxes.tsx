@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ActivityChart, Sparkline, TeamScatter } from "@/app/insights/charts";
-import { technologyRows } from "@/app/insights/event-data";
 import { ConsumptionChart } from "@/app/insights/evolution-charts";
 import { Panel } from "@/app/insights/panel";
 import {
+  bucketTotals,
   compact,
   filterSamples,
-  getSamples,
   harnessRows,
   number,
   percent,
@@ -17,25 +15,38 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
+import {
+  NO_TEAM_ID,
+  useLiveInsights,
+} from "@/app/insights/use-live-insights";
 import { useBarWidth, useCountUp } from "./gsap";
 
+/**
+ * Everything on these boxes is real: AI usage from RawTree, teams and GitHub
+ * activity from Convex (use-live-insights.ts). `teams` leaves out the usage of
+ * people without a team, which still counts in the totals.
+ */
 function useInsightSnapshot() {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") setTick((value) => value + 1);
-    }, 5_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  return useMemo(() => {
-    const samples = filterSamples(getSamples(tick), "event", "all");
-    return {
-      samples,
-      teams: teamRows(samples),
-      tools: harnessRows(samples),
-      totals: sumSamples(samples),
-    };
-  }, [tick]);
+  const data = useLiveInsights();
+  const samples = filterSamples(data.samples, "event", "all", data.teams);
+  return {
+    bucketMinutes: data.bucketMinutes,
+    samples,
+    stacks: data.stacks,
+    startsAt: data.startsAt,
+    teams: teamRows(samples, data.teams).filter(
+      (team) => team.id !== NO_TEAM_ID
+    ),
+    tools: harnessRows(samples),
+    totals: sumSamples(samples),
+  };
+}
+
+function bucketLabel(minutes: number): string {
+  const rounded = Math.round(minutes);
+  return rounded >= 60 && rounded % 60 === 0
+    ? `${rounded / 60} h`
+    : `${rounded} min`;
 }
 
 function TvInsightPanel({
@@ -105,13 +116,9 @@ function MiniStat({
 
 export function InsightsStatsBox() {
   const { samples, teams, tools, totals } = useInsightSnapshot();
+  const buckets = bucketTotals(samples);
   const trend = (metric: "tokens" | "commits" | "sessions" | "pullRequests") =>
-    [...new Set(samples.map((sample) => sample.bucket))].map(
-      (bucket) =>
-        sumSamples(samples.filter((sample) => sample.bucket === bucket))[
-          metric
-        ],
-    );
+    buckets.map((bucket) => bucket[metric]);
   return (
     <div className="grid h-full grid-cols-4 gap-[0.7cqw]">
       <MiniStat
@@ -123,10 +130,10 @@ export function InsightsStatsBox() {
         highlight
       />
       <MiniStat
-        label="Commits publicados"
+        label="Pushes a GitHub"
         value={totals.commits}
         format={number}
-        detail={`${teams.length} equipos · ${number(totals.commits / Math.max(teams.length, 1))} commits por equipo`}
+        detail={`${teams.length} equipos · ${number(totals.commits / Math.max(teams.length, 1))} pushes por equipo`}
         trend={trend("commits")}
       />
       <MiniStat
@@ -148,13 +155,18 @@ export function InsightsStatsBox() {
 }
 
 export function InsightsActivityBox() {
-  const { samples } = useInsightSnapshot();
+  const { samples, bucketMinutes, startsAt } = useInsightSnapshot();
   return (
     <TvInsightPanel
       title="El pulso del evento"
-      subtitle="Tokens · intervalos de 30 min"
+      subtitle={`Tokens · intervalos de ${bucketLabel(bucketMinutes)}`}
     >
-      <ActivityChart samples={samples} metric="tokens" mode="tv" />
+      <ActivityChart
+        samples={samples}
+        metric="tokens"
+        mode="tv"
+        timeline={{ bucketMinutes, startsAt }}
+      />
     </TvInsightPanel>
   );
 }
@@ -192,11 +204,18 @@ function ShareRow({
 
 export function InsightsHarnessBox() {
   const { tools } = useInsightSnapshot();
-  const sorted = [...tools].sort((a, b) => b.tokens - a.tokens);
+  // Only what is in use: nine harnesses do not fit, and idle ones say nothing.
+  const sorted = tools
+    .filter((row) => row.tokens > 0)
+    .toSorted((a, b) => b.tokens - a.tokens)
+    .slice(0, 8);
   const total = sorted.reduce((sum, row) => sum + row.tokens, 0);
   return (
     <TvInsightPanel title="Herramientas de IA" subtitle="Cuota de tokens">
       <div className="grid h-full grid-cols-2 content-between gap-x-[2cqw] gap-y-[0.5cqw]">
+        {sorted.length === 0 && (
+          <p className="text-[0.75cqw] text-hs-brown">Sin datos todavía.</p>
+        )}
         {sorted.map((row) => (
           <ShareRow
             key={row.id}
@@ -211,30 +230,31 @@ export function InsightsHarnessBox() {
   );
 }
 
+const STACK_COLORS = ["#1e3958", "#35858a", "#d96b2a", "#8b6b9f", "#a67516"];
+
 export function InsightsStacksBox() {
-  const { teams } = useInsightSnapshot();
-  const rows = technologyRows(
-    teams.map((team) => team.id),
-    "all",
-  ).slice(0, 5);
+  const { stacks } = useInsightSnapshot();
+  const rows = stacks.rows.slice(0, 5);
   return (
     <TvInsightPanel
       title="Con qué construimos"
       subtitle="Tecnologías · equipos"
     >
       <div className="grid h-full grid-cols-2 content-between gap-x-[2cqw] gap-y-[0.5cqw]">
-        {rows.map((row) => (
+        {rows.map((row, index) => (
           <ShareRow
             key={row.name}
             name={row.name}
-            label={`${row.teams.length} / ${teams.length}`}
-            ratio={row.teams.length / Math.max(teams.length, 1)}
-            color={row.color}
+            label={`${row.count} / ${stacks.total}`}
+            ratio={row.count / Math.max(stacks.total, 1)}
+            color={STACK_COLORS[index % STACK_COLORS.length]}
             thick
           />
         ))}
         <p className="self-center text-[0.65cqw] text-hs-brown">
-          Cada equipo puede usar varias tecnologías.
+          {rows.length
+            ? `Leído de los repos de ${stacks.auto} de ${stacks.total} proyectos.`
+            : "Sin datos de tecnologías todavía."}
         </p>
       </div>
     </TvInsightPanel>
@@ -262,9 +282,12 @@ export function InsightsLeaderboardBox() {
   return (
     <Panel
       title="Leaderboard"
-      eyebrow="Por tokens · datos simulados"
+      eyebrow="Por tokens"
       className="h-full overflow-hidden border-hs-ink/20 py-3"
     >
+      {ranked.length === 0 && (
+        <p className="text-sm text-hs-brown">Sin datos de equipos todavía.</p>
+      )}
       <ol className="space-y-2">
         {ranked.map((team, index) => (
           <li
@@ -296,14 +319,22 @@ export function InsightsLeaderboardBox() {
 }
 
 export function InsightsEvolutionBox() {
-  const { samples } = useInsightSnapshot();
+  const { samples, bucketMinutes, startsAt } = useInsightSnapshot();
   return (
     <Panel
       title="Evolución del evento"
-      eyebrow="Consumo por fase · datos simulados"
+      eyebrow="Consumo por fase"
       className="h-full overflow-hidden border-hs-ink/20 py-3"
     >
-      <ConsumptionChart samples={samples} color="#1e3958" />
+      {samples.length ? (
+        <ConsumptionChart
+          samples={samples}
+          color="#1e3958"
+          timeline={{ bucketMinutes, startsAt }}
+        />
+      ) : (
+        <p className="text-sm text-hs-brown">Sin datos de actividad todavía.</p>
+      )}
     </Panel>
   );
 }

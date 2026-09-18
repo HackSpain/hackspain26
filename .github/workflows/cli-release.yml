@@ -1,6 +1,6 @@
 name: cli-release
 # Tag `cli-vX.Y.Z` on master to publish binaries for every platform.
-# Binaries talk to https://app.hackspain.com; the optional repository
+# Binaries talk to https://hackspain.app; the optional repository
 # variable HACKSPAIN_APP_URL overrides that at build time.
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
           version: "11.1.1"
       - uses: actions/setup-node@v4
         with:
-          node-version: "22.12"
+          node-version: "22.13"
           cache: pnpm
       - uses: oven-sh/setup-bun@v2
         with:

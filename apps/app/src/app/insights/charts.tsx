@@ -27,6 +27,7 @@ import {
   number,
   percent,
   sumSamples,
+  bucketSpan,
   timeLabel,
 } from "./mock-data";
 import type {
@@ -34,6 +35,7 @@ import type {
   HarnessRow,
   Metric,
   Sample,
+  Timeline,
   TeamRow,
 } from "./mock-data";
 
@@ -117,18 +119,24 @@ export function ActivityChart({
   samples,
   metric,
   mode = "interactive",
+  timeline,
 }: {
   samples: Sample[];
   metric: Metric;
   mode?: "interactive" | "tv";
+  /** Real start and bucket size; the TV passes the hackathon's. */
+  timeline?: Timeline;
 }) {
   const [selectedBucket, setSelectedBucket] = useState<number | null>(null);
+  if (samples.length === 0) {
+    return <p className="py-6 text-sm text-hs-brown">Sin datos de actividad todavía.</p>;
+  }
   const buckets = [...new Set(samples.map((sample) => sample.bucket))];
   const rows = buckets.map((bucket) => {
     const group = samples.filter((sample) => sample.bucket === bucket);
     return {
       bucket,
-      label: timeLabel(bucket),
+      label: timeLabel(bucket, timeline),
       ...Object.fromEntries(
         HARNESSES.map((harness) => [
           harness.id,
@@ -142,7 +150,11 @@ export function ActivityChart({
   });
   const selected =
     rows.find((row) => row.bucket === selectedBucket) ?? rows.at(-1);
-  const unit = metric === "tokens" ? "tokens" : "commits";
+  const unit = {
+    commits: "pushes",
+    pullRequests: "pull requests",
+    tokens: "tokens",
+  }[metric];
   const activeTools = HARNESSES.filter((harness) =>
     samples.some(
       (sample) => sample.harness === harness.id && sample[metric] > 0
@@ -157,7 +169,7 @@ export function ActivityChart({
             margin={{ bottom: 0, left: -12, right: 0, top: 12 }}
             barCategoryGap="26%"
             accessibilityLayer
-            aria-label={`${unit} por intervalos de 30 minutos. Usa las flechas para explorar.`}
+            aria-label={`${unit} por intervalos de ${bucketSpan(timeline)}. Usa las flechas para explorar.`}
           >
             <CartesianGrid
               strokeDasharray="2 4"
@@ -219,7 +231,7 @@ export function ActivityChart({
             >
               {rows.map((row) => (
                 <option key={row.bucket} value={row.bucket}>
-                  {row.label}–{timeLabel(row.bucket + 1)}
+                  {row.label}–{timeLabel(row.bucket + 1, timeline)}
                 </option>
               ))}
             </select>
@@ -347,7 +359,7 @@ function TeamPoint({
       tabIndex={0}
       role="button"
       className="cursor-pointer outline-none hover:fill-opacity-100 focus-visible:stroke-hs-navy focus-visible:stroke-[3px]"
-      aria-label={`${team.name}: ${compact(team.tokens)} tokens, ${number(team.commits)} commits. Ver equipo.`}
+      aria-label={`${team.name}: ${compact(team.tokens)} tokens, ${number(team.commits)} pushes. Ver equipo.`}
       onClick={() => onSelect(team)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -368,18 +380,21 @@ export function TeamScatter({
   teams: TeamRow[];
   onSelect: (team: TeamRow) => void;
 }) {
+  if (teams.length === 0) {
+    return <p className="py-6 text-sm text-hs-brown">Sin datos de equipos todavía.</p>;
+  }
   return (
     <div>
       <div className={STAGE}>
         <div className="mb-2 flex justify-between text-[11px] text-hs-brown">
-          <span>Commits</span>
+          <span>Pushes</span>
           <span>Tokens →</span>
         </div>
         <ResponsiveContainer width="100%" height={248} minWidth={0}>
           <ScatterChart
             margin={{ bottom: 0, left: -12, right: 14, top: 12 }}
             accessibilityLayer
-            aria-label="Consumo de tokens y commits por equipo"
+            aria-label="Consumo de tokens y pushes por equipo"
           >
             <CartesianGrid strokeDasharray="2 4" stroke={GRID} />
             <XAxis
@@ -396,7 +411,7 @@ export function TeamScatter({
             />
             <YAxis
               dataKey="commits"
-              name="Commits"
+              name="Pushes"
               type="number"
               tickLine={false}
               axisLine={false}

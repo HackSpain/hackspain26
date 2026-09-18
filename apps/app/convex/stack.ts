@@ -1,12 +1,17 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { requireOnboarded } from "./lib/auth";
 import { onboardedQuery } from "./lib/customFunctions";
 import { repoSlug } from "./lib/github";
-import { stackCategory, STACK_SCAN_TTL_MS } from "./lib/stack";
+import {
+  isHandSet,
+  STACK_BACKGROUND_TTL_MS,
+  stackCategory,
+  STACK_SCAN_TTL_MS,
+} from "./lib/stack";
 import { findOwnedSubmission, membershipForUser } from "./lib/team";
 import { urlOf } from "./lib/urls";
 
@@ -66,8 +71,12 @@ const scanContextReturn = v.object({
   token: v.union(v.string(), v.null()),
 });
 
-function isFresh(at: number | undefined, now: number): boolean {
-  return at !== undefined && now - at < STACK_SCAN_TTL_MS;
+function isFresh(
+  at: number | undefined,
+  now: number,
+  ttlMs = STACK_SCAN_TTL_MS
+): boolean {
+  return at !== undefined && now - at < ttlMs;
 }
 
 export const scanContext = internalQuery({
@@ -97,17 +106,20 @@ export const scanContext = internalQuery({
 });
 
 export const myContext = internalQuery({
-  args: { now: v.number() },
+  args: { background: v.optional(v.boolean()), now: v.number() },
   handler: async (ctx, args) => {
     const user = await requireOnboarded(ctx);
     const membership = await membershipForUser(ctx, user._id);
     const team = membership ? await ctx.db.get(membership.teamId) : null;
     const submission = await findOwnedSubmission(ctx, user._id);
+    const ttlMs = args.background ? STACK_BACKGROUND_TTL_MS : undefined;
     return {
-      submissionFresh: isFresh(submission?.techStackAt, args.now),
+      submissionFresh: isFresh(submission?.techStackAt, args.now, ttlMs),
       submissionId: submission?._id,
       submissionRepo: urlOf(submission?.urls, "repo"),
-      teamFresh: isFresh(team?.techStackAt, args.now),
+      teamFresh:
+        isFresh(team?.techStackAt, args.now, ttlMs) ||
+        (args.background === true && isHandSet(team)),
       teamId: team?._id,
       teamRepos: teamRepoList(team),
       token: user.githubAccessToken ?? null,
@@ -118,12 +130,19 @@ export const myContext = internalQuery({
 
 export const record = internalMutation({
   args: {
+    /** A scan nobody asked for by name: leave hand-typed stacks alone. */
+    keepHandSet: v.optional(v.boolean()),
     repoUrls: v.array(v.string()),
     submissionId: v.optional(v.id("submissions")),
     teamId: v.optional(v.id("teams")),
     techStack: v.array(v.string()),
   },
   handler: async (ctx, args) => {
+    // A private repo, a rate limit or an empty repo all come back as nothing.
+    // None of them is a reason to wipe a stack that is already there.
+    if (args.techStack.length === 0) {
+      return 0;
+    }
     const now = Date.now();
     const scanned = new Set(
       args.repoUrls.map((url) => repoSlug(url)).filter((slug) => slug !== null)
@@ -132,7 +151,11 @@ export const record = internalMutation({
     if (args.teamId) {
       const team = await ctx.db.get(args.teamId);
       const teamSlugs = teamRepoList(team).map((url) => repoSlug(url));
-      if (team && teamSlugs.some((slug) => slug && scanned.has(slug))) {
+      if (
+        team &&
+        !(args.keepHandSet && isHandSet(team)) &&
+        teamSlugs.some((slug) => slug && scanned.has(slug))
+      ) {
         await ctx.db.patch(args.teamId, {
           techStack: args.techStack,
           techStackAt: now,
@@ -145,7 +168,12 @@ export const record = internalMutation({
     if (args.submissionId) {
       const submission = await ctx.db.get(args.submissionId);
       const submissionSlug = repoSlug(urlOf(submission?.urls, "repo"));
-      if (submission && submissionSlug && scanned.has(submissionSlug)) {
+      if (
+        submission &&
+        !(args.keepHandSet && isHandSet(submission)) &&
+        submissionSlug &&
+        scanned.has(submissionSlug)
+      ) {
         await ctx.db.patch(args.submissionId, {
           techStack: args.techStack,
           techStackAt: now,
@@ -155,6 +183,75 @@ export const record = internalMutation({
       }
     }
     return wrote;
+  },
+  returns: v.number(),
+});
+
+const RESCAN_GAP_MS = 2000;
+
+/**
+ * Re-scan every linked repo, for when the detector learns something new (a
+ * stored stack is otherwise only refreshed when its repo changes or the
+ * project is submitted). Run it by hand: `npx convex run stack:rescanAll`.
+ * Hand-typed stacks are left as they are.
+ * Spaced out so the shared fallback token is not drained in one burst.
+ */
+export const rescanAll = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const [submissions, teams] = await Promise.all([
+      ctx.db.query("submissions").collect(),
+      ctx.db.query("teams").collect(),
+    ]);
+    const submissionByTeam = new Map<string, Doc<"submissions">>();
+    for (const submission of submissions) {
+      if (submission.teamId && !submissionByTeam.has(submission.teamId)) {
+        submissionByTeam.set(submission.teamId, submission);
+      }
+    }
+    const jobs: {
+      repoUrls: string[];
+      submissionId?: Id<"submissions">;
+      teamId?: Id<"teams">;
+      userId: Id<"users">;
+    }[] = [];
+    for (const team of teams) {
+      const submission = submissionByTeam.get(team._id);
+      const submissionRepo = urlOf(submission?.urls, "repo");
+      jobs.push({
+        repoUrls: [
+          ...teamRepoList(team),
+          ...(submissionRepo ? [submissionRepo] : []),
+        ],
+        submissionId: submission?._id,
+        teamId: team._id,
+        userId: team.ownerId,
+      });
+    }
+    for (const submission of submissions) {
+      const repo = urlOf(submission.urls, "repo");
+      if (!submission.teamId && repo) {
+        jobs.push({
+          repoUrls: [repo],
+          submissionId: submission._id,
+          userId: submission.submittedBy,
+        });
+      }
+    }
+    let scheduled = 0;
+    for (const job of jobs) {
+      const repoUrls = job.repoUrls.filter((url) => repoSlug(url));
+      if (repoUrls.length === 0) {
+        continue;
+      }
+      await ctx.scheduler.runAfter(
+        scheduled * RESCAN_GAP_MS,
+        internal.stackDetect.scan,
+        { ...job, force: true, keepHandSet: true, repoUrls }
+      );
+      scheduled++;
+    }
+    return scheduled;
   },
   returns: v.number(),
 });
@@ -170,55 +267,74 @@ const histogramRow = v.object({
   name: v.string(),
 });
 
+export const histogramReturn = v.object({
+  /** How many of `total` came from a repo scan rather than typed by hand. */
+  auto: v.number(),
+  rows: v.array(histogramRow),
+  total: v.number(),
+});
+
+type Stacked = Pick<Doc<"teams">, "techStack" | "techStackSource">;
+
+/**
+ * One stack per project: the submitted project's, else the team's, else a
+ * draft's. The draft matters: a scan of a repo that is only on the draft
+ * lands there and nowhere else.
+ */
+export async function stackHistogram(ctx: QueryCtx) {
+  const [submissions, teams] = await Promise.all([
+    ctx.db.query("submissions").collect(),
+    ctx.db.query("teams").collect(),
+  ]);
+  const usedTeams = new Set<string>();
+  const stacks: string[][] = [];
+  let auto = 0;
+  const take = (doc: Stacked, teamId: string | undefined): void => {
+    if (!doc.techStack || doc.techStack.length === 0) {
+      return;
+    }
+    if (teamId) {
+      if (usedTeams.has(teamId)) {
+        return;
+      }
+      usedTeams.add(teamId);
+    }
+    stacks.push(doc.techStack);
+    auto += doc.techStackSource === "repo" ? 1 : 0;
+  };
+  for (const submission of submissions) {
+    if (submission.status === "submitted") {
+      take(submission, submission.teamId);
+    }
+  }
+  for (const team of teams) {
+    take(team, team._id);
+  }
+  for (const submission of submissions) {
+    if (submission.status !== "submitted") {
+      take(submission, submission.teamId);
+    }
+  }
+  const counts = new Map<string, number>();
+  for (const stack of stacks) {
+    for (const tag of new Set(stack)) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  const rows = [...counts.entries()]
+    .map(([name, count]) => ({
+      category: stackCategory(name),
+      count,
+      name,
+    }))
+    .toSorted(
+      (a, b) => b.count - a.count || a.name.localeCompare(b.name, "es")
+    );
+  return { auto, rows, total: stacks.length };
+}
+
 export const histogram = onboardedQuery({
   args: {},
-  handler: async (ctx) => {
-    const [submitted, teams] = await Promise.all([
-      ctx.db
-        .query("submissions")
-        .withIndex("by_status", (q) => q.eq("status", "submitted"))
-        .collect(),
-      ctx.db.query("teams").collect(),
-    ]);
-    const usedTeams = new Set<string>();
-    const stacks: string[][] = [];
-    for (const submission of submitted) {
-      if (!submission.techStack || submission.techStack.length === 0) {
-        continue;
-      }
-      stacks.push(submission.techStack);
-      if (submission.teamId) {
-        usedTeams.add(submission.teamId);
-      }
-    }
-    for (const team of teams) {
-      if (usedTeams.has(team._id)) {
-        continue;
-      }
-      if (!team.techStack || team.techStack.length === 0) {
-        continue;
-      }
-      stacks.push(team.techStack);
-    }
-    const counts = new Map<string, number>();
-    for (const stack of stacks) {
-      for (const tag of new Set(stack)) {
-        counts.set(tag, (counts.get(tag) ?? 0) + 1);
-      }
-    }
-    const rows = [...counts.entries()]
-      .map(([name, count]) => ({
-        category: stackCategory(name),
-        count,
-        name,
-      }))
-      .toSorted(
-        (a, b) => b.count - a.count || a.name.localeCompare(b.name, "es")
-      );
-    return { rows, total: stacks.length };
-  },
-  returns: v.object({
-    rows: v.array(histogramRow),
-    total: v.number(),
-  }),
+  handler: async (ctx) => await stackHistogram(ctx),
+  returns: histogramReturn,
 });

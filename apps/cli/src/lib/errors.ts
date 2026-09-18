@@ -65,6 +65,14 @@ export function authError(
   });
 }
 
+/** What keeps working outside the hackathon window (the `anytime*` functions). */
+export const EVENT_CLOSED_HINT =
+  "You can still use `hackspain profile`, list perks with `hackspain perk list`, and open the participant directory with `hackspain open participantes`.";
+
+/** Phone, terms and consent are confirmed in the dashboard's wizard. */
+export const ONBOARDING_HINT =
+  "Run `hackspain open onboarding` to finish it in the dashboard, then retry.";
+
 /**
  * The backend's gate helpers throw plain `Error` with Spanish copy (the web
  * renders `err.message` directly). Convex wraps them as
@@ -97,7 +105,7 @@ const GATE_MESSAGES: {
     explained: {
       code: "NOT_REGISTERED",
       exitCode: EXIT.INELIGIBLE,
-      hint: "Log in with the email you applied with, or sign up at https://hackspain.com/signup.",
+      hint: "Log in with the email you applied with. Signups are closed; if your application is missing, contact the organisers.",
       message: "This email has no HackSpain signup.",
     },
     needle: "No hay inscripción a la hackathon con este email",
@@ -115,7 +123,7 @@ const GATE_MESSAGES: {
     explained: {
       code: "NOT_ONBOARDED",
       exitCode: EXIT.INELIGIBLE,
-      hint: "Finish onboarding in the dashboard, then retry.",
+      hint: ONBOARDING_HINT,
       message: "You still need to confirm your details.",
     },
     needle: "Confirma tus datos primero",
@@ -143,19 +151,53 @@ const GATE_MESSAGES: {
 const CODED_EXIT: Record<string, ExitCode> = {
   ALREADY_IN_TEAM: EXIT.ERROR,
   BAD_CODE: EXIT.ERROR,
+  BAD_OTP: EXIT.ERROR,
+  EVENT_CLOSED: EXIT.INELIGIBLE,
   NOT_FOUND: EXIT.ERROR,
   NOT_MEMBER: EXIT.ERROR,
   NOT_OWNER: EXIT.ERROR,
   NO_TEAM: EXIT.ERROR,
+  TRACK_FULL: EXIT.ERROR,
+  OTP_EXPIRED: EXIT.ERROR,
+  SEND_FAILED: EXIT.ERROR,
+  TOO_MANY_ATTEMPTS: EXIT.ERROR,
   UNAUTHENTICATED: EXIT.AUTH,
+  UNREGISTERED: EXIT.INELIGIBLE,
   VALIDATION: EXIT.USAGE,
 };
 
 const CODED_HINT: Record<string, string> = {
   ALREADY_IN_TEAM: "Leave it first with `hackspain team leave`.",
   BAD_CODE: "Ask the team owner for the code shown by `hackspain team show`.",
+  BAD_OTP:
+    "Check the digits in the email, or run `hackspain auth login` for a new one.",
+  EVENT_CLOSED: EVENT_CLOSED_HINT,
   NO_TEAM:
     "Create one with `hackspain team create <name>` or join with `hackspain team join <code>`.",
+  TRACK_FULL:
+    "Pick another with `hackspain track list`, then `hackspain track register <slug>`.",
+  OTP_EXPIRED:
+    "Codes last 15 minutes. Run `hackspain auth login` to get a new one.",
+  SEND_FAILED:
+    "Try again in a minute. If it keeps failing, tell the organisers.",
+  TOO_MANY_ATTEMPTS:
+    "Wait a few minutes, then run `hackspain auth login` for a new code.",
+  UNREGISTERED:
+    "Log in with the email you applied with. Signups are closed; if your application is missing, contact the organisers.",
+};
+
+/**
+ * The server's copy is Spanish (the web renders it verbatim); the CLI is
+ * English, so codes listed here replace the relayed message.
+ */
+const CODED_MESSAGE: Record<string, string> = {
+  BAD_OTP: "That code is not right.",
+  EVENT_CLOSED: "The hackathon is not running right now.",
+  TRACK_FULL: "That track already has 15 teams. Join a different one.",
+  OTP_EXPIRED: "That code is no longer valid.",
+  SEND_FAILED: "The sign-in email could not be sent.",
+  TOO_MANY_ATTEMPTS: "Too many wrong codes for this email.",
+  UNREGISTERED: "This email has no HackSpain signup.",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -206,7 +248,7 @@ export function explainError(err: unknown): Explained {
         code: data.code,
         exitCode: CODED_EXIT[data.code] ?? EXIT.ERROR,
         hint: CODED_HINT[data.code],
-        message,
+        message: CODED_MESSAGE[data.code] ?? message,
       };
     }
     return {

@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import {
   TV_FONT_WEIGHT_OPTIONS,
   TV_PALETTE,
-  defaultTvFontWeight,
   tvFontSizePixels,
   isTvFontWeight,
   layoutTvBox,
@@ -15,6 +14,7 @@ import {
 import type { TvWidget, TvWidgetKind } from "@/lib/tv";
 import { FeedEditor } from "./feed-box";
 import { isEditableKind } from "./inline-edit";
+import { PaletteThumb } from "./palette-thumb";
 import { widgetLabel } from "./preview";
 import { SponsorEditor } from "./sponsor-editor";
 
@@ -62,11 +62,18 @@ export function TvInspector({
                     type="button"
                     disabled={pending}
                     onClick={() => onAdd(item.kind)}
-                    className="border-[3px] border-hs-ink bg-hs-paper px-2.5 py-2 text-left outline-none motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out motion-safe:active:scale-[0.96] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 focus-visible:border-hs-navy disabled:opacity-50"
+                    className="overflow-hidden border-[3px] border-hs-ink bg-hs-paper text-left outline-none motion-safe:transition-[transform,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:not-disabled:scale-[0.96] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/70 focus-visible:border-hs-navy disabled:opacity-50"
                   >
-                    <span className="block text-sm font-semibold">{item.label}</span>
-                    <span className="mt-0.5 block text-[11px] text-hs-brown">
-                      {item.hint}
+                    <span className="block aspect-[5/3] w-full">
+                      <PaletteThumb kind={item.kind} />
+                    </span>
+                    <span className="block border-t-[3px] border-hs-ink px-2 py-1.5">
+                      <span className="block font-bungee text-[11px] leading-tight uppercase">
+                        {item.label}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-hs-brown">
+                        {item.hint}
+                      </span>
                     </span>
                   </button>
                 ))}
@@ -84,7 +91,7 @@ export function TvInspector({
         <p className="font-bungee text-sm">Inspector</p>
         <p className="mt-2 text-sm text-hs-brown">
           Selecciona una caja para moverla, escribir o cambiar su contenido.
-          Pulsa + para añadir una.
+          Añadir caja pone una nueva en la pantalla.
         </p>
       </aside>
     );
@@ -195,7 +202,7 @@ function TextFields({
         <label className="block text-xs text-hs-brown">
           Peso
           <select
-            value={widget.fontWeight ?? defaultTvFontWeight()}
+            value={widget.fontWeight ?? "normal"}
             onChange={(event) => {
               const next = event.target.value;
               if (!isTvFontWeight(next) || next === widget.fontWeight) {
@@ -264,10 +271,16 @@ function FontSizeField({
             setValue(String(pixels));
             return;
           }
-          if (next === pixels) return;
+          if (next === pixels) {
+            return;
+          }
           onPatch(widget._id, { fontSize: next });
         }}
-        onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          }
+        }}
         className="mt-1 tabular-nums"
       />
       <span className="mt-1 block text-xs">8–240 px sobre 1920 px de ancho. Se adapta a la pantalla.</span>

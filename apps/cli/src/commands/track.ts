@@ -7,7 +7,12 @@ import { uiFor } from "../lib/output";
 import type { Participant } from "../lib/participant";
 import { openParticipant } from "../lib/participant";
 import { alreadySubmitted, planTracks, projectArgsFrom } from "../lib/project";
+import { pickOne } from "../lib/prompts";
 import { c, highlight } from "../lib/style";
+
+function occupancy(count: number, limit: number): string {
+  return `${count}/${limit}`;
+}
 
 async function applyPlan(
   ui: Ui,
@@ -30,8 +35,16 @@ async function applyPlan(
   const plan = planTracks(submission?.challengeIds ?? [], tracks, ops);
   if (plan.unknown.length > 0) {
     throw usageError(
-      `Unknown track${plan.unknown.length > 1 ? "s" : ""}: ${plan.unknown.join(", ")}.`,
+      `Unknown track: ${plan.unknown[0]}.`,
       `Run \`hackspain track list\`. Known: ${tracks.map((t) => t.slug).join(", ")}.`
+    );
+  }
+  const full = plan.added.filter((t) => t.teamCount >= t.teamLimit);
+  if (full.length > 0) {
+    const t = full[0];
+    throw usageError(
+      `${t?.label} is full (${t?.teamLimit} teams).`,
+      "Run `hackspain track list` to see which tracks still have room."
     );
   }
   if (plan.added.length === 0 && plan.removed.length === 0) {
@@ -66,26 +79,16 @@ async function applyPlan(
       ? `${c.dim("Entering:")} ${entered.map((t) => t.label).join(", ")}`
       : c.dim("Not entering any track right now.")
   );
-  if (entered.length > 0) {
-    ui.next([
-      [
-        "hackspain submit --draft",
-        "save the project details whenever you like",
-      ],
-    ]);
-  }
 }
 
 export function registerTrack(program: Command): void {
   const track = program
     .command("track")
-    .description(
-      "See the tracks (challenges) and choose which ones your project enters"
-    );
+    .description("See the tracks and pick the one your project enters");
 
   track
     .command("list")
-    .description("Tracks you can enter, marking the ones your project is in")
+    .description("Tracks you can enter, marking the one your project is in")
     .action(async (_opts: unknown, command: Command) => {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
@@ -100,73 +103,103 @@ export function registerTrack(program: Command): void {
           ]),
         "Tracks"
       );
-      const entered = new Set(submission?.challengeIds);
+      const currentId = submission?.challengeIds[0];
       ui.result({
         submissionsOpen: settings.submissionsOpen,
         tracks: tracks.map((t) => ({
-          entered: entered.has(t._id),
+          entered: t._id === currentId,
+          full: t.teamCount >= t.teamLimit,
           label: t.label,
           note: t.note,
           slug: t.slug,
+          teamCount: t.teamCount,
+          teamLimit: t.teamLimit,
         })),
       });
       ui.table(
         tracks.map((t) => [
-          entered.has(t._id) ? c.gold("●") : c.dim("○"),
-          entered.has(t._id) ? highlight(t.slug) : t.slug,
+          t._id === currentId ? c.gold("●") : c.dim("○"),
+          t._id === currentId ? highlight(t.slug) : t.slug,
           t.label,
+          t.teamCount >= t.teamLimit
+            ? c.gold(`${occupancy(t.teamCount, t.teamLimit)} full`)
+            : occupancy(t.teamCount, t.teamLimit),
           c.dim(t.note),
         ]),
-        ["", "Slug", "Track", "Note"]
+        ["", "Slug", "Track", "Teams", "Note"]
       );
       ui.line(
-        entered.size
+        currentId
           ? `${c.gold("●")} ${c.dim("= you are entering it")}`
           : c.dim("You are not entering any track yet.")
       );
       ui.next([
-        [
-          "hackspain track register <slug>",
-          "enter a track (you can enter several)",
-        ],
-        ["hackspain track move <from> <to>", "change your mind"],
-        [
-          "hackspain submit",
-          settings.submissionsOpen
-            ? "submissions are open"
-            : "opens later; drafts work already",
-        ],
+        ["hackspain track register [slug]", "enter one track"],
+        ["hackspain track unregister", "leave it"],
       ]);
     });
 
   track
-    .command("register <slugs...>")
-    .description("Enter your project in one or more tracks")
+    .command("register [slugs...]")
+    .description("Enter one track; extra slugs are ignored")
     .action(async (slugs: string[], _opts: unknown, command: Command) => {
       const ctx = contextFor(command);
-      await applyPlan(uiFor(ctx), await openParticipant(ctx), { add: slugs });
-    });
-
-  track
-    .command("unregister <slugs...>")
-    .description("Withdraw your project from one or more tracks")
-    .action(async (slugs: string[], _opts: unknown, command: Command) => {
-      const ctx = contextFor(command);
-      await applyPlan(uiFor(ctx), await openParticipant(ctx), {
-        remove: slugs,
+      const ui = uiFor(ctx);
+      const participant = await openParticipant(ctx);
+      const { session } = participant;
+      const [tracks, submission] = await ui.spin(
+        "Loading tracks…",
+        () =>
+          Promise.all([
+            session.client.query(api.tracks.list, {}),
+            session.client.query(api.submissions.mine, {}),
+          ]),
+        "Tracks loaded"
+      );
+      const currentId = submission?.challengeIds[0];
+      const chosen = await pickOne(ctx, slugs[0], {
+        choices: tracks.map((t) => ({
+          hint: occupancy(t.teamCount, t.teamLimit),
+          label: t.label,
+          value: t.slug,
+        })),
+        flag: "<slug>",
+        initialValue: tracks.find((t) => t._id === currentId)?.slug,
+        message: "Which track?",
       });
+      if (!chosen) {
+        throw usageError(
+          "Pick a track.",
+          "Pass the slug or run interactively."
+        );
+      }
+      await applyPlan(ui, participant, { add: [chosen] });
     });
 
   track
-    .command("move <from> <to>")
-    .description("Swap one track for another")
-    .action(
-      async (from: string, to: string, _opts: unknown, command: Command) => {
-        const ctx = contextFor(command);
-        await applyPlan(uiFor(ctx), await openParticipant(ctx), {
-          add: [to],
-          remove: [from],
-        });
+    .command("unregister [slugs...]")
+    .description("Leave the track your project is in")
+    .action(async (slugs: string[], _opts: unknown, command: Command) => {
+      const ctx = contextFor(command);
+      const ui = uiFor(ctx);
+      const participant = await openParticipant(ctx);
+      const { session } = participant;
+      const [tracks, submission] = await ui.spin(
+        "Loading tracks…",
+        () =>
+          Promise.all([
+            session.client.query(api.tracks.list, {}),
+            session.client.query(api.submissions.mine, {}),
+          ]),
+        "Tracks loaded"
+      );
+      const current = tracks.find((t) => t._id === submission?.challengeIds[0]);
+      const slug = slugs[0] ?? current?.slug;
+      if (!slug) {
+        ui.result({ changed: false, tracks: [] });
+        ui.info("Not in a track.");
+        return;
       }
-    );
+      await applyPlan(ui, participant, { remove: [slug] });
+    });
 }

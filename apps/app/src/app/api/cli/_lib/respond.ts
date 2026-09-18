@@ -44,6 +44,19 @@ export function fail(message: string, status: number): NextResponse {
   return NextResponse.json(body, { status });
 }
 
+/** A `{ code, message }` error the CLI explains like a relayed ConvexError. */
+export function failCoded(
+  code: string,
+  message: string,
+  status = 400
+): NextResponse {
+  const body: CliErrorBody = {
+    error: { data: { code, message }, kind: "convex" },
+    ok: false,
+  };
+  return NextResponse.json(body, { status });
+}
+
 export function fromError(err: unknown): NextResponse {
   if (err instanceof ConvexError) {
     const body: CliErrorBody = {

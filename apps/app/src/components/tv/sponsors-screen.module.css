@@ -1,0 +1,124 @@
+.screen {
+  --rule: min(0.416667vw, 0.740741dvh);
+  --rail: 3.333333vw;
+  --paper: #f7ecd6;
+  --blue: #00878b;
+  --red: #df0005;
+  --yellow: #f4b300;
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail);
+  grid-template-rows: 16.296296dvh minmax(0, 1fr) 4.444444dvh;
+  gap: var(--rule);
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  padding: var(--rule);
+  background: #000;
+  color: #000;
+}
+
+.header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3vw;
+  padding-inline: 2.5vw;
+  background: var(--paper);
+}
+
+.brand {
+  width: auto;
+  height: 11.851852dvh;
+  max-width: 42%;
+  object-fit: contain;
+}
+
+.title,
+.clock {
+  font-family: var(--font-mono);
+  font-size: clamp(12px, 2.962963vmin, 48px);
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.clock {
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: var(--rule);
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 2.2vmin 2.2vw;
+  background: var(--paper);
+}
+
+.logo {
+  width: 100%;
+  height: 100%;
+  max-width: 17.1875vw;
+  max-height: 9.62963dvh;
+  object-fit: contain;
+  filter: brightness(0);
+}
+
+.cell[data-sponsor="fal.ai"] .logo,
+.cell[data-sponsor="Exa"] .logo {
+  transform: scale(0.75);
+}
+
+.leftRail,
+.rightRail {
+  display: grid;
+  grid-template-rows: 1fr 2fr 1fr;
+  gap: var(--rule);
+  min-height: 0;
+}
+
+.leftRail span:nth-child(1),
+.rightRail span:nth-child(3),
+.footer span:nth-child(3) { background: var(--blue); }
+.leftRail span:nth-child(2),
+.rightRail span:nth-child(1),
+.footer span:nth-child(2) { background: var(--paper); }
+.leftRail span:nth-child(3),
+.footer span:nth-child(1) { background: var(--yellow); }
+.rightRail span:nth-child(2),
+.footer span:nth-child(4) { background: var(--red); }
+
+.footer {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr 1fr;
+  gap: var(--rule);
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .screen {
+    --rule: 0.6vw;
+    grid-template-rows: 14dvh minmax(0, 1fr) 4dvh;
+  }
+
+  .header { flex-wrap: wrap; gap: 0 4vw; padding-block: 1.5dvh; }
+  .brand { height: 8dvh; max-width: 65%; }
+  .title { order: 1; width: 100%; font-size: 2.5vw; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); }
+  .cell { padding: 1.6vmin 4vw; }
+  .logo { max-width: 30vw; max-height: 6dvh; }
+}

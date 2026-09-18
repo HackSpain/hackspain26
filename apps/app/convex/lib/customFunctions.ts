@@ -9,7 +9,8 @@ import {
   getCurrentUser,
   requireAccepted,
   requireAdmin,
-  requireJudge,
+  requireInEvent,
+  requireJudgeInEvent,
   requireOnboarded,
 } from "./auth";
 
@@ -39,9 +40,19 @@ export const authedQuery = wrapQuery(getCurrentUser);
 export const authedMutation = wrapMutation(getCurrentUser);
 export const acceptedQuery = wrapQuery(requireAccepted);
 export const acceptedMutation = wrapMutation(requireAccepted);
-export const onboardedQuery = wrapQuery(requireOnboarded);
-export const onboardedMutation = wrapMutation(requireOnboarded);
+/**
+ * Onboarded participants inside the hackathon window (convex/lib/eventWindow.ts).
+ * Outside it only explicitly exempt features work; use the anytime wrappers
+ * for one that must survive a closed window. Admins are never gated.
+ */
+export const onboardedQuery = wrapQuery(requireInEvent);
+export const onboardedMutation = wrapMutation(requireInEvent);
+/** Onboarded, no window check: features that remain available at any time. */
+export const anytimeOnboardedQuery = wrapQuery(requireOnboarded);
+export const anytimeOnboardedMutation = wrapMutation(requireOnboarded);
+/** Onboarded, no window check: profile fields the participant may always edit. */
+export const profileMutation = wrapMutation(requireOnboarded);
 export const adminQuery = wrapQuery(requireAdmin);
 export const adminMutation = wrapMutation(requireAdmin);
-export const judgeQuery = wrapQuery(requireJudge);
-export const judgeMutation = wrapMutation(requireJudge);
+export const judgeQuery = wrapQuery(requireJudgeInEvent);
+export const judgeMutation = wrapMutation(requireJudgeInEvent);

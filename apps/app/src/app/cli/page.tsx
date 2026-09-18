@@ -49,7 +49,7 @@ const EXIT_CODES = [
   { code: "1", meaning: "Error del servidor o genérico" },
   { code: "2", meaning: "Error de uso (flags mal puestos, falta input en modo no interactivo)" },
   { code: "3", meaning: "Sin sesión o sesión caducada" },
-  { code: "4", meaning: "Aún no elegible (sin solicitud, sin aceptar u onboarding incompleto)" },
+  { code: "4", meaning: "Aún no elegible (sin solicitud, sin aceptar, onboarding incompleto o la hackathon no está en marcha)" },
   { code: "5", meaning: "No se pudo alcanzar el backend" },
   { code: "130", meaning: "Interrumpido (Ctrl+C)" },
 ] as const;
@@ -88,13 +88,17 @@ export default function CliPage() {
 
         <CommandCard
           title="Primeros pasos"
-          description="Inicia sesión con el mismo email del dashboard. Tras el login te pedirá lo que falte: nombre, teléfono o GitHub."
+          description="Misma cuenta que este dashboard. El login abre el navegador para aprobar el dispositivo; también vale el código de 8 dígitos. Después te pedirá lo que falte: nombre, teléfono o GitHub."
         >
           <CommandRow command="hackspain">
-            Dónde estás y qué toca hacer a continuación.
+            Dónde estás y qué toca hacer. En una terminal interactiva, menú para moverte.
           </CommandRow>
-          <CommandRow command="hackspain auth login">
-            Email + código de 8 dígitos, como en la web.
+          <CommandRow command="hackspain auth login [--email …] [--code …]">
+            Por defecto abre /cli-auth para aprobar este dispositivo. Con --email/--code, el código de 8 dígitos por correo, como en la web.
+          </CommandRow>
+          <CommandRow command="hackspain open [feed|teams|perks|…]">
+            Abre el dashboard en tu navegador ya con la sesión iniciada: no
+            hace falta volver a pedir el código.
           </CommandRow>
           <CommandRow command="hackspain auth status">
             Comprueba tu sesión.
@@ -104,19 +108,23 @@ export default function CliPage() {
 
         <CommandCard title="Perfil">
           <CommandRow command="hackspain profile">
-            Nombre, dieta, viaje, teléfono, avisos y GitHub.
+            Nombre, dieta, viaje, teléfono, avisos, GitHub y X. La foto y la
+            ficha se completan en el dashboard.
           </CommandRow>
-          <CommandRow command="hackspain profile edit [--name …] [--diet …] [--from …]">
+          <CommandRow command="hackspain profile edit [--name …] [--diet …] [--diet-details …] [--from …]">
             Edita los datos de tu perfil.
           </CommandRow>
           <CommandRow command="hackspain profile notify on|off">
             Activa o desactiva los avisos.
           </CommandRow>
-          <CommandRow command="hackspain profile phone [+34…] [--code …]">
-            Verifica el teléfono por SMS, igual que en el dashboard.
+          <CommandRow command="hackspain profile phone [+34…]">
+            Guarda tu teléfono de contacto, igual que en el dashboard.
           </CommandRow>
           <CommandRow command="hackspain profile github [--unlink]">
             Imprime el enlace para autorizar GitHub en el navegador.
+          </CommandRow>
+          <CommandRow command="hackspain profile x [@usuario] [--clear]">
+            Guarda tu usuario de X, igual que en el dashboard.
           </CommandRow>
         </CommandCard>
 
@@ -136,8 +144,9 @@ export default function CliPage() {
           <CommandRow command="hackspain team code [--regenerate]">
             Muestra (o regenera) el código de invitación.
           </CommandRow>
-          <CommandRow command="hackspain team repo [url|--clear]">
-            Vincula el repositorio de GitHub; su actividad aparece en el feed.
+          <CommandRow command="hackspain team repo [url…] [--clear]">
+            Vincula el repositorio público (o varios) de GitHub; su actividad
+            aparece en el feed. Hazlo público antes de vincularlo.
           </CommandRow>
           <CommandRow command="hackspain team leave">Sal del equipo.</CommandRow>
           <CommandRow command="hackspain team transfer [member]">
@@ -153,16 +162,13 @@ export default function CliPage() {
 
         <CommandCard
           title="Retos y entrega"
-          description="Un proyecto por equipo, tantos retos como quieras. La entrega congela todo; los borradores se pueden guardar antes."
+          description="Un proyecto por equipo, un reto. La entrega congela todo; los borradores se pueden guardar antes."
         >
           <CommandRow command="hackspain track list">
             Retos disponibles.
           </CommandRow>
-          <CommandRow command="hackspain track register <slug…> | unregister <slug…>">
-            Apúntate o bórrate de retos.
-          </CommandRow>
-          <CommandRow command="hackspain track move <from> <to>">
-            Cámbiate de reto.
+          <CommandRow command="hackspain track register [slug] | unregister">
+            Entra en un reto o salte. Cambiar de reto sustituye el anterior.
           </CommandRow>
           <CommandRow command="hackspain submit [--draft]">
             Formulario interactivo de entrega; flags para scripts.
@@ -189,8 +195,10 @@ export default function CliPage() {
           title="Feed"
           description="El mismo feed que la página Feed del dashboard: mensajes de todo el mundo más pushes y PRs de cada repo de equipo."
         >
-          <CommandRow command="hackspain feed [-n 20]">
-            Últimas publicaciones y actividad de GitHub.
+          <CommandRow command="hackspain feed [-n 20] [--no-images] [--before …]">
+            Últimas publicaciones y actividad de GitHub, por páginas. En
+            kitty, Ghostty, WezTerm, iTerm2 o la terminal de VS Code las fotos
+            se ven en la propia terminal; en el resto, un enlace.
           </CommandRow>
           <CommandRow command='hackspain post "texto" [--image foto.jpg]'>
             Publica (≤500 caracteres; jpeg/png/webp/gif ≤5 MB).
@@ -199,11 +207,16 @@ export default function CliPage() {
 
         <CommandCard
           title="Watcher"
-          description="Pensado para quedarse abierto en su propia terminal todo el fin de semana: detecta tus harnesses de IA (Claude Code, Codex, OpenCode, Cline), muestra el feed y los avisos de la organización, y reporta uso. Nunca salen prompts ni rutas completas de tu máquina."
+          description="Pensado para quedarse abierto en su propia terminal todo el fin de semana: detecta tus harnesses de IA (Claude Code, Codex, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin), muestra el feed y los avisos de la organización, y reporta uso. Nunca salen prompts ni rutas completas de tu máquina."
         >
-          <CommandRow command="hackspain watch [--interval 30] [--backfill <hours>] [--no-upload] [--once]">
-            Arranca el watcher. <code className="font-mono text-xs">q</code>{" "}
-            sale, <code className="font-mono text-xs">p</code> pausa.
+          <CommandRow command="hackspain watch [--interval 30] [--no-upload] [--no-images] [--once]">
+            Arranca el watcher; reporta todo el uso de IA de la ventana de la
+            hackathon, también el de cuando estaba cerrado, y nada de fuera de
+            ella.{" "}
+            <code className="font-mono text-xs">q</code> sale,{" "}
+            <code className="font-mono text-xs">p</code> pausa,{" "}
+            <code className="font-mono text-xs">↑↓</code> recorren el feed y{" "}
+            <code className="font-mono text-xs">g</code> vuelve al directo.
           </CommandRow>
           <CommandRow command="hackspain telemetry stats">
             Lo que el watcher ha registrado en esta máquina.
@@ -219,7 +232,7 @@ export default function CliPage() {
 
         <CommandCard
           title="Códigos de salida"
-          description="Los comandos que necesitan equipo, solicitud aceptada u onboarding completo fallan rápido con el siguiente paso a dar."
+          description="Los comandos que necesitan equipo, solicitud aceptada u onboarding completo fallan rápido con el siguiente paso a dar. Fuera de la ventana de la hackathon siguen funcionando hackspain profile, hackspain perk list y hackspain open participantes."
         >
           <div>
             {EXIT_CODES.map((row) => (

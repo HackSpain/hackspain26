@@ -2,20 +2,31 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
+import { directoryValidator } from "./lib/directory";
+import { sectionsValidator } from "./lib/userTypes";
+import { screenPresetValidator } from "./lib/tvScreens";
+import { tvWidgetFields, tvWidgetValidator } from "./lib/tvValidators";
 import {
+  claimTypeValidator,
   milestoneKindValidator,
   perkAnswerValidator,
   perkInputValidator,
+  perkTypeValidator,
   roleValidator,
 } from "./lib/validators";
 
-const authTablesWithoutUsers = Object.fromEntries(
-  Object.entries(authTables).filter(([name]) => name !== "users")
-) as Omit<typeof authTables, "users">;
-
 export default defineSchema({
   tvPlaybackControl: defineTable({ key: v.string(), reloadVersion: v.number() }).index("by_key", ["key"]),
-  ...authTablesWithoutUsers,
+  tvScreens: defineTable({
+    key: v.string(), preset: screenPresetValidator, message: v.string(),
+    revision: v.number(), reloadVersion: v.number(),
+  }).index("by_key", ["key"]),
+  tvScreenConnections: defineTable({
+    screenId: v.id("tvScreens"), clientId: v.string(), url: v.string(),
+    width: v.number(), height: v.number(), lastSeenAt: v.number(),
+    receivedRevision: v.number(), receivedReloadVersion: v.number(),
+  }).index("by_client", ["clientId"]).index("by_screen", ["screenId"]),
+  ...authTables,
   ambassadorApplications: defineTable({
     email: v.string(),
     fullName: v.string(),
@@ -34,10 +45,37 @@ export default defineSchema({
     expiresAt: v.number(),
   }).index("by_email", ["email"]),
 
+  eventPasses: defineTable({
+    userId: v.optional(v.id("users")),
+    signupId: v.optional(v.id("signups")),
+    code: v.string(),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    codeSentAt: v.optional(v.number()),
+    checkedInAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_signup", ["signupId"])
+    .index("by_code", ["code"]),
+
+  eventSettings: defineTable({
+    key: v.string(),
+    phase: v.union(
+      v.literal("pre_event"),
+      v.literal("live"),
+      v.literal("ended")
+    ),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  }).index("by_key", ["key"]),
+
   githubLinkStates: defineTable({
     userId: v.id("users"),
     state: v.string(),
     expiresAt: v.number(),
+    /** Same-origin path the callback sends the browser back to; `/` when unset. */
+    returnTo: v.optional(v.string()),
   })
     .index("by_state", ["state"])
     .index("by_user", ["userId"]),
@@ -78,7 +116,7 @@ export default defineSchema({
   perkClaims: defineTable({
     perkId: v.id("perks"),
     userId: v.id("users"),
-    type: v.union(v.literal("email"), v.literal("code")),
+    type: claimTypeValidator,
     status: v.union(
       v.literal("pending"),
       v.literal("added"),
@@ -111,8 +149,10 @@ export default defineSchema({
     title: v.string(),
     value: v.string(),
     description: v.string(),
-    type: v.union(v.literal("email"), v.literal("code")),
+    type: perkTypeValidator,
     sponsorUrl: v.optional(v.string()),
+    /** How to claim on the partner site. Required when type is `external`. */
+    instructions: v.optional(v.string()),
     inputs: v.optional(v.array(perkInputValidator)),
     active: v.boolean(),
     createdBy: v.id("users"),
@@ -121,14 +161,6 @@ export default defineSchema({
   })
     .index("by_active", ["active"])
     .index("by_company", ["company"]),
-
-  phoneChallenges: defineTable({
-    userId: v.id("users"),
-    phone: v.string(),
-    codeHash: v.string(),
-    expiresAt: v.number(),
-    attempts: v.number(),
-  }).index("by_user", ["userId"]),
 
   posts: defineTable({
     kind: v.union(v.literal("post"), v.literal("github")),
@@ -146,6 +178,8 @@ export default defineSchema({
     ),
     /** GitHub event id, so polling never inserts the same event twice. */
     externalId: v.optional(v.string()),
+    /** Client nonce so an optimistic row and its server row share one React key. */
+    clientId: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_created", ["createdAt"])
@@ -156,6 +190,9 @@ export default defineSchema({
   settings: defineTable({
     key: v.string(),
     submissionsOpen: v.boolean(),
+    /** Hackathon window (epoch ms). Both unset means no restriction. */
+    eventStartsAt: v.optional(v.number()),
+    eventEndsAt: v.optional(v.number()),
   }).index("by_key", ["key"]),
 
   signups: defineTable({
@@ -227,6 +264,8 @@ export default defineSchema({
     joinCode: v.optional(v.string()),
     repoUrl: v.optional(v.string()),
     repoUrls: v.optional(v.array(v.string())),
+    /** Team logo uploaded by the owner, served as /api/files/<id>. */
+    logoId: v.optional(v.id("_storage")),
     techStack: v.optional(v.array(v.string())),
     techStackAt: v.optional(v.number()),
     techStackSource: v.optional(v.literal("repo")),
@@ -237,30 +276,67 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
-    .index("by_join_code", ["joinCode"]),
+    .index("by_join_code", ["joinCode"])
+    .index("by_logo", ["logoId"]),
 
   tracks: defineTable({
     slug: v.string(),
     label: v.string(),
     body: v.string(),
     note: v.string(),
+    /** Challenge brief: markdown on /tracks/<slug>, or a lone http(s) URL opened in a new tab. */
+    markdown: v.optional(v.string()),
+    /** Sponsor logo: a path under /public (e.g. /tracks/maisa.png) or an absolute URL. */
+    logoUrl: v.optional(v.string()),
+    /** Sponsor website. */
+    website: v.optional(v.string()),
     sortOrder: v.number(),
     active: v.boolean(),
   })
     .index("by_slug", ["slug"])
     .index("by_active_and_sort", ["active", "sortOrder"]),
 
+  /** Admin-defined participant categories; `sections` drives the tabs. See convex/lib/userTypes.ts. */
+  userTypes: defineTable({
+    slug: v.string(),
+    label: v.string(),
+    description: v.optional(v.string()),
+    sections: sectionsValidator,
+    isDefault: v.boolean(),
+    sortOrder: v.number(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_default", ["isDefault"])
+    .index("by_sort", ["sortOrder"]),
+
   users: defineTable({
     name: v.optional(v.string()),
+    /** External avatar URL (GitHub). `avatarId` wins when set. */
     image: v.optional(v.string()),
+    /** Uploaded profile picture, served as /api/files/<id>. */
+    avatarId: v.optional(v.id("_storage")),
+    /** Small square copy of `avatarId` for the participants map and lists (convex/lib/photo.ts). */
+    avatarThumbId: v.optional(v.id("_storage")),
+    userTypeId: v.optional(v.id("userTypes")),
+    /** Participant directory card; drives the connections graph. See convex/lib/directory.ts. */
+    directory: v.optional(directoryValidator),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
-    phone: v.optional(v.string()),
-    phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     role: roleValidator,
     signupId: v.optional(v.id("signups")),
-    phoneConfirmed: v.boolean(),
+    /** Contact number for the venue, E.164. Stored as typed (normalised), never verified. */
+    phone: v.optional(v.string()),
+    /**
+     * Legacy SMS verification (removed). Kept optional so existing rows still
+     * validate; `migrations.dropPhoneVerification` clears them, after which
+     * these two lines can go.
+     */
+    phoneVerificationTime: v.optional(v.number()),
+    phoneConfirmed: v.optional(v.boolean()),
     notificationConsent: v.boolean(),
     notificationConsentAt: v.optional(v.number()),
     termsAcceptedAt: v.optional(v.number()),
@@ -279,6 +355,8 @@ export default defineSchema({
     githubLinkedAt: v.optional(v.number()),
     /** User OAuth token from github.startLink. Never return from public queries. */
     githubAccessToken: v.optional(v.string()),
+    /** X handle, lowercase without the @. Optional in onboarding; see users.setTwitterHandle. */
+    twitterHandle: v.optional(v.string()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"])
@@ -286,7 +364,10 @@ export default defineSchema({
     .index("by_role", ["role"])
     .index("by_attendance", ["attendanceStatus"])
     .index("by_github_id", ["githubId"])
-    .index("by_github", ["githubUsername"]),
+    .index("by_github", ["githubUsername"])
+    .index("by_avatar", ["avatarId"])
+    .index("by_avatar_thumb", ["avatarThumbId"])
+    .index("by_user_type", ["userTypeId"]),
 
   /** Pending `hackspain auth login` browser approvals. See convex/cliAuth.ts. */
   cliAuthRequests: defineTable({
@@ -298,6 +379,17 @@ export default defineSchema({
     expiresAt: v.number(),
   })
     .index("by_code", ["code"])
+    .index("by_expires", ["expiresAt"]),
+
+  // Single-use tokens a signed-in CLI mints so `hackspain open` can sign the
+  // browser in (convex/cliAuth.ts, /cli-auth/handoff).
+  cliWebHandoffs: defineTable({
+    token: v.string(),
+    userId: v.id("users"),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
     .index("by_expires", ["expiresAt"]),
 
   tvMessages: defineTable({
@@ -316,67 +408,7 @@ export default defineSchema({
   }).index("by_zone", ["zone", "order"]),
 
   tvWidgets: defineTable({
-    kind: v.union(
-      v.literal("banner"),
-      v.literal("ticker"),
-      v.literal("clock"),
-      v.literal("message"),
-      v.literal("insightsStats"),
-      v.literal("insightsActivity"),
-      v.literal("insightsHarness"),
-      v.literal("insightsStacks"),
-      v.literal("insightsScatter"),
-      v.literal("insightsLeaderboard"),
-      v.literal("insightsEvolution"),
-      v.literal("liveCommits"),
-      v.literal("liveAgents"),
-      v.literal("liveTokens"),
-      v.literal("liveLeaderboard"),
-      v.literal("feed"),
-      v.literal("sponsorGrid"),
-      v.literal("sponsorTicker")
-    ),
-    x: v.number(),
-    y: v.number(),
-    w: v.number(),
-    h: v.number(),
-    z: v.number(),
-    text: v.string(),
-    sponsors: v.optional(
-      v.array(
-        v.object({
-          name: v.string(),
-          logoUrl: v.string(),
-          href: v.string(),
-          tier: v.union(
-            v.literal("gold"),
-            v.literal("silver"),
-            v.literal("community")
-          ),
-        })
-      )
-    ),
-    tickerSpeed: v.optional(
-      v.union(v.literal("slow"), v.literal("normal"), v.literal("fast"))
-    ),
-    feedMode: v.optional(v.union(v.literal("latest"), v.literal("rotate"))),
-    feedSource: v.optional(
-      v.union(
-        v.literal("all"),
-        v.literal("participants"),
-        v.literal("github")
-      )
-    ),
-    fontSize: v.optional(v.number()),
-    fontWeight: v.optional(
-      v.union(
-        v.literal("normal"),
-        v.literal("medium"),
-        v.literal("semibold"),
-        v.literal("bold")
-      )
-    ),
-    background: v.optional(v.boolean()),
+    ...tvWidgetFields,
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -385,71 +417,7 @@ export default defineSchema({
   tvLayouts: defineTable({
     name: v.string(),
     isLive: v.boolean(),
-    widgets: v.array(
-      v.object({
-        kind: v.union(
-          v.literal("banner"),
-          v.literal("ticker"),
-          v.literal("clock"),
-          v.literal("message"),
-          v.literal("insightsStats"),
-          v.literal("insightsActivity"),
-          v.literal("insightsHarness"),
-          v.literal("insightsStacks"),
-          v.literal("insightsScatter"),
-          v.literal("insightsLeaderboard"),
-          v.literal("insightsEvolution"),
-          v.literal("liveCommits"),
-          v.literal("liveAgents"),
-          v.literal("liveTokens"),
-          v.literal("liveLeaderboard"),
-          v.literal("feed"),
-          v.literal("sponsorGrid"),
-          v.literal("sponsorTicker")
-        ),
-        x: v.number(),
-        y: v.number(),
-        w: v.number(),
-        h: v.number(),
-        z: v.number(),
-        text: v.string(),
-        sponsors: v.optional(
-          v.array(
-            v.object({
-              name: v.string(),
-              logoUrl: v.string(),
-              href: v.string(),
-              tier: v.union(
-                v.literal("gold"),
-                v.literal("silver"),
-                v.literal("community")
-              ),
-            })
-          )
-        ),
-        tickerSpeed: v.optional(
-          v.union(v.literal("slow"), v.literal("normal"), v.literal("fast"))
-        ),
-        feedMode: v.optional(v.union(v.literal("latest"), v.literal("rotate"))),
-        feedSource: v.optional(
-          v.union(
-            v.literal("all"),
-            v.literal("participants"),
-            v.literal("github")
-          )
-        ),
-        fontSize: v.optional(v.number()),
-        fontWeight: v.optional(
-          v.union(
-            v.literal("normal"),
-            v.literal("medium"),
-            v.literal("semibold"),
-            v.literal("bold")
-          )
-        ),
-        background: v.optional(v.boolean()),
-      })
-    ),
+    widgets: v.array(tvWidgetValidator),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
