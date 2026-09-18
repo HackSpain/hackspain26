@@ -682,6 +682,7 @@ async function writeTeamRepos(
     JSON.stringify(teamRepoList(team)) !== JSON.stringify(urls);
   await ctx.db.patch(team._id, {
     githubEtag: changed ? undefined : team.githubEtag,
+    githubEtags: changed ? undefined : team.githubEtags,
     repoUrl: primary,
     repoUrls: urls,
     updatedAt: Date.now(),
@@ -704,6 +705,7 @@ export const setRepoUrl = onboardedMutation({
     if (args.url === null || args.url.trim() === "") {
       await ctx.db.patch(team._id, {
         githubEtag: undefined,
+        githubEtags: undefined,
         repoUrl: undefined,
         repoUrls: undefined,
         updatedAt: Date.now(),
@@ -737,6 +739,7 @@ export const setRepoUrls = onboardedMutation({
     if (urls.length === 0) {
       await ctx.db.patch(team._id, {
         githubEtag: undefined,
+        githubEtags: undefined,
         repoUrl: undefined,
         repoUrls: undefined,
         updatedAt: Date.now(),

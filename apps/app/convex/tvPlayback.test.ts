@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MutationCtx } from "./_generated/server";
-import { heartbeat, reloadScreen, removeScreen, screenConfiguration, screens, setScreen } from "./tvPlayback";
+import { githubActivityKind, heartbeat, reloadScreen, removeScreen, screenConfiguration, screens, setScreen } from "./tvPlayback";
+
+test("insights recognise the canonical GitHub feed event names", () => {
+  assert.equal(githubActivityKind("push"), "push");
+  assert.equal(githubActivityKind("pull_request"), "pull_request");
+  assert.equal(githubActivityKind("PushEvent"), null);
+});
 
 type Row = Record<string, unknown> & { _id: string; table: string };
 function venue() {

@@ -18,6 +18,14 @@ export function canonicalRepoUrl(raw: string): string | null {
   return slug ? `https://github.com/${slug}` : null;
 }
 
+/** Canonical event names stored in feed posts after mapping GitHub's API payload. */
+export const GITHUB_FEED_EVENTS = {
+  pullRequest: "pull_request",
+  push: "push",
+  release: "release",
+  tag: "tag",
+} as const;
+
 export function githubAuthHeader(userToken?: string | null): Record<string, string> {
   if (userToken) {
     return { authorization: `Bearer ${userToken}` };

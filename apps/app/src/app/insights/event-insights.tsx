@@ -132,7 +132,7 @@ export function LiveTechnologyStacks() {
       <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
         {total === 0
           ? "Datos reales del repo."
-          : `${histogram?.auto ?? 0} de ${total} proyectos con stack leído del repo; el resto lo escribió el equipo.`}
+          : `${histogram?.auto ?? 0} de ${total} stacks de proyecto detectados desde GitHub; no es un recuento de repos vinculados.`}
       </p>
     </Panel>
   );

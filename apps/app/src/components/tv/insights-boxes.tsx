@@ -253,7 +253,7 @@ export function InsightsStacksBox() {
         ))}
         <p className="self-center text-[0.65cqw] text-hs-brown">
           {rows.length
-            ? `Leído de los repos de ${stacks.auto} de ${stacks.total} proyectos.`
+            ? `${stacks.auto} de ${stacks.total} stacks detectados desde GitHub.`
             : "Sin datos de tecnologías todavía."}
         </p>
       </div>

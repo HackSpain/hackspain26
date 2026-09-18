@@ -2,6 +2,12 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — GitHub Insights reads the feed's canonical event names
+
+**Evidence.** GitHub's API sends `PushEvent` and `PullRequestEvent`, but `githubFeed:pollRepos` deliberately stores the normalized values `push` and `pull_request` in feed posts. Insights compared stored posts with the upstream API names, so production returned zero GitHub activity even when the feed contained events. Teams may link several repositories, so one ETag on the team also cannot represent every poll target.
+
+**Prevention and verification.** Keep stored GitHub event names in the shared `GITHUB_FEED_EVENTS` contract and aggregate those canonical values. Poll every URL from `teamRepoList` and retain ETags per repository, with the old primary ETag only as a migration fallback. Focused tests must cover both API-to-feed normalization and the names accepted by Insights.
+
 ## 2026-09-19 — Sanitize remote text before adding terminal styling
 
 **Evidence and consequence.** Feed fields reached the CLI renderer before sanitization, and `fit()` returned strings unchanged when they already fit. Bun reproduced OSC clipboard, hyperlink, cursor, DCS, and C1 sequences as terminal instructions rather than visible text, so a participant-controlled post could forge terminal output or modify the clipboard in compatible terminals.

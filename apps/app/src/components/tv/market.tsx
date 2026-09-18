@@ -265,7 +265,7 @@ function Board({ data, series, teams }: { data: LiveInsightData; series: MarketS
     herramientas: ["Herramientas de IA", "Cuota de tokens · sesiones"],
     pulso: ["El pulso del evento", `Tokens acumulados y por tramo · ${percent(cached, tokens)} desde caché`],
     ranking: ["Clasificación de equipos", slide.kind === "ranking" ? `Por tokens · página ${slide.page + 1} de ${slide.pages}` : ""],
-    stacks: ["Con qué construimos", `Leído de los repos de ${data.stacks.auto} de ${data.stacks.total} proyectos`],
+    stacks: ["Con qué construimos", `${data.stacks.auto} de ${data.stacks.total} stacks detectados desde GitHub`],
   };
   const [title, detail] = heading[slide.kind];
   return (

@@ -271,6 +271,7 @@ export default defineSchema({
     techStackSource: v.optional(v.literal("repo")),
     // GitHub feed polling: ETag for conditional requests, last poll time.
     githubEtag: v.optional(v.string()),
+    githubEtags: v.optional(v.record(v.string(), v.string())),
     githubPolledAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
