@@ -264,6 +264,8 @@ export default defineSchema({
     joinCode: v.optional(v.string()),
     repoUrl: v.optional(v.string()),
     repoUrls: v.optional(v.array(v.string())),
+    /** Sanitized GitHub remotes seen in authenticated local agent sessions. */
+    observedRepoUrls: v.optional(v.array(v.string())),
     /** Team logo uploaded by the owner, served as /api/files/<id>. */
     logoId: v.optional(v.id("_storage")),
     techStack: v.optional(v.array(v.string())),

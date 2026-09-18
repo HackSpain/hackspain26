@@ -12,6 +12,7 @@ import {
   githubHeaders,
   repoSlug,
 } from "./lib/github";
+import { urlOf } from "./lib/urls";
 import { teamRepoList } from "./stack";
 
 /**
@@ -40,16 +41,32 @@ const eventInput = v.object({
 
 type PollableTeam = Pick<
   Doc<"teams">,
-  "_id" | "githubEtag" | "githubEtags" | "repoUrl" | "repoUrls"
+  | "_id"
+  | "githubEtag"
+  | "githubEtags"
+  | "observedRepoUrls"
+  | "repoUrl"
+  | "repoUrls"
 >;
 
-export function pollTargetsForTeam(team: PollableTeam) {
+export function pollTargetsForTeam(
+  team: PollableTeam,
+  submissionRepo?: string
+) {
   const primaryRepo = repoSlug(team.repoUrl);
-  return teamRepoList(team).flatMap((url) => {
+  const official = [submissionRepo, ...teamRepoList(team)].filter(
+    (url): url is string => Boolean(repoSlug(url))
+  );
+  const candidates = official.length > 0
+    ? official
+    : (team.observedRepoUrls ?? []);
+  const seen = new Set<string>();
+  return candidates.flatMap((url) => {
     const repo = repoSlug(url);
-    if (!repo) {
+    if (!repo || seen.has(repo)) {
       return [];
     }
+    seen.add(repo);
     return [{
       teamId: team._id,
       repo,
@@ -63,10 +80,26 @@ export function pollTargetsForTeam(team: PollableTeam) {
 export const reposToPoll = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const teams = await ctx.db.query("teams").collect();
+    const [teams, submissions] = await Promise.all([
+      ctx.db.query("teams").collect(),
+      ctx.db.query("submissions").collect(),
+    ]);
+    const submissionRepos = new Map<string, string>();
+    for (const submission of submissions) {
+      const repo = urlOf(submission.urls, "repo");
+      if (!submission.teamId || !repo) {
+        continue;
+      }
+      if (
+        submission.status === "submitted" ||
+        !submissionRepos.has(submission.teamId)
+      ) {
+        submissionRepos.set(submission.teamId, repo);
+      }
+    }
     const out = [];
     for (const team of teams) {
-      out.push(...pollTargetsForTeam(team));
+      out.push(...pollTargetsForTeam(team, submissionRepos.get(team._id)));
     }
     return out;
   },

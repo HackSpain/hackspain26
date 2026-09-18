@@ -9,7 +9,11 @@ const event: TelemetryEvent = {
   model: { family: "gpt", name: "gpt-5", provider: "openai", raw: "gpt-5" },
   observedAt: "2026-09-07T12:00:01.000Z",
   occurredAt: "2026-09-07T12:00:00.000Z",
-  project: { dirHash: "9f2c1a7b3e4d5c6a", name: "agentos" },
+  project: {
+    dirHash: "9f2c1a7b3e4d5c6a",
+    name: "agentos",
+    repo: "hackspain/agentos",
+  },
   schema: "hackspain.telemetry.v2",
   sessionId: "session-1",
   tokens: { cacheRead: 4, cacheWrite: 5, input: 2, output: 3, total: 14 },
@@ -31,6 +35,18 @@ describe("RawTree telemetry", () => {
     expect(
       parseTelemetryEvent(
         { ...event, project: { ...event.project, name: "/Users/alice/code" } },
+        { userId: "user-1" }
+      )
+    ).toBeNull();
+    expect(
+      parseTelemetryEvent(
+        {
+          ...event,
+          project: {
+            ...event.project,
+            repo: "https://token@github.com/hackspain/agentos",
+          },
+        },
         { userId: "user-1" }
       )
     ).toBeNull();

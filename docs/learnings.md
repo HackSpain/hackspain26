@@ -6,7 +6,7 @@ Add an entry only for an evidenced, non-obvious project fact that helps prevent 
 
 **Evidence.** GitHub's API sends `PushEvent` and `PullRequestEvent`, but `githubFeed:pollRepos` deliberately stores the normalized values `push` and `pull_request` in feed posts. Insights compared stored posts with the upstream API names, so production returned zero GitHub activity even when the feed contained events. Teams may link several repositories, so one ETag on the team also cannot represent every poll target.
 
-**Prevention and verification.** Keep stored GitHub event names in the shared `GITHUB_FEED_EVENTS` contract and aggregate those canonical values. Poll every URL from `teamRepoList` and retain ETags per repository, with the old primary ETag only as a migration fallback. Focused tests must cover both API-to-feed normalization and the names accepted by Insights.
+**Prevention and verification.** Keep stored GitHub event names in the shared `GITHUB_FEED_EVENTS` contract and aggregate those canonical values. Poll the submission repo and every URL from `teamRepoList`, retaining ETags per repository with the old primary ETag only as a migration fallback. When neither source declares a repo, the CLI may fall back to a GitHub origin observed from an authenticated agent session; sanitize it locally to `owner/repo`, never transmit the raw remote or path, and never let an observed repo override official project configuration. Focused tests must cover API-to-feed normalization, the names accepted by Insights, official-source precedence, observed fallback, credential removal, and Git worktrees.
 
 ## 2026-09-19 — Sanitize remote text before adding terminal styling
 

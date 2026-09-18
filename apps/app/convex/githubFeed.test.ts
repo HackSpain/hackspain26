@@ -8,6 +8,7 @@ test("every linked team repository gets its own conditional poll target", () => 
     _id: "team" as Id<"teams">,
     githubEtag: "legacy-primary",
     githubEtags: { "org/secondary": "secondary" },
+    observedRepoUrls: ["https://github.com/org/observed"],
     repoUrl: "https://github.com/org/primary",
     repoUrls: [
       "https://github.com/org/primary",
@@ -15,12 +16,39 @@ test("every linked team repository gets its own conditional poll target", () => 
     ],
   } satisfies Pick<
     Doc<"teams">,
-    "_id" | "githubEtag" | "githubEtags" | "repoUrl" | "repoUrls"
+    | "_id"
+    | "githubEtag"
+    | "githubEtags"
+    | "observedRepoUrls"
+    | "repoUrl"
+    | "repoUrls"
   >;
 
+  assert.deepEqual(
+    pollTargetsForTeam(team, "https://github.com/org/submission"),
+    [
+      { etag: undefined, repo: "org/submission", teamId: team._id },
+      { etag: "legacy-primary", repo: "org/primary", teamId: team._id },
+      { etag: "secondary", repo: "org/secondary", teamId: team._id },
+    ]
+  );
+});
+
+test("a locally observed repo is only a fallback without official configuration", () => {
+  const team = {
+    _id: "team" as Id<"teams">,
+    observedRepoUrls: ["https://github.com/org/observed"],
+  } as Pick<
+    Doc<"teams">,
+    | "_id"
+    | "githubEtag"
+    | "githubEtags"
+    | "observedRepoUrls"
+    | "repoUrl"
+    | "repoUrls"
+  >;
   assert.deepEqual(pollTargetsForTeam(team), [
-    { etag: "legacy-primary", repo: "org/primary", teamId: team._id },
-    { etag: "secondary", repo: "org/secondary", teamId: team._id },
+    { etag: undefined, repo: "org/observed", teamId: team._id },
   ]);
 });
 

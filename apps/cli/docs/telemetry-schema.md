@@ -42,7 +42,7 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 | `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` \| `pi` \| `omp` \| `antigravity` \| `devin` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
 | `harnessVersion` | string? | e.g. Claude Code `2.1.261`, Codex `0.130.0` |
 | `sessionId` | string | Harness session / task id |
-| `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path. `gitBranch` is the harness's own when it logs one (Claude Code, Codex, Qwen Code), else read from the repository's `.git/HEAD`, so every harness reports it; absent outside a repository or on a detached HEAD |
+| `project` | `{ dirHash, name, gitBranch?, repo? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path. `gitBranch` is the harness's own when it logs one (Claude Code, Codex, Qwen Code), else read from the repository's `.git/HEAD`; absent outside a repository or on a detached HEAD. `repo` is only the sanitized `owner/name` of a `github.com` origin; the raw remote URL, credentials and non-GitHub remotes never leave the machine |
 | `model` | `{ raw, name, family, provider }` | Required for `usage`. `raw` is exactly what the harness logged. `name` is the grouping key: lower case, no gateway path, variant tag, release date or cloud prefix, version dots as dashes, so `anthropic/claude-sonnet-4.5`, `claude-sonnet-4-5-20250929` and `us.anthropic.claude-sonnet-4-5-20250929-v1:0` are all `claude-sonnet-4-5`. `family` ∈ `claude` \| `gpt` \| `gemini` \| `qwen` \| `other`. `provider` is always set: who served the request when the harness says (as a slug, aliases folded), else who makes the model (`anthropic`, `openai`, `google`, `alibaba`, `unknown`) |
 | `tokens` | `{ input, output, cacheRead, cacheWrite, total, reasoning? }`? | Non-negative integers. Required for `usage`. For every harness: `input` excludes cache reads, `output` includes `reasoning`, `total` = `input + output + cacheRead + cacheWrite`. `reasoning` is a breakdown of `output`, absent when the harness does not report it (Cline) |
 | `identity` | `{ userId, teamId?, clientVersion }` | Stamped by the CLI from the logged-in user and their team at flush time |
@@ -147,7 +147,7 @@ There is one log record per event: `timeUnixNano` is `occurredAt`, `observedTime
 | `harness` / `harnessVersion` | `hackspain.harness` / `hackspain.harness.version` |
 | `identity.userId` / `teamId` | `hackspain.user.id` / `hackspain.team.id` |
 | `identity.clientVersion` | resource `service.version` (`service.name` is `hackspain-cli`) |
-| `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` |
+| `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` / `repo` |
 
 Native OTLP has no insert deduplication guarantee, so queries on the logs table dedupe on
 (`hackspain.user.id`, `event.id`).
@@ -157,6 +157,8 @@ Native OTLP has no insert deduplication guarantee, so queries on the logs table 
 - No prompt or response text, ever. Fixtures under `apps/cli/test/fixtures` are redacted and a
   test fails if a home path sneaks in.
 - Working directories are hashed; only the last path segment is kept.
+- Git remotes are reduced locally to a GitHub `owner/repo`; raw URLs, credentials and
+  non-GitHub remotes are discarded.
 - No harness account ids. Identity is the HackSpain user and team.
 - `native` keys are allowlisted in both CLI and server validation; unknown keys are rejected.
 - Only the hackathon window is recorded; nothing from before or after it leaves the machine, and
@@ -165,5 +167,5 @@ Native OTLP has no insert deduplication guarantee, so queries on the logs table 
 ## Example
 
 ```json
-{"schema":"hackspain.telemetry.v2","type":"usage","eventId":"claude-code:eb2f547c:msg_011CekYx","occurredAt":"2026-09-19T10:18:23.076Z","observedAt":"2026-09-19T10:18:30.002Z","harness":"claude-code","harnessVersion":"2.1.261","sessionId":"eb2f547c","project":{"dirHash":"9f2c1a7b3e4d5c6a","name":"agentos","gitBranch":"main"},"model":{"raw":"claude-fable-5-1","name":"claude-fable-5-1","family":"claude","provider":"anthropic"},"tokens":{"input":2,"output":344,"cacheRead":26445,"cacheWrite":13687,"reasoning":127,"total":40478},"identity":{"userId":"j57…","teamId":"k97…","clientVersion":"0.5.0"},"native":{"requestId":"req_011…"}}
+{"schema":"hackspain.telemetry.v2","type":"usage","eventId":"claude-code:eb2f547c:msg_011CekYx","occurredAt":"2026-09-19T10:18:23.076Z","observedAt":"2026-09-19T10:18:30.002Z","harness":"claude-code","harnessVersion":"2.1.261","sessionId":"eb2f547c","project":{"dirHash":"9f2c1a7b3e4d5c6a","name":"agentos","gitBranch":"main","repo":"hackspain/agentos"},"model":{"raw":"claude-fable-5-1","name":"claude-fable-5-1","family":"claude","provider":"anthropic"},"tokens":{"input":2,"output":344,"cacheRead":26445,"cacheWrite":13687,"reasoning":127,"total":40478},"identity":{"userId":"j57…","teamId":"k97…","clientVersion":"0.5.0"},"native":{"requestId":"req_011…"}}
 ```

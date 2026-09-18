@@ -751,6 +751,35 @@ export const setRepoUrls = onboardedMutation({
   returns: v.array(v.string()),
 });
 
+/**
+ * A watcher saw this sanitized GitHub origin in an agent session. Observed
+ * repos never override the project/team configuration; the feed only uses
+ * them as a fallback while no official repo has been declared.
+ */
+export const observeRepo = onboardedMutation({
+  args: { repo: v.string() },
+  handler: async (ctx, args) => {
+    const team = await requireMemberTeam(ctx);
+    const url = canonicalRepoUrl(args.repo);
+    if (!url) {
+      fail("VALIDATION", "Repositorio de GitHub no válido");
+    }
+    const observed = [
+      ...(team.observedRepoUrls ?? []).filter(
+        (existing) => canonicalRepoUrl(existing) !== url
+      ),
+      url,
+    ].slice(-MAX_REPOS);
+    if (
+      JSON.stringify(observed) !== JSON.stringify(team.observedRepoUrls ?? [])
+    ) {
+      await ctx.db.patch(team._id, { observedRepoUrls: observed });
+    }
+    return url;
+  },
+  returns: v.string(),
+});
+
 export const setTechStack = onboardedMutation({
   args: { stack: v.array(v.string()) },
   handler: async (ctx, args) => {

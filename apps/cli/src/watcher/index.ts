@@ -327,11 +327,16 @@ export async function runWatch(
     );
   }
   const batcher = createBatcher(sinks, log);
+  const pendingRepoObservations = new Set<string>();
+  const sentRepoObservations = new Set<string>();
   const recording: Batcher = {
     ...batcher,
     push: (event) => {
       if (state) {
         recordEvent(state, event);
+      }
+      if (event.project?.repo) {
+        pendingRepoObservations.add(event.project.repo);
       }
       batcher.push(event);
     },
@@ -344,6 +349,25 @@ export async function runWatch(
     ...(teamId ? { teamId } : {}),
     clientVersion: VERSION,
   });
+  const reportObservedRepos = async (): Promise<void> => {
+    if (!(options.uploadUrl && teamId)) {
+      return;
+    }
+    for (const repo of pendingRepoObservations) {
+      const key = `${teamId}:${repo}`;
+      if (sentRepoObservations.has(key)) {
+        pendingRepoObservations.delete(repo);
+        continue;
+      }
+      try {
+        await session.client.mutation(api.teams.observeRepo, { repo });
+        sentRepoObservations.add(key);
+        pendingRepoObservations.delete(repo);
+      } catch (error) {
+        log(`repo observation failed: ${String(error)}`);
+      }
+    }
+  };
   // Nobody records outside the hackathon window, and without a window
   // nothing is recorded at all; `ctx` is only ever scanned with one set.
   let { window } = options;
@@ -616,6 +640,7 @@ export async function runWatch(
     const scanned: ScanResult = window
       ? await scanOnce(collectors, ctx, recording, identity(), recent)
       : { byHarness: {}, events: 0, skipped: 0 };
+    await reportObservedRepos();
     const ok = await batcher.flush();
     if (ok) {
       cursors.save();
