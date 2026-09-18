@@ -4,6 +4,7 @@ import { outputWithReasoning } from "../src/watcher/schema";
 import {
   collectionWindow,
   inWindow,
+  isRecording,
   windowNotice,
   windowPhase,
 } from "../src/watcher/window";
@@ -22,7 +23,12 @@ describe("collectionWindow", () => {
     const lastRun = Date.parse("2026-10-04T12:00:00Z");
     expect(
       collectionWindow({ event: scheduled, role: "user" }, lastRun)
-    ).toEqual({ scheduled: true, since: START, until: END });
+    ).toEqual({
+      hackathon: { endsAt: END, startsAt: START },
+      scheduled: true,
+      since: START,
+      until: END,
+    });
   });
 
   test("without a schedule, and for organisers, the catch-up rule stays", () => {
@@ -36,7 +42,9 @@ describe("collectionWindow", () => {
       scheduled: false,
       since: 42,
     });
+    // Organisers are not bound by the window, but still know where it is.
     expect(collectionWindow({ event: scheduled, role: "admin" }, 42)).toEqual({
+      hackathon: { endsAt: END, startsAt: START },
       scheduled: false,
       since: 42,
     });
@@ -54,14 +62,16 @@ describe("collectionWindow", () => {
 });
 
 describe("windowPhase and windowNotice", () => {
-  const window = { scheduled: true, since: START, until: END };
+  const hackathon = { endsAt: END, startsAt: START };
+  const window = { hackathon, scheduled: true, since: START, until: END };
+  const organiser = { hackathon, scheduled: false, since: 0 };
   const date = (ms: number) => `<${new Date(ms).toISOString()}>`;
 
   test("before, during and after, on the current clock", () => {
     expect(windowPhase(window, START - 1)).toBe("before");
     expect(windowPhase(window, START)).toBe("during");
     expect(windowPhase(window, END)).toBe("after");
-    expect(windowPhase({ scheduled: false, since: 0 }, START)).toBeUndefined();
+    expect(windowPhase({}, START)).toBeUndefined();
     expect(windowPhase(undefined, START)).toBeUndefined();
   });
 
@@ -76,6 +86,18 @@ describe("windowPhase and windowNotice", () => {
     expect(
       windowNotice({ scheduled: false, since: 0 }, 1, date)
     ).toBeUndefined();
+  });
+
+  test("organisers keep recording outside the window, and are told so", () => {
+    expect(isRecording(window, START - 1)).toBe(false);
+    expect(isRecording(window, START)).toBe(true);
+    expect(isRecording(organiser, START - 1)).toBe(true);
+    expect(isRecording(undefined, START)).toBe(true);
+    const notice = windowNotice(organiser, START - 1, date) ?? "";
+    expect(notice).toContain("Outside the hackathon window");
+    expect(notice).toContain("starts <2026-10-03T08:00:00.000Z>");
+    expect(notice).toContain("still records");
+    expect(windowNotice(organiser, START, date)).toBeUndefined();
   });
 });
 

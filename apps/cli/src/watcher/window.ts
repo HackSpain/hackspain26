@@ -10,6 +10,12 @@ export type CollectionWindow = {
   until?: number;
   /** True when the bounds come from the organisers' hackathon window. */
   scheduled: boolean;
+  /**
+   * The hackathon as scheduled on the server, whoever is watching. Organiser
+   * accounts are not bound by it (`scheduled` is false for them), yet the
+   * screen still tells them where the clock stands.
+   */
+  hackathon?: { startsAt: number; endsAt: number };
 };
 
 /**
@@ -24,26 +30,42 @@ export function collectionWindow(
   fallbackSince: number
 ): CollectionWindow {
   const { startsAt, endsAt } = me.event;
-  if (me.role === "admin" || startsAt === undefined || endsAt === undefined) {
+  if (startsAt === undefined || endsAt === undefined) {
     return { scheduled: false, since: fallbackSince };
   }
-  return { scheduled: true, since: startsAt, until: endsAt };
+  const hackathon = { endsAt, startsAt };
+  if (me.role === "admin") {
+    return { hackathon, scheduled: false, since: fallbackSince };
+  }
+  return { hackathon, scheduled: true, since: startsAt, until: endsAt };
 }
 
 export type WindowPhase = "before" | "during" | "after";
 
-/** Where `now` falls; undefined without a scheduled window. */
+/** Where `now` falls in the hackathon; undefined when none is scheduled. */
 export function windowPhase(
-  window: Pick<CollectionWindow, "since" | "until" | "scheduled"> | undefined,
+  window: Pick<CollectionWindow, "hackathon"> | undefined,
   now: number
 ): WindowPhase | undefined {
-  if (!window?.scheduled || window.until === undefined) {
+  const hackathon = window?.hackathon;
+  if (!hackathon) {
     return;
   }
-  if (now < window.since) {
+  if (now < hackathon.startsAt) {
     return "before";
   }
-  return now < window.until ? "during" : "after";
+  return now < hackathon.endsAt ? "during" : "after";
+}
+
+/**
+ * Whether this watcher records right now. Participants only during the
+ * hackathon; organisers and servers without a schedule always.
+ */
+export function isRecording(
+  window: CollectionWindow | undefined,
+  now: number
+): boolean {
+  return !window?.scheduled || windowPhase(window, now) === "during";
 }
 
 /**
@@ -57,12 +79,21 @@ export function windowNotice(
   formatDate: (ms: number) => string
 ): string | undefined {
   const phase = windowPhase(window, now);
-  if (!window || window.until === undefined || !phase || phase === "during") {
+  const hackathon = window?.hackathon;
+  if (!(hackathon && phase) || phase === "during") {
     return;
   }
+  const when =
+    phase === "before"
+      ? `starts ${formatDate(hackathon.startsAt)}`
+      : `ended ${formatDate(hackathon.endsAt)}`;
+  if (!window?.scheduled) {
+    // Organisers test before the doors open, so theirs keeps recording.
+    return `Outside the hackathon window: it ${when}. Organiser account, so this one still records; participants' watchers do not.`;
+  }
   return phase === "before"
-    ? `Not recording yet: the hackathon starts ${formatDate(window.since)}. Leave this open, it starts on its own.`
-    : `Not recording: the hackathon ended ${formatDate(window.until)}. Only usage from inside it is still delivered.`;
+    ? `Not recording yet: the hackathon ${when}. Leave this open, it starts on its own.`
+    : `Not recording: the hackathon ${when}. Only usage from inside it is still delivered.`;
 }
 
 export function inWindow(

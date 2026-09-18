@@ -114,7 +114,9 @@ all of it: usage from before the start or after the end is never sent, and usage
 picked up even if the watcher was opened late or not at all until the end. It runs outside the
 window too: opened early it waits and starts recording on its own, opened after the end it
 delivers what is left, and in both cases an orange "Not recording" line under the header and in
-the status bar says so, with the date that matters. Every event keeps the time the harness recorded, not
+the status bar says so, with the date that matters. Organiser accounts are not bound by the
+window (they test before the doors open): theirs keeps recording and the same line reads "Outside
+the hackathon window … this one still records". Every event keeps the time the harness recorded, not
 the time the watcher read it. On a server without a schedule only usage after the watcher starts
 is reported; `--backfill 6` includes the last six hours.
 

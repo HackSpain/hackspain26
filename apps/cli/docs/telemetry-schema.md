@@ -81,7 +81,9 @@ with (`coveredSince`); an earlier one (the first windowed run, or organisers mov
 starts the cursors over, and event ids already in the local spool are skipped so nothing is sent
 twice. The server applies the same window per event and rejects the rest with
 `outside_event_window`, which also covers older binaries. Organisers and servers without a
-schedule keep the catch-up rule (`catchUpSince`).
+schedule keep the catch-up rule (`catchUpSince`); an organiser's watcher still knows the window
+(`CollectionWindow.hackathon`) and says when the clock is outside it, so their pre-event test
+usage is in the data and any query about the hackathon filters on `occurredAt`.
 
 ## OpenTelemetry copy
 

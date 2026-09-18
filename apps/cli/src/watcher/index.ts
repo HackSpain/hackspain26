@@ -49,7 +49,7 @@ import {
 } from "./state";
 import type { Collector, CollectorContext } from "./types";
 import type { CollectionWindow } from "./window";
-import { inWindow, windowPhase } from "./window";
+import { inWindow, isRecording } from "./window";
 
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
@@ -509,10 +509,8 @@ export async function runWatch(
 
   // Team, announcements and the feed are hackathon-window functions on the
   // server: outside it they only answer "closed", so they are not asked.
-  const inEvent = (): boolean => {
-    const phase = windowPhase(options.window, Date.now());
-    return phase === undefined || phase === "during";
-  };
+  // Organisers are never closed out, so for them this is always true.
+  const inEvent = (): boolean => isRecording(options.window, Date.now());
   let wasInEvent = inEvent();
 
   const tick = async (): Promise<ScanResult> => {
