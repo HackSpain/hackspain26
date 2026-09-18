@@ -32,7 +32,7 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
   return (
     <main className="flex h-dvh w-full flex-col gap-[4vmin] overflow-hidden bg-hs-ink p-[4vmin] text-hs-paper">
       <header className="flex shrink-0 items-center justify-between gap-6">
-        <Image src="/logo.svg" alt="HackSpain" width={190} height={62} className="h-auto w-[clamp(100px,12vw,280px)]" />
+        <Image src="/logo.svg" alt="HackSpain" width={190} height={63} className="h-auto w-[clamp(100px,12vw,280px)]" />
         <p className="font-mono text-[clamp(16px,2.5vmin,48px)] tabular-nums text-hs-paper/60">
           {now?.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" })}
         </p>

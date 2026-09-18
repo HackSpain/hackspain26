@@ -165,7 +165,7 @@ export function LoginTransition({
             src="/logo.svg"
             alt="HackSpain"
             width={250}
-            height={80}
+            height={82}
             className="h-auto w-40"
           />
           <div

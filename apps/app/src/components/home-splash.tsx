@@ -163,7 +163,7 @@ export function HomeSplash() {
                 src="/logo.svg"
                 alt="HackSpain"
                 width={250}
-                height={80}
+                height={82}
                 className="h-auto w-52 sm:w-64 md:w-72"
               />
             </motion.h1>
