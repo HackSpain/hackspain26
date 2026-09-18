@@ -15,9 +15,7 @@ export const PROFILE_FIELDS = ["name", "photo", "directory"] as const;
 export type ProfileField = (typeof PROFILE_FIELDS)[number];
 
 export const profileFieldValidator = v.union(
-  v.literal("name"),
-  v.literal("photo"),
-  v.literal("directory")
+  ...PROFILE_FIELDS.map((field) => v.literal(field))
 );
 
 export type ProfileUser = Pick<

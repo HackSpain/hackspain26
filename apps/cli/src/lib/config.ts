@@ -1,6 +1,5 @@
 import {
   chmodSync,
-  existsSync,
   mkdirSync,
   readFileSync,
   renameSync,
@@ -43,9 +42,7 @@ export function stateDir(): string {
 }
 
 export function ensureDir(path: string, mode = 0o700): void {
-  if (!existsSync(path)) {
-    mkdirSync(path, { mode, recursive: true });
-  }
+  mkdirSync(path, { mode, recursive: true });
 }
 
 /** Write via a sibling temp file + rename so readers never see a torn file. */

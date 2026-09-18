@@ -1,6 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { stripAnsi, width } from "../src/lib/style";
-import { cardWidth, formatPickBox, parsePickKey } from "../src/lib/tui";
+import { cardWidth, fit, formatPickBox, parsePickKey } from "../src/lib/tui";
+
+test("terminal text measures and truncates whole graphemes without ANSI controls", () => {
+  const linked = "\x1b]8;;https://hackspain.app\x07Madrid\x1b]8;;\x07";
+  expect(stripAnsi(linked)).toBe("Madrid");
+  expect(width(linked)).toBe(6);
+  for (const text of ["👩‍💻", "🇪🇸", "界"]) {
+    expect(width(text)).toBe(2);
+    expect(fit(`${text}abc`, 3)).toBe(`${text}…`);
+  }
+  expect(width("e\u0301")).toBe(1);
+  expect(fit("e\u0301abc", 2)).toBe("e\u0301…");
+});
 
 describe("cardWidth", () => {
   test("fills the terminal minus the card inset", () => {

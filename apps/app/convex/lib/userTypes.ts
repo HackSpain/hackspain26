@@ -19,12 +19,7 @@ export const SECTION_KEYS = [
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export const sectionKeyValidator = v.union(
-  v.literal("teams"),
-  v.literal("tracks"),
-  v.literal("perks"),
-  v.literal("participantes"),
-  v.literal("judging"),
-  v.literal("cli")
+  ...SECTION_KEYS.map((key) => v.literal(key))
 );
 
 export const sectionsValidator = v.array(sectionKeyValidator);

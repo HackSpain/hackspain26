@@ -290,23 +290,6 @@ const PYTHON_STDLIB = new Set([
   "uuid",
 ]);
 
-const LANGUAGE_FROM_GITHUB: Record<string, string> = {
-  "C#": "C#",
-  "C++": "C++",
-  Dart: "Dart",
-  Elixir: "Elixir",
-  Go: "Go",
-  Java: "Java",
-  JavaScript: "JavaScript",
-  Kotlin: "Kotlin",
-  PHP: "PHP",
-  Python: "Python",
-  Ruby: "Ruby",
-  Rust: "Rust",
-  Swift: "Swift",
-  TypeScript: "TypeScript",
-};
-
 const LANGUAGE_FROM_EXT: Record<string, string> = {
   cs: "C#",
   go: "Go",
@@ -769,7 +752,9 @@ export function detectStack(input: DetectStackInput): string[] {
   tagsFromPaths(paths, tags);
   if (input.languages) {
     for (const name of Object.keys(input.languages)) {
-      addTag(tags, LANGUAGE_FROM_GITHUB[name]);
+      if (LANGUAGE_ORDER.includes(name)) {
+        addTag(tags, name);
+      }
     }
   }
   for (const file of input.files) {

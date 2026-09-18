@@ -6,6 +6,7 @@ import { c, stripAnsi, width } from "./style";
  */
 
 export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 export function pad(text: string, size: number): string {
   return text + " ".repeat(Math.max(0, size - width(text)));
@@ -17,7 +18,7 @@ export function fit(text: string, max: number): string {
     return text;
   }
   let out = "";
-  for (const ch of stripAnsi(text)) {
+  for (const { segment: ch } of GRAPHEMES.segment(stripAnsi(text))) {
     if (width(`${out}${ch}`) > Math.max(0, max - 1)) {
       break;
     }

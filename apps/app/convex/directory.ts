@@ -69,16 +69,7 @@ export const me = authedQuery({
 });
 
 export const save = authedMutation({
-	args: {
-		bio: v.optional(v.string()),
-		city: v.string(),
-		company: v.optional(v.string()),
-		degree: v.optional(v.string()),
-		interests: v.array(v.string()),
-		role: v.string(),
-		skills: v.array(v.string()),
-		university: v.optional(v.string()),
-	},
+	args: directoryValidator.omit("updatedAt").fields,
 	handler: async (ctx, args) => {
 		const directory = parseDirectoryCard(args);
 		await ctx.db.patch(ctx.user._id, { directory });
