@@ -45,12 +45,13 @@ export const me = authedQuery({
 	args: {},
 	handler: async (ctx) => {
 		const card = ctx.user.directory;
+		const missing = missingDirectoryFields(card);
 		const membership = await membershipForUser(ctx, ctx.user._id);
 		const team = membership ? await ctx.db.get(membership.teamId) : null;
 		return {
 			card,
-			complete: isDirectoryComplete(card),
-			missing: missingDirectoryFields(card),
+			complete: missing.length === 0,
+			missing,
 			suggestions: {
 				city: ctx.user.travelOrigin,
 				skills: team?.techStack ?? [],

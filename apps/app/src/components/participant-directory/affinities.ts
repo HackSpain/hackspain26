@@ -36,20 +36,14 @@ export function valuesFor(
   kind: AffinityKind
 ): string[] {
   switch (kind) {
-    case "company": {
-      return participant.company ? [participant.company] : [];
-    }
-    case "degree": {
-      return participant.degree ? [participant.degree] : [];
+    case "company":
+    case "degree":
+    case "university":
+    case "city": {
+      return participant[kind] ? [participant[kind]] : [];
     }
     case "team": {
       return participant.team ? [participant.team.name] : [];
-    }
-    case "university": {
-      return participant.university ? [participant.university] : [];
-    }
-    case "city": {
-      return participant.city ? [participant.city] : [];
     }
     case "skills": {
       return participant.skills;
