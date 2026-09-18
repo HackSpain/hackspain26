@@ -3,9 +3,11 @@
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { ArrowUpRightIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import Link from "next/link";
 import { useId, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { participantHref } from "@/components/admin/participant-detail";
 import {
   EmptyState,
   Field,
@@ -76,6 +78,7 @@ import { claimStatusLabel, cn, perkName, perkTypeLabel } from "@/lib/utils";
 
 type AdminPerk = FunctionReturnType<typeof api.perks.adminList>[number];
 type PerkType = AdminPerk["type"];
+type Viewing = { perk: AdminPerk; kind: "requests" | "codes" };
 
 type DraftInput = {
   id: string;
@@ -152,6 +155,14 @@ function lines(value: string): string[] {
     .filter(Boolean);
 }
 
+function uniqueCodes(value: string): string[] {
+  return [...new Set(lines(value))];
+}
+
+function codesCountLabel(count: number): string {
+  return `${count} ${count === 1 ? "código" : "códigos"}`;
+}
+
 function inputsFromDraft(inputs: DraftInput[]): PerkInput[] {
   return inputs.map((input) => ({
     key: input.key.trim() || slugKey(input.label),
@@ -211,7 +222,7 @@ export default function AdminPerksPage() {
   const [creating, setCreating] = useState(false);
   const [extraCodes, setExtraCodes] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<AdminPerk | null>(null);
-  const [viewing, setViewing] = useState<AdminPerk | null>(null);
+  const [viewing, setViewing] = useState<Viewing | null>(null);
 
   async function submitCreate() {
     const problem = draftProblem(draft);
@@ -310,10 +321,21 @@ export default function AdminPerksPage() {
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   {perk.type === "external" ? null : (
-                    <Button variant="teal" onClick={() => setViewing(perk)}>
+                    <Button
+                      variant="teal"
+                      onClick={() => setViewing({ perk, kind: "requests" })}
+                    >
                       Solicitudes ({perk.claimCount})
                     </Button>
                   )}
+                  {perk.type === "code" ? (
+                    <Button
+                      variant="teal"
+                      onClick={() => setViewing({ perk, kind: "codes" })}
+                    >
+                      Códigos ({perk.codeCount})
+                    </Button>
+                  ) : null}
                   <Button variant="outline" onClick={() => setEditing(perk)}>
                     Editar
                   </Button>
@@ -325,7 +347,16 @@ export default function AdminPerksPage() {
                   </Button>
                 </div>
                 {perk.type === "code" ? (
-                  <Field label="Añadir más códigos">
+                  <Field
+                    label="Añadir más códigos"
+                    hint={
+                      uniqueCodes(extraCodes[perk._id] ?? "").length > 0 ? (
+                        <span className="tabular-nums">
+                          {`${codesCountLabel(uniqueCodes(extraCodes[perk._id] ?? "").length)} a añadir. Se ignoran vacíos y duplicados.`}
+                        </span>
+                      ) : undefined
+                    }
+                  >
                     <Textarea
                       value={extraCodes[perk._id] ?? ""}
                       onChange={(event) =>
@@ -428,7 +459,12 @@ export default function AdminPerksPage() {
         }}
       >
         <SheetContent className="sm:max-w-4xl">
-          {viewing ? <RequestsSheet key={viewing._id} perk={viewing} /> : null}
+          {viewing?.kind === "requests" ? (
+            <RequestsSheet key={`${viewing.perk._id}-requests`} perk={viewing.perk} />
+          ) : null}
+          {viewing?.kind === "codes" ? (
+            <CodesSheet key={`${viewing.perk._id}-codes`} perk={viewing.perk} />
+          ) : null}
         </SheetContent>
       </Sheet>
     </Page>
@@ -608,7 +644,15 @@ function PerkFields({
         </Field>
       ) : null}
       {mode === "create" && draft.type === "code" ? (
-        <Field label="Códigos (uno por línea)" htmlFor={`${ids}-codes`}>
+        <Field
+          label="Códigos (uno por línea)"
+          htmlFor={`${ids}-codes`}
+          hint={
+            <span className="tabular-nums">
+              {`${codesCountLabel(uniqueCodes(draft.codes).length)}. Se ignoran vacíos y duplicados.`}
+            </span>
+          }
+        >
           <Textarea
             id={`${ids}-codes`}
             value={draft.codes}
@@ -923,6 +967,98 @@ function ReviewActions({
       </div>
       <FormError message={error} />
     </div>
+  );
+}
+
+function CodesSheet({ perk }: { perk: AdminPerk }) {
+  const rows = useQuery(api.perks.adminCodes, { perkId: perk._id });
+  const name = perkName(perk.company, perk.title);
+  const claimed = rows?.filter((row) => !row.available).length ?? 0;
+
+  function exportCsv() {
+    if (!rows) return;
+    const header = ["Código", "Estado", "Nombre", "Email", "Equipo", "Fecha"];
+    const body = rows.map((row) => [
+      row.code,
+      row.available ? "Libre" : "Reclamado",
+      row.name ?? "",
+      row.email ?? "",
+      row.teamName ?? "",
+      row.assignedAt ? new Date(row.assignedAt).toISOString() : "",
+    ]);
+    downloadCsv(`perk-${fileSlug(name)}-codigos.csv`, toCsv(header, body));
+  }
+
+  return (
+    <>
+      <SheetHeader>
+        <SheetTitle>{name}</SheetTitle>
+        <SheetDescription className="tabular-nums">
+          {rows === undefined
+            ? "Cargando códigos…"
+            : `${rows.length} ${rows.length === 1 ? "código" : "códigos"} · ${claimed} ${claimed === 1 ? "reclamado" : "reclamados"}`}
+        </SheetDescription>
+      </SheetHeader>
+      <SheetBody className="flex flex-col p-0">
+        {rows === undefined ? (
+          <div className="p-5">
+            <LoadingText />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="p-5 text-sm text-hs-brown">Este perk aún no tiene códigos.</p>
+        ) : (
+          <Table
+            className="border-separate border-spacing-0"
+            containerClassName="min-h-0 flex-1 overflow-auto overscroll-contain border-0"
+          >
+            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+              <TableRow>
+                <TableHead>Código</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Equipo</TableHead>
+                <TableHead>Fecha</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row._id} className="[&_td]:border-b [&_td]:border-hs-ink/20">
+                  <TableCell className="font-mono text-xs">{row.code}</TableCell>
+                  <TableCell>
+                    <Badge variant={row.available ? "default" : "gold"}>
+                      {row.available ? "Libre" : "Reclamado"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {row.userId ? (
+                      <Link
+                        href={participantHref({ kind: "user", id: row.userId })}
+                        className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+                      >
+                        {row.name ?? "Participante"}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                  <TableCell>{row.email ?? "—"}</TableCell>
+                  <TableCell>{row.teamName ?? "—"}</TableCell>
+                  <TableCell className="tabular-nums text-hs-brown">
+                    {row.assignedAt ? dateFormat.format(new Date(row.assignedAt)) : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </SheetBody>
+      <SheetFooter>
+        <Button variant="teal" disabled={!rows || rows.length === 0} onClick={exportCsv}>
+          Exportar CSV
+        </Button>
+      </SheetFooter>
+    </>
   );
 }
 
