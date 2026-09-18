@@ -34,6 +34,7 @@ import type {
   HarnessRow,
   Metric,
   Sample,
+  Timeline,
   TeamRow,
 } from "./mock-data";
 
@@ -117,10 +118,13 @@ export function ActivityChart({
   samples,
   metric,
   mode = "interactive",
+  timeline,
 }: {
   samples: Sample[];
   metric: Metric;
   mode?: "interactive" | "tv";
+  /** Real start and bucket size; the TV passes the hackathon's. */
+  timeline?: Timeline;
 }) {
   const [selectedBucket, setSelectedBucket] = useState<number | null>(null);
   if (samples.length === 0) {
@@ -131,7 +135,7 @@ export function ActivityChart({
     const group = samples.filter((sample) => sample.bucket === bucket);
     return {
       bucket,
-      label: timeLabel(bucket),
+      label: timeLabel(bucket, timeline),
       ...Object.fromEntries(
         HARNESSES.map((harness) => [
           harness.id,
@@ -222,7 +226,7 @@ export function ActivityChart({
             >
               {rows.map((row) => (
                 <option key={row.bucket} value={row.bucket}>
-                  {row.label}–{timeLabel(row.bucket + 1)}
+                  {row.label}–{timeLabel(row.bucket + 1, timeline)}
                 </option>
               ))}
             </select>
