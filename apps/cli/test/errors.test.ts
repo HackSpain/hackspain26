@@ -66,6 +66,21 @@ describe("explainError", () => {
     ).toBe(EXIT.USAGE);
   });
 
+  test("TRACK_FULL tells you to pick another track", () => {
+    const e = explainError(
+      new RemoteError({
+        code: "TRACK_FULL",
+        message: "Maisa ya tiene 15 equipos. Únete a otro track.",
+      })
+    );
+    expect(e.code).toBe("TRACK_FULL");
+    expect(e.exitCode).toBe(EXIT.ERROR);
+    expect(e.message).toBe(
+      "That track already has 15 teams. Join a different one."
+    );
+    expect(e.hint).toContain("track register");
+  });
+
   test("EVENT_CLOSED is ineligible and gets English copy plus the profile hint", () => {
     const e = explainError(
       new RemoteError({

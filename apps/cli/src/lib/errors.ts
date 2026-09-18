@@ -157,6 +157,7 @@ const CODED_EXIT: Record<string, ExitCode> = {
   NOT_MEMBER: EXIT.ERROR,
   NOT_OWNER: EXIT.ERROR,
   NO_TEAM: EXIT.ERROR,
+  TRACK_FULL: EXIT.ERROR,
   OTP_EXPIRED: EXIT.ERROR,
   SEND_FAILED: EXIT.ERROR,
   TOO_MANY_ATTEMPTS: EXIT.ERROR,
@@ -173,6 +174,8 @@ const CODED_HINT: Record<string, string> = {
   EVENT_CLOSED: EVENT_CLOSED_HINT,
   NO_TEAM:
     "Create one with `hackspain team create <name>` or join with `hackspain team join <code>`.",
+  TRACK_FULL:
+    "Pick another with `hackspain track list`, then `hackspain track register <slug>`.",
   OTP_EXPIRED:
     "Codes last 15 minutes. Run `hackspain auth login` to get a new one.",
   SEND_FAILED:
@@ -190,6 +193,7 @@ const CODED_HINT: Record<string, string> = {
 const CODED_MESSAGE: Record<string, string> = {
   BAD_OTP: "That code is not right.",
   EVENT_CLOSED: "The hackathon is not running right now.",
+  TRACK_FULL: "That track already has 15 teams. Join a different one.",
   OTP_EXPIRED: "That code is no longer valid.",
   SEND_FAILED: "The sign-in email could not be sent.",
   TOO_MANY_ATTEMPTS: "Too many wrong codes for this email.",

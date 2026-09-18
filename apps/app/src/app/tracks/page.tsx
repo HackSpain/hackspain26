@@ -30,19 +30,34 @@ type TeamSummary = FunctionReturnType<typeof api.teams.list>[number];
  * Small team avatars under a track. Clicking one opens that team's roster
  * inline; clicking it again (or another team) closes it.
  */
-function TrackTeams({ teams, trackSlug }: { teams: TeamSummary[]; trackSlug: string }) {
+function TrackTeams({
+  teams,
+  trackSlug,
+  teamLimit,
+}: {
+  teams: TeamSummary[];
+  trackSlug: string;
+  teamLimit: number;
+}) {
   const [openId, setOpenId] = useState<TeamSummary["_id"] | null>(null);
   const open = teams.find((team) => team._id === openId) ?? null;
+  const full = teams.length >= teamLimit;
 
   if (teams.length === 0) {
-    return <p className="text-xs text-hs-brown">Ningún equipo todavía.</p>;
+    return (
+      <p className="text-xs text-hs-brown">
+        Ningún equipo todavía · {teamLimit} plazas
+      </p>
+    );
   }
   const rosterId = `track-${trackSlug}-roster`;
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-bungee text-[11px] uppercase text-hs-brown">
-          {teams.length === 1 ? "1 equipo" : `${teams.length} equipos`}
+          {teams.length}/{teamLimit}{" "}
+          {teams.length === 1 ? "equipo" : "equipos"}
+          {full ? " · lleno" : ""}
         </span>
         <ul className="flex flex-wrap items-center gap-1.5" aria-label="Equipos en este reto">
           {teams.map((team) => {
@@ -347,6 +362,7 @@ export default function TracksPage() {
                   ) : (
                     <TrackTeams
                       trackSlug={track.slug}
+                      teamLimit={settings.teamLimit}
                       teams={teams.filter((team) =>
                         team.tracks.some((chosen) => chosen.slug === track.slug),
                       )}

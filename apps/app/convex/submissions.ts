@@ -13,7 +13,8 @@ import {
 } from "./lib/judging";
 import { submissionStatusValidator } from "./lib/validators";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
-import { submissionsAreOpen } from "./tracks";
+import { fail } from "./lib/errors";
+import { TRACK_TEAM_LIMIT, submissionsAreOpen } from "./tracks";
 import { findOwnedSubmission, membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { scheduleStackScan } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -133,6 +134,29 @@ async function resolvePerkIds(
   return unique;
 }
 
+async function assertTrackCapacity(
+  ctx: MutationCtx,
+  challengeIds: Id<"tracks">[],
+  existing: Doc<"submissions"> | null
+): Promise<void> {
+  const already = new Set(existing?.challengeIds);
+  const joining = challengeIds.filter((trackId) => !already.has(trackId));
+  if (joining.length === 0) {
+    return;
+  }
+  const rows = await ctx.db.query("submissions").collect();
+  for (const trackId of joining) {
+    const taken = rows.filter((row) => row.challengeIds.includes(trackId)).length;
+    if (taken >= TRACK_TEAM_LIMIT) {
+      const track = await ctx.db.get(trackId);
+      fail(
+        "TRACK_FULL",
+        `${track?.label ?? "Este reto"} ya tiene ${TRACK_TEAM_LIMIT} equipos. Únete a otro track.`
+      );
+    }
+  }
+}
+
 async function nextGeneralGroup(ctx: MutationCtx): Promise<number> {
   const [settings, submitted] = await Promise.all([
     ctx.db
@@ -196,6 +220,7 @@ async function upsertProject(
     mode === "submit"
   );
   const perkIds = await resolvePerkIds(ctx, args.perkIds);
+  await assertTrackCapacity(ctx, challengeIds, existing);
 
   if (mode === "submit") {
     if (!(await submissionsAreOpen(ctx))) {

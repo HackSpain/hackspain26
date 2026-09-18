@@ -58,6 +58,8 @@ const DEFAULT_TRACKS = [
   },
 ] as const;
 
+export const TRACK_TEAM_LIMIT = 15;
+
 const RETIRED_SLUGS = ["ml", "non-tech"] as const;
 
 /** Absolute http(s) URL or a site-relative path; empty clears the field. */
@@ -186,12 +188,18 @@ export const get = onboardedQuery({
   returns: v.union(trackReturn, v.null()),
 });
 
+const settingsReturn = v.object({
+  submissionsOpen: v.boolean(),
+  teamLimit: v.number(),
+});
+
 export const settings = onboardedQuery({
   args: {},
   handler: async (ctx) => ({
     submissionsOpen: await submissionsAreOpen(ctx),
+    teamLimit: TRACK_TEAM_LIMIT,
   }),
-  returns: v.object({ submissionsOpen: v.boolean() }),
+  returns: settingsReturn,
 });
 
 export const adminList = adminQuery({
@@ -209,8 +217,9 @@ export const adminSettings = adminQuery({
   args: {},
   handler: async (ctx) => ({
     submissionsOpen: await submissionsAreOpen(ctx),
+    teamLimit: TRACK_TEAM_LIMIT,
   }),
-  returns: v.object({ submissionsOpen: v.boolean() }),
+  returns: settingsReturn,
 });
 
 export const adminEnsureDefaults = adminMutation({
