@@ -32,6 +32,7 @@ const participantReturn = v.object({
 			id: v.string(),
 			label: v.string(),
 			logoUrl: v.optional(v.string()),
+			slug: v.string(),
 		}),
 	),
 	university: v.optional(v.string()),
@@ -193,6 +194,7 @@ export const list = authedQuery({
 					id: track._id,
 					label: track.label,
 					logoUrl: track.logoUrl,
+					slug: track.slug,
 				})),
 				university: card.university,
 			});

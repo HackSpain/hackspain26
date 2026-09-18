@@ -15,7 +15,7 @@ import {
 	NODE_RADIUS,
 	placeClusters,
 	SETTLED,
-	wordmarkBox,
+	symbolBox,
 } from "./network-model";
 import type { DirectoryParticipant } from "./types";
 
@@ -92,7 +92,7 @@ test("the track lens puts people in every challenge of their team, with the word
 	);
 });
 
-test("members of a track with a wordmark ring it instead of covering it", () => {
+test("members of a track with a symbol ring it instead of covering it", () => {
 	const track = { id: "t", label: "Maisa", logoUrl: "/tracks/maisa.png" };
 	const people = Array.from({ length: 9 }, (_, i) => ({
 		...person,
@@ -101,8 +101,8 @@ test("members of a track with a wordmark ring it instead of covering it", () => 
 	}));
 	const clusters = clusterParticipants(people, "track");
 	const places = placeClusters(clusters);
-	const box = wordmarkBox(9);
-	assert.ok(places[0].r > clusterRadius(9), "a wordmark needs a bigger circle");
+	const box = symbolBox(9);
+	assert.ok(places[0].r > clusterRadius(9), "a symbol needs a bigger circle");
 	const points = initialPoints(clusters, places);
 	const layout = createLayout(points, clusters, places);
 	for (let i = 0; i < 300; i++) {
@@ -111,7 +111,7 @@ test("members of a track with a wordmark ring it instead of covering it", () => 
 	for (const point of points) {
 		const nx = (point.x - places[0].x) / (box.width / 2 + NODE_RADIUS);
 		const ny = (point.y - places[0].y) / (box.height / 2 + NODE_RADIUS);
-		assert.ok(Math.hypot(nx, ny) >= 0.98, `${point.id} sits on the wordmark`);
+		assert.ok(Math.hypot(nx, ny) >= 0.98, `${point.id} sits on the symbol`);
 		assert.ok(
 			Math.hypot(point.x - places[0].x, point.y - places[0].y) <
 				places[0].r * 1.2,
@@ -195,7 +195,7 @@ test("clusters with people in common overlap like a Venn diagram; others keep cl
 	}
 	for (const point of logoPoints) {
 		for (const [index, place] of logoPlaces.entries()) {
-			const box = wordmarkBox(logoClusters[index].memberIds.length);
+			const box = symbolBox(logoClusters[index].memberIds.length);
 			const nx = (point.x - place.x) / (box.width / 2 + NODE_RADIUS);
 			const ny = (point.y - place.y) / (box.height / 2 + NODE_RADIUS);
 			assert.ok(
@@ -329,4 +329,63 @@ test("a tick reports how far people moved, and a settled layout stops moving", (
 	}
 	assert.ok(frames < 182, `settled in ${frames} frames, before alpha runs out`);
 	assert.ok(layout.tick(alpha) <= SETTLED, "and stays still afterwards");
+});
+
+test("people carried over from another lens end up centred in their new circle", () => {
+	const people = Array.from({ length: 90 }, (_, i) => ({
+		...person,
+		id: `p${i}`,
+		city: `City ${i % 5}`,
+		team: { id: `t${i % 30}`, name: `Team ${i % 30}` },
+	}));
+	const teams = clusterParticipants(people, "team");
+	const carried = new Map(
+		initialPoints(teams, placeClusters(teams)).map((point) => [point.id, point]),
+	);
+	const clusters = clusterParticipants(people, "city");
+	const places = placeClusters(clusters);
+	const points = initialPoints(clusters, places).map(
+		(point) => carried.get(point.id) ?? point,
+	);
+	const layout = createLayout(points, clusters, places);
+	let alpha = 1;
+	for (let i = 0; i < 378 && layout.tick(alpha) > SETTLED; i++) {
+		alpha *= 0.97;
+	}
+	const byId = new Map(points.map((point) => [point.id, point]));
+	for (const [index, cluster] of clusters.entries()) {
+		const members = cluster.memberIds.map((id) => byId.get(id));
+		const x = members.reduce((sum, p) => sum + (p?.x ?? 0), 0) / members.length;
+		const y = members.reduce((sum, p) => sum + (p?.y ?? 0), 0) / members.length;
+		const place = places[index];
+		assert.ok(
+			Math.hypot(x - place.x, y - place.y) < place.r * 0.05,
+			`${cluster.label} sits off-centre`,
+		);
+		for (const member of members) {
+			assert.ok(
+				member && Math.hypot(member.x - place.x, member.y - place.y) < place.r,
+				`${member?.id} was left outside ${cluster.label}`,
+			);
+		}
+	}
+});
+
+test("overlapping tracks with symbols come to rest instead of jittering", () => {
+	const track = (id: string) => ({ id, label: id, logoUrl: `/${id}.svg` });
+	const people = Array.from({ length: 120 }, (_, i) => ({
+		...person,
+		id: `p${i}`,
+		tracks: i % 3 ? [track(`T${i % 4}`)] : [track(`T${i % 4}`), track(`T${(i + 1) % 4}`)],
+	}));
+	const clusters = clusterParticipants(people, "track");
+	const places = placeClusters(clusters);
+	const layout = createLayout(initialPoints(clusters, places), clusters, places);
+	let alpha = 1;
+	let moved = Number.POSITIVE_INFINITY;
+	for (let i = 0; i < 378; i++) {
+		moved = layout.tick(alpha);
+		alpha *= 0.97;
+	}
+	assert.ok(moved < 0.5, `people still move ${moved.toFixed(2)} per frame`);
 });
