@@ -4,7 +4,6 @@ import { RawTreeError } from "@rawtree/sdk";
 import { fetchQuery } from "convex/nextjs";
 import { reportServerEvent } from "@/lib/server-observability";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
-import { exportTelemetryAsOtlpLogs, otlpLogsEnabled } from "./otlp";
 import {
   occurredInWindow,
   parseTelemetryEvent,
@@ -144,19 +143,6 @@ export async function POST(request: Request) {
     });
     const status = error instanceof RawTreeConfigurationError ? 503 : 502;
     return fail("No se pudo guardar la telemetría; se reintentará", status);
-  }
-
-  // The explorer copy is best effort: the canonical insert above is what the
-  // receipt answers for, so a failure here is reported and nothing more.
-  if (otlpLogsEnabled()) {
-    try {
-      await exportTelemetryAsOtlpLogs(accepted);
-    } catch (error) {
-      await reportServerEvent("warn", "RawTree OTLP logs export failed", {
-        batchSize: accepted.length,
-        message: error instanceof Error ? error.message : "unknown",
-      });
-    }
   }
 
   return ok(

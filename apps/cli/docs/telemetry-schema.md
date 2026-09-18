@@ -104,33 +104,9 @@ included). No scheduled hackathon means no window and nothing recorded.
   the local spool are skipped so nothing is sent twice.
 - Server (`occurredInWindow` in `telemetry/rawtree.ts`): the route answers 403 before the start
   and rejects every event outside the window with `outside_event_window`, whatever the binary.
-  Both the canonical table and the OpenTelemetry copy only ever receive accepted events.
+  The canonical table only receives accepted events.
 
 Moving the window later does not remove rows stored under the old one; clean those in RawTree.
-
-## OpenTelemetry copy
-
-When `RAWTREE_OTLP_LOGS_TABLE` is set, the dashboard also sends each accepted batch to RawTree's
-OTLP endpoint (`POST /otlp/v1/logs`, OTLP/JSON) for its OpenTelemetry explorer
-(`apps/app/src/app/api/cli/telemetry/otlp.ts`). One log record per event: `timeUnixNano` is
-`occurredAt`, `observedTimeUnixNano` is `observedAt`, `eventName` is `hackspain.<type>`.
-
-| Event field | Log attribute |
-| --- | --- |
-| `eventId` | `event.id` |
-| `sessionId` | `gen_ai.conversation.id` |
-| `model.name` / `model.provider` / `model.family` / `model.raw` | `gen_ai.request.model` / `gen_ai.provider.name` / `hackspain.model.family` / `hackspain.model.raw` |
-| `tokens.input` / `tokens.output` | `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` |
-| `tokens.cacheRead` / `cacheWrite` / `reasoning` / `total` | `hackspain.usage.cache_read_tokens` / `cache_write_tokens` / `reasoning_tokens` / `total_tokens` |
-| `native.costUsd` / `native.requestId` | `hackspain.native.cost_usd` / `hackspain.native.request_id` |
-| `harness` / `harnessVersion` | `hackspain.harness` / `hackspain.harness.version` |
-| `identity.userId` / `teamId` | `hackspain.user.id` / `hackspain.team.id` |
-| `identity.clientVersion` | resource `service.version` (`service.name` is `hackspain-cli`) |
-| `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` |
-
-The copy is best effort and has no insert deduplication, so a retried batch can land twice: the
-canonical table stays the source of truth, and queries on the logs table dedupe on
-(`hackspain.user.id`, `event.id`).
 
 ## Privacy
 
