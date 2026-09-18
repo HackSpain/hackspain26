@@ -16,15 +16,18 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
-import { NO_TEAM_ID, useTvInsights } from "./use-tv-insights";
+import {
+  NO_TEAM_ID,
+  useLiveInsights,
+} from "@/app/insights/use-live-insights";
 
 /**
  * Everything on these boxes is real: AI usage from RawTree, teams and GitHub
- * activity from Convex (use-tv-insights.ts). `teams` leaves out the usage of
+ * activity from Convex (use-live-insights.ts). `teams` leaves out the usage of
  * people without a team, which still counts in the totals.
  */
 function useInsightSnapshot() {
-  const data = useTvInsights();
+  const data = useLiveInsights();
   const samples = filterSamples(data.samples, "event", "all", data.teams);
   return {
     bucketMinutes: data.bucketMinutes,
