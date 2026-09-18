@@ -234,16 +234,21 @@ function sharedCounts(clusters: Cluster[]) {
 }
 
 /**
- * How far two overlapping circles should sit apart: close enough that the
- * lens between them holds the shared people, never so close that one
- * swallows the other.
+ * How far two overlapping circles should sit apart. The lens is only as
+ * wide as the shared people need — two large tracks that share a handful
+ * of people stay mostly apart instead of being glued at 35% of their radii.
  */
 function overlapDistance(a: number, b: number, shared: number): number {
 	const lens = Math.min(
-		Math.max(NODE_RADIUS * 2 + Math.sqrt(shared) * PITCH, 0.35 * (a + b)),
+		NODE_RADIUS * 2 + Math.sqrt(shared) * PITCH,
 		1.6 * Math.min(a, b),
 	);
 	return a + b - lens;
+}
+
+/** Drawn radius: the halo is what the map actually paints. */
+function visualRadius(r: number): number {
+	return r * ZONE_HALO;
 }
 
 /**
@@ -289,8 +294,17 @@ export function placeClusters(
 				return 0;
 			}
 			const common = shared(i, j);
-			// Room for the label above each cluster and clear air between neighbours.
-			return common ? overlapDistance(a.r, b.r, common) : a.r + b.r + (flatten ? 64 : 96);
+			const va = visualRadius(a.r);
+			const vb = visualRadius(b.r);
+			const logos = Boolean(clusters[i].logoUrl && clusters[j].logoUrl);
+			// Air is measured on the painted circles, not the packing radius —
+			// otherwise the halo eats the gap and two large tracks sit on top
+			// of each other. Sponsor symbols keep a clear gap even when a few
+			// people sit in both; the Venn overlap is for clusters without one.
+			const air = (flatten ? 64 : 96) + (logos ? PITCH : 0);
+			return common && !logos
+				? overlapDistance(va, vb, common)
+				: va + vb + air;
 		}),
 	);
 	// A strong pull leaves neighbours pressed together: finish with a few
