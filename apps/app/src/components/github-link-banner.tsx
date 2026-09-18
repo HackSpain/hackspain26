@@ -14,7 +14,7 @@ const RESULT_MESSAGES: Record<
   { text: string; variant: "success" | "error" }
 > = {
   cancelled: {
-    text: "Has cancelado la vinculación con GitHub.",
+    text: "¿Seguro que no quieres vincular tu GitHub? El análisis de tus commits ayudará a tu puntuación final.",
     variant: "error",
   },
   error: {
