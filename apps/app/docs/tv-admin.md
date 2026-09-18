@@ -53,11 +53,35 @@ El catálogo compartido está en `convex/lib/tvScreens.ts` y el render en
 | `actividad` | Las últimas publicaciones y eventos de GitHub del feed real |
 | `patrocinadores` | Logos del catálogo de patrocinadores existente |
 | `espera` | Franjas animadas y marca HackSpain |
+| `panel` | Todo el hackathon en una pantalla: cifras, equipos, feed y patrocinadores |
 
-No hay coordenadas, tamaños de cajas ni métricas simuladas en estas vistas.
+No hay coordenadas, tamaños de cajas ni métricas simuladas en estas vistas
+(salvo la demo del panel, que lo indica en pantalla).
 Sólo las funciones admin pueden cambiar contenido y emitir recargas; el heartbeat
 público únicamente registra presencia y lee la configuración correspondiente.
 Las URLs guardadas sólo incluyen el identificador y la vista, nunca otros parámetros.
+
+## Panel
+
+`/tv?screen=hall&view=panel` reúne lo que ya enseñan las otras vistas, con la
+retícula de celdas de color de la landing:
+
+- Cabecera con el tramo del hackathon (24 tramos iguales), la cuenta atrás hasta
+  el cierre y la hora de Madrid.
+- Una cinta con todos los equipos por tokens y los puestos que han ganado o
+  perdido desde que cerró el tramo anterior.
+- Cuatro cifras fijas: tokens, pushes, sesiones de agentes y pull requests, cada
+  una con su evolución por tramo y lo sumado en el tramo en curso.
+- Un tablero que rota cada 12 segundos: pulso del evento, clasificación (siete
+  equipos por página, todas las páginas pasan), herramientas de IA y tecnologías.
+- El feed (publicaciones y GitHub) baja una fila cada 4,5 segundos y recicla las
+  16 últimas; una publicación nueva entra arriba al momento.
+- Una cinta de patrocinadores en tinta, como en la landing.
+
+Los datos son los de `/api/tv/insights` (RawTree y Convex, refresco cada 30
+segundos) y `tv.listFeed`; nada por persona. La rotación se detiene con la pestaña
+en segundo plano y respeta movimiento reducido. `/tv?view=panel&demo=1` usa equipos
+y cifras inventados (`src/lib/tv-market.ts`), nunca mezclados con los reales.
 
 ## Entradas y tamaños de pantalla
 

@@ -242,10 +242,63 @@
   transition-timing-function: ease-out;
 }
 
+/* /tv?view=panel: every size hangs off --u, one hundredth of a 16:9 stage, and
+   the cells sit --line apart on ink, which draws the landing's grid between them. */
+.hsx {
+  --u: min(1cqw, 1.78cqh);
+  --line: calc(var(--u) * 0.26);
+  --hsx-up: var(--color-hs-teal);
+  --hsx-down: var(--color-hs-red);
+  --hsx-flash: var(--color-hs-orange);
+}
+@media (orientation: portrait) {
+  .hsx {
+    --u: min(1.55cqw, 1cqh);
+  }
+}
+.hsx-xs { font-size: calc(var(--u) * 0.74); }
+.hsx-sm { font-size: calc(var(--u) * 0.9); }
+.hsx-md { font-size: calc(var(--u) * 1.1); }
+.hsx-lg { font-size: calc(var(--u) * 1.45); }
+.hsx-xl { font-size: calc(var(--u) * 2); }
+.hsx-2xl { font-size: calc(var(--u) * 3.3); }
+.hsx-num { font-variant-numeric: tabular-nums; }
+.hsx-label {
+  font-size: calc(var(--u) * 0.74);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, currentColor 78%, transparent);
+}
+.hsx-title {
+  font-family: var(--font-bungee);
+  line-height: 1;
+}
+
+@keyframes hsx-flash {
+  from {
+    color: var(--hsx-flash);
+  }
+}
+.hsx-flash {
+  animation: hsx-flash 1400ms ease-out;
+}
+
+@keyframes hsx-progress {
+  from {
+    transform: scaleX(0);
+  }
+}
+.hsx-progress {
+  animation: hsx-progress linear both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tv-ticker,
   .tv-stream-row,
-  .tv-pulse {
+  .tv-pulse,
+  .hsx-flash,
+  .hsx-progress {
     animation: none;
   }
   .tv-odometer-digit {
