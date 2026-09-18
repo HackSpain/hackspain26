@@ -507,6 +507,52 @@ export const adminRequests = adminQuery({
   },
 });
 
+/** Every code in a perk pool, with who claimed it when assigned. */
+export const adminCodes = adminQuery({
+  args: { perkId: v.id("perks") },
+  returns: v.array(
+    v.object({
+      _id: v.id("perkCodes"),
+      code: v.string(),
+      available: v.boolean(),
+      userId: v.optional(v.id("users")),
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      teamName: v.optional(v.string()),
+      assignedAt: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const codes = await ctx.db
+      .query("perkCodes")
+      .withIndex("by_perk", (q) => q.eq("perkId", args.perkId))
+      .collect();
+    const rows = [];
+    for (const row of codes) {
+      const user = row.assignedTo ? await ctx.db.get(row.assignedTo) : null;
+      rows.push({
+        _id: row._id,
+        code: row.code,
+        available: row.available,
+        userId: row.assignedTo,
+        name: user?.name,
+        email: user?.email,
+        teamName: row.assignedTo ? await teamNameFor(ctx, row.assignedTo) : undefined,
+        assignedAt: row.assignedAt,
+      });
+    }
+    return rows.toSorted((a, b) => {
+      if (a.available !== b.available) {
+        return a.available ? 1 : -1;
+      }
+      if (!a.available) {
+        return (b.assignedAt ?? 0) - (a.assignedAt ?? 0);
+      }
+      return a.code.localeCompare(b.code, "es");
+    });
+  },
+});
+
 export const adminApplications = adminQuery({
   args: {
     status: v.optional(claimStatusValidator),
