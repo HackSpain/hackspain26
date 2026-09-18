@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { ObjectType } from "convex/values";
 import {
   adminQuery,
   onboardedMutation,
@@ -50,10 +51,6 @@ const submissionReturn = v.object({
   updatedAt: v.number(),
   urls: urlsValidator,
 });
-
-function uniqueIds<T extends string>(ids: T[]): T[] {
-  return [...new Set(ids)];
-}
 
 async function hydrateSubmission(
   ctx: QueryCtx | MutationCtx,
@@ -109,7 +106,7 @@ async function resolveChallengeIds(
   challengeIds: Id<"tracks">[],
   requireActive: boolean
 ): Promise<Id<"tracks">[]> {
-  const unique = uniqueIds(challengeIds);
+  const unique = [...new Set(challengeIds)];
   for (const trackId of unique) {
     const track = await ctx.db.get(trackId);
     if (!track) {
@@ -126,7 +123,7 @@ async function resolvePerkIds(
   ctx: MutationCtx,
   perkIds: Id<"perks">[]
 ): Promise<Id<"perks">[]> {
-  const unique = uniqueIds(perkIds);
+  const unique = [...new Set(perkIds)];
   for (const perkId of unique) {
     const perk = await ctx.db.get(perkId);
     if (!perk) {
@@ -183,15 +180,7 @@ const projectArgs = {
 
 async function upsertProject(
   ctx: MutationCtx & { user: Doc<"users"> },
-  args: {
-    name: string;
-    description: string;
-    repoUrl?: string;
-    demoUrl?: string;
-    videoUrl?: string;
-    challengeIds: Id<"tracks">[];
-    perkIds: Id<"perks">[];
-  },
+  args: ObjectType<typeof projectArgs>,
   mode: "draft" | "submit"
 ) {
   const existing = await findOwnedSubmission(ctx, ctx.user._id);

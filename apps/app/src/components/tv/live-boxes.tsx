@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { api } from "@convex/_generated/api";
 import { Sparkline } from "@/app/insights/charts";
 import {
+  bucketTotals,
   compact,
   filterSamples,
   getSamples,
@@ -15,39 +16,6 @@ import {
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
 import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
-
-const MOCK_COMMITS = [
-  {
-    repo: "tortilla/agentos",
-    actor: "ana",
-    text: "feat: wire Convex auth",
-    sha: "a1b2c3d",
-  },
-  {
-    repo: "siesta/deploy",
-    actor: "leo",
-    text: "fix: retry failed deploys",
-    sha: "c0ffee1",
-  },
-  {
-    repo: "paella/barrio",
-    actor: "marta",
-    text: "docs: add README",
-    sha: "bada55e",
-  },
-  {
-    repo: "gitana/reviewmate",
-    actor: "nico",
-    text: "refactor: extract review agent",
-    sha: "def4567",
-  },
-  {
-    repo: "context/memory",
-    actor: "ira",
-    text: "feat: persist session memory",
-    sha: "feedb0b",
-  },
-];
 
 type CommitRow = {
   instance: string;
@@ -64,18 +32,13 @@ export function LiveCommitsBox() {
   const remote = useQuery(api.tv.listGithubActivity);
   const source = useMemo(
     () =>
-      remote && remote.length > 0
-        ? remote.map((row) => ({
-            id: row._id,
-            repo: row.repo || "repo",
-            actor: row.actor || "github",
-            text: row.text,
-            sha: row.sha,
-          }))
-        : MOCK_COMMITS.map((row, index) => ({
-            id: `${row.sha}-${index}`,
-            ...row,
-          })),
+      (remote ?? []).map((row) => ({
+        id: row._id,
+        repo: row.repo || "repo",
+        actor: row.actor || "github",
+        text: row.text,
+        sha: row.sha,
+      })),
     [remote],
   );
   const queue = useMemo(() => {
@@ -96,6 +59,11 @@ export function LiveCommitsBox() {
   return (
     <div className="flex h-full flex-col bg-hs-paper p-3 text-hs-ink">
       <p className="font-bungee text-xs">Commits en vivo</p>
+      {queue.length === 0 && (
+        <p className="mt-2 text-xs text-hs-brown">
+          {remote === undefined ? "Cargando actividad…" : "Sin commits todavía."}
+        </p>
+      )}
       <ol className="mt-2 min-h-0 flex-1 space-y-1.5 overflow-hidden">
         {queue.map((row, index) => (
           <li
@@ -123,8 +91,7 @@ export function LiveCommitsBox() {
 export function LiveAgentsBox() {
   const reduced = usePrefersReducedMotion();
   const visible = usePageVisible();
-  const tick = useTick(4000);
-  const samples = filterSamples(getSamples(tick), "event", "all");
+  const samples = filterSamples(getSamples(), "event", "all");
   const tools = harnessRows(samples)
     .filter((row) =>
       ["claude-code", "codex", "cursor", "opencode", "cline"].includes(row.id),
@@ -134,13 +101,16 @@ export function LiveAgentsBox() {
   return (
     <div className="flex h-full flex-col bg-hs-paper p-3 text-hs-ink">
       <p className="font-bungee text-xs">Agentes activos</p>
+      {samples.length === 0 && (
+        <p className="mt-2 text-xs text-hs-brown">Sin datos todavía.</p>
+      )}
       <div className="mt-2 flex flex-wrap gap-2">
         {tools.map((tool) => (
           <span
             key={tool.id}
             className={cn(
               "inline-flex items-center gap-2 border border-hs-ink/20 px-2 py-1",
-              !reduced && "tv-pulse",
+              !reduced && tool.sessions > 0 && "tv-pulse",
             )}
             style={{
               animationDelay: `${HARNESSES.findIndex((item) => item.id === tool.id) * 80}ms`,
@@ -165,7 +135,7 @@ export function LiveAgentsBox() {
 function Odometer({ value }: { value: number }) {
   const reduced = usePrefersReducedMotion();
   const digits = Math.round(value).toString().padStart(4, "0").split("");
-  if (reduced) {
+  if (reduced || value === 0) {
     return (
       <span className="font-sans text-4xl font-black tracking-[-0.06em] tabular-nums">
         {compact(value)}
@@ -204,18 +174,13 @@ function Odometer({ value }: { value: number }) {
 }
 
 export function LiveTokensBox() {
-  const tick = useTick(5000);
-  const samples = filterSamples(getSamples(tick), "event", "all");
+  const samples = filterSamples(getSamples(), "event", "all");
   const totals = samples.reduce((sum, sample) => sum + sample.tokens, 0);
-  const trend = [...new Set(samples.map((sample) => sample.bucket))].map(
-    (bucket) =>
-      samples
-        .filter((sample) => sample.bucket === bucket)
-        .reduce((sum, sample) => sum + sample.tokens, 0),
-  );
+  const trend = bucketTotals(samples).map((bucket) => bucket.tokens);
   return (
     <div className="flex h-full flex-col justify-between bg-hs-gold p-3 text-hs-ink">
       <p className="font-bungee text-xs">Tokens</p>
+      {samples.length === 0 && <p className="text-xs">Sin datos todavía.</p>}
       <div className="flex items-end justify-between gap-3">
         <Odometer value={totals} />
         <Sparkline values={trend} color="#2a170f" />
@@ -226,14 +191,16 @@ export function LiveTokensBox() {
 
 export function LiveLeaderboardBox() {
   const reduced = usePrefersReducedMotion();
-  const tick = useTick(4500);
-  const teams = teamRows(filterSamples(getSamples(tick), "event", "all"))
+  const teams = teamRows(filterSamples(getSamples(), "event", "all"))
     .sort((a, b) => b.tokens - a.tokens)
     .slice(0, 6);
 
   return (
     <div className="flex h-full flex-col bg-hs-paper p-3 text-hs-ink">
       <p className="font-bungee text-xs">Equipos</p>
+      {teams.length === 0 && (
+        <p className="mt-2 text-xs text-hs-brown">Sin datos de equipos todavía.</p>
+      )}
       <ol className="mt-2 space-y-1.5">
         {teams.map((team, index) => (
           <motion.li

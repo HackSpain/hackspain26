@@ -49,6 +49,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ActivityChart, Sparkline, TeamScatter, UsageDonut } from "./charts";
 import {
+  bucketTotals,
   compact,
   filterSamples,
   getSamples,
@@ -204,17 +205,21 @@ function HarnessUsage({
     >
       <div className="flex flex-col items-center justify-between gap-4 min-[400px]:flex-row">
         <UsageDonut rows={sorted} metric={metric} onExplore={onExplore} />
-        <div className="max-w-28 space-y-2">
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-hs-brown">
-            <Terminal className="size-3" aria-hidden /> Más utilizado
-          </span>
-          <p className="font-bungee text-base leading-snug">
-            {sorted[0]?.name}
-          </p>
-          <p className="text-2xl font-bold tabular-nums">
-            {percent(sorted[0]?.[metric] ?? 0, total)}
-          </p>
-        </div>
+        {total > 0 ? (
+          <div className="max-w-28 space-y-2">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-hs-brown">
+              <Terminal className="size-3" aria-hidden /> Más utilizado
+            </span>
+            <p className="font-bungee text-base leading-snug">
+              {sorted[0]?.name}
+            </p>
+            <p className="text-2xl font-bold tabular-nums">
+              {percent(sorted[0]?.[metric] ?? 0, total)}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-hs-brown">Sin datos de uso todavía.</p>
+        )}
       </div>
       <div className="mt-5 space-y-3">
         {sorted.map((row) => (
@@ -291,7 +296,7 @@ function downloadCsv(rows: TeamRow[]) {
   );
   const link = document.createElement("a");
   link.href = url;
-  link.download = "hackspain-insights-demo.csv";
+  link.download = "hackspain-insights.csv";
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
@@ -383,8 +388,7 @@ function Leaderboard({
         <Table className="min-w-[680px]">
           <caption className="sr-only">
             Equipos ordenados por{" "}
-            {METRICS.find((item) => item.id === metric)?.label}. Datos
-            simulados, sin puntuación de calidad.
+            {METRICS.find((item) => item.id === metric)?.label}. Sin puntuación de calidad.
           </caption>
           <TableHeader>
             <TableRow>
@@ -529,17 +533,23 @@ function Leaderboard({
       {filtered.length === 0 ? (
         <div className="border border-t-0 border-hs-ink/25 px-5 py-8 text-center">
           <Search className="mx-auto mb-3 size-5 text-hs-brown" aria-hidden />
-          <p className="font-semibold">No hay equipos con estos filtros.</p>
-          <button
-            type="button"
-            className="mt-2 min-h-11 text-sm underline underline-offset-4"
-            onClick={() => {
-              setSearch("");
-              setHarness("all");
-            }}
-          >
-            Limpiar búsqueda y harness
-          </button>
+          <p className="font-semibold">
+            {teams.length
+              ? "No hay equipos con estos filtros."
+              : "Sin datos de equipos todavía."}
+          </p>
+          {teams.length > 0 && (
+            <button
+              type="button"
+              className="mt-2 min-h-11 text-sm underline underline-offset-4"
+              onClick={() => {
+                setSearch("");
+                setHarness("all");
+              }}
+            >
+              Limpiar búsqueda y harness
+            </button>
+          )}
         </div>
       ) : null}
       <div className="mt-3 flex flex-wrap justify-between gap-2 text-[11px] text-hs-brown">
@@ -563,7 +573,7 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
     <>
       <DialogHeader>
         <p className="mb-1 font-mono text-[11px] uppercase tracking-widest text-hs-brown">
-          Ficha de equipo · datos simulados
+          Ficha de equipo
         </p>
         <DialogTitle>{team.name}</DialogTitle>
         <DialogDescription>
@@ -623,14 +633,12 @@ export function InsightsView({
 }: {
   showBackLink?: boolean;
 }) {
-  // TODO: Replace simulated insights with real event data, including usage,
-  // concurrent agents, team milestones, and declared technology stacks.
+  // Insights telemetry is not connected yet; metrics stay at zero.
   const [activeTab, setActiveTab] = useState("overview");
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const leaderboardTabRef = useRef<HTMLButtonElement | null>(null);
   const [period, setPeriod] = useState<Period>("event");
   const [track, setTrack] = useState("all");
-  const [tick, setTick] = useState(0);
   const [chartMetric, setChartMetric] = useState<Metric>("tokens");
   const [harness, setHarness] = useState("all");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -646,14 +654,7 @@ export function InsightsView({
     return () => window.removeEventListener("hashchange", syncTabFromHash);
   }, []);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") setTick((value) => value + 1);
-    }, 5_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const allSamples = useMemo(() => getSamples(tick), [tick]);
+  const allSamples = useMemo(() => getSamples(), []);
   const samples = useMemo(
     () => filterSamples(allSamples, period, track),
     [allSamples, period, track],
@@ -670,13 +671,9 @@ export function InsightsView({
   const selectedTeam = teamRows(detailSamples).find(
     (team) => team.id === selectedTeamId,
   );
+  const buckets = bucketTotals(samples);
   const trend = (metric: Metric | "sessions") =>
-    [...new Set(samples.map((sample) => sample.bucket))].map(
-      (bucket) =>
-        sumSamples(samples.filter((sample) => sample.bucket === bucket))[
-          metric
-        ],
-    );
+    buckets.map((bucket) => bucket[metric]);
   const topCommitTeam = [...teams].sort((a, b) => b.commits - a.commits)[0];
   const leadingTool = [...tools].sort((a, b) => b.tokens - a.tokens)[0];
 
@@ -722,7 +719,7 @@ export function InsightsView({
           id="insights-title"
           className="max-w-4xl text-3xl leading-tight text-balance sm:text-4xl lg:text-5xl"
         >
-          Insights en tiempo real
+          Insights del evento
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-pretty text-hs-brown sm:text-base">
           Tokens, commits y herramientas de los equipos de HackSpain.
@@ -814,7 +811,7 @@ export function InsightsView({
             <StatCard
               label="Commits publicados"
               value={number(totals.commits)}
-              detail={`${number(totals.commits / teams.length)} de media por equipo`}
+              detail={`${number(totals.commits / Math.max(teams.length, 1))} de media por equipo`}
               icon={GitCommitHorizontal}
               trend={trend("commits")}
             />
@@ -849,21 +846,23 @@ export function InsightsView({
                 }
               >
                 <ActivityChart samples={samples} metric={chartMetric} />
-                <div className="mt-5 flex items-start gap-3 bg-hs-teal/10 p-3">
-                  <Activity
-                    className="mt-0.5 size-4 shrink-0 text-hs-teal"
-                    aria-hidden
-                  />
-                  <p className="text-xs leading-relaxed">
-                    <strong>{topCommitTeam?.name}</strong> lidera en commits en
-                    este periodo.{" "}
-                    <span className="text-hs-brown">
-                      {leadingTool?.name} concentra el{" "}
-                      {percent(leadingTool?.tokens ?? 0, totals.tokens)} de los
-                      tokens.
-                    </span>
-                  </p>
-                </div>
+                {topCommitTeam && (
+                  <div className="mt-5 flex items-start gap-3 bg-hs-teal/10 p-3">
+                    <Activity
+                      className="mt-0.5 size-4 shrink-0 text-hs-teal"
+                      aria-hidden
+                    />
+                    <p className="text-xs leading-relaxed">
+                      <strong>{topCommitTeam?.name}</strong> lidera en commits en
+                      este periodo.{" "}
+                      <span className="text-hs-brown">
+                        {leadingTool?.name} concentra el{" "}
+                        {percent(leadingTool?.tokens ?? 0, totals.tokens)} de los
+                        tokens.
+                      </span>
+                    </p>
+                  </div>
+                )}
               </Panel>
               <Panel
                 title="Tokens vs. commits"
@@ -906,7 +905,7 @@ export function InsightsView({
       </Tabs.Root>
 
       <footer className="border-t border-hs-ink/20 pt-5 text-xs leading-relaxed text-pretty text-hs-brown">
-        Demo con equipos, proyectos y métricas ficticios.
+        Métricas de actividad pendientes de conexión. Sin datos, los contadores muestran 0.
       </footer>
 
       <Dialog

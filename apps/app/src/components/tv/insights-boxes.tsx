@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { ActivityChart, Sparkline, TeamScatter } from "@/app/insights/charts";
 import { technologyRows } from "@/app/insights/event-data";
 import { ConsumptionChart } from "@/app/insights/evolution-charts";
 import { Panel } from "@/app/insights/panel";
 import {
+  bucketTotals,
   compact,
   filterSamples,
   getSamples,
@@ -17,19 +17,15 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
-import { useTick } from "./motion";
 
-function useInsightSnapshot() {
-  const tick = useTick(5_000);
-  return useMemo(() => {
-    const samples = filterSamples(getSamples(tick), "event", "all");
-    return {
-      samples,
-      teams: teamRows(samples),
-      tools: harnessRows(samples),
-      totals: sumSamples(samples),
-    };
-  }, [tick]);
+function insightSnapshot() {
+  const samples = filterSamples(getSamples(), "event", "all");
+  return {
+    samples,
+    teams: teamRows(samples),
+    tools: harnessRows(samples),
+    totals: sumSamples(samples),
+  };
 }
 
 function TvInsightPanel({
@@ -89,14 +85,10 @@ function MiniStat({
 }
 
 export function InsightsStatsBox() {
-  const { samples, teams, tools, totals } = useInsightSnapshot();
+  const { samples, teams, tools, totals } = insightSnapshot();
+  const buckets = bucketTotals(samples);
   const trend = (metric: "tokens" | "commits" | "sessions" | "pullRequests") =>
-    [...new Set(samples.map((sample) => sample.bucket))].map(
-      (bucket) =>
-        sumSamples(samples.filter((sample) => sample.bucket === bucket))[
-          metric
-        ],
-    );
+    buckets.map((bucket) => bucket[metric]);
   return (
     <div className="grid h-full grid-cols-4 gap-[0.7cqw]">
       <MiniStat
@@ -129,7 +121,7 @@ export function InsightsStatsBox() {
 }
 
 export function InsightsActivityBox() {
-  const { samples } = useInsightSnapshot();
+  const { samples } = insightSnapshot();
   return (
     <TvInsightPanel
       title="El pulso del evento"
@@ -141,7 +133,7 @@ export function InsightsActivityBox() {
 }
 
 export function InsightsHarnessBox() {
-  const { tools } = useInsightSnapshot();
+  const { tools } = insightSnapshot();
   const sorted = [...tools].sort((a, b) => b.tokens - a.tokens);
   const total = sorted.reduce((sum, row) => sum + row.tokens, 0);
   return (
@@ -172,7 +164,7 @@ export function InsightsHarnessBox() {
 }
 
 export function InsightsStacksBox() {
-  const { teams } = useInsightSnapshot();
+  const { teams } = insightSnapshot();
   const rows = technologyRows(
     teams.map((team) => team.id),
     "all",
@@ -203,7 +195,7 @@ export function InsightsStacksBox() {
           </div>
         ))}
         <p className="self-center text-[0.65cqw] text-hs-brown">
-          Cada equipo puede usar varias tecnologías.
+          {rows.length ? "Cada equipo puede usar varias tecnologías." : "Sin datos de tecnologías todavía."}
         </p>
       </div>
     </TvInsightPanel>
@@ -211,7 +203,7 @@ export function InsightsStacksBox() {
 }
 
 export function InsightsScatterBox() {
-  const { teams } = useInsightSnapshot();
+  const { teams } = insightSnapshot();
   return (
     <Panel
       title="Tokens vs. commits"
@@ -224,16 +216,19 @@ export function InsightsScatterBox() {
 }
 
 export function InsightsLeaderboardBox() {
-  const { teams } = useInsightSnapshot();
+  const { teams } = insightSnapshot();
   const ranked = [...teams]
     .sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
     .slice(0, 8);
   return (
     <Panel
       title="Leaderboard"
-      eyebrow="Por tokens · datos simulados"
+      eyebrow="Por tokens"
       className="h-full overflow-hidden border-hs-ink/20 py-3"
     >
+      {ranked.length === 0 && (
+        <p className="text-sm text-hs-brown">Sin datos de equipos todavía.</p>
+      )}
       <ol className="space-y-2">
         {ranked.map((team, index) => (
           <li
@@ -265,14 +260,18 @@ export function InsightsLeaderboardBox() {
 }
 
 export function InsightsEvolutionBox() {
-  const { samples } = useInsightSnapshot();
+  const { samples } = insightSnapshot();
   return (
     <Panel
       title="Evolución del evento"
-      eyebrow="Consumo por fase · datos simulados"
+      eyebrow="Consumo por fase"
       className="h-full overflow-hidden border-hs-ink/20 py-3"
     >
-      <ConsumptionChart samples={samples} color="#1e3958" />
+      {samples.length ? (
+        <ConsumptionChart samples={samples} color="#1e3958" />
+      ) : (
+        <p className="text-sm text-hs-brown">Sin datos de actividad todavía.</p>
+      )}
     </Panel>
   );
 }

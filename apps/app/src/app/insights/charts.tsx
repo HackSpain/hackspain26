@@ -123,6 +123,9 @@ export function ActivityChart({
   mode?: "interactive" | "tv";
 }) {
   const [selectedBucket, setSelectedBucket] = useState<number | null>(null);
+  if (samples.length === 0) {
+    return <p className="py-6 text-sm text-hs-brown">Sin datos de actividad todavía.</p>;
+  }
   const buckets = [...new Set(samples.map((sample) => sample.bucket))];
   const rows = buckets.map((bucket) => {
     const group = samples.filter((sample) => sample.bucket === bucket);
@@ -368,6 +371,9 @@ export function TeamScatter({
   teams: TeamRow[];
   onSelect: (team: TeamRow) => void;
 }) {
+  if (teams.length === 0) {
+    return <p className="py-6 text-sm text-hs-brown">Sin datos de equipos todavía.</p>;
+  }
   return (
     <div>
       <div className={STAGE}>

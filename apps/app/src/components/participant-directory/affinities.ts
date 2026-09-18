@@ -74,16 +74,8 @@ export function sharedAffinities(
         : [];
     }
     const other = new Set(valuesFor(b, kind).map(normalize).filter(Boolean));
-    const seen = new Set<string>();
     return valuesFor(a, kind)
-      .filter((value) => {
-        const key = normalize(value);
-        if (!key || seen.has(key) || !other.has(key)) {
-          return false;
-        }
-        seen.add(key);
-        return true;
-      })
+      .filter((value) => other.delete(normalize(value)))
       .map((value) => ({ kind, value }));
   });
 }

@@ -1,5 +1,5 @@
 import { TEAMS, sumSamples } from "./mock-data";
-import type { Sample } from "./mock-data";
+import type { Sample, Totals } from "./mock-data";
 
 export const EVENT_MINUTES = 720;
 export const SNAPSHOT_MINUTE = 705;
@@ -10,8 +10,7 @@ export const PHASES = [
 ] as const;
 
 // Fictional pricing for the mock. This is not a provider's price schedule.
-export function usageUsd(samples: Sample[]): number {
-  const totals = sumSamples(samples);
+export function usageUsd(totals: Pick<Totals, "tokens" | "cachedTokens">): number {
   return (
     ((totals.tokens - totals.cachedTokens) * 4 + totals.cachedTokens * 0.5) /
     1_000_000
@@ -48,7 +47,7 @@ export function phaseRows(samples: Sample[]) {
     return {
       ...phase,
       ...totals,
-      cost: usageUsd(rows),
+      cost: usageUsd(totals),
       hourlyTokens: totals.tokens / ((phase.end - phase.start) / 60),
     };
   });

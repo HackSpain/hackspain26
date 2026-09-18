@@ -22,9 +22,12 @@ export type Milestone = FunctionReturnType<typeof api.milestones.mine>[number];
  * Logged-in, accepted, onboarded (or admin), and inside the hackathon window.
  * Fails fast otherwise; the server enforces the same gates.
  */
-export async function openParticipant(ctx: CliContext): Promise<Participant> {
+export async function openParticipant(
+  ctx: CliContext,
+  options: { allowClosed?: boolean } = {}
+): Promise<Participant> {
   const session = await openSession(ctx, { requireAuth: true });
-  const me = await requireOnboarded(session);
+  const me = await requireOnboarded(session, options);
   return { me, session };
 }
 
@@ -32,12 +35,8 @@ export async function openParticipant(ctx: CliContext): Promise<Participant> {
 export async function openAnytimeParticipant(
   ctx: CliContext
 ): Promise<Participant> {
-  const session = await openSession(ctx, { requireAuth: true });
-  const me = await requireOnboarded(session, { allowClosed: true });
-  return { me, session };
+  return await openParticipant(ctx, { allowClosed: true });
 }
 
 /** Same ladder minus the window: `hackspain profile` works while closed. */
-export async function openProfile(ctx: CliContext): Promise<Participant> {
-  return await openAnytimeParticipant(ctx);
-}
+export const openProfile = openAnytimeParticipant;

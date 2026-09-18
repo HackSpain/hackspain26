@@ -29,6 +29,11 @@ test("normalizes accents, case and whitespace without counting duplicate skills"
     shared.map((item) => item.kind),
     ["university", "city", "skills", "interests"]
   );
+  assert.deepEqual(
+    sharedAffinities(anchor, { ...peer, skills: ["react", "REACT", " "] })
+      .filter((item) => item.kind === "skills"),
+    [{ kind: "skills", value: "React" }]
+  );
 });
 
 test("never links a profile to itself or matches missing data", () => {
