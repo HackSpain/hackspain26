@@ -4,7 +4,6 @@ import {
   Activity,
   ArrowDown,
   ArrowDownToLine,
-  ArrowLeft,
   ArrowUpRight,
   Bot,
   ChartNoAxesCombined,
@@ -16,7 +15,6 @@ import {
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
 import { Tabs } from "radix-ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -51,8 +49,8 @@ import { ActivityChart, Sparkline, TeamScatter, UsageDonut } from "./charts";
 import {
   bucketTotals,
   compact,
+  bucketSpan,
   filterSamples,
-  getSamples,
   harnessRows,
   HARNESSES,
   number,
@@ -62,6 +60,8 @@ import {
   teamRows,
   TRACKS,
 } from "./mock-data";
+import { NO_TEAM_ID, useLiveInsights } from "./use-live-insights";
+import type { LiveInsightData } from "./use-live-insights";
 import type {
   HarnessId,
   HarnessRow,
@@ -73,7 +73,7 @@ import type {
 
 const METRICS: { id: Metric; label: string; icon: LucideIcon }[] = [
   { id: "tokens", label: "Tokens", icon: Zap },
-  { id: "commits", label: "Commits", icon: GitCommitHorizontal },
+  { id: "commits", label: "Pushes", icon: GitCommitHorizontal },
   { id: "pullRequests", label: "PRs", icon: GitPullRequest },
 ];
 const NAV = [
@@ -271,7 +271,7 @@ function downloadCsv(rows: TeamRow[]) {
     "Proyecto",
     "Reto",
     "Tokens",
-    "Commits",
+    "Pushes",
     "PRs",
     "Sesiones",
   ];
@@ -331,7 +331,7 @@ function Leaderboard({
   return (
     <Panel
       title="Leaderboard"
-      eyebrow="Clasificación por tokens, commits y pull requests"
+      eyebrow="Clasificación por tokens, pushes y pull requests"
       action={
         <Button
           type="button"
@@ -610,8 +610,7 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
             <div className="flex-1">
               <p className="font-semibold">{tool.name}</p>
               <p className="text-xs text-hs-brown">
-                {number(tool.sessions)} sesiones · {number(tool.commits)}{" "}
-                commits
+                {number(tool.sessions)} sesiones
               </p>
             </div>
             <span className="font-mono text-xs">
@@ -628,12 +627,29 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
   );
 }
 
-export function InsightsView({
-  showBackLink = true,
-}: {
-  showBackLink?: boolean;
-}) {
-  // Insights telemetry is not connected yet; metrics stay at zero.
+const REAL_FOOTER =
+  "Uso de IA reportado por hackspain watch durante la ventana del hackathon, en 24 tramos; pushes y pull requests del feed de GitHub. Se actualiza cada 30 segundos. El uso de quien no tiene equipo cuenta en los totales, no en las clasificaciones.";
+
+const INSIGHTS_FOOTER: Record<LiveInsightData["status"], string> = {
+  empty: `Todavía no ha llegado ningún evento de uso. ${REAL_FOOTER}`,
+  loading: "Cargando datos…",
+  ok: REAL_FOOTER,
+  unavailable:
+    "No se han podido leer los datos de uso ahora mismo; se reintenta solo. Los contadores muestran lo último disponible.",
+  unconfigured:
+    "La lectura de datos de uso no está configurada en este despliegue; los contadores de IA muestran 0.",
+  unscheduled:
+    "El hackathon no tiene fechas todavía; sin ventana no se registra uso.",
+};
+
+export function InsightsView() {
+  // Real numbers: AI usage from RawTree, teams and GitHub activity from
+  // Convex (use-live-insights.ts), refreshed every 30 seconds.
+  const live = useLiveInsights();
+  const timeline = useMemo(
+    () => ({ bucketMinutes: live.bucketMinutes, startsAt: live.startsAt }),
+    [live.bucketMinutes, live.startsAt],
+  );
   const [activeTab, setActiveTab] = useState("overview");
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const leaderboardTabRef = useRef<HTMLButtonElement | null>(null);
@@ -654,21 +670,24 @@ export function InsightsView({
     return () => window.removeEventListener("hashchange", syncTabFromHash);
   }, []);
 
-  const allSamples = useMemo(() => getSamples(), []);
+  const allSamples = live.samples;
   const samples = useMemo(
-    () => filterSamples(allSamples, period, track),
-    [allSamples, period, track],
+    () => filterSamples(allSamples, period, track, live.teams, timeline),
+    [allSamples, period, track, live.teams, timeline],
   );
   const eventSamples = useMemo(
-    () => filterSamples(allSamples, "event", track),
-    [allSamples, track],
+    () => filterSamples(allSamples, "event", track, live.teams, timeline),
+    [allSamples, track, live.teams, timeline],
   );
-  const eventTeams = teamRows(eventSamples);
+  // People without a team count in every total and never in a team list.
+  const ranked = (rows: Sample[]) =>
+    teamRows(rows, live.teams).filter((team) => team.id !== NO_TEAM_ID);
+  const eventTeams = ranked(eventSamples);
   const totals = sumSamples(samples);
-  const teams = teamRows(samples);
+  const teams = ranked(samples);
   const tools = harnessRows(samples);
   const detailSamples = activeTab === "evolution" ? eventSamples : samples;
-  const selectedTeam = teamRows(detailSamples).find(
+  const selectedTeam = ranked(detailSamples).find(
     (team) => team.id === selectedTeamId,
   );
   const buckets = bucketTotals(samples);
@@ -700,16 +719,6 @@ export function InsightsView({
 
   return (
     <div className="space-y-5 pb-4 [&_button]:focus-visible:outline-2 [&_button]:focus-visible:outline-offset-2 [&_button]:focus-visible:outline-hs-navy">
-      {showBackLink ? (
-        <Link
-          href="/"
-          className="inline-flex min-h-11 w-auto min-w-max shrink-0 items-center gap-2 text-sm font-medium whitespace-nowrap text-hs-brown underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-navy"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Volver al dashboard
-        </Link>
-      ) : null}
-
       <div className="min-w-0 space-y-5 tabular-nums">
       <section
         className="flex flex-col items-center px-2 pt-5 pb-7 text-center sm:pt-8 sm:pb-10"
@@ -722,7 +731,7 @@ export function InsightsView({
           Insights del evento
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-pretty text-hs-brown sm:text-base">
-          Tokens, commits y herramientas de los equipos de HackSpain.
+          Tokens, pushes y herramientas de los equipos de HackSpain.
         </p>
       </section>
 
@@ -809,7 +818,7 @@ export function InsightsView({
               highlight
             />
             <StatCard
-              label="Commits publicados"
+              label="Pushes a GitHub"
               value={number(totals.commits)}
               detail={`${number(totals.commits / Math.max(teams.length, 1))} de media por equipo`}
               icon={GitCommitHorizontal}
@@ -835,7 +844,7 @@ export function InsightsView({
             <div className="min-w-0 space-y-5">
               <Panel
                 title="Actividad del evento"
-                eyebrow="Actividad por intervalos de 30 minutos"
+                eyebrow={`Actividad por intervalos de ${bucketSpan(timeline)}`}
                 action={
                   <MetricSwitch
                     value={chartMetric}
@@ -845,7 +854,11 @@ export function InsightsView({
                   />
                 }
               >
-                <ActivityChart samples={samples} metric={chartMetric} />
+                <ActivityChart
+                  samples={samples}
+                  metric={chartMetric}
+                  timeline={timeline}
+                />
                 {topCommitTeam && (
                   <div className="mt-5 flex items-start gap-3 bg-hs-teal/10 p-3">
                     <Activity
@@ -853,7 +866,7 @@ export function InsightsView({
                       aria-hidden
                     />
                     <p className="text-xs leading-relaxed">
-                      <strong>{topCommitTeam?.name}</strong> lidera en commits en
+                      <strong>{topCommitTeam?.name}</strong> lidera en pushes en
                       este periodo.{" "}
                       <span className="text-hs-brown">
                         {leadingTool?.name} concentra el{" "}
@@ -865,7 +878,7 @@ export function InsightsView({
                 )}
               </Panel>
               <Panel
-                title="Tokens vs. commits"
+                title="Tokens vs. pushes"
                 eyebrow="Consumo y contribuciones por equipo"
               >
                 <TeamScatter teams={teams} onSelect={openTeam} />
@@ -900,12 +913,13 @@ export function InsightsView({
             samples={eventSamples}
             teams={eventTeams}
             onSelect={openTeam}
+            timeline={timeline}
           />
         </Tabs.Content>
       </Tabs.Root>
 
       <footer className="border-t border-hs-ink/20 pt-5 text-xs leading-relaxed text-pretty text-hs-brown">
-        Métricas de actividad pendientes de conexión. Sin datos, los contadores muestran 0.
+        {INSIGHTS_FOOTER[live.status]}
       </footer>
 
       <Dialog

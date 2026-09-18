@@ -35,13 +35,32 @@ export const HARNESSES = [
     mark: "Co",
     name: "Copilot",
   },
+  // The rest of the harnesses the watcher collects (apps/cli/src/watcher).
+  {
+    color: "#3f6fd1",
+    id: "gemini-cli",
+    mark: "Ge",
+    name: "Gemini CLI",
+  },
+  {
+    color: "#6a4bc4",
+    id: "qwen-code",
+    mark: "Qw",
+    name: "Qwen Code",
+  },
+  {
+    color: "#b8432f",
+    id: "kilo-code",
+    mark: "Ki",
+    name: "Kilo Code",
+  },
 ] as const;
 
 export const TRACKS: string[] = [];
 export const PERIODS = [
-  { buckets: 24, id: "event", label: "Todo el evento" },
-  { buckets: 12, id: "6h", label: "Últimas 6 horas" },
-  { buckets: 2, id: "1h", label: "Última hora" },
+  { buckets: 24, id: "event", label: "Todo el evento", minutes: 0 },
+  { buckets: 12, id: "6h", label: "Últimas 6 horas", minutes: 360 },
+  { buckets: 2, id: "1h", label: "Última hora", minutes: 60 },
 ] as const;
 
 export type Period = (typeof PERIODS)[number]["id"];
@@ -80,19 +99,47 @@ export function getSamples(): Sample[] {
   return [];
 }
 
+/**
+ * The buckets a period covers. On a real timeline "the last 6 hours" ends at
+ * the bucket the clock is in (not at the end of the event) and is as many
+ * whole buckets as it takes to cover the period, so with two-hour buckets
+ * "the last hour" is the current bucket.
+ */
+export function periodBuckets(
+  period: Period,
+  timeline?: Timeline,
+  now = Date.now()
+): { from: number; to: number } {
+  const option = PERIODS.find((item) => item.id === period);
+  if (timeline?.startsAt === undefined) {
+    return { from: 24 - (option?.buckets ?? 24), to: 23 };
+  }
+  if (!option?.minutes) {
+    return { from: 0, to: 23 };
+  }
+  const elapsed = (now - timeline.startsAt) / 60_000;
+  const to = Math.min(23, Math.max(0, Math.floor(elapsed / timeline.bucketMinutes)));
+  const span = Math.max(1, Math.ceil(option.minutes / timeline.bucketMinutes));
+  return { from: Math.max(0, to - span + 1), to };
+}
+
+/** `teams` defaults to the static list; live callers pass the real ones. */
 export function filterSamples(
   samples: Sample[],
   period: Period,
-  track: string
+  track: string,
+  teams: Team[] = TEAMS,
+  timeline?: Timeline
 ): Sample[] {
-  const buckets = PERIODS.find((item) => item.id === period)?.buckets ?? 24;
+  const { from, to } = periodBuckets(period, timeline);
   const ids = new Set(
-    TEAMS.filter((team) => track === "all" || team.track === track).map(
-      (team) => team.id
-    )
+    teams
+      .filter((team) => track === "all" || team.track === track)
+      .map((team) => team.id)
   );
   return samples.filter(
-    (sample) => sample.bucket >= 24 - buckets && ids.has(sample.teamId)
+    (sample) =>
+      sample.bucket >= from && sample.bucket <= to && ids.has(sample.teamId)
   );
 }
 
@@ -129,8 +176,8 @@ export function bucketTotals(samples: Sample[]): Totals[] {
   );
 }
 
-export function teamRows(samples: Sample[]) {
-  return TEAMS.filter((team) =>
+export function teamRows(samples: Sample[], teams: Team[] = TEAMS) {
+  return teams.filter((team) =>
     samples.some((sample) => sample.teamId === team.id)
   ).map((team) => ({
     ...team,
@@ -151,8 +198,43 @@ export function harnessRows(samples: Sample[]) {
 }
 export type HarnessRow = ReturnType<typeof harnessRows>[number];
 
-export function timeLabel(bucket: number): string {
-  return `${String(9 + Math.floor(bucket / 2)).padStart(2, "0")}:${bucket % 2 ? "30" : "00"}`;
+/**
+ * Where the buckets sit in real time. Without one, charts keep the 12-hour
+ * day of the static layout (09:00, 30 minutes a bucket).
+ */
+export type Timeline = { startsAt?: number; bucketMinutes: number };
+
+const REAL_TIME = new Intl.DateTimeFormat("es-ES", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Madrid",
+  weekday: "short",
+});
+
+/** "30 minutos", "2 horas", "1 h 58 min": how long one bucket lasts. */
+export function bucketSpan(timeline?: Timeline): string {
+  const minutes = Math.round(timeline?.bucketMinutes ?? 30);
+  if (minutes < 60) {
+    return `${minutes} minutos`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (rest === 0) {
+    return hours === 1 ? "1 hora" : `${hours} horas`;
+  }
+  return `${hours} h ${rest} min`;
+}
+
+/** Minutes since the start as a clock time: "sáb 10:30" on a real timeline. */
+export function minuteLabel(minutes: number, timeline?: Timeline): string {
+  if (timeline?.startsAt === undefined) {
+    return `${String(9 + Math.floor(minutes / 60)).padStart(2, "0")}:${String(Math.round(minutes % 60)).padStart(2, "0")}`;
+  }
+  return REAL_TIME.format(new Date(timeline.startsAt + minutes * 60_000));
+}
+
+export function timeLabel(bucket: number, timeline?: Timeline): string {
+  return minuteLabel(bucket * (timeline?.bucketMinutes ?? 30), timeline);
 }
 
 export function compact(value: number): string {

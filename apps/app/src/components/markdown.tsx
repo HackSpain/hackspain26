@@ -1,6 +1,16 @@
+import type { ReactNode } from "react";
 import type { Components } from "react-markdown";
+import Link from "next/link";
 import Markdown from "react-markdown";
 import { cn } from "@/lib/utils";
+
+const BRIEF_URL = /^https?:\/\/\S+$/i;
+
+/** Lone http(s) URL in the brief field; otherwise the value is markdown. */
+export function trackBriefUrl(source?: string): string | undefined {
+  const value = source?.trim() ?? "";
+  return BRIEF_URL.test(value) ? value : undefined;
+}
 
 function safeUrl(url?: string): string | undefined {
   if (!url) {
@@ -109,6 +119,19 @@ export function TrackBrief({
   markdown?: string;
   body: string;
 }) {
+  const url = trackBriefUrl(markdown);
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="font-medium text-hs-navy underline decoration-hs-navy/40 underline-offset-4 outline-none hover:decoration-hs-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-navy"
+      >
+        {url}
+      </a>
+    );
+  }
   const brief = markdown?.trim() ?? "";
   if (brief) {
     return <TrackMarkdown source={brief} />;
@@ -121,4 +144,22 @@ export function TrackBrief({
       </p>
     </div>
   );
+}
+
+export function TrackBriefLink({
+  track,
+  children,
+}: {
+  track: { slug: string; markdown?: string };
+  children: ReactNode;
+}) {
+  const url = trackBriefUrl(track.markdown);
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        {children}
+      </a>
+    );
+  }
+  return <Link href={`/tracks/${track.slug}`}>{children}</Link>;
 }

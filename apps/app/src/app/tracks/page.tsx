@@ -2,11 +2,11 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
+import { TrackBriefLink } from "@/components/markdown";
 import { LoadingText, MetaLink, MetaRow, Page } from "@/components/page";
 import { ProjectCliDialog } from "@/components/project-cli-dialog";
 import { TrackLogo, TrackTag } from "@/components/track-tag";
@@ -355,7 +355,7 @@ export default function TracksPage() {
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <Button asChild className="w-full sm:w-auto">
-                    <Link href={`/tracks/${track.slug}`}>Ver reto</Link>
+                    <TrackBriefLink track={track}>Ver reto</TrackBriefLink>
                   </Button>
                   <div className="flex min-w-0 flex-wrap items-center gap-3">
                     <code className="font-mono text-xs text-hs-brown">

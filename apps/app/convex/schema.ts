@@ -284,7 +284,7 @@ export default defineSchema({
     label: v.string(),
     body: v.string(),
     note: v.string(),
-    /** Challenge brief, rendered as markdown on /tracks/<slug>. */
+    /** Challenge brief: markdown on /tracks/<slug>, or a lone http(s) URL opened in a new tab. */
     markdown: v.optional(v.string()),
     /** Sponsor logo: a path under /public (e.g. /tracks/maisa.png) or an absolute URL. */
     logoUrl: v.optional(v.string()),
