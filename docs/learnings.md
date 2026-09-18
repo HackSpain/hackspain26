@@ -2,6 +2,14 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — Sanitize remote text before adding terminal styling
+
+**Evidence and consequence.** Feed fields reached the CLI renderer before sanitization, and `fit()` returned strings unchanged when they already fit. Bun reproduced OSC clipboard, hyperlink, cursor, DCS, and C1 sequences as terminal instructions rather than visible text, so a participant-controlled post could forge terminal output or modify the clipboard in compatible terminals.
+
+**Correction and prevention.** Pass every remote feed field through `terminalText()` before applying HackSpain's own ANSI styling. That boundary uses Bun's maintained ANSI parser, removes residual Unicode control and bidirectional formatting characters, and preserves only tabs and line feeds needed by the renderer. Do not sanitize after adding trusted colors, and do not rely on truncation as a security boundary.
+
+**Verification.** Keep focused feed tests for OSC 52, OSC 8, CSI, DCS, carriage returns, and bidirectional controls, alongside the full CLI check. New terminal surfaces that render server, repository, or participant data must use the same boundary.
+
 ## 2026-09-18 — Backend routes must not receive browser bot challenges
 
 **Symptom and evidence.** During the investigation from 17:00 Europe/Madrid (15:00 UTC), Vercel's managed bot filter returned 429s for `/betterstack/web-vitals` and some `/api/auth` requests. The existing bypass covered only `^/api/(cli|files)/` and a separate GET `/api/tv` monitor. It left auth and observability endpoints exposed to challenges. Better Stack's `@logtail/next@0.4.0` fetch fallback also attempted to replace the browser User-Agent with `next-logtail/v0.4.0`, which was associated with the challenged telemetry requests.

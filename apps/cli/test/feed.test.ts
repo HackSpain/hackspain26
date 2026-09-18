@@ -46,6 +46,31 @@ describe("feed formatting", () => {
     expect(lines[2]).toContain("github.com/quijote/agentos/commit/abc");
   });
 
+  test("remote posts cannot inject terminal controls", () => {
+    const post: FeedItem = {
+      _id: "hostile",
+      author: {
+        name: "Ana\u001B]52;c;ZXZpbA==\u0007",
+      },
+      createdAt: NOW,
+      imageUrl: "https://files.example/image\rforged",
+      kind: "post",
+      teamName: "Quijote\u001B[2J Labs",
+      text: [
+        "visible\u001B]8;;https://evil.example\u0007 link\u001B]8;;\u0007",
+        "safe\u001BPignored\u001B\\ text\u202E",
+      ].join("\n"),
+    };
+
+    const rendered = postLines(post, NOW).map(stripAnsi).join("\n");
+    expect(rendered).toContain("Ana · Quijote Labs");
+    expect(rendered).toContain("visible link");
+    expect(rendered).toContain("safe text");
+    expect(rendered).toContain("image: https://files.example/imageforged");
+    expect(rendered).not.toContain("evil.example");
+    expect(rendered.replaceAll("\n", "")).not.toMatch(/\p{Cc}/u);
+  });
+
   test("image paths become links on the dashboard domain", () => {
     const [withImage, without] = withImageUrls(
       [{ imagePath: "/api/files/abc" }, { imagePath: undefined }],
