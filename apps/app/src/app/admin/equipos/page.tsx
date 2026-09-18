@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
+import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -55,6 +56,7 @@ function matchesSearch(team: TeamRow, query: string) {
 export default function AdminTeamsPage() {
   const data = useQuery(api.teams.adminDirectory);
   const setTrack = useMutation(api.teams.adminSetTrack);
+  const removeTrack = useMutation(api.teams.adminRemoveTrack);
   const [search, setSearch] = useState("");
   const [trackFilter, setTrackFilter] = useState<string>(ALL);
   const [savingId, setSavingId] = useState<Id<"teams"> | null>(null);
@@ -96,6 +98,18 @@ export default function AdminTeamsPage() {
       await setTrack({ teamId, trackId });
     } catch (err) {
       setError(errorMessage(err, "No se pudo cambiar el track."));
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const drop = async (teamId: Id<"teams">, trackId: Id<"tracks">) => {
+    setSavingId(teamId);
+    setError(null);
+    try {
+      await removeTrack({ teamId, trackId });
+    } catch (err) {
+      setError(errorMessage(err, "No se pudo quitar el track."));
     } finally {
       setSavingId(null);
     }
@@ -165,6 +179,7 @@ export default function AdminTeamsPage() {
                 teamLimit={data.teamLimit}
                 tracks={data.tracks}
                 onChange={(trackId) => void save(team._id, trackId)}
+                onRemove={(trackId) => void drop(team._id, trackId)}
               />
             ))}
           </TableBody>
@@ -178,6 +193,7 @@ function TeamRowView({
   countById,
   disabled,
   onChange,
+  onRemove,
   team,
   teamLimit,
   tracks,
@@ -185,6 +201,7 @@ function TeamRowView({
   countById: Map<string, number>;
   disabled: boolean;
   onChange: (trackId: Id<"tracks"> | undefined) => void;
+  onRemove: (trackId: Id<"tracks">) => void;
   team: TeamRow;
   teamLimit: number;
   tracks: TrackRow[];
@@ -217,9 +234,18 @@ function TeamRowView({
                 <Badge
                   key={track._id}
                   variant={extras || count > teamLimit ? "gold" : "default"}
-                  className="tabular-nums"
+                  className="gap-1 pr-0.5 tabular-nums"
                 >
                   {track.label} · {occupancy(count, teamLimit)}
+                  <button
+                    type="button"
+                    aria-label={`Quitar ${track.label} de ${team.name}`}
+                    disabled={disabled}
+                    className="flex size-5 items-center justify-center text-hs-ink/70 hover:text-hs-ink disabled:pointer-events-none"
+                    onClick={() => onRemove(track._id)}
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
                 </Badge>
               );
             })}

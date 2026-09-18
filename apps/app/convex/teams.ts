@@ -1015,3 +1015,35 @@ export const adminSetTrack = adminMutation({
   },
   returns: v.null(),
 });
+
+export const adminRemoveTrack = adminMutation({
+  args: {
+    teamId: v.id("teams"),
+    trackId: v.id("tracks"),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Equipo no encontrado");
+    }
+    const existing = await ctx.db
+      .query("submissions")
+      .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+      .first();
+    if (!existing) {
+      return null;
+    }
+    const challengeIds = existing.challengeIds.filter(
+      (trackId) => trackId !== args.trackId
+    );
+    if (challengeIds.length === existing.challengeIds.length) {
+      return null;
+    }
+    await ctx.db.patch(existing._id, {
+      challengeIds,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+  returns: v.null(),
+});
