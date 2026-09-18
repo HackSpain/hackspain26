@@ -38,6 +38,7 @@ const FEED_SCROLL_KEYS: Record<string, number> = {
 const FEED_LIVE_KEYS = new Set(["g", `${ESC}[H`]);
 
 const HARNESS_NAMES: Record<string, string> = {
+  antigravity: "Antigravity",
   "claude-code": "Claude Code",
   cline: "Cline",
   codex: "Codex",
@@ -61,6 +62,7 @@ const TEAL: Rgb = [53, 133, 138];
  * at a glance. Single-cell symbols only; the names stay as the label.
  */
 const HARNESS_BRAND: Record<string, { glyph: string; color: Rgb }> = {
+  antigravity: { color: [124, 92, 255], glyph: "◠" },
   "claude-code": { color: [217, 119, 87], glyph: "✻" },
   cline: { color: [99, 102, 241], glyph: "▣" },
   codex: { color: [16, 163, 127], glyph: "⬡" },

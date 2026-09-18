@@ -39,7 +39,7 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 | `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key for queries and downstream processing |
 | `occurredAt` | ISO-8601 UTC | When the harness recorded it. The hackathon window and every time bucket use this one, so usage read days later still lands when it happened |
 | `observedAt` | ISO-8601 UTC | When the watcher read it |
-| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` \| `pi` \| `omp` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
+| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` \| `pi` \| `omp` \| `antigravity` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
 | `harnessVersion` | string? | e.g. Claude Code `2.1.261`, Codex `0.130.0` |
 | `sessionId` | string | Harness session / task id |
 | `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path. `gitBranch` is the harness's own when it logs one (Claude Code, Codex, Qwen Code), else read from the repository's `.git/HEAD`, so every harness reports it; absent outside a repository or on a detached HEAD |
@@ -64,6 +64,7 @@ buckets on `occurredAt`.
 | qwen-code | `~/.qwen/projects/<slug>/chats/<session>.jsonl` (`QWEN_HOME` overrides), records with `type: "assistant"` and `usageMetadata` | `sessionId` | record `uuid` | `promptTokenCount − cachedContentTokenCount` | `candidatesTokenCount`, plus `thoughtsTokenCount` when the total counts it apart | `cachedContentTokenCount` | 0 | `model`; `thoughtsTokenCount` → `reasoning`; `version` → `harnessVersion` |
 | pi | `~/.pi/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoning` → `reasoning`; `usage.cost.total` → `native.costUsd` |
 | omp | `~/.omp/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoningTokens` → `reasoning`; `usage.cost.total` → `native.costUsd` |
+| antigravity | `~/.gemini/antigravity-cli/conversations/<uuid>.db` (Antigravity CLI, `agy`), table `steps`, rows whose protobuf `metadata` carries a usage message (field 9); `gen_metadata` names the model codes and the sibling `conversation_summaries.db` gives the workspace | the file name's uuid | step `idx` | usage field 2 (already net of cache reads) | usage field 3 (already includes thoughts) | usage field 5 | 0 (implicit caching) | usage field 1 → `gen_metadata` name; usage field 10 (thoughts) → `reasoning` |
 
 Reasoning tokens go to `tokens.reasoning` when the harness reports them (Claude thinking,
 Codex `reasoning_output_tokens`, OpenCode `tokens.reasoning`, Gemini CLI and Qwen Code thought
@@ -93,13 +94,17 @@ Only persisted assistant usage is collected, not compaction summaries or estimat
 
 ## Known limits
 
-- `tokens.cacheWrite` is always 0 for Gemini CLI and Qwen Code: their caching is implicit and no
-  write is billed or reported.
+- `tokens.cacheWrite` is always 0 for Gemini CLI, Qwen Code and Antigravity: their caching is
+  implicit and no write is billed or reported.
 - `harnessVersion` exists only where the harness logs it (Claude Code, Codex, Qwen Code).
+- Antigravity's step schema is undocumented: the field numbers come from decoding real
+  conversations (output = candidates + thoughts on every one of 7.7k steps checked). A step whose
+  model code no conversation names is reported as `unknown`.
 - Cline reports no reasoning count, and its `tokensIn` follows whatever the provider adapter did
   with cached tokens; there is no total in the record to check it against.
 - Codex, Gemini CLI, Qwen Code, Kilo Code, Pi and Oh My Pi collectors are written from documented formats, not
-  checked against a local install. Claude Code and OpenCode are checked against real logs.
+  checked against a local install. Claude Code, OpenCode and Antigravity are checked against real
+  logs.
 - `cursor` and `copilot` keep no local usage logs, so they have no collector.
 
 ## Collection window

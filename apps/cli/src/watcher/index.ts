@@ -16,6 +16,7 @@ import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
 import { createBatcher } from "./batcher";
+import { antigravityCollector } from "./collectors/antigravity";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
@@ -63,6 +64,7 @@ export const COLLECTORS: Collector[] = [
   clineCollector,
   piCollector,
   ompCollector,
+  antigravityCollector,
 ];
 
 export type WatchOptions = {
