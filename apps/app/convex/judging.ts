@@ -229,7 +229,11 @@ function projectFields(submission: Doc<"submissions">, catalog: Catalog) {
     perks,
     teamLogoUrl: teamLogoUrlFor(team),
     teamName: team?.name,
-    techStack: submission.techStack ?? [],
+    // The scan lands on whichever has the repo; the team's covers a project
+    // that never got its own repo URL.
+    techStack: submission.techStack?.length
+      ? submission.techStack
+      : (team?.techStack ?? []),
     urls: submission.urls,
   };
 }

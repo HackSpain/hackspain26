@@ -1,6 +1,39 @@
+import {
+  normalizePackage,
+  PACKAGE_PREFIX_TAGS,
+  PACKAGE_TAGS,
+  PRODUCT_ORDER,
+} from "./stackCatalog";
+
+export { stackCategory } from "./stackCatalog";
+export type { StackCategory } from "./stackCatalog";
+
 export const MAX_TECH_STACK = 12;
 export const MAX_TECH_LENGTH = 32;
 export const STACK_SCAN_TTL_MS = 6 * 60 * 60 * 1000;
+/**
+ * How stale a stack may get while somebody on the team has the CLI watcher
+ * open: it asks for a re-scan on its own, and this is what keeps a whole team
+ * of watchers down to one scan per period.
+ */
+export const STACK_BACKGROUND_TTL_MS = 30 * 60 * 1000;
+// Each chosen file is one GitHub request, so these bound the cost of a scan.
+const MAX_MANIFEST_FILES = 20;
+const MAX_SOURCE_FILES = 12;
+
+/**
+ * Typed by somebody rather than read from a repo. Only a scan somebody asked
+ * for replaces it; the ones that run on their own (the CLI watcher, a draft
+ * save, a mass re-scan) leave it alone.
+ */
+export function isHandSet(
+  doc:
+    | { techStack?: string[]; techStackSource?: "repo" }
+    | null
+    | undefined
+): boolean {
+  return Boolean(doc?.techStack?.length) && doc?.techStackSource !== "repo";
+}
 
 export type StackFile = { path: string; content: string };
 
@@ -9,8 +42,6 @@ export type DetectStackInput = {
   languages?: Record<string, number>;
   paths?: string[];
 };
-
-export type StackCategory = "Frontend" | "Backend" | "Datos" | "Otras";
 
 const SKIP_DIR = new Set([
   ".cache",
@@ -32,6 +63,7 @@ const SKIP_DIR = new Set([
 const MANIFEST_NAMES = new Set([
   "Cargo.toml",
   "Gemfile",
+  "Package.swift",
   "Pipfile",
   "build.gradle",
   "build.gradle.kts",
@@ -47,6 +79,7 @@ const MANIFEST_NAMES = new Set([
 
 const SOURCE_EXT = new Set([
   "go",
+  "java",
   "js",
   "jsx",
   "kt",
@@ -57,7 +90,7 @@ const SOURCE_EXT = new Set([
   "tsx",
 ]);
 
-const LANGUAGE_ORDER = [
+export const LANGUAGE_ORDER = [
   "TypeScript",
   "JavaScript",
   "Python",
@@ -72,176 +105,31 @@ const LANGUAGE_ORDER = [
   "Elixir",
   "Dart",
   "C++",
+  "C",
+  "Scala",
+  "Solidity",
+  "Zig",
+  "Haskell",
+  "OCaml",
+  "Clojure",
+  "Gleam",
+  "Julia",
+  "R",
+  "Lua",
+  "F#",
+  "Objective-C",
 ];
 
-const PRODUCT_ORDER = [
-  "Next.js",
-  "Nuxt",
-  "Remix",
-  "SvelteKit",
-  "Astro",
-  "Angular",
-  "React Native",
-  "Expo",
-  "React",
-  "Vue",
-  "Svelte",
-  "Solid",
-  "Flutter",
-  "Unity",
-  "Tailwind",
-  "Three.js",
-  "Vite",
-  "Convex",
-  "Supabase",
-  "Firebase",
-  "FastAPI",
-  "Django",
-  "Flask",
-  "Express",
-  "Hono",
-  "Fastify",
-  "NestJS",
-  "Gin",
-  "Fiber",
-  "Axum",
-  "Actix",
-  "Rails",
-  "Laravel",
-  "Spring",
-  "ASP.NET",
-  "Phoenix",
-  "Prisma",
-  "Drizzle",
-  "Postgres",
-  "SQLite",
-  "MongoDB",
-  "Redis",
-  "PyTorch",
-  "TensorFlow",
-  "LangChain",
-  "Transformers",
-  "OpenAI",
-  "Streamlit",
-  "Gradio",
-];
-
-export const STACK_CATEGORY: Record<string, StackCategory> = {
-  Actix: "Backend",
-  Angular: "Frontend",
-  "ASP.NET": "Backend",
-  Astro: "Frontend",
-  Axum: "Backend",
-  Convex: "Backend",
-  Django: "Backend",
-  Drizzle: "Datos",
-  Expo: "Frontend",
-  Express: "Backend",
-  FastAPI: "Backend",
-  Fastify: "Backend",
-  Fiber: "Backend",
-  Firebase: "Backend",
-  Flask: "Backend",
-  Flutter: "Frontend",
-  Gin: "Backend",
-  Gradio: "Datos",
-  Hono: "Backend",
-  LangChain: "Datos",
-  Laravel: "Backend",
-  MongoDB: "Datos",
-  NestJS: "Backend",
-  "Next.js": "Frontend",
-  Nuxt: "Frontend",
-  OpenAI: "Datos",
-  Phoenix: "Backend",
-  Postgres: "Datos",
-  Prisma: "Datos",
-  PyTorch: "Datos",
-  Rails: "Backend",
-  React: "Frontend",
-  "React Native": "Frontend",
-  Redis: "Datos",
-  Remix: "Frontend",
-  Solid: "Frontend",
-  Spring: "Backend",
-  SQLite: "Datos",
-  Streamlit: "Datos",
-  Supabase: "Backend",
-  Svelte: "Frontend",
-  SvelteKit: "Frontend",
-  Tailwind: "Frontend",
-  TensorFlow: "Datos",
-  "Three.js": "Frontend",
-  Transformers: "Datos",
-  Unity: "Otras",
-  Vite: "Frontend",
-  Vue: "Frontend",
-};
-
-const PACKAGE_TAGS: Record<string, string> = {
-  "@ai-sdk/openai": "OpenAI",
-  "@auth/core": "Auth.js",
-  "@langchain/core": "LangChain",
-  "@nestjs/core": "NestJS",
-  "@react-three/fiber": "Three.js",
-  "@remix-run/react": "Remix",
-  "@sveltejs/kit": "SvelteKit",
-  "@supabase/supabase-js": "Supabase",
-  "@trpc/server": "tRPC",
-  actixweb: "Actix",
-  "actix-web": "Actix",
-  ai: "AI SDK",
-  angular: "Angular",
-  astro: "Astro",
-  axum: "Axum",
-  convex: "Convex",
-  django: "Django",
-  "drizzle-orm": "Drizzle",
-  electron: "Electron",
-  expo: "Expo",
-  express: "Express",
-  fastapi: "FastAPI",
-  fastify: "Fastify",
-  firebase: "Firebase",
-  flask: "Flask",
-  flutter: "Flutter",
-  gin: "Gin",
-  "github.com/gin-gonic/gin": "Gin",
-  "github.com/gofiber/fiber": "Fiber",
-  "github.com/gofiber/fiber/v2": "Fiber",
-  "github.com/labstack/echo": "Echo",
-  "github.com/labstack/echo/v4": "Echo",
-  gradio: "Gradio",
-  hono: "Hono",
-  ioredis: "Redis",
-  langchain: "LangChain",
-  "laravel/framework": "Laravel",
-  mongoose: "MongoDB",
-  next: "Next.js",
-  nuxt: "Nuxt",
-  openai: "OpenAI",
-  pg: "Postgres",
-  phoenix: "Phoenix",
-  postgres: "Postgres",
-  prisma: "Prisma",
-  pytorch: "PyTorch",
-  rails: "Rails",
-  react: "React",
-  "react-native": "React Native",
-  redis: "Redis",
-  remix: "Remix",
-  "solid-js": "Solid",
-  streamlit: "Streamlit",
-  supabase: "Supabase",
-  svelte: "Svelte",
-  tailwindcss: "Tailwind",
-  tensorflow: "TensorFlow",
-  three: "Three.js",
-  torch: "PyTorch",
-  transformers: "Transformers",
-  typescript: "TypeScript",
-  vite: "Vite",
-  vue: "Vue",
+/** GitHub's language names that are one of our product tags instead. */
+export const GITHUB_LANGUAGE_TAGS: Record<string, string> = {
+  Astro: "Astro",
+  Dockerfile: "Docker",
+  GDScript: "Godot",
+  HCL: "Terraform",
+  "Jupyter Notebook": "Jupyter",
+  SCSS: "Sass",
+  Svelte: "Svelte",
+  Vue: "Vue",
 };
 
 const SKIP_PACKAGES = new Set([
@@ -291,18 +179,126 @@ const PYTHON_STDLIB = new Set([
 ]);
 
 const LANGUAGE_FROM_EXT: Record<string, string> = {
+  c: "C",
+  cc: "C++",
+  clj: "Clojure",
+  cpp: "C++",
   cs: "C#",
+  cxx: "C++",
+  dart: "Dart",
+  ex: "Elixir",
+  exs: "Elixir",
+  gleam: "Gleam",
   go: "Go",
+  hpp: "C++",
+  hs: "Haskell",
   java: "Java",
+  jl: "Julia",
   js: "JavaScript",
   jsx: "JavaScript",
   kt: "Kotlin",
+  lua: "Lua",
+  ml: "OCaml",
+  php: "PHP",
   py: "Python",
+  r: "R",
+  rb: "Ruby",
   rs: "Rust",
+  scala: "Scala",
+  sol: "Solidity",
   swift: "Swift",
   ts: "TypeScript",
   tsx: "TypeScript",
+  zig: "Zig",
 };
+
+/** File extensions that name a product rather than a language. */
+export const PRODUCT_FROM_EXT: Record<string, string> = {
+  astro: "Astro",
+  gd: "Godot",
+  gql: "GraphQL",
+  graphql: "GraphQL",
+  ipynb: "Jupyter",
+  prisma: "Prisma",
+  proto: "gRPC",
+  scss: "Sass",
+  svelte: "Svelte",
+  tf: "Terraform",
+  tscn: "Godot",
+  unity: "Unity",
+  uproject: "Unreal Engine",
+  vue: "Vue",
+};
+
+/** Whole file names, lowercased, that give a tool away wherever they sit. */
+export const PRODUCT_FROM_FILE: Record<string, string> = {
+  "anchor.toml": "Anchor",
+  "angular.json": "Angular",
+  "bun.lock": "Bun",
+  "bun.lockb": "Bun",
+  "bunfig.toml": "Bun",
+  "chart.yaml": "Kubernetes",
+  "components.json": "shadcn/ui",
+  "compose.yaml": "Docker",
+  "compose.yml": "Docker",
+  "dbt_project.yml": "dbt",
+  "deno.json": "Deno",
+  "deno.jsonc": "Deno",
+  "docker-compose.yaml": "Docker",
+  "docker-compose.yml": "Docker",
+  dockerfile: "Docker",
+  "firebase.json": "Firebase",
+  "fly.toml": "Fly.io",
+  "foundry.toml": "Foundry",
+  "kustomization.yaml": "Kubernetes",
+  "manage.py": "Django",
+  "netlify.toml": "Netlify",
+  "nginx.conf": "Nginx",
+  "nx.json": "Nx",
+  "project.godot": "Godot",
+  "pulumi.yaml": "Pulumi",
+  "railway.json": "Railway",
+  "railway.toml": "Railway",
+  "render.yaml": "Render",
+  "serverless.yml": "Serverless",
+  "tauri.conf.json": "Tauri",
+  "turbo.json": "Turborepo",
+  "vercel.json": "Vercel",
+  "wp-config.php": "WordPress",
+  "wrangler.json": "Cloudflare Workers",
+  "wrangler.jsonc": "Cloudflare Workers",
+  "wrangler.toml": "Cloudflare Workers",
+};
+
+/** `next.config.ts`, `next.config.mjs`...: the part before the extension. */
+export const PRODUCT_FROM_CONFIG: Record<string, string> = {
+  "astro.config": "Astro",
+  "capacitor.config": "Capacitor",
+  "cypress.config": "Cypress",
+  "drizzle.config": "Drizzle",
+  "hardhat.config": "Hardhat",
+  "jest.config": "Jest",
+  "next.config": "Next.js",
+  "nuxt.config": "Nuxt",
+  "playwright.config": "Playwright",
+  "remix.config": "Remix",
+  "sst.config": "SST",
+  "svelte.config": "Svelte",
+  "tailwind.config": "Tailwind",
+  "vite.config": "Vite",
+  "vitest.config": "Vitest",
+  "webpack.config": "Webpack",
+};
+
+/** Folders that only one tool makes. */
+export const PRODUCT_FROM_DIR: [RegExp, string][] = [
+  [/(^|\/)convex\//, "Convex"],
+  [/(^|\/)\.github\/workflows\//, "GitHub Actions"],
+  [/(^|\/)supabase\/(migrations|functions)\//, "Supabase"],
+  [/(^|\/)\.storybook\//, "Storybook"],
+  [/(^|\/)wp-content\//, "WordPress"],
+  [/(^|\/)Assets\//, "Unity"],
+];
 
 const IMPLIED_DROP: Record<string, string[]> = {
   "Next.js": ["React"],
@@ -312,6 +308,11 @@ const IMPLIED_DROP: Record<string, string[]> = {
   Expo: ["React Native", "React"],
   "React Native": ["React"],
   NestJS: ["Express"],
+  Gatsby: ["React"],
+  Docusaurus: ["React"],
+  "TanStack Start": ["React", "TanStack Router"],
+  SolidStart: ["Solid"],
+  "shadcn/ui": ["Radix UI"],
 };
 
 function basename(path: string): string {
@@ -343,31 +344,81 @@ function isSource(path: string): boolean {
     name.endsWith(".d.ts") ||
     name.endsWith(".min.js") ||
     name.includes(".test.") ||
-    name.includes(".spec.")
+    name.includes(".spec.") ||
+    // Tool configs sit at the top of every package and import nothing useful;
+    // tagsFromPaths already reads what their names say.
+    name.includes(".config.")
   ) {
     return false;
   }
   return SOURCE_EXT.has(extOf(path));
 }
 
-/** Pick a bounded set of repo paths to fetch. Root manifests win. */
+function dirOf(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash === -1 ? "" : path.slice(0, slash);
+}
+
+function byDepth(a: string, b: string): number {
+  return depthOf(a) - depthOf(b) || a.localeCompare(b);
+}
+
+/** Take one path from each group in turn until `limit`, so no group starves. */
+function dealRoundRobin(groups: string[][], limit: number): string[] {
+  const out: string[] = [];
+  for (let round = 0; out.length < limit; round++) {
+    const before = out.length;
+    for (const group of groups) {
+      const path = group[round];
+      if (path !== undefined && out.length < limit) {
+        out.push(path);
+      }
+    }
+    if (out.length === before) {
+      break;
+    }
+  }
+  return out;
+}
+
+function groupBy(paths: string[], keyOf: (path: string) => string): string[][] {
+  const groups = new Map<string, string[]>();
+  for (const path of paths) {
+    const key = keyOf(path);
+    const group = groups.get(key);
+    if (group) {
+      group.push(path);
+    } else {
+      groups.set(key, [path]);
+    }
+  }
+  return [...groups.values()];
+}
+
+/**
+ * Pick a bounded set of repo paths to fetch. Depth never rules a file out: in
+ * a monorepo the real manifests and code live under apps/* or packages/*.
+ * Manifests are dealt across ecosystems (a lone requirements.txt is not pushed
+ * out by thirty package.json) and sources across the package each belongs to,
+ * shallowest first within each.
+ */
 export function selectStackFiles(paths: string[]): string[] {
   const usable = paths.filter((path) => path && !isIgnoredPath(path));
-  const manifests = usable
-    .filter(isManifest)
-    .toSorted((a, b) => depthOf(a) - depthOf(b) || a.localeCompare(b));
-  const packageJson = manifests.filter(
-    (path) => basename(path) === "package.json"
+  const manifests = usable.filter(isManifest).toSorted(byDepth);
+  const chosenManifests = dealRoundRobin(
+    groupBy(manifests, basename),
+    MAX_MANIFEST_FILES
   );
-  const others = manifests.filter((path) => basename(path) !== "package.json");
-  const chosenManifests = [
-    ...packageJson.filter((path) => depthOf(path) <= 3).slice(0, 5),
-    ...others.slice(0, packageJson.length === 0 ? 3 : 2),
-  ].slice(0, 7);
-  const sources = usable
-    .filter(isSource)
-    .toSorted((a, b) => depthOf(a) - depthOf(b) || a.localeCompare(b))
-    .slice(0, 8);
+  // Longest root first, so a file belongs to its nearest package.
+  const roots = [...new Set(manifests.map(dirOf))].toSorted(
+    (a, b) => b.length - a.length
+  );
+  const rootOf = (path: string) =>
+    roots.find((root) => root === "" || path.startsWith(`${root}/`)) ?? "";
+  const sources = dealRoundRobin(
+    groupBy(usable.filter(isSource).toSorted(byDepth), rootOf),
+    MAX_SOURCE_FILES
+  );
   return [...new Set([...chosenManifests, ...sources])];
 }
 
@@ -382,15 +433,38 @@ function packageKey(raw: string): string {
   const trimmed = raw.trim().replace(/^npm:/, "");
   if (trimmed.startsWith("@")) {
     const parts = trimmed.split("/");
-    return parts.slice(0, 2).join("/").toLowerCase();
+    return normalizePackage(parts.slice(0, 2).join("/"));
   }
-  return trimmed.split("/")[0]?.toLowerCase() ?? "";
+  return normalizePackage(trimmed.split("/")[0] ?? "");
+}
+
+/**
+ * Go names a module by its path, and code imports subpackages and major
+ * versions of it (github.com/gin-gonic/gin/binding, .../fiber/v2), so try
+ * every shorter prefix down to host/name.
+ */
+function tagForGoModule(full: string): string | undefined {
+  const parts = full.split("/");
+  if (!parts[0]?.includes(".")) {
+    return undefined;
+  }
+  for (let size = parts.length - 1; size >= 2; size--) {
+    const tag = PACKAGE_TAGS.get(parts.slice(0, size).join("/"));
+    if (tag) {
+      return tag;
+    }
+  }
+  return undefined;
 }
 
 function tagForPackage(raw: string): string | undefined {
-  const full = raw.trim().toLowerCase();
-  if (PACKAGE_TAGS[full]) {
-    return PACKAGE_TAGS[full];
+  const full = normalizePackage(raw);
+  if (full === "typescript") {
+    return "TypeScript";
+  }
+  const exact = PACKAGE_TAGS.get(full) ?? tagForGoModule(full);
+  if (exact) {
+    return exact;
   }
   const key = packageKey(raw);
   if (!key || key.startsWith(".") || key.startsWith("node:")) {
@@ -399,7 +473,10 @@ function tagForPackage(raw: string): string | undefined {
   if (SKIP_PACKAGES.has(key)) {
     return undefined;
   }
-  return PACKAGE_TAGS[key];
+  return (
+    PACKAGE_TAGS.get(key) ??
+    PACKAGE_PREFIX_TAGS.find(([prefix]) => full.startsWith(prefix))?.[1]
+  );
 }
 
 function parsePackageJson(content: string, tags: Set<string>): void {
@@ -522,6 +599,55 @@ function parseMix(content: string, tags: Set<string>): void {
   }
 }
 
+// Longest prefix first: androidx.compose is Compose, the rest of androidx is not.
+export const JVM_PREFIX_TAGS: [string, string][] = [
+  ["androidx.compose", "Jetpack Compose"],
+  ["org.springframework", "Spring"],
+  ["io.ktor", "Ktor"],
+  ["io.quarkus", "Quarkus"],
+  ["io.micronaut", "Micronaut"],
+  ["io.vertx", "Vert.x"],
+  ["org.hibernate", "Hibernate"],
+  ["org.jetbrains.exposed", "Exposed"],
+  ["dev.langchain4j", "LangChain4j"],
+  ["com.google.firebase", "Firebase"],
+  ["org.apache.kafka", "Kafka"],
+  ["org.apache.spark", "Spark"],
+  ["org.postgresql", "Postgres"],
+  ["org.mongodb", "MongoDB"],
+  ["com.badlogic.gdx", "libGDX"],
+  ["androidx.", "Android"],
+  ["android.", "Android"],
+  ["com.android.", "Android"],
+];
+
+/** NuGet package ids, by prefix, lowercased. */
+export const DOTNET_PREFIX_TAGS: [string, string][] = [
+  ["microsoft.aspnetcore.components", "Blazor"],
+  ["microsoft.aspnetcore", "ASP.NET"],
+  ["microsoft.entityframeworkcore", "EF Core"],
+  ["microsoft.maui", ".NET MAUI"],
+  ["microsoft.semantickernel", "Semantic Kernel"],
+  ["avalonia", "Avalonia"],
+  ["dapper", "Dapper"],
+  ["npgsql", "Postgres"],
+  ["mongodb.driver", "MongoDB"],
+  ["stackexchange.redis", "Redis"],
+  ["azure.", "Azure"],
+  ["awssdk.", "AWS"],
+  ["openai", "OpenAI"],
+  ["anthropic", "Anthropic"],
+  ["stripe.net", "Stripe"],
+];
+
+function addJvmTags(content: string, tags: Set<string>): void {
+  for (const [prefix, tag] of JVM_PREFIX_TAGS) {
+    if (content.includes(prefix)) {
+      addTag(tags, tag);
+    }
+  }
+}
+
 function parseGradle(content: string, tags: Set<string>): void {
   if (/\bkotlin\b/i.test(content)) {
     addTag(tags, "Kotlin");
@@ -529,12 +655,21 @@ function parseGradle(content: string, tags: Set<string>): void {
   if (/\bspring\b/i.test(content)) {
     addTag(tags, "Spring");
   }
+  addJvmTags(content, tags);
+}
+
+function parsePackageSwift(content: string, tags: Set<string>): void {
+  // .package(url: "https://github.com/vapor/vapor.git", from: "4.0.0")
+  for (const match of content.matchAll(/url:\s*"[^"]*\/([^/"]+?)(?:\.git)?"/g)) {
+    addTag(tags, tagForPackage(match[1] ?? ""));
+  }
 }
 
 function parsePom(content: string, tags: Set<string>): void {
   if (/spring/i.test(content)) {
     addTag(tags, "Spring");
   }
+  addJvmTags(content, tags);
   addTag(tags, "Java");
 }
 
@@ -545,6 +680,13 @@ function parseCsproj(content: string, tags: Set<string>): void {
   }
   if (/UnityEngine/i.test(content)) {
     addTag(tags, "Unity");
+  }
+  if (/<UseMaui>\s*true/i.test(content)) {
+    addTag(tags, ".NET MAUI");
+  }
+  for (const match of content.matchAll(/<PackageReference\s+Include="([^"]+)"/gi)) {
+    const id = (match[1] ?? "").toLowerCase();
+    addTag(tags, DOTNET_PREFIX_TAGS.find(([prefix]) => id.startsWith(prefix))?.[1]);
   }
 }
 
@@ -582,6 +724,11 @@ function parseManifest(path: string, content: string, tags: Set<string>): void {
   if (name === "composer.json") {
     parseComposer(content, tags);
     addTag(tags, "PHP");
+    return;
+  }
+  if (name === "Package.swift") {
+    parsePackageSwift(content, tags);
+    addTag(tags, "Swift");
     return;
   }
   if (name === "pubspec.yaml") {
@@ -625,10 +772,19 @@ function jsImports(content: string): string[] {
 
 function pythonImports(content: string): string[] {
   const found: string[] = [];
-  for (const match of content.matchAll(/^(?:from|import)\s+([a-zA-Z_][\w.]*)/gm)) {
-    const root = match[1]?.split(".")[0];
-    if (root && !PYTHON_STDLIB.has(root)) {
-      found.push(root);
+  // Namespace packages only mean something with their second part, which
+  // can sit on either side: `import google.genai`, `from google import genai`.
+  const pattern =
+    /^(?:import\s+([a-zA-Z_][\w.]*)|from\s+([a-zA-Z_][\w.]*)\s+import\s+([a-zA-Z_]\w*)?)/gm;
+  for (const match of content.matchAll(pattern)) {
+    const [root, inner] = (match[1] ?? match[2] ?? "").split(".");
+    if (!root || PYTHON_STDLIB.has(root)) {
+      continue;
+    }
+    found.push(root);
+    const second = inner ?? match[3];
+    if (second) {
+      found.push(`${root}.${second}`);
     }
   }
   return found;
@@ -659,11 +815,18 @@ function rustImports(content: string): string[] {
 function swiftImports(content: string): string[] {
   const found: string[] = [];
   for (const match of content.matchAll(/^import\s+([A-Za-z_][\w]*)/gm)) {
-    if (match[1] && match[1] !== "Foundation" && match[1] !== "SwiftUI") {
+    if (match[1] && match[1] !== "Foundation") {
       found.push(match[1]);
     }
   }
   return found;
+}
+
+/** Only the import lines, so a package name in a comment or string is not a hit. */
+function jvmImports(content: string): string {
+  return [...content.matchAll(/^import\s+(?:static\s+)?([\w.]+)/gm)]
+    .map((match) => match[1])
+    .join("\n");
 }
 
 function parseImports(path: string, content: string, tags: Set<string>): void {
@@ -679,6 +842,8 @@ function parseImports(path: string, content: string, tags: Set<string>): void {
     specs = rustImports(content);
   } else if (ext === "swift") {
     specs = swiftImports(content);
+  } else if (ext === "kt" || ext === "java") {
+    addJvmTags(jvmImports(content), tags);
   }
   for (const spec of specs) {
     addTag(tags, tagForPackage(spec));
@@ -690,31 +855,20 @@ function tagsFromPaths(paths: string[], tags: Set<string>): void {
     if (isIgnoredPath(path)) {
       continue;
     }
-    const name = basename(path);
-    if (name.startsWith("next.config.")) {
-      addTag(tags, "Next.js");
+    const name = basename(path).toLowerCase();
+    const ext = extOf(path);
+    addTag(tags, PRODUCT_FROM_FILE[name]);
+    // "next.config.mjs" -> "next.config"
+    addTag(tags, PRODUCT_FROM_CONFIG[name.split(".").slice(0, 2).join(".")]);
+    addTag(tags, LANGUAGE_FROM_EXT[ext]);
+    addTag(tags, PRODUCT_FROM_EXT[ext]);
+    if (name.startsWith("dockerfile.") || ext === "dockerfile") {
+      addTag(tags, "Docker");
     }
-    if (name.startsWith("astro.config.")) {
-      addTag(tags, "Astro");
-    }
-    if (name.startsWith("svelte.config.")) {
-      addTag(tags, "Svelte");
-    }
-    if (name.startsWith("nuxt.config.")) {
-      addTag(tags, "Nuxt");
-    }
-    if (name.startsWith("tailwind.config.")) {
-      addTag(tags, "Tailwind");
-    }
-    if (name.endsWith(".unity") || path.startsWith("Assets/") || path.includes("/Assets/")) {
-      addTag(tags, "Unity");
-    }
-    if (path === "convex" || path.startsWith("convex/")) {
-      addTag(tags, "Convex");
-    }
-    const language = LANGUAGE_FROM_EXT[extOf(path)];
-    if (language) {
-      addTag(tags, language);
+    for (const [pattern, tag] of PRODUCT_FROM_DIR) {
+      if (pattern.test(path)) {
+        addTag(tags, tag);
+      }
     }
   }
 }
@@ -752,9 +906,10 @@ export function detectStack(input: DetectStackInput): string[] {
   tagsFromPaths(paths, tags);
   if (input.languages) {
     for (const name of Object.keys(input.languages)) {
-      if (LANGUAGE_ORDER.includes(name)) {
-        addTag(tags, name);
-      }
+      addTag(
+        tags,
+        LANGUAGE_ORDER.includes(name) ? name : GITHUB_LANGUAGE_TAGS[name]
+      );
     }
   }
   for (const file of input.files) {
@@ -766,8 +921,4 @@ export function detectStack(input: DetectStackInput): string[] {
     }
   }
   return finalize(tags);
-}
-
-export function stackCategory(name: string): StackCategory {
-  return STACK_CATEGORY[name] ?? "Otras";
 }

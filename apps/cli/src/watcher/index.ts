@@ -96,6 +96,12 @@ const RECENT_IDS_CAP = 5000;
 /** Thumbnails fetched per loop iteration, so a burst of images never stalls a scan. */
 const FEED_IMAGES_PER_TURN = 4;
 const TEAM_REFRESH_MS = 5 * 60 * 1000;
+/**
+ * How often the watcher asks for the team's stack to be re-read from its
+ * repo. Only asks: the server scans when the stack has gone stale, so a whole
+ * team of watchers costs one scan, and it leaves a hand-typed stack alone.
+ */
+export const STACK_REFRESH_MS = 30 * 60 * 1000;
 /** After this long without a usage event, scans slow down to save battery. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000;
 export const IDLE_INTERVAL_MS = 60 * 1000;
@@ -119,6 +125,22 @@ export function scanIntervalFor(
 }
 
 /** Sleep for `ms`, or until something calls `state.wake()` (a key press). */
+/** Whether this tick should ask for the team's stack to be re-read. */
+export function stackRefreshDue(input: {
+  inEvent: boolean;
+  lastAskedAt: number;
+  now: number;
+  once?: boolean;
+  teamId?: string;
+}): boolean {
+  return (
+    input.inEvent &&
+    Boolean(input.teamId) &&
+    !input.once &&
+    input.now - input.lastAskedAt > STACK_REFRESH_MS
+  );
+}
+
 function sleepOrWake(state: WatchState | undefined, ms: number): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -309,6 +331,7 @@ export async function runWatch(
   };
   let { teamId } = deps;
   let teamCheckedAt = Date.now();
+  let stackCheckedAt = 0;
   const identity = (): TelemetryEvent["identity"] => ({
     userId: me._id,
     ...(teamId ? { teamId } : {}),
@@ -554,6 +577,30 @@ export async function runWatch(
       } catch (error) {
         log(`team lookup failed: ${String(error)}`);
       }
+    }
+    // The team keeps building after linking the repo; this keeps what the
+    // dashboards say they build with current. Not awaited: a scan reads
+    // GitHub for a few seconds and telemetry does not wait for it.
+    if (
+      stackRefreshDue({
+        inEvent: inEvent(),
+        lastAskedAt: stackCheckedAt,
+        now: Date.now(),
+        once: options.once,
+        teamId,
+      })
+    ) {
+      stackCheckedAt = Date.now();
+      session.client
+        .action(api.stackDetect.mine, {})
+        .then((result) => {
+          if (result.scanned) {
+            log(`stack re-read from the repo: ${result.techStack.join(", ")}`);
+          }
+        })
+        .catch((error: unknown) =>
+          log(`stack refresh failed: ${String(error)}`)
+        );
     }
     if (state) {
       state.scanning = true;

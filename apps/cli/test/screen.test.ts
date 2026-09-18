@@ -4,7 +4,9 @@ import { box, fit, wrap } from "../src/lib/tui";
 import {
   IDLE_AFTER_MS,
   IDLE_INTERVAL_MS,
+  STACK_REFRESH_MS,
   scanIntervalFor,
+  stackRefreshDue,
 } from "../src/watcher/index";
 import { diffFrame, frame, gauge } from "../src/watcher/screen";
 import {
@@ -241,6 +243,18 @@ describe("primitives", () => {
     expect(
       scanIntervalFor(120_000, undefined, start + IDLE_AFTER_MS, start)
     ).toBe(120_000);
+  });
+
+  test("asks for a stack re-read at start, then every half hour, only for a team during the event", () => {
+    const due = { inEvent: true, lastAskedAt: 0, now: NOW, teamId: "t1" };
+    expect(stackRefreshDue(due)).toBe(true);
+    expect(stackRefreshDue({ ...due, lastAskedAt: NOW - 60_000 })).toBe(false);
+    expect(
+      stackRefreshDue({ ...due, lastAskedAt: NOW - STACK_REFRESH_MS - 1 })
+    ).toBe(true);
+    expect(stackRefreshDue({ ...due, teamId: undefined })).toBe(false);
+    expect(stackRefreshDue({ ...due, inEvent: false })).toBe(false);
+    expect(stackRefreshDue({ ...due, once: true })).toBe(false);
   });
 
   test("state keeps recent requests newest first and per-harness tokens", () => {

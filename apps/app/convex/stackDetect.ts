@@ -9,10 +9,14 @@ import { canonicalizeTags, detectStack, selectStackFiles } from "./lib/stack";
 
 const MAX_FILE_BYTES = 80_000;
 const MAX_REPOS = 5;
+// Monorepos mean more files per scan; a few at a time keeps it quick without
+// tripping GitHub's secondary rate limit.
+const FETCH_BATCH = 5;
 
 type GitHubRepo = { default_branch?: string; private?: boolean };
 type GitHubTree = {
   tree?: { path?: string; type?: string }[];
+  truncated?: boolean;
 };
 
 async function githubJson<T>(
@@ -86,17 +90,28 @@ async function scanOneRepo(
   const paths = (tree.value.tree ?? [])
     .filter((entry) => entry.type === "blob" && entry.path)
     .map((entry) => entry.path as string);
+  if (tree.value.truncated) {
+    console.warn(`github stack: tree ${repo} is truncated; scanning what came`);
+  }
+  const selected = selectStackFiles(paths);
   const files = [];
-  for (const path of selectStackFiles(paths)) {
-    const body = await githubText(
-      `https://api.github.com/repos/${repo}/contents/${path
-        .split("/")
-        .map(encodeURIComponent)
-        .join("/")}`,
-      token
+  for (let start = 0; start < selected.length; start += FETCH_BATCH) {
+    const batch = selected.slice(start, start + FETCH_BATCH);
+    const bodies = await Promise.all(
+      batch.map((path) =>
+        githubText(
+          `https://api.github.com/repos/${repo}/contents/${path
+            .split("/")
+            .map(encodeURIComponent)
+            .join("/")}`,
+          token
+        )
+      )
     );
-    if (body.ok) {
-      files.push({ content: body.value, path });
+    for (const [index, body] of bodies.entries()) {
+      if (body.ok) {
+        files.push({ content: body.value, path: batch[index] as string });
+      }
     }
   }
   const languages = await githubJson<Record<string, number>>(
@@ -135,6 +150,8 @@ async function detectRepos(
 export const scan = internalAction({
   args: {
     force: v.optional(v.boolean()),
+    /** Defaults to `!force`: only a scan somebody asked for replaces a hand-typed stack. */
+    keepHandSet: v.optional(v.boolean()),
     repoUrls: v.array(v.string()),
     submissionId: v.optional(v.id("submissions")),
     teamId: v.optional(v.id("teams")),
@@ -163,6 +180,7 @@ export const scan = internalAction({
     }
     const techStack = await detectRepos(args.repoUrls, target.token);
     await ctx.runMutation(internal.stack.record, {
+      keepHandSet: args.keepHandSet ?? !args.force,
       repoUrls: args.repoUrls,
       submissionId: args.submissionId,
       teamId: args.teamId,
@@ -176,10 +194,16 @@ export const scan = internalAction({
   }),
 });
 
+/**
+ * `force` is somebody asking for a scan (`hackspain stack detect`). Without
+ * it this is the CLI watcher keeping the stack current in the background: it
+ * scans only what has gone stale, and never replaces a hand-typed stack.
+ */
 export const mine = action({
   args: { force: v.optional(v.boolean()) },
-  handler: async (ctx, _args) => {
+  handler: async (ctx, args) => {
     const target = await ctx.runQuery(internal.stack.myContext, {
+      background: !args.force,
       now: Date.now(),
     });
     const repoUrls = [
@@ -189,11 +213,18 @@ export const mine = action({
     if (repoUrls.length === 0) {
       return { scanned: false, techStack: [] };
     }
+    const fresh =
+      (target.teamRepos.length > 0 ? target.teamFresh : true) &&
+      (target.submissionRepo ? target.submissionFresh : true);
+    if (!args.force && fresh) {
+      return { scanned: false, techStack: [] };
+    }
     if (!hasGithubAuth(target.token)) {
       return { scanned: false, techStack: [] };
     }
     const techStack = await detectRepos(repoUrls, target.token);
     await ctx.runMutation(internal.stack.record, {
+      keepHandSet: !args.force,
       repoUrls,
       submissionId: target.submissionId as Id<"submissions"> | undefined,
       teamId: target.teamId as Id<"teams"> | undefined,

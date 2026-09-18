@@ -21,6 +21,8 @@ export type LiveInsightData = {
   status: "loading" | TvInsights["usage"];
   samples: Sample[];
   teams: Team[];
+  /** Technologies per project; `auto` of `total` were read from a repo. */
+  stacks: TvInsights["stacks"];
   /** Minutes each of the 24 buckets covers; the hackathon is not 12 hours. */
   bucketMinutes: number;
   startsAt?: number;
@@ -30,6 +32,7 @@ export type LiveInsightData = {
 const EMPTY: LiveInsightData = {
   bucketMinutes: 30,
   samples: [],
+  stacks: { auto: 0, rows: [], total: 0 },
   status: "loading",
   teams: [],
 };
@@ -124,6 +127,7 @@ export function toInsightData(payload: TvInsights): LiveInsightData {
     bucketMinutes,
     endsAt,
     samples: [...byKey.values()].toSorted((a, b) => a.bucket - b.bucket),
+    stacks: payload.stacks,
     startsAt,
     status: payload.usage,
     teams,
