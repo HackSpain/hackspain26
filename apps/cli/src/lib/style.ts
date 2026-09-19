@@ -38,18 +38,19 @@ export function highlight(text: string): string {
 
 export const BRAND = `${c.gold("⚡")} ${c.bold("hackspain")}`;
 
-export function stripAnsi(text: string): string {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escapes are control chars by definition
-  return text.replaceAll(/\x1B\[[0-9;]*m/g, "");
+export const stripAnsi = Bun.stripANSI;
+
+const CONTROL_CHARACTER = /\p{Cc}/gu;
+const BIDI_CONTROL = /\p{Bidi_Control}/gu;
+
+/** Plain text from remote sources, safe to place inside our own terminal chrome. */
+export function terminalText(text: string): string {
+  return stripAnsi(text)
+    .replaceAll(BIDI_CONTROL, "")
+    .replaceAll(CONTROL_CHARACTER, (character) =>
+      character === "\n" || character === "\t" ? character : ""
+    );
 }
 
-const WIDE = /\p{Extended_Pictographic}/u;
-
-/** Visible width: colour codes ignored, emoji counted as two cells. */
-export function width(text: string): number {
-  let cells = 0;
-  for (const ch of stripAnsi(text)) {
-    cells += WIDE.test(ch) ? 2 : 1;
-  }
-  return cells;
-}
+/** Visible terminal width, including ANSI, emoji and wide characters. */
+export const width = Bun.stringWidth;

@@ -26,6 +26,7 @@ import type { Ui } from "../lib/output";
 import { firstName, formatWhen, uiFor } from "../lib/output";
 import { pickOne, textOrFlag } from "../lib/prompts";
 import { c, highlight } from "../lib/style";
+import { syncTelemetry } from "../watcher/sync";
 import { completeProfile } from "./profile";
 
 const CODE_PATTERN = /^\d{8}$/;
@@ -80,6 +81,29 @@ async function finishLogin(
   const shownEmail = email || me?.email || "";
   const gate = me ? describeGate(me) : null;
 
+  if (
+    me &&
+    (gate?.state === "ready" ||
+      gate?.state === "admin" ||
+      gate?.state === "closed")
+  ) {
+    try {
+      const result = await syncTelemetry(session, me, (message) =>
+        process.stderr.write(`${message}\n`)
+      );
+      if (result.status === "pending") {
+        process.stderr.write(
+          "Some usage is still pending; run hackspain telemetry sync to retry.\n"
+        );
+      }
+    } catch {
+      // Authentication succeeded even if the history upload is temporarily offline.
+      process.stderr.write(
+        "Signed in; usage recovery could not finish. Run hackspain telemetry sync to retry.\n"
+      );
+    }
+  }
+
   if (ctx.json) {
     ui.result({ email: shownEmail, url, gate });
     return;
@@ -93,11 +117,15 @@ async function finishLogin(
     if (gate.hint) {
       ui.line(c.dim(gate.hint));
     }
+    ui.next([
+      ["hackspain open", "the dashboard in your browser, already signed in"],
+    ]);
     ui.outro("Everything else unlocks once that is sorted.");
     return;
   }
   ui.next([
     ["hackspain", "see where you stand and what to do next"],
+    ["hackspain open", "the dashboard in your browser, no second login"],
     ["hackspain team create <name>", "start a team, or join one with a code"],
     ["hackspain watch", "keep it running in a spare terminal"],
   ]);
@@ -148,11 +176,12 @@ async function browserLogin(
     () => deviceStart(url, secret),
     "Browser sign-in ready"
   );
-  // `hs-code`, not `code`: Convex Auth's middleware eats a `code` param.
-  const authorizeUrl = `${url}/cli-auth?hs-code=${code}`;
-  const opened = openInBrowser(authorizeUrl);
+  const authorizeUrl = new URL("/cli-auth", url);
+  authorizeUrl.hash = new URLSearchParams({ "hs-code": code }).toString();
+  const authorizeHref = authorizeUrl.toString();
+  const opened = openInBrowser(authorizeHref);
   ui.note(
-    `${authorizeUrl}\n\n${
+    `${authorizeHref}\n\n${
       opened
         ? "We tried to open it for you. Sign in there"
         : "Open that link, sign in"

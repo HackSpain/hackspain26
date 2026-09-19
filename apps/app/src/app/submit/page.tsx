@@ -2,6 +2,7 @@
 
 import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
@@ -100,7 +101,10 @@ function SubmitReady({
   const searchParams = useSearchParams();
   const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);
   const submittedIds = new Set((mine?.submittedTracks ?? []).map((row) => row._id));
-  const pending = tracks.filter((track) => !submittedIds.has(track._id));
+  const registered = new Set(mine?.challengeIds ?? []);
+  const pending = tracks.filter(
+    (track) => registered.has(track._id) && !submittedIds.has(track._id),
+  );
   const requested = searchParams.get(TRACK_PARAM);
   const selected =
     pending.find((track) => track.slug === requested) ??
@@ -132,7 +136,24 @@ function SubmitReady({
       ) : null}
 
       {pending.length === 0 ? (
-        <DoneCard tracks={mine?.submittedTracks ?? []} />
+        (mine?.submittedTracks ?? []).length > 0 ? (
+          <DoneCard tracks={mine?.submittedTracks ?? []} />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Entra en un reto</CardTitle>
+              <CardDescription>
+                Un equipo, un reto. Regístralo en la CLI y vuelve aquí a
+                entregar el vídeo y el repo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild>
+                <Link href="/tracks">Ver retos</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )
       ) : lastSubmitted && !selected ? (
         <Card>
           <CardHeader>

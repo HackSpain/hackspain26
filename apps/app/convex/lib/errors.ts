@@ -12,7 +12,16 @@ export type ErrorCode =
   | "NO_TEAM"
   | "ALREADY_IN_TEAM"
   | "BAD_CODE"
-  | "VALIDATION";
+  | "EVENT_CLOSED"
+  | "TRACK_FULL"
+  | "VALIDATION"
+  // Email OTP login (convex/login.ts, convex/auth.ts). The login page and the
+  // CLI both branch on these instead of parsing the library's messages.
+  | "UNREGISTERED"
+  | "BAD_OTP"
+  | "OTP_EXPIRED"
+  | "TOO_MANY_ATTEMPTS"
+  | "SEND_FAILED";
 
 export type CodedError = { code: ErrorCode; message: string };
 

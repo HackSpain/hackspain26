@@ -1,8 +1,10 @@
 import { Command } from "commander";
 import { registerAuth } from "../commands/auth";
+import { registerCursorHook } from "../commands/cursor-hook";
 import { registerFeed } from "../commands/feed";
 import { registerHome } from "../commands/home";
 import { registerMilestone } from "../commands/milestone";
+import { registerOpen } from "../commands/open";
 import { registerPerk } from "../commands/perk";
 import { registerProfile } from "../commands/profile";
 import { registerProject } from "../commands/project";
@@ -38,13 +40,15 @@ export function buildProgram(): Command {
     .option("--json", "machine-readable output on stdout, no prompts")
     .option(
       "--url <url>",
-      "dashboard URL (default: HACKSPAIN_APP_URL, config, then app.hackspain.com)"
+      "dashboard URL (default: HACKSPAIN_APP_URL, config, then hackspain.app)"
     )
     .showHelpAfterError("(run with --help for usage)")
     .showSuggestionAfterError();
 
   registerHome(program, buildProgram);
+  registerCursorHook(program);
   registerAuth(program);
+  registerOpen(program);
   registerProfile(program);
   registerTeam(program);
   registerTrack(program);

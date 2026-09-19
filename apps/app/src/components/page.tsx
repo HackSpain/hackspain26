@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 import type { ReactNode } from "react";
 import type { UrlEntry } from "@/lib/urls";
 import { urlDisplay, urlLabel, urlOf } from "@/lib/urls";
@@ -88,7 +89,7 @@ export function EmptyState({
   );
 }
 
-export function FormError({ message }: { message: string | null }) {
+export function FormError({ message }: { message: ReactNode | null }) {
   if (!message) {
     return null;
   }
@@ -120,34 +121,29 @@ export function Field({
   label,
   htmlFor,
   hint,
+  meta,
   children,
 }: {
   label: string;
   htmlFor?: string;
   hint?: ReactNode;
+  /** Small text on the label row's right edge (a counter, "opcional"). */
+  meta?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {hint ? <p className="text-sm text-hs-brown">{hint}</p> : null}
+      <div className="space-y-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <Label htmlFor={htmlFor}>{label}</Label>
+          {meta ? (
+            <span className="shrink-0 text-xs tabular-nums text-hs-brown">{meta}</span>
+          ) : null}
+        </div>
+        {hint ? <p className="text-sm text-hs-brown">{hint}</p> : null}
+      </div>
       {children}
     </div>
-  );
-}
-
-export function RecordList({
-  desktop,
-  children,
-}: {
-  desktop: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <>
-      <div className="grid gap-3 md:hidden">{children}</div>
-      <div className="hidden md:block">{desktop}</div>
-    </>
   );
 }
 
@@ -165,23 +161,25 @@ export function RecordCard({
   actions?: ReactNode;
 }) {
   return (
-    <Card className="gap-3">
-      <CardHeader>
+    <Card className="min-w-0 gap-3 overflow-hidden">
+      <CardHeader className="min-w-0">
         {badges ? (
-          <CardTitle className="flex flex-wrap items-center gap-2 text-base [&_[data-slot=badge]]:whitespace-nowrap">
-            <span>{title}</span>
+          <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 text-base [&_[data-slot=badge]]:whitespace-nowrap">
+            <span className="min-w-0 break-words">{title}</span>
             {badges}
           </CardTitle>
         ) : (
-          <CardTitle className="text-base">{title}</CardTitle>
+          <CardTitle className="min-w-0 break-words text-base">{title}</CardTitle>
         )}
-        {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}
+        {subtitle ? (
+          <CardDescription className="min-w-0 break-all">{subtitle}</CardDescription>
+        ) : null}
       </CardHeader>
       {children || actions ? (
-        <CardContent className="space-y-3">
+        <CardContent className="min-w-0 space-y-3">
           {children}
           {actions ? (
-            <div className="flex flex-col gap-2 sm:flex-row">{actions}</div>
+            <div className="flex min-w-0 flex-col gap-2">{actions}</div>
           ) : null}
         </CardContent>
       ) : null}
@@ -253,6 +251,12 @@ export function SocialMeta({
 }
 
 export function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ConvexError) {
+    const data = err.data as { message?: unknown } | null;
+    if (typeof data?.message === "string" && data.message) {
+      return data.message;
+    }
+  }
   if (!(err instanceof Error)) {
     return fallback;
   }

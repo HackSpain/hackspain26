@@ -8,7 +8,7 @@ Monorepo for [HackSpain](https://hackspain.com) (Hack Spain 2026, Madrid).
 | `apps/app` | Next.js, Convex, Convex Auth, shadcn | [localhost:3000](http://localhost:3000) |
 | `apps/cli` | Bun, Commander, clack; `hackspain` binary for participants | `pnpm dev:cli -- --help` |
 
-Package manager is pnpm 11. The CLI still requires Bun to run its tests and compile standalone binaries. Node.js ≥ 22.12.
+Package manager is pnpm 11. The CLI still requires Bun to run its tests and compile standalone binaries. Node.js ≥ 22.13.
 
 ## Setup
 
@@ -21,6 +21,8 @@ cp apps/app/.env.example apps/app/.env.local
 Landing static pages run without a database. Signup and ambassador APIs need `DATABASE_URL` (Neon PostgreSQL). Optional `DISCORD_WEBHOOK_URL` notifies Discord on new submissions.
 
 The dashboard needs a Convex development deployment (`pnpm dev:convex` / `pnpm --filter app exec convex dev`). Do not use `pnpm --filter app exec convex deploy` unless you are shipping production. Dashboard env lives in `apps/app/.env.example`.
+
+Errors, logs, Web Vitals and uptime are consolidated in Better Stack.
 
 ## Commands
 
@@ -50,12 +52,10 @@ pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
 # optional email delivery; without this, OTPs print in Convex logs
 pnpm exec convex env set AUTH_RESEND_KEY re_...
 pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
-# dev only: allow the phone-verification stub (no Twilio). Never set in production.
-pnpm exec convex env set ALLOW_PHONE_STUB true
 # dev only: 00000000 also works as the email sign-in code (ignored if AUTH_RESEND_KEY is set).
 pnpm exec convex env set ALLOW_EMAIL_OTP_STUB true
-# GitHub account linking (optional). Create a GitHub OAuth App whose callback URL is
-# <your deployment>.convex.site/github/callback, then:
+# GitHub account linking (optional). The callback goes directly to the Convex
+# HTTP action at <CONVEX_SITE_URL>/github/callback:
 pnpm exec convex env set GITHUB_CLIENT_ID Iv1...
 pnpm exec convex env set GITHUB_CLIENT_SECRET ...
 ```
@@ -72,7 +72,7 @@ pnpm dlx @convex-dev/auth
 
 ### Confirming details
 
-Accepted hackers confirm phone (E.164 + code), dietary restrictions, travel origin, and attend/cancel. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` on the Convex deployment to deliver codes via SMS (partial config fails loudly). Without Twilio, the phone code is only logged and returned as a stub when the Convex env `ALLOW_PHONE_STUB=true`; otherwise the request fails with "SMS is not configured". The number is not auto-confirmed. Import marks Neon `approval_status = confirmed` as accepted. Everyone else stays unaccepted until CRM.
+Accepted hackers give a contact phone (E.164, stored as typed and never verified by SMS), confirm terms and notification consent, dietary restrictions, travel origin, and attend/cancel. Import marks Neon `approval_status = confirmed` as accepted. Everyone else stays unaccepted until CRM.
 
 ## Migrating Neon to Convex
 
@@ -81,6 +81,16 @@ Accepted hackers confirm phone (E.164 + code), dietary restrictions, travel orig
 It loads `DATABASE_URL` from `apps/web/.env`, and `NEXT_PUBLIC_CONVEX_URL` plus `MIGRATION_SECRET` from `apps/app/.env.local`. Shell exports win if already set. `MIGRATION_SECRET` must match the Convex deployment env.
 
 The script upserts `hackathon_signups` and `ambassador_applications` into Convex. Rows with `approval_status = confirmed` are marked accepted. Re-runs do not clear an admin’s accepted flag.
+
+### Profile photo thumbnails
+
+The participants map draws every photo at 128px. New uploads make that copy in the browser; pictures uploaded before that are resized on every request until you run, once, from the repo root:
+
+```sh
+pnpm --filter app backfill:avatars
+```
+
+Same env as the import (`NEXT_PUBLIC_CONVEX_URL`, `MIGRATION_SECRET`). Idempotent: people who already have a thumbnail are skipped.
 
 ## Design
 
@@ -96,7 +106,7 @@ Two Vercel projects, both linked to this repo. Set **Root Directory** before the
 | Project | Root Directory | Domain | Build |
 | --- | --- | --- | --- |
 | Landing (existing) | `apps/web` | hackspain.com | `pnpm run build` |
-| Dashboard (new) | `apps/app` | e.g. app.hackspain.com | `pnpm run vercel-build` — deploys Convex, then Next.js |
+| Dashboard (new) | `apps/app` | hackspain.app | `pnpm run vercel-build` — deploys Convex, then Next.js |
 
 Vercel reads `pnpm-lock.yaml` and `pnpm-workspace.yaml` from the repo root (`installCommand` is `cd ../.. && pnpm install --frozen-lockfile`). A change that only touches the other app is skipped (`scripts/vercel-ignore.sh`).
 
@@ -112,15 +122,24 @@ Vercel reads `pnpm-lock.yaml` and `pnpm-workspace.yaml` from the repo root (`ins
 4. On the Convex **production** deployment (`pnpm exec convex env set` from `apps/app` after `pnpm exec convex deploy` once, or the dashboard Env vars UI):
 
 ```sh
-pnpm exec convex env set SITE_URL https://app.hackspain.com
+pnpm exec convex env set SITE_URL https://hackspain.app
 pnpm exec convex env set ADMIN_EMAILS you@example.com
 pnpm exec convex env set AUTH_RESEND_KEY re_...
 pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
 pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
 ```
 
-Do **not** set `ALLOW_PHONE_STUB` or `ALLOW_EMAIL_OTP_STUB` on production. Do **not** put `.env` / `.env.local` in git.
+In the production deployment's Settings, add and verify `api.hackspain.com` as
+a custom domain, then set it as the default HTTP Actions domain by overriding
+`CONVEX_SITE_URL` there.
+
+Set the production GitHub OAuth App callback URL to
+`https://api.hackspain.com/github/callback`. GitHub calls the production Convex
+HTTP action directly; after linking, Convex redirects the browser back to the
+dashboard URL in `SITE_URL`.
+
+Do **not** set `ALLOW_EMAIL_OTP_STUB` on production. Do **not** put `.env` / `.env.local` in git.
 
 `convex deploy --cmd` injects `NEXT_PUBLIC_CONVEX_URL` for the Next.js build. You do not need to paste the prod Convex URL into Vercel unless you skip the deploy-key flow.
 
-Landing Vercel env stays as today (`DATABASE_URL`, `RESEND_*`, `SENTRY_*`, …). Those are not Convex.
+Landing Vercel env stays separate (`DATABASE_URL`, `RESEND_*`, `BETTER_STACK_*`, …). Those are not Convex.

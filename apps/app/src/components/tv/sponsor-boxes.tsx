@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   TICKER_DURATION,
+  resolveTvSponsors,
   sponsorLogoSources,
   type TvSponsor,
   type TvTickerSpeed,
@@ -40,6 +41,7 @@ function SponsorLogo({
         referrerPolicy="no-referrer"
         className={cn(
           "h-8 w-auto max-w-24 object-contain outline outline-1 -outline-offset-1 outline-black/10",
+          src.startsWith("/sponsors/") && "brightness-0",
           editor &&
             "grayscale motion-safe:transition-[filter] motion-safe:duration-150 group-hover:grayscale-0",
         )}
@@ -76,16 +78,7 @@ export function SponsorGridBox({
   sponsors: TvSponsor[];
   editor?: boolean;
 }) {
-  const rows = sponsors.length > 0 ? sponsors : [];
-  if (rows.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center bg-hs-paper p-3 text-hs-brown">
-        <p className="text-sm">
-          {editor ? "Doble clic para añadir sponsors" : "Sponsors"}
-        </p>
-      </div>
-    );
-  }
+  const rows = resolveTvSponsors(sponsors);
   return (
     <div className="grid h-full grid-cols-2 content-start gap-2 bg-hs-paper p-3 text-hs-ink sm:grid-cols-3">
       {rows.map((sponsor) => (
@@ -104,18 +97,85 @@ export function SponsorGridBox({
   );
 }
 
+/**
+ * The v1 panel strip: label, black logos on paper, no names.
+ */
+function SponsorLogoStrip({
+  items,
+  speed,
+  reduced,
+  visible,
+}: {
+  items: TvSponsor[];
+  speed: TvTickerSpeed;
+  reduced: boolean;
+  visible: boolean;
+}) {
+  const logos = (copy: number) =>
+    items.map((sponsor) => (
+      <span
+        key={`${copy}-${sponsor.name}`}
+        className="flex h-full shrink-0 items-center px-[1.6cqw]"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={sponsor.logoUrl}
+          alt={sponsor.name}
+          className="h-[45%] w-auto max-w-[8cqw] object-contain brightness-0"
+        />
+      </span>
+    ));
+  return (
+    <div className="grid h-full grid-cols-[auto_minmax(0,1fr)_auto] gap-[0.3cqw] bg-hs-ink">
+      <p className="flex items-center bg-hs-orange px-[1.2cqw] font-bungee text-[clamp(0.7rem,1.1cqw,1.5rem)] uppercase text-hs-paper">
+        Patrocinan
+      </p>
+      <div className="flex min-w-0 overflow-hidden bg-hs-paper">
+        {reduced ? (
+          <div className="flex h-full w-full items-center justify-around">{logos(0)}</div>
+        ) : (
+          <div
+            className="tv-ticker flex h-full w-max"
+            style={{
+              animationDuration: TICKER_DURATION[speed],
+              animationPlayState: visible ? "running" : "paused",
+            }}
+          >
+            {[0, 1].map((copy) => (
+              <div key={copy} aria-hidden={copy === 1} className="flex h-full shrink-0">
+                {logos(copy)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="flex flex-col items-center justify-center bg-hs-navy px-[1.2cqw] leading-none text-hs-paper">
+        <span className="text-[clamp(0.45rem,0.6cqw,0.8rem)] font-bold tracking-[0.12em] uppercase">
+          Powered by
+        </span>
+        <span className="mt-[0.3cqw] font-bungee text-[clamp(0.7rem,1.1cqw,1.5rem)]">RawTree</span>
+      </p>
+    </div>
+  );
+}
+
 export function SponsorTickerBox({
   sponsors,
   speed = "normal",
   editor = false,
+  logosOnly = false,
 }: {
   sponsors: TvSponsor[];
   speed?: TvTickerSpeed;
   editor?: boolean;
+  logosOnly?: boolean;
 }) {
-  const items = sponsors.length > 0 ? sponsors : [];
+  const items = resolveTvSponsors(sponsors);
   const reduced = usePrefersReducedMotion();
   const visible = usePageVisible();
+  if (logosOnly) {
+    return <SponsorLogoStrip items={items} speed={speed} reduced={reduced} visible={visible} />;
+  }
   if (reduced) {
     return (
       <div className="flex h-full flex-wrap items-center gap-6 overflow-hidden bg-hs-gold px-4">

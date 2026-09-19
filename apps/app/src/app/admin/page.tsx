@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
+import type { Id } from "@convex/_generated/dataModel";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, RefObject } from "react";
 import { api } from "@convex/_generated/api";
+import { AddPeopleDialog } from "@/components/admin/add-people-dialog";
 import {
   ParticipantDetail,
   participantHref,
@@ -117,6 +119,13 @@ function AdminCrm() {
     "all" | "attending" | "cancelled" | "undecided"
   >("all");
   const [accepted, setAccepted] = useState<"all" | "yes" | "no">("all");
+  const [userType, setUserType] = useState<"all" | "none" | Id<"userTypes">>("all");
+  const userTypes = useQuery(api.userTypes.list);
+  const ensureDefaults = useMutation(api.userTypes.ensureDefaults);
+
+  useEffect(() => {
+    void ensureDefaults({});
+  }, [ensureDefaults]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -130,6 +139,7 @@ function AdminCrm() {
     search: searchQuery || undefined,
     attendance: attendance === "all" ? undefined : attendance,
     accepted: accepted === "all" ? undefined : accepted === "yes",
+    userType: userType === "all" ? undefined : userType,
     page,
     pageSize: PAGE_SIZE,
   });
@@ -192,10 +202,17 @@ function AdminCrm() {
 
   return (
     <Page
-      title="Participantes"
+      title={
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-bungee text-2xl leading-tight sm:text-3xl">
+            Participantes
+          </h1>
+          <AddPeopleDialog />
+        </div>
+      }
       className="flex h-[calc(100dvh-11rem)] flex-col gap-4 space-y-0 sm:h-[calc(100dvh-12rem)]"
     >
-      <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -203,6 +220,26 @@ function AdminCrm() {
           aria-label="Buscar participantes"
           className="sm:col-span-2 lg:col-span-1"
         />
+        <Select
+          value={userType}
+          onValueChange={(value) => {
+            setUserType(value as "all" | "none" | Id<"userTypes">);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger aria-label="Tipo de usuario">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los tipos</SelectItem>
+            <SelectItem value="none">Sin tipo</SelectItem>
+            {(userTypes ?? []).map((type) => (
+              <SelectItem key={type._id} value={type._id}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select
           value={accepted}
           onValueChange={(value) => {
@@ -310,7 +347,7 @@ function AdminCrm() {
                     >
                       <p className="text-sm text-hs-brown">
                         {row.teamName ?? "Sin equipo"}
-                        {row.travelOrigin ? ` · ${row.travelOrigin}` : ""}
+                        {row.userTypeLabel ? ` · ${row.userTypeLabel}` : ""}
                       </p>
                     </RecordCard>
                   </div>
@@ -329,8 +366,8 @@ function AdminCrm() {
                     <TableHead>Email</TableHead>
                     <TableHead>Aceptado</TableHead>
                     <TableHead>Teléfono</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Dieta</TableHead>
-                    <TableHead>Origen</TableHead>
                     <TableHead>Asistencia</TableHead>
                     <TableHead>Equipo</TableHead>
                   </TableRow>
@@ -384,11 +421,11 @@ function AdminCrm() {
                           </Badge>
                         </TableCell>
                         <TableCell>{row.phone ?? "—"}</TableCell>
+                        <TableCell className="max-w-36 truncate">
+                          {row.userTypeLabel ?? "—"}
+                        </TableCell>
                         <TableCell className="max-w-40 truncate">
                           {row.dietaryRestrictions ?? "—"}
-                        </TableCell>
-                        <TableCell className="max-w-36 truncate">
-                          {row.travelOrigin ?? "—"}
                         </TableCell>
                         <TableCell>
                           <Badge>
@@ -478,7 +515,8 @@ function CrmPager({
 
 function CrmToolbarSkeleton() {
   return (
-    <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>
+    <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden>
+      <Skeleton className="h-11" />
       <Skeleton className="h-11" />
       <Skeleton className="h-11" />
       <Skeleton className="h-11" />

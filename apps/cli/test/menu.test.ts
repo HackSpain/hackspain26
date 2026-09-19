@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { MenuItem, MenuStatus } from "../src/lib/menu";
-import { buildMainMenu, isResumeKey, statusLine } from "../src/lib/menu";
+import { buildMainMenu, statusLine } from "../src/lib/menu";
 import { buildProgram } from "../src/lib/program";
 
 const LOGGED_OUT: MenuStatus = { loggedIn: false };
@@ -8,6 +8,13 @@ const LOGGED_OUT: MenuStatus = { loggedIn: false };
 const PENDING: MenuStatus = {
   loggedIn: true,
   gate: "pending",
+  email: "ana@example.com",
+};
+
+const CLOSED: MenuStatus = {
+  loggedIn: true,
+  gate: "closed",
+  gateMessage: "The hackathon ended on Sun 5 Oct, 18:00 (Madrid).",
   email: "ana@example.com",
 };
 
@@ -24,7 +31,7 @@ const READY_OWNER: MenuStatus = {
   gate: "ready",
   email: "ana@example.com",
   team: { name: "Los Increíbles", isOwner: true, members: 3, hasRepo: false },
-  project: { name: "Quijote", submitted: false, tracks: 2 },
+  project: { name: "Quijote", submitted: false, tracks: 1, track: "Maisa" },
 };
 
 const READY_MEMBER: MenuStatus = {
@@ -34,12 +41,13 @@ const READY_MEMBER: MenuStatus = {
 
 const READY_SUBMITTED: MenuStatus = {
   ...READY_OWNER,
-  project: { name: "Quijote", submitted: true, tracks: 2 },
+  project: { name: "Quijote", submitted: true, tracks: 1, track: "Maisa" },
 };
 
 const ALL_STATUSES = [
   LOGGED_OUT,
   PENDING,
+  CLOSED,
   READY_NO_TEAM,
   READY_OWNER,
   READY_MEMBER,
@@ -90,10 +98,32 @@ describe("buildMainMenu", () => {
     const items = buildMainMenu(PENDING);
     expect(values(items)).toEqual([
       "auth-status",
+      "open",
       "auth-logout",
       "update",
       "exit",
     ]);
+    expect(itemOf(items, "open").argv).toEqual(["open"]);
+  });
+
+  test("outside the hackathon window: profile and perks, no team or project entries", () => {
+    const items = buildMainMenu(CLOSED);
+    expect(values(items)).toEqual([
+      "profile",
+      "perks",
+      "open",
+      "account",
+      "exit",
+    ]);
+    expect(itemOf(items, "profile").preview).toEqual([["profile", "show"]]);
+    expect(itemOf(items, "perks").argv).toEqual(["perk", "list"]);
+    const argvs = allArgvs(items).map((argv) => argv[0]);
+    expect(argvs).not.toContain("team");
+    expect(argvs).not.toContain("submit");
+    expect(argvs).not.toContain("feed");
+    expect(argvs).not.toContain("watch");
+    expect(values(submenuOf(items, "account"))).toContain("auth-logout");
+    expect(statusLine(CLOSED)).toContain("The hackathon ended on");
   });
 
   test("ready without a team: join and create come first, exit last", () => {
@@ -134,6 +164,8 @@ describe("buildMainMenu", () => {
       "profile-edit",
       "profile-phone",
       "profile-github",
+      "profile-x",
+      "profile-card",
       "profile-notify",
       "auth-status",
       "auth-logout",
@@ -155,11 +187,13 @@ describe("buildMainMenu", () => {
     expect(labels).toEqual([
       "Join a team",
       "Create a team",
-      "Tracks & project",
+      "Track",
+      "Project",
       "Feed",
       "Profile",
       "Perks",
       "Milestones",
+      "Open the dashboard",
       "Start the watcher",
       "Exit",
     ]);
@@ -177,36 +211,32 @@ describe("buildMainMenu", () => {
     expect(values(buildMainMenu(READY_NO_TEAM))).not.toContain("account");
   });
 
-  test("q, Esc and Ctrl+C after an action resume the menu", () => {
-    expect(isResumeKey(Uint8Array.of(113))).toBe(true);
-    expect(isResumeKey(Uint8Array.of(27))).toBe(true);
-    expect(isResumeKey(Uint8Array.of(3))).toBe(true);
-  });
-
-  test("tracks show the state first: track list plus the project when it exists", () => {
-    const withProject = itemOf(buildMainMenu(READY_OWNER), "tracks");
-    expect(withProject.preview).toEqual([
-      ["track", "list"],
-      ["project", "show"],
-    ]);
+  test("tracks show the list first; project is its own item", () => {
+    const track = itemOf(buildMainMenu(READY_OWNER), "tracks");
+    expect(track.preview).toEqual([["track", "list"]]);
+    const project = itemOf(buildMainMenu(READY_OWNER), "project");
+    expect(project.preview).toEqual([["project", "show"]]);
     const withoutProject = itemOf(buildMainMenu(READY_NO_TEAM), "tracks");
     expect(withoutProject.preview).toEqual([["track", "list"]]);
   });
 
-  test("draft project: can register, unregister, then browse projects", () => {
-    const subValues = values(submenuOf(buildMainMenu(READY_OWNER), "tracks"));
-    expect(subValues).toEqual([
+  test("draft project: track picker has no submit; project opens the dashboard", () => {
+    expect(values(submenuOf(buildMainMenu(READY_OWNER), "tracks"))).toEqual([
       "track-register",
       "track-unregister",
+    ]);
+    expect(values(submenuOf(buildMainMenu(READY_OWNER), "project"))).toEqual([
+      "submit-open",
       "project-list",
     ]);
   });
 
-  test("submitted project: editing actions disappear, viewing stays", () => {
-    const subValues = values(
-      submenuOf(buildMainMenu(READY_SUBMITTED), "tracks")
-    );
-    expect(subValues).toEqual(["project-list"]);
+  test("submitted project: track is view-only, project listing stays", () => {
+    const track = itemOf(buildMainMenu(READY_SUBMITTED), "tracks");
+    expect(track.submenu).toBeUndefined();
+    expect(
+      values(submenuOf(buildMainMenu(READY_SUBMITTED), "project"))
+    ).toEqual(["project-list"]);
   });
 
   test("top level stays tight: no static hint on perks or feed", () => {

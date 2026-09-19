@@ -1,6 +1,8 @@
 "use client";
 
+import { captureException } from "@sentry/nextjs";
 import Link from "next/link";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +19,10 @@ export default function ErrorBoundary({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    captureException(error);
+  }, [error]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-hs-paper px-4">
       <Card className="hs-enter w-full max-w-md">

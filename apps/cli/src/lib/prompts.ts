@@ -102,14 +102,25 @@ export async function pickOne<T extends string>(
     flag: string;
     message: string;
     choices: Option<T>[];
+    initialValue?: T;
+    optional?: boolean;
   }
-): Promise<T> {
+): Promise<T | undefined> {
   if (flagValue !== undefined) {
     return flagValue;
   }
-  requireInteractive(ctx, options.flag);
+  if (!ctx.interactive) {
+    if (options.optional) {
+      return options.initialValue;
+    }
+    requireInteractive(ctx, options.flag);
+  }
   return guard(
-    await select<T>({ message: options.message, options: options.choices })
+    await select<T>({
+      initialValue: options.initialValue,
+      message: options.message,
+      options: options.choices,
+    })
   );
 }
 

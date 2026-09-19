@@ -8,11 +8,15 @@ import {
   submissionStatusValidator,
 } from "./lib/validators";
 import { countsAsAttending } from "./lib/attendance";
+import { findSignupByEmail, findUserByEmail } from "./lib/auth";
+import { parseEmailList } from "./lib/normalize";
 import { urlsFromRecord, urlsValidator } from "./lib/urls";
 import { findOwnedSubmission, membershipForUser } from "./lib/team";
+import { userTypeSummaryValidator } from "./lib/userTypes";
 import type { Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { UrlEntry } from "./lib/urls";
+import type { Role } from "./lib/validators";
 
 async function teamForUser(
   ctx: QueryCtx,
@@ -72,6 +76,8 @@ const participantSummary = v.object({
   teamName: v.optional(v.string()),
   travelOrigin: v.optional(v.string()),
   userId: v.optional(v.id("users")),
+  userTypeId: v.optional(v.id("userTypes")),
+  userTypeLabel: v.optional(v.string()),
   wantsAmbassador: v.optional(v.boolean()),
 });
 
@@ -87,11 +93,17 @@ export const listParticipants = adminQuery({
     search: v.optional(v.string()),
     page: v.optional(v.number()),
     pageSize: v.optional(v.number()),
+    /** Filter by assigned type; "none" keeps only users without one. */
+    userType: v.optional(v.union(v.id("userTypes"), v.literal("none"))),
   },
   handler: async (ctx, args) => {
     const signups = await ctx.db.query("signups").collect();
     const users = await ctx.db.query("users").collect();
     const teamMap = await teamsByUserId(ctx);
+    const types = await ctx.db.query("userTypes").collect();
+    const typeLabels = new Map(types.map((type) => [type._id, type.label]));
+    const typeLabelOf = (user: (typeof users)[number] | undefined) =>
+      user?.userTypeId ? typeLabels.get(user.userTypeId) : undefined;
     const usersBySignup = new Map(
       users
         .filter((user) => user.signupId !== undefined)
@@ -132,6 +144,8 @@ export const listParticipants = adminQuery({
         teamName: team?.name,
         wantsAmbassador: signup.wantsAmbassador,
         createdAt: signup.createdAt,
+        userTypeId: user?.userTypeId,
+        userTypeLabel: typeLabelOf(user),
       });
     }
 
@@ -155,6 +169,8 @@ export const listParticipants = adminQuery({
         hasAccount: true,
         teamName: team?.name,
         createdAt: user._creationTime,
+        userTypeId: user.userTypeId,
+        userTypeLabel: typeLabelOf(user),
       });
     }
 
@@ -179,6 +195,16 @@ export const listParticipants = adminQuery({
           return false;
         }
         if (args.role && row.role !== args.role) {
+          return false;
+        }
+        if (args.userType === "none" && row.userTypeId !== undefined) {
+          return false;
+        }
+        if (
+          args.userType &&
+          args.userType !== "none" &&
+          row.userTypeId !== args.userType
+        ) {
           return false;
         }
         if (
@@ -256,6 +282,9 @@ export const getParticipant = adminQuery({
     const team = user
       ? ((await teamForUser(ctx, user._id)) ?? undefined)
       : undefined;
+    const userType = user?.userTypeId
+      ? await ctx.db.get(user.userTypeId)
+      : null;
 
     const claims = [];
     let submission:
@@ -349,7 +378,6 @@ export const getParticipant = adminQuery({
             name: user.name,
             role: user.role,
             phone: user.phone,
-            phoneConfirmed: user.phoneConfirmed,
             notificationConsent: user.notificationConsent,
             dietaryRestrictions: user.dietaryRestrictions,
             dietaryDetails: user.dietaryDetails,
@@ -357,6 +385,17 @@ export const getParticipant = adminQuery({
             attendanceStatus: user.attendanceStatus,
             onboardingComplete: user.onboardingComplete,
             adminNotes: user.adminNotes,
+            userType: userType
+              ? {
+                  _id: userType._id,
+                  description: userType.description,
+                  isDefault: userType.isDefault,
+                  label: userType.label,
+                  sections: userType.sections,
+                  slug: userType.slug,
+                  sortOrder: userType.sortOrder,
+                }
+              : undefined,
           }
         : undefined,
       ambassador: ambassador
@@ -391,7 +430,6 @@ export const getParticipant = adminQuery({
           name: v.optional(v.string()),
           role: roleValidator,
           phone: v.optional(v.string()),
-          phoneConfirmed: v.boolean(),
           notificationConsent: v.boolean(),
           dietaryRestrictions: v.optional(v.string()),
           dietaryDetails: v.optional(v.string()),
@@ -399,6 +437,7 @@ export const getParticipant = adminQuery({
           attendanceStatus: attendanceValidator,
           onboardingComplete: v.boolean(),
           adminNotes: v.optional(v.string()),
+          userType: v.optional(userTypeSummaryValidator),
         })
       ),
       ambassador: v.optional(
@@ -444,6 +483,9 @@ export const getParticipant = adminQuery({
 export const setRole = adminMutation({
   args: { role: roleValidator, userId: v.id("users") },
   handler: async (ctx, args) => {
+    if (args.role === "judge") {
+      throw new Error("Los jueces se definen con un tipo de usuario");
+    }
     if (args.userId === ctx.user._id && args.role !== "admin") {
       throw new Error("No puedes quitarte el rol de admin a ti mismo");
     }
@@ -455,6 +497,173 @@ export const setRole = adminMutation({
     return null;
   },
   returns: v.null(),
+});
+
+export const setUserType = adminMutation({
+  args: { typeId: v.union(v.id("userTypes"), v.null()), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+    if (args.typeId) {
+      const type = await ctx.db.get(args.typeId);
+      if (!type) {
+        throw new Error("Tipo no encontrado");
+      }
+      await ctx.db.patch(user._id, { userTypeId: type._id });
+    } else {
+      await ctx.db.patch(user._id, { userTypeId: undefined });
+    }
+    return null;
+  },
+  returns: v.null(),
+});
+
+const MAX_ADD_PEOPLE = 50;
+
+const addPeopleRoleValidator = v.union(v.literal("user"), v.literal("admin"));
+
+function nameFromEmail(email: string): string {
+  const local = email.split("@")[0] ?? email;
+  return local.replaceAll(/[._+-]+/g, " ").trim() || email;
+}
+
+async function upsertPerson(
+  ctx: MutationCtx,
+  email: string,
+  role: "user" | "admin",
+  userTypeId: Id<"userTypes"> | undefined,
+  name: string | undefined,
+  actorId: Id<"users">
+): Promise<"added" | "updated" | "skipped"> {
+  const existingUser = await findUserByEmail(ctx, email);
+  const signup = await findSignupByEmail(ctx, email);
+  const fullName = name ?? signup?.fullName ?? nameFromEmail(email);
+
+  if (existingUser) {
+    if (existingUser._id === actorId && role !== "admin") {
+      throw new Error("No puedes quitarte el rol de admin a ti mismo");
+    }
+    if (signup && role === "user" && signup.accepted !== true) {
+      await ctx.db.patch(signup._id, { accepted: true });
+    }
+    const patch: {
+      name?: string;
+      role?: Role;
+      signupId?: Id<"signups">;
+      userTypeId?: Id<"userTypes">;
+    } = {};
+    if (existingUser.role !== role) {
+      patch.role = role;
+    }
+    if (userTypeId && existingUser.userTypeId !== userTypeId) {
+      patch.userTypeId = userTypeId;
+    }
+    if (!existingUser.name) {
+      patch.name = fullName;
+    }
+    if (signup && !existingUser.signupId) {
+      patch.signupId = signup._id;
+    }
+    if (Object.keys(patch).length === 0) {
+      return "skipped";
+    }
+    await ctx.db.patch(existingUser._id, patch);
+    return existingUser.role === role &&
+      (!userTypeId || existingUser.userTypeId === userTypeId)
+      ? "skipped"
+      : "updated";
+  }
+
+  let signupId = signup?._id;
+  if (role === "user") {
+    if (!signupId) {
+      signupId = await ctx.db.insert("signups", {
+        email,
+        fullName,
+        urls: [],
+        wantsAmbassador: false,
+        accepted: true,
+        createdAt: Date.now(),
+      });
+    } else if (signup && signup.accepted !== true) {
+      await ctx.db.patch(signup._id, { accepted: true });
+    }
+  }
+
+  await ctx.db.insert("users", {
+    email,
+    name: fullName,
+    role,
+    signupId,
+    userTypeId,
+    notificationConsent: false,
+    attendanceStatus: "attending",
+    onboardingComplete: false,
+  });
+  return "added";
+}
+
+export const addPeople = adminMutation({
+  args: {
+    emails: v.array(v.string()),
+    name: v.optional(v.string()),
+    role: addPeopleRoleValidator,
+    userTypeId: v.optional(v.id("userTypes")),
+  },
+  handler: async (ctx, args) => {
+    const parsed = parseEmailList(args.emails);
+    if (parsed.emails.length === 0) {
+      throw new Error("Añade al menos un email válido");
+    }
+    if (parsed.emails.length > MAX_ADD_PEOPLE) {
+      throw new Error(`Como máximo ${MAX_ADD_PEOPLE} emails de una vez`);
+    }
+    if (args.userTypeId) {
+      const type = await ctx.db.get(args.userTypeId);
+      if (!type) {
+        throw new Error("Tipo no encontrado");
+      }
+    }
+
+    const name = args.name?.trim().replaceAll(/\s+/g, " ") || undefined;
+    const singleName = parsed.emails.length === 1 ? name : undefined;
+
+    let added = 0;
+    let updated = 0;
+    let skipped = 0;
+    for (const email of parsed.emails) {
+      const result = await upsertPerson(
+        ctx,
+        email,
+        args.role,
+        args.userTypeId,
+        singleName,
+        ctx.user._id
+      );
+      if (result === "added") {
+        added += 1;
+      } else if (result === "updated") {
+        updated += 1;
+      } else {
+        skipped += 1;
+      }
+    }
+
+    return {
+      added,
+      updated,
+      skipped,
+      invalid: parsed.invalid,
+    };
+  },
+  returns: v.object({
+    added: v.number(),
+    updated: v.number(),
+    skipped: v.number(),
+    invalid: v.array(v.string()),
+  }),
 });
 
 export const setAccepted = adminMutation({

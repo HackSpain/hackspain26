@@ -2,6 +2,45 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isLikelyEmail(value: string): boolean {
+  return EMAIL_RE.test(value);
+}
+
+export function parseEmailList(values: readonly string[]): {
+  emails: string[];
+  invalid: string[];
+} {
+  const seen = new Set<string>();
+  const emails: string[] = [];
+  const invalid: string[] = [];
+  const invalidSeen = new Set<string>();
+
+  for (const value of values) {
+    for (const part of value.split(/[\s,;]+/)) {
+      const trimmed = part.trim();
+      if (!trimmed) {
+        continue;
+      }
+      const email = normalizeEmail(trimmed);
+      if (!isLikelyEmail(email)) {
+        if (!invalidSeen.has(email)) {
+          invalidSeen.add(email);
+          invalid.push(email);
+        }
+        continue;
+      }
+      if (seen.has(email)) {
+        continue;
+      }
+      seen.add(email);
+      emails.push(email);
+    }
+  }
+  return { emails, invalid };
+}
+
 function firstPathSegment(pathname: string): string {
   return pathname.replace(/^\/+/, "").split("/")[0]?.toLowerCase() ?? "";
 }
@@ -67,17 +106,7 @@ export function normalizeTwitter(input: string): string {
   );
 }
 
-export function normalizePhone(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const digits = trimmed.replaceAll(/\D/g, "");
-  if (digits.length < 8 || digits.length > 15) {
-    return null;
-  }
-  return `+${digits}`;
-}
+export { normalizePhone, PHONE_ERROR } from "./phone";
 
 export function adminEmailAllowlist(): Set<string> {
   const raw = process.env.ADMIN_EMAILS ?? "";
@@ -87,18 +116,4 @@ export function adminEmailAllowlist(): Set<string> {
       .map((value) => normalizeEmail(value))
       .filter((value) => value.length > 0)
   );
-}
-
-export async function sha256Hex(value: string): Promise<string> {
-  const data = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export function generateNumericCode(length: number): string {
-  const bytes = new Uint8Array(length);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => (byte % 10).toString()).join("");
 }

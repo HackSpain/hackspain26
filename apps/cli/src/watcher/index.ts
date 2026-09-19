@@ -1,7 +1,11 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  rememberTelemetry,
+  telemetryDedupKeys,
+} from "../../../app/src/app/api/cli/telemetry/canonical";
 import type { Session } from "../lib/api";
-import { api } from "../lib/api";
+import { api, fetchImage } from "../lib/api";
 import {
   ensureDir,
   readJsonFile,
@@ -11,36 +15,77 @@ import {
 import { CliError, EXIT } from "../lib/errors";
 import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
+import { fetchMe } from "../lib/me";
+import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
-import { createBatcher } from "./batcher";
+import { BATCH_MAX, createBatcher } from "./batcher";
+import { antigravityCollector } from "./collectors/antigravity";
 import { claudeCodeCollector } from "./collectors/claude-code";
+import { createClaudeOtelCollector } from "./collectors/claude-otel";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
+import { copilotCollector } from "./collectors/copilot";
+import { cursorCollector } from "./collectors/cursor";
+import { devinCollector } from "./collectors/devin";
+import { geminiCliCollector } from "./collectors/gemini-cli";
+import { kiloCodeCollector } from "./collectors/kilo-code";
 import { openCodeCollector } from "./collectors/opencode";
+import { ompCollector, piCollector } from "./collectors/pi";
+import { qwenCodeCollector } from "./collectors/qwen-code";
 import { openCursorStore } from "./cursor-store";
+import { historyCollectors } from "./history";
+import type { MemoryStore } from "./memory";
+import {
+  openMemory,
+  rememberNotification,
+  replaySpool,
+  shouldToast,
+} from "./memory";
 import type { Toaster } from "./notify";
 import { platformToaster } from "./notify";
 import type { RawEvent, TelemetryEvent } from "./schema";
-import { SCHEMA, validateEvent } from "./schema";
+import { canonicalize, SCHEMA, validateEvent } from "./schema";
 import { httpSink } from "./sinks/http";
 import type { Sink } from "./sinks/spool";
-import { spoolSink } from "./sinks/spool";
+import { readSpool, spoolSink } from "./sinks/spool";
 import type { WatchState } from "./state";
-import { recordEvent, recordLog, recordNotification } from "./state";
+import {
+  appendOlderFeed,
+  FEED_PAGE,
+  mergeNewerFeed,
+  recordEvent,
+  recordLog,
+  recordNotification,
+  WATCH_IMAGE_BOUNDS,
+} from "./state";
 import type { Collector, CollectorContext } from "./types";
+import type { CollectionWindow } from "./window";
+import { collectionWindow, inWindow, windowPhase } from "./window";
 
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
   codexCollector,
+  cursorCollector,
+  geminiCliCollector,
+  qwenCodeCollector,
   openCodeCollector,
+  kiloCodeCollector,
   clineCollector,
+  copilotCollector,
+  piCollector,
+  ompCollector,
+  antigravityCollector,
+  devinCollector,
 ];
 
 export type WatchOptions = {
+  /** Recover the whole collection window on connect, including locally-only spooled events. */
+  backfill?: boolean;
   once: boolean;
   intervalMs: number;
-  since: number;
+  /** The telemetry window when the watcher started; null without a schedule. */
+  window: CollectionWindow | null;
   toast: boolean;
   /** Where batches are uploaded; undefined disables the upload sink. */
   uploadUrl?: string;
@@ -60,13 +105,28 @@ export type WatchDeps = {
   toaster?: Toaster;
   collectors?: Collector[];
   extraSinks?: Sink[];
+  /** Cross-run memory (first start, last scan, announcements); defaults to the state dir. */
+  memory?: MemoryStore;
+  /** Usage events recorded by earlier runs, replayed onto the board; defaults to the spool. */
+  history?: Iterable<TelemetryEvent>;
+  /** Installs a pending CLI update; true asks the watcher to exit cleanly for restart. */
+  checkForUpdate?: () => Promise<boolean>;
 };
 
 const RECENT_IDS_CAP = 5000;
+/** Thumbnails fetched per loop iteration, so a burst of images never stalls a scan. */
+const FEED_IMAGES_PER_TURN = 4;
 const TEAM_REFRESH_MS = 5 * 60 * 1000;
+/**
+ * How often the watcher asks for the team's stack to be re-read from its
+ * repo. Only asks: the server scans when the stack has gone stale, so a whole
+ * team of watchers costs one scan, and it leaves a hand-typed stack alone.
+ */
+export const STACK_REFRESH_MS = 30 * 60 * 1000;
 /** After this long without a usage event, scans slow down to save battery. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000;
 export const IDLE_INTERVAL_MS = 60 * 1000;
+const UPDATE_RECHECK_MS = 5 * 60 * 1000;
 
 /**
  * Scan cadence: the configured interval while there is activity, at most
@@ -87,21 +147,36 @@ export function scanIntervalFor(
 }
 
 /** Sleep for `ms`, or until something calls `state.wake()` (a key press). */
-function sleepOrWake(state: WatchState | undefined, ms: number): Promise<void> {
+/** Whether this tick should ask for the team's stack to be re-read. */
+export function stackRefreshDue(input: {
+  inEvent: boolean;
+  lastAskedAt: number;
+  now: number;
+  once?: boolean;
+  teamId?: string;
+}): boolean {
+  return (
+    input.inEvent &&
+    Boolean(input.teamId) &&
+    !input.once &&
+    input.now - input.lastAskedAt > STACK_REFRESH_MS
+  );
+}
+
+function sleepOrWake(
+  state: Pick<WatchState, "wake">,
+  ms: number
+): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
-      if (state) {
-        state.wake = undefined;
-      }
+      state.wake = undefined;
       resolve();
     }, ms);
-    if (state) {
-      state.wake = () => {
-        clearTimeout(timer);
-        state.wake = undefined;
-        resolve();
-      };
-    }
+    state.wake = () => {
+      clearTimeout(timer);
+      state.wake = undefined;
+      resolve();
+    };
   });
 }
 
@@ -169,7 +244,7 @@ export function stamp(
 ): TelemetryEvent {
   return {
     schema: SCHEMA,
-    ...raw,
+    ...canonicalize(raw),
     observedAt: observedAt.toISOString(),
     identity,
   };
@@ -179,7 +254,34 @@ export type ScanResult = {
   events: number;
   skipped: number;
   byHarness: Record<string, number>;
+  deferred?: boolean;
+  failed?: boolean;
 };
+
+/** Retry setup/discovery each scan: tools may start or be repaired after us. */
+export async function discoverCollectors(
+  collectors: Collector[],
+  window: CollectionWindow | null,
+  log: (message: string) => void,
+  onFailure?: () => void
+): Promise<Collector[]> {
+  const found: Collector[] = [];
+  for (const collector of collectors) {
+    try {
+      collector.setWindow?.(window);
+      await collector.prepare?.(log);
+      if ((await collector.discover()).length > 0) {
+        found.push(collector);
+      }
+    } catch (error) {
+      onFailure?.();
+      log(
+        `${collector.id}: setup/discovery failed; will retry: ${String(error)}`
+      );
+    }
+  }
+  return found;
+}
 
 export async function scanOnce(
   collectors: Collector[],
@@ -190,17 +292,27 @@ export async function scanOnce(
 ): Promise<ScanResult> {
   const result: ScanResult = { byHarness: {}, events: 0, skipped: 0 };
   for (const collector of collectors) {
-    const roots = await collector.discover();
-    if (roots.length === 0) {
-      continue;
-    }
     try {
+      const roots = await collector.discover();
+      if (roots.length === 0) {
+        continue;
+      }
       for await (const raw of collector.collect(ctx)) {
-        if (recent.has(raw.eventId)) {
+        const event = stamp(raw, identity);
+        if (
+          recent.has(raw.eventId) ||
+          telemetryDedupKeys(event).some((key) => recent.has(key))
+        ) {
+          rememberTelemetry(recent, event);
           result.skipped++;
           continue;
         }
-        const event = stamp(raw, identity);
+        // Collectors drop what is older than `since` themselves; the end of
+        // the window is enforced here, on the harness's own timestamp.
+        if (!inWindow(raw.occurredAt, ctx)) {
+          result.skipped++;
+          continue;
+        }
         const problems = validateEvent(event);
         if (problems.length > 0) {
           ctx.log(
@@ -209,13 +321,23 @@ export async function scanOnce(
           result.skipped++;
           continue;
         }
-        recent.add(event.eventId);
+        // Apply backpressure before a large catch-up can overflow the queues.
+        // Returning closes the generator without committing its unread cursor.
+        if (batcher.size() >= BATCH_MAX && !(await batcher.flush())) {
+          ctx.log(
+            "scan deferred until queued telemetry can be written; source cursors retained"
+          );
+          result.deferred = true;
+          return result;
+        }
         batcher.push(event);
+        rememberTelemetry(recent, event);
         result.events++;
         result.byHarness[collector.id] =
           (result.byHarness[collector.id] ?? 0) + 1;
       }
     } catch (error) {
+      result.failed = true;
       ctx.log(`${collector.id}: collector failed: ${String(error)}`);
     }
   }
@@ -240,16 +362,84 @@ export async function runWatch(
 ): Promise<number> {
   const { session, me, say } = deps;
   const { state } = deps;
+  const wakeState: Pick<WatchState, "wake"> = state ?? {};
   const log = (message: string) => {
     deps.log(message);
     if (state) {
       recordLog(state, message);
     }
   };
-  const collectors = deps.collectors ?? COLLECTORS;
-  const cursors = openCursorStore();
-  const recent = loadRecentIds();
-  const sinks: Sink[] = [spoolSink(), ...(deps.extraSinks ?? [])];
+  let { window } = options;
+  const nativeClaude = createClaudeOtelCollector({
+    userId: me._id,
+    listen: !options.once,
+    window: () => window,
+    paused: () => Boolean(state?.paused),
+  });
+  const collectors =
+    deps.collectors ??
+    COLLECTORS.map((collector) =>
+      collector.id === "claude-code" ? nativeClaude.collector : collector
+    );
+  const memory = deps.memory ?? openMemory();
+  const cursors = openCursorStore(undefined, options.backfill);
+  const recent = options.backfill ? new Set<string>() : loadRecentIds();
+  let savedRecentSize = options.backfill ? -1 : recent.size;
+  const saveProgress = () => {
+    cursors.save();
+    // This set only grows during a run. Backfill must replace prior ids even
+    // when empty; ordinary idle scans need no serialization.
+    if (recent.size !== savedRecentSize) {
+      saveRecentIds(recent);
+      savedRecentSize = recent.size;
+    }
+  };
+  // A supplied history may be a one-shot generator; aliases and board replay
+  // both need it during a historical catch-up.
+  const storedHistory =
+    deps.history ?? (options.backfill ? readSpool() : undefined);
+  const history = storedHistory ? [...storedHistory] : undefined;
+  const historical = options.backfill
+    ? historyCollectors(history ?? [], me._id)
+    : [];
+  let backfilling = Boolean(options.backfill);
+  const recorded = new Set<string>();
+  // A local spool write is not proof of delivery: a crash can happen before
+  // the upload has even been staged. Only extend successfully saved recent
+  // ids with aliases; retain all local identities separately for board replay.
+  for (const event of history ?? readSpool()) {
+    if (validateEvent(event).length === 0 && event.identity.userId === me._id) {
+      rememberTelemetry(recorded, event);
+      if (
+        recent.has(event.eventId) ||
+        telemetryDedupKeys(event).some((key) => recent.has(key))
+      ) {
+        rememberTelemetry(recent, event);
+      }
+    }
+  }
+  // Replaying history must not append another copy to the local spool.
+  // This set tracks local persistence only, never successful remote delivery.
+  const persisted = new Set(recorded);
+  const localSpool = spoolSink();
+  const sinks: Sink[] = [
+    {
+      ...localSpool,
+      async write(events) {
+        const fresh = events.filter(
+          (event) =>
+            !telemetryDedupKeys(event).some((key) => persisted.has(key))
+        );
+        if (fresh.length > 0) {
+          await localSpool.write(fresh);
+          for (const event of fresh) {
+            rememberTelemetry(persisted, event);
+          }
+        }
+      },
+    },
+    ...(deps.extraSinks ?? []),
+  ];
   if (options.uploadUrl) {
     sinks.push(
       httpSink(options.uploadUrl, () => session.token(), fetch, {
@@ -259,37 +449,91 @@ export async function runWatch(
     );
   }
   const batcher = createBatcher(sinks, log);
+  const pendingRepoObservations = new Set<string>();
+  const sentRepoObservations = new Set<string>();
   const recording: Batcher = {
     ...batcher,
     push: (event) => {
-      if (state) {
+      if (state && !rememberTelemetry(recorded, event)) {
         recordEvent(state, event);
+      }
+      if (event.project?.repo) {
+        pendingRepoObservations.add(event.project.repo);
       }
       batcher.push(event);
     },
   };
   let { teamId } = deps;
   let teamCheckedAt = Date.now();
+  let stackCheckedAt = 0;
   const identity = (): TelemetryEvent["identity"] => ({
     userId: me._id,
     ...(teamId ? { teamId } : {}),
     clientVersion: VERSION,
   });
-  const ctx: CollectorContext = { cursors, log, since: options.since };
-
-  const discovered: string[] = [];
-  for (const c of collectors) {
-    if ((await c.discover()).length > 0) {
-      discovered.push(c.id);
+  const reportObservedRepos = async (): Promise<void> => {
+    if (!(options.uploadUrl && teamId)) {
+      return;
     }
-  }
+    for (const repo of pendingRepoObservations) {
+      const key = `${teamId}:${repo}`;
+      if (sentRepoObservations.has(key)) {
+        pendingRepoObservations.delete(repo);
+        continue;
+      }
+      try {
+        await session.client.mutation(api.teams.observeRepo, { repo });
+        sentRepoObservations.add(key);
+        pendingRepoObservations.delete(repo);
+      } catch (error) {
+        log(`repo observation failed: ${String(error)}`);
+      }
+    }
+  };
+  // Nobody records outside the hackathon window, and without a window
+  // nothing is recorded at all; `ctx` is only ever scanned with one set.
+  const ctx: CollectorContext = { cursors, log, since: 0 };
+  const applyWindow = (next: CollectionWindow | null): void => {
+    window = next;
+    if (state) {
+      state.window = next;
+    }
+    if (!next) {
+      return;
+    }
+    ctx.since = next.since;
+    ctx.until = next.until;
+    // An earlier `since` than the cursors were built with (the first
+    // windowed run, or organisers moving the start) means reading the logs
+    // again. Committed recent ids avoid ordinary repeats; older deliveries
+    // may be sent again and are permanently deduplicated by the server.
+    if (cursors.coverFrom(next.since)) {
+      log("reading harness logs again to cover the whole hackathon window");
+    }
+  };
+  applyWindow(window);
+
+  const discovered = (await discoverCollectors(collectors, window, log)).map(
+    (collector) => collector.id
+  );
   if (state) {
     state.harnesses = collectors.map((c) => ({
+      cached: 0,
       found: discovered.includes(c.id),
       id: c.id,
       requests: 0,
       tokens: 0,
     }));
+    // The board remembers: everything this machine reported since the first
+    // run comes back from the local spool, and the last announcements too.
+    state.trackedSince = memory.data.firstStartedAt;
+    const replayed = replaySpool(state, history ?? readSpool());
+    if (replayed > 0) {
+      log(`replayed ${replayed} events from the local spool`);
+    }
+    for (const n of memory.data.notifications.toReversed()) {
+      recordNotification(state, n.subject, n.body, n.at);
+    }
   }
   say(
     discovered.length
@@ -303,7 +547,9 @@ export async function runWatch(
   }
 
   const toaster = deps.toaster ?? platformToaster();
-  let lastSeen = Date.now();
+  // Poll from the last announcement seen by any run, so messages sent while
+  // the watcher was closed still show up (a first run fetches them all).
+  let lastSeen = memory.data.lastNotificationAt ?? 0;
   const pollNotifications = async (): Promise<void> => {
     let rows: Awaited<
       ReturnType<typeof session.client.query<typeof api.notifications.forMe>>
@@ -316,11 +562,18 @@ export async function runWatch(
       log(`notifications: ${String(error)}`);
       return;
     }
+    let remembered = false;
     for (const row of rows) {
       if (row.sentAt <= lastSeen) {
         continue;
       }
       lastSeen = row.sentAt;
+      rememberNotification(memory.data, {
+        at: row.sentAt,
+        body: row.body,
+        subject: row.subject,
+      });
+      remembered = true;
       if (state) {
         recordNotification(state, row.subject, row.body, row.sentAt);
       }
@@ -329,7 +582,8 @@ export async function runWatch(
         row.body,
         row.sentAt
       );
-      if (options.toast) {
+      // Catching up on old announcements stays on screen; only fresh ones toast.
+      if (options.toast && shouldToast(row.sentAt)) {
         toaster(row.subject, row.body).then((ok) => {
           if (!ok) {
             log("toast failed; notifications still print here");
@@ -337,32 +591,147 @@ export async function runWatch(
         });
       }
     }
+    if (remembered) {
+      memory.save();
+    }
   };
 
-  /** Latest feed posts for the board; nothing to do in line mode. */
+  /**
+   * Thumbnails for loaded posts that do not have one yet, a few per call.
+   * Only when the terminal can draw them; failures turn into links.
+   */
+  let feedImagesPending = false;
+  const loadFeedImages = async (): Promise<void> => {
+    feedImagesPending = false;
+    if (!state?.imageProtocol) {
+      return;
+    }
+    const width = WATCH_IMAGE_BOUNDS.maxColumns * PIXELS_PER_COLUMN;
+    let budget = FEED_IMAGES_PER_TURN;
+    for (const post of state.feed) {
+      if (
+        !post.imagePath ||
+        state.feedImages.has(post._id) ||
+        state.feedImageFailed.has(post._id)
+      ) {
+        continue;
+      }
+      if (budget === 0) {
+        feedImagesPending = true;
+        return;
+      }
+      budget--;
+      const png = await fetchImage(session, post.imagePath, width);
+      const size = png ? pngSize(png) : null;
+      if (png && size) {
+        state.feedImages.set(post._id, { png, ...size });
+      } else {
+        state.feedImageFailed.add(post._id);
+      }
+    }
+  };
+
+  /** Latest feed page for the board; nothing to do in line mode. */
   const pollFeed = async (): Promise<void> => {
     if (!state) {
       return;
     }
     try {
-      state.feed = withImageUrls(
-        await session.client.query(api.feed.list, { limit: 15 }),
-        session.url
+      mergeNewerFeed(
+        state,
+        withImageUrls(
+          await session.client.query(api.feed.list, { limit: FEED_PAGE }),
+          session.url
+        )
       );
     } catch (error) {
       log(`feed: ${String(error)}`);
+      return;
     }
+    await loadFeedImages();
+  };
+
+  /** The next older page, when scrolling asked for it. */
+  const fetchOlderFeed = async (): Promise<void> => {
+    if (!state?.feedNeedOlder) {
+      return;
+    }
+    const oldest = state.feed.at(-1);
+    if (!oldest) {
+      state.feedNeedOlder = false;
+      return;
+    }
+    try {
+      appendOlderFeed(
+        state,
+        withImageUrls(
+          await session.client.query(api.feed.list, {
+            before: oldest.createdAt,
+            limit: FEED_PAGE,
+          }),
+          session.url
+        ),
+        FEED_PAGE
+      );
+    } catch (error) {
+      state.feedNeedOlder = false;
+      log(`feed: ${String(error)}`);
+      return;
+    }
+    await loadFeedImages();
   };
 
   let stopping = false;
   const stop = () => {
     stopping = true;
+    wakeState.wake?.();
   };
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
 
+  // Team, announcements and the feed are hackathon-window functions on the
+  // server: before and after it they only answer "closed", so they are not
+  // asked. Organisers are never closed out, and neither is anybody while no
+  // hackathon is scheduled.
+  let eventSchedule = me.event;
+  const inEvent = (): boolean => {
+    let accessWindow = window;
+    if (eventSchedule) {
+      accessWindow =
+        eventSchedule.startsAt === undefined ||
+        eventSchedule.endsAt === undefined
+          ? null
+          : { since: eventSchedule.startsAt, until: eventSchedule.endsAt };
+    }
+    const phase = windowPhase(accessWindow, Date.now());
+    return me.role === "admin" || phase === "during" || phase === "unscheduled";
+  };
+  let wasInEvent = inEvent();
+  let windowCheckedAt = Date.now();
+
+  let tickComplete = false;
   const tick = async (): Promise<ScanResult> => {
-    if (Date.now() - teamCheckedAt > TEAM_REFRESH_MS) {
+    // Organisers may schedule or move the hackathon while this is open.
+    if (Date.now() - windowCheckedAt > TEAM_REFRESH_MS) {
+      windowCheckedAt = Date.now();
+      try {
+        const latest = await fetchMe(session);
+        if (latest) {
+          eventSchedule = latest.event;
+          const next = collectionWindow(latest);
+          if (next?.since !== window?.since || next?.until !== window?.until) {
+            applyWindow(next);
+          }
+        }
+      } catch (error) {
+        log(`hackathon window lookup failed: ${String(error)}`);
+      }
+    }
+    // The doors just opened with the watcher already running: pick the team
+    // up now rather than at the next refresh.
+    const opened = inEvent() && !wasInEvent;
+    wasInEvent = inEvent();
+    if (inEvent() && (opened || Date.now() - teamCheckedAt > TEAM_REFRESH_MS)) {
       teamCheckedAt = Date.now();
       try {
         teamId = (await session.client.query(api.teams.mine, {}))?._id;
@@ -370,21 +739,71 @@ export async function runWatch(
         log(`team lookup failed: ${String(error)}`);
       }
     }
+    // The team keeps building after linking the repo; this keeps what the
+    // dashboards say they build with current. Not awaited: a scan reads
+    // GitHub for a few seconds and telemetry does not wait for it.
+    if (
+      stackRefreshDue({
+        inEvent: inEvent(),
+        lastAskedAt: stackCheckedAt,
+        now: Date.now(),
+        once: options.once,
+        teamId,
+      })
+    ) {
+      stackCheckedAt = Date.now();
+      session.client
+        .action(api.stackDetect.mine, {})
+        .then((result) => {
+          if (result.scanned) {
+            log(`stack re-read from the repo: ${result.techStack.join(", ")}`);
+          }
+        })
+        .catch((error: unknown) =>
+          log(`stack refresh failed: ${String(error)}`)
+        );
+    }
     if (state) {
       state.scanning = true;
     }
-    const scanned = await scanOnce(
-      collectors,
-      ctx,
-      recording,
-      identity(),
-      recent
-    );
-    const ok = await batcher.flush();
-    if (ok) {
-      cursors.save();
-      saveRecentIds(recent);
+    let discoveryFailed = false;
+    const available = await discoverCollectors(collectors, window, log, () => {
+      discoveryFailed = true;
+    });
+    if (state) {
+      const found = new Set(available.map((collector) => collector.id));
+      for (const harness of state.harnesses) {
+        harness.found = found.has(harness.id);
+      }
     }
+    // Without a scheduled hackathon there is no window to read for.
+    const scanned: ScanResult = window
+      ? await scanOnce(
+          backfilling ? [...historical, ...available] : available,
+          ctx,
+          recording,
+          identity(),
+          recent
+        )
+      : { byHarness: {}, events: 0, skipped: 0 };
+    await reportObservedRepos();
+    const ok = await batcher.flush();
+    tickComplete =
+      ok && !scanned.deferred && !scanned.failed && !discoveryFailed;
+    if (window && tickComplete) {
+      backfilling = false;
+    }
+    if (ok) {
+      try {
+        nativeClaude.checkpoint(cursors);
+      } catch {
+        log("claude-code: OTLP queue cleanup deferred; events remain on disk");
+      }
+      saveProgress();
+    }
+    // The next run catches up from here.
+    memory.data.lastActiveAt = Date.now();
+    memory.save();
     if (state) {
       state.scanning = false;
       state.lastScanAt = Date.now();
@@ -408,7 +827,7 @@ export async function runWatch(
   try {
     await tick();
     if (options.once) {
-      return EXIT.OK;
+      return tickComplete ? EXIT.OK : EXIT.NETWORK;
     }
     const startedAt = Date.now();
     let lastEventAt: number | undefined = state?.lastEventAt;
@@ -419,14 +838,23 @@ export async function runWatch(
         Date.now(),
         startedAt
       );
-    await pollNotifications();
-    await pollFeed();
+    if (inEvent()) {
+      await pollNotifications();
+      await pollFeed();
+    }
     let nextScan = Date.now() + interval();
+    let nextUpdateCheck = Date.now() + UPDATE_RECHECK_MS;
     if (state) {
       state.nextScanAt = nextScan;
     }
     while (!(stopping || state?.stopRequested)) {
       const now = Date.now();
+      if (now >= nextUpdateCheck) {
+        nextUpdateCheck = now + UPDATE_RECHECK_MS;
+        if (await deps.checkForUpdate?.()) {
+          return EXIT.OK;
+        }
+      }
       if (now >= nextScan) {
         if (state?.paused) {
           nextScan = Date.now() + 1000;
@@ -436,23 +864,55 @@ export async function runWatch(
           if (scanned.events > 0) {
             lastEventAt = Date.now();
           }
-          await pollNotifications();
-          await pollFeed();
+          if (inEvent()) {
+            await pollNotifications();
+            await pollFeed();
+          }
           nextScan = Date.now() + interval();
         }
         if (state) {
           state.nextScanAt = nextScan;
         }
       }
-      // One wakeup per second at most; a key press wakes it immediately.
-      await sleepOrWake(state, state?.paused ? 5000 : 1000);
+      if (stopping || state?.stopRequested) {
+        break;
+      }
+      // Sleep until there is work. The screen owns its clock; keys and
+      // signals wake this loop immediately, including in line mode.
+      const nextWork = Math.min(
+        nextUpdateCheck,
+        state?.paused ? Number.POSITIVE_INFINITY : nextScan,
+        inEvent() && feedImagesPending
+          ? Date.now() + 1000
+          : Number.POSITIVE_INFINITY
+      );
+      await sleepOrWake(
+        wakeState,
+        inEvent() && state?.feedNeedOlder
+          ? 0
+          : Math.max(0, nextWork - Date.now())
+      );
+      if (stopping || state?.stopRequested) {
+        break;
+      }
+      // Scrolling past the loaded posts asks for an older page; pictures
+      // for anything loaded trickle in a few per turn.
+      if (inEvent()) {
+        await fetchOlderFeed();
+        await loadFeedImages();
+      }
     }
     say("Stopping, flushing…");
-    await batcher.flush();
-    cursors.save();
-    saveRecentIds(recent);
+    if (await batcher.flush()) {
+      saveProgress();
+    } else {
+      log(
+        "Pending telemetry remains; the next run will retry from the last saved cursors."
+      );
+    }
     return EXIT.INTERRUPTED;
   } finally {
+    await nativeClaude.stop();
     process.off("SIGINT", stop);
     process.off("SIGTERM", stop);
   }

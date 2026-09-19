@@ -22,6 +22,7 @@ import { uiFor } from "../lib/output";
 import type { Submission, Team } from "../lib/participant";
 import { c, cmd } from "../lib/style";
 import { VERSION } from "../version";
+import { profileNudge } from "./profile";
 
 /**
  * `hackspain` with no command: a friendly overview of where you stand. On an
@@ -85,7 +86,7 @@ function nextSteps(
       ]);
     }
     if (!submission || submission.challenges.length === 0) {
-      steps.push(["hackspain track list", "pick the tracks you are going for"]);
+      steps.push(["hackspain track list", "pick a track"]);
     }
     if (submission?.status !== "submitted") {
       steps.push([
@@ -108,8 +109,15 @@ function renderReady(
   snapshot: Extract<Snapshot, { kind: "ready" }>,
   menuMode: boolean
 ): void {
-  const { gate, team, submission, email } = snapshot;
-  ui.result({ loggedIn: true, gate, team, submission });
+  const { gate, me, team, submission, email } = snapshot;
+  const nudge = profileNudge(me);
+  ui.result({
+    loggedIn: true,
+    gate,
+    profileMissing: me.profileMissing,
+    team,
+    submission,
+  });
   if (!ui.json) {
     console.log("");
     console.log(
@@ -128,14 +136,19 @@ function renderReady(
             ? {
                 name: submission.name || null,
                 submitted: submission.status === "submitted",
-                tracks: submission.challenges.length,
-                trackLabels: submission.challenges.map((item) => item.label),
+                tracks: submission.challenges.length > 0 ? 1 : 0,
+                trackLabels: submission.challenges[0]
+                  ? [submission.challenges[0].label]
+                  : [],
               }
             : null,
         })
       )
     );
     console.log();
+    if (nudge) {
+      console.log(`  ${c.orange(nudge)}\n`);
+    }
   }
   if (menuMode) {
     return;

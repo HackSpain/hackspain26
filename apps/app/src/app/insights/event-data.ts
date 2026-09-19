@@ -1,5 +1,5 @@
 import { TEAMS, sumSamples } from "./mock-data";
-import type { Sample } from "./mock-data";
+import type { Sample, Totals } from "./mock-data";
 
 export const EVENT_MINUTES = 720;
 export const SNAPSHOT_MINUTE = 705;
@@ -10,8 +10,7 @@ export const PHASES = [
 ] as const;
 
 // Fictional pricing for the mock. This is not a provider's price schedule.
-export function usageUsd(samples: Sample[]): number {
-  const totals = sumSamples(samples);
+export function usageUsd(totals: Pick<Totals, "tokens" | "cachedTokens">): number {
   return (
     ((totals.tokens - totals.cachedTokens) * 4 + totals.cachedTokens * 0.5) /
     1_000_000
@@ -48,7 +47,7 @@ export function phaseRows(samples: Sample[]) {
     return {
       ...phase,
       ...totals,
-      cost: usageUsd(rows),
+      cost: usageUsd(totals),
       hourlyTokens: totals.tokens / ((phase.end - phase.start) / 60),
     };
   });
@@ -100,48 +99,3 @@ export const MILESTONES = TEAMS.map((team, index) => {
   };
 });
 
-export const TECHNOLOGIES = [
-  { category: "Frontend", color: "#1e3958", name: "Next.js" },
-  { category: "Frontend", color: "#35858a", name: "React + Vite" },
-  { category: "Frontend", color: "#d96b2a", name: "SvelteKit" },
-  { category: "Frontend", color: "#8b6b9f", name: "Astro" },
-  { category: "Backend", color: "#d96b2a", name: "Convex" },
-  { category: "Backend", color: "#35858a", name: "FastAPI" },
-  { category: "Backend", color: "#a67516", name: "Hono" },
-  { category: "Backend", color: "#1e3958", name: "Express" },
-  { category: "Datos", color: "#1e3958", name: "Postgres" },
-  { category: "Datos", color: "#677558", name: "SQLite" },
-  { category: "Datos", color: "#cc291f", name: "Redis" },
-] as const;
-
-const STACKS = [
-  ["Next.js", "Convex"],
-  ["Next.js", "Hono", "Postgres"],
-  ["React + Vite", "FastAPI", "Postgres"],
-  ["Next.js", "Convex"],
-  ["SvelteKit", "Hono", "SQLite"],
-  ["Next.js", "FastAPI", "Postgres"],
-  ["React + Vite", "Hono", "SQLite"],
-  ["Next.js", "Convex"],
-  ["Astro", "Express", "Postgres"],
-  ["Next.js", "Hono", "Redis"],
-  ["React + Vite", "FastAPI", "Postgres", "Redis"],
-  ["SvelteKit", "Express", "SQLite"],
-];
-
-export function technologyRows(teamIds: string[], category: string) {
-  return TECHNOLOGIES.filter(
-    (tech) => category === "all" || tech.category === category
-  )
-    .map((tech) => ({
-      ...tech,
-      teams: TEAMS.filter(
-        (team, index) =>
-          teamIds.includes(team.id) && STACKS[index].includes(tech.name)
-      ),
-    }))
-    .filter((row) => row.teams.length > 0)
-    .toSorted(
-      (a, b) => b.teams.length - a.teams.length || a.name.localeCompare(b.name)
-    );
-}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { INSIGHTS_LAYOUT } from "../../convex/lib/tvLayouts";
+import { INSIGHTS_LAYOUT, PANEL_V2_LAYOUT } from "../../convex/lib/tvLayouts";
 import { layoutTvBox, tvFontSizeClass, tvFontSizePixels, tvFontSizeStyle } from "./tv";
 
 test("custom pixels scale from the same 1920px canvas in preview and TV", () => {
@@ -22,6 +22,22 @@ test("default reset layout fits the canvas and has no team leaderboards", () => 
   assert.equal(INSIGHTS_LAYOUT.length, 7);
   for (const widget of INSIGHTS_LAYOUT) {
     assert.ok(!widget.kind.toLowerCase().includes("leaderboard"));
+    const { x, y, w, h } = widget;
+    assert.deepEqual(layoutTvBox(widget), { x, y, w, h });
+  }
+});
+
+test("panelv2 layout fits the canvas and keeps live CLI widgets", () => {
+  assert.equal(PANEL_V2_LAYOUT.length, 8);
+  const kinds = new Set(PANEL_V2_LAYOUT.map((widget) => widget.kind));
+  for (const kind of ["liveTokens", "liveAgents", "liveModels", "liveLeaderboard", "feed", "sponsorTicker"]) {
+    assert.ok(kinds.has(kind));
+  }
+  assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "clock" && widget.text === "event"), true);
+  // Commits ride inside the feed, and the strip is logos only like the v1 panel.
+  assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "feed" && widget.feedSource === "all"), true);
+  assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "sponsorTicker" && widget.text === "logos"), true);
+  for (const widget of PANEL_V2_LAYOUT) {
     const { x, y, w, h } = widget;
     assert.deepEqual(layoutTvBox(widget), { x, y, w, h });
   }

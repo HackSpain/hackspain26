@@ -4,7 +4,6 @@ import {
   Activity,
   ArrowDown,
   ArrowDownToLine,
-  ArrowLeft,
   ArrowUpRight,
   Bot,
   ChartNoAxesCombined,
@@ -16,7 +15,6 @@ import {
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
 import { Tabs } from "radix-ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -49,9 +47,10 @@ import {
 import { cn } from "@/lib/utils";
 import { ActivityChart, Sparkline, TeamScatter, UsageDonut } from "./charts";
 import {
+  bucketTotals,
   compact,
+  bucketSpan,
   filterSamples,
-  getSamples,
   harnessRows,
   HARNESSES,
   number,
@@ -61,6 +60,8 @@ import {
   teamRows,
   TRACKS,
 } from "./mock-data";
+import { NO_TEAM_ID, useLiveInsights } from "./use-live-insights";
+import type { LiveInsightData } from "./use-live-insights";
 import type {
   HarnessId,
   HarnessRow,
@@ -72,7 +73,7 @@ import type {
 
 const METRICS: { id: Metric; label: string; icon: LucideIcon }[] = [
   { id: "tokens", label: "Tokens", icon: Zap },
-  { id: "commits", label: "Commits", icon: GitCommitHorizontal },
+  { id: "commits", label: "Pushes", icon: GitCommitHorizontal },
   { id: "pullRequests", label: "PRs", icon: GitPullRequest },
 ];
 const NAV = [
@@ -204,17 +205,21 @@ function HarnessUsage({
     >
       <div className="flex flex-col items-center justify-between gap-4 min-[400px]:flex-row">
         <UsageDonut rows={sorted} metric={metric} onExplore={onExplore} />
-        <div className="max-w-28 space-y-2">
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-hs-brown">
-            <Terminal className="size-3" aria-hidden /> Más utilizado
-          </span>
-          <p className="font-bungee text-base leading-snug">
-            {sorted[0]?.name}
-          </p>
-          <p className="text-2xl font-bold tabular-nums">
-            {percent(sorted[0]?.[metric] ?? 0, total)}
-          </p>
-        </div>
+        {total > 0 ? (
+          <div className="max-w-28 space-y-2">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-hs-brown">
+              <Terminal className="size-3" aria-hidden /> Más utilizado
+            </span>
+            <p className="font-bungee text-base leading-snug">
+              {sorted[0]?.name}
+            </p>
+            <p className="text-2xl font-bold tabular-nums">
+              {percent(sorted[0]?.[metric] ?? 0, total)}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-hs-brown">Sin datos de uso todavía.</p>
+        )}
       </div>
       <div className="mt-5 space-y-3">
         {sorted.map((row) => (
@@ -266,7 +271,7 @@ function downloadCsv(rows: TeamRow[]) {
     "Proyecto",
     "Reto",
     "Tokens",
-    "Commits",
+    "Pushes",
     "PRs",
     "Sesiones",
   ];
@@ -291,7 +296,7 @@ function downloadCsv(rows: TeamRow[]) {
   );
   const link = document.createElement("a");
   link.href = url;
-  link.download = "hackspain-insights-demo.csv";
+  link.download = "hackspain-insights.csv";
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
@@ -326,7 +331,7 @@ function Leaderboard({
   return (
     <Panel
       title="Leaderboard"
-      eyebrow="Clasificación por tokens, commits y pull requests"
+      eyebrow="Clasificación por tokens, pushes y pull requests"
       action={
         <Button
           type="button"
@@ -383,8 +388,7 @@ function Leaderboard({
         <Table className="min-w-[680px]">
           <caption className="sr-only">
             Equipos ordenados por{" "}
-            {METRICS.find((item) => item.id === metric)?.label}. Datos
-            simulados, sin puntuación de calidad.
+            {METRICS.find((item) => item.id === metric)?.label}. Sin puntuación de calidad.
           </caption>
           <TableHeader>
             <TableRow>
@@ -529,17 +533,23 @@ function Leaderboard({
       {filtered.length === 0 ? (
         <div className="border border-t-0 border-hs-ink/25 px-5 py-8 text-center">
           <Search className="mx-auto mb-3 size-5 text-hs-brown" aria-hidden />
-          <p className="font-semibold">No hay equipos con estos filtros.</p>
-          <button
-            type="button"
-            className="mt-2 min-h-11 text-sm underline underline-offset-4"
-            onClick={() => {
-              setSearch("");
-              setHarness("all");
-            }}
-          >
-            Limpiar búsqueda y harness
-          </button>
+          <p className="font-semibold">
+            {teams.length
+              ? "No hay equipos con estos filtros."
+              : "Sin datos de equipos todavía."}
+          </p>
+          {teams.length > 0 && (
+            <button
+              type="button"
+              className="mt-2 min-h-11 text-sm underline underline-offset-4"
+              onClick={() => {
+                setSearch("");
+                setHarness("all");
+              }}
+            >
+              Limpiar búsqueda y harness
+            </button>
+          )}
         </div>
       ) : null}
       <div className="mt-3 flex flex-wrap justify-between gap-2 text-[11px] text-hs-brown">
@@ -563,7 +573,7 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
     <>
       <DialogHeader>
         <p className="mb-1 font-mono text-[11px] uppercase tracking-widest text-hs-brown">
-          Ficha de equipo · datos simulados
+          Ficha de equipo
         </p>
         <DialogTitle>{team.name}</DialogTitle>
         <DialogDescription>
@@ -600,8 +610,7 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
             <div className="flex-1">
               <p className="font-semibold">{tool.name}</p>
               <p className="text-xs text-hs-brown">
-                {number(tool.sessions)} sesiones · {number(tool.commits)}{" "}
-                commits
+                {number(tool.sessions)} sesiones
               </p>
             </div>
             <span className="font-mono text-xs">
@@ -618,19 +627,34 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
   );
 }
 
-export function InsightsView({
-  showBackLink = true,
-}: {
-  showBackLink?: boolean;
-}) {
-  // TODO: Replace simulated insights with real event data, including usage,
-  // concurrent agents, team milestones, and declared technology stacks.
+const REAL_FOOTER =
+  "Uso de IA reportado por hackspain watch durante la ventana del hackathon, en 24 tramos; pushes y pull requests del feed de GitHub. Se actualiza cada 30 segundos. El uso de quien no tiene equipo cuenta en los totales, no en las clasificaciones.";
+
+const INSIGHTS_FOOTER: Record<LiveInsightData["status"], string> = {
+  empty: `Todavía no ha llegado ningún evento de uso. ${REAL_FOOTER}`,
+  loading: "Cargando datos…",
+  ok: REAL_FOOTER,
+  unavailable:
+    "No se han podido leer los datos de uso ahora mismo; se reintenta solo. Los contadores muestran lo último disponible.",
+  unconfigured:
+    "La lectura de datos de uso no está configurada en este despliegue; los contadores de IA muestran 0.",
+  unscheduled:
+    "El hackathon no tiene fechas todavía; sin ventana no se registra uso.",
+};
+
+export function InsightsView() {
+  // Real numbers: AI usage from RawTree, teams and GitHub activity from
+  // Convex (use-live-insights.ts), refreshed every 30 seconds.
+  const live = useLiveInsights();
+  const timeline = useMemo(
+    () => ({ bucketMinutes: live.bucketMinutes, startsAt: live.startsAt }),
+    [live.bucketMinutes, live.startsAt],
+  );
   const [activeTab, setActiveTab] = useState("overview");
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const leaderboardTabRef = useRef<HTMLButtonElement | null>(null);
   const [period, setPeriod] = useState<Period>("event");
   const [track, setTrack] = useState("all");
-  const [tick, setTick] = useState(0);
   const [chartMetric, setChartMetric] = useState<Metric>("tokens");
   const [harness, setHarness] = useState("all");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -646,37 +670,29 @@ export function InsightsView({
     return () => window.removeEventListener("hashchange", syncTabFromHash);
   }, []);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") setTick((value) => value + 1);
-    }, 5_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const allSamples = useMemo(() => getSamples(tick), [tick]);
+  const allSamples = live.samples;
   const samples = useMemo(
-    () => filterSamples(allSamples, period, track),
-    [allSamples, period, track],
+    () => filterSamples(allSamples, period, track, live.teams, timeline),
+    [allSamples, period, track, live.teams, timeline],
   );
   const eventSamples = useMemo(
-    () => filterSamples(allSamples, "event", track),
-    [allSamples, track],
+    () => filterSamples(allSamples, "event", track, live.teams, timeline),
+    [allSamples, track, live.teams, timeline],
   );
-  const eventTeams = teamRows(eventSamples);
+  // People without a team count in every total and never in a team list.
+  const ranked = (rows: Sample[]) =>
+    teamRows(rows, live.teams).filter((team) => team.id !== NO_TEAM_ID);
+  const eventTeams = ranked(eventSamples);
   const totals = sumSamples(samples);
-  const teams = teamRows(samples);
+  const teams = ranked(samples);
   const tools = harnessRows(samples);
   const detailSamples = activeTab === "evolution" ? eventSamples : samples;
-  const selectedTeam = teamRows(detailSamples).find(
+  const selectedTeam = ranked(detailSamples).find(
     (team) => team.id === selectedTeamId,
   );
+  const buckets = bucketTotals(samples);
   const trend = (metric: Metric | "sessions") =>
-    [...new Set(samples.map((sample) => sample.bucket))].map(
-      (bucket) =>
-        sumSamples(samples.filter((sample) => sample.bucket === bucket))[
-          metric
-        ],
-    );
+    buckets.map((bucket) => bucket[metric]);
   const topCommitTeam = [...teams].sort((a, b) => b.commits - a.commits)[0];
   const leadingTool = [...tools].sort((a, b) => b.tokens - a.tokens)[0];
 
@@ -703,16 +719,6 @@ export function InsightsView({
 
   return (
     <div className="space-y-5 pb-4 [&_button]:focus-visible:outline-2 [&_button]:focus-visible:outline-offset-2 [&_button]:focus-visible:outline-hs-navy">
-      {showBackLink ? (
-        <Link
-          href="/"
-          className="inline-flex min-h-11 w-auto min-w-max shrink-0 items-center gap-2 text-sm font-medium whitespace-nowrap text-hs-brown underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-navy"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Volver al dashboard
-        </Link>
-      ) : null}
-
       <div className="min-w-0 space-y-5 tabular-nums">
       <section
         className="flex flex-col items-center px-2 pt-5 pb-7 text-center sm:pt-8 sm:pb-10"
@@ -722,10 +728,10 @@ export function InsightsView({
           id="insights-title"
           className="max-w-4xl text-3xl leading-tight text-balance sm:text-4xl lg:text-5xl"
         >
-          Insights en tiempo real
+          Insights del evento
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-pretty text-hs-brown sm:text-base">
-          Tokens, commits y herramientas de los equipos de HackSpain.
+          Tokens, pushes y herramientas de los equipos de HackSpain.
         </p>
       </section>
 
@@ -812,9 +818,9 @@ export function InsightsView({
               highlight
             />
             <StatCard
-              label="Commits publicados"
+              label="Pushes a GitHub"
               value={number(totals.commits)}
-              detail={`${number(totals.commits / teams.length)} de media por equipo`}
+              detail={`${number(totals.commits / Math.max(teams.length, 1))} de media por equipo`}
               icon={GitCommitHorizontal}
               trend={trend("commits")}
             />
@@ -838,7 +844,7 @@ export function InsightsView({
             <div className="min-w-0 space-y-5">
               <Panel
                 title="Actividad del evento"
-                eyebrow="Actividad por intervalos de 30 minutos"
+                eyebrow={`Actividad por intervalos de ${bucketSpan(timeline)}`}
                 action={
                   <MetricSwitch
                     value={chartMetric}
@@ -848,25 +854,31 @@ export function InsightsView({
                   />
                 }
               >
-                <ActivityChart samples={samples} metric={chartMetric} />
-                <div className="mt-5 flex items-start gap-3 bg-hs-teal/10 p-3">
-                  <Activity
-                    className="mt-0.5 size-4 shrink-0 text-hs-teal"
-                    aria-hidden
-                  />
-                  <p className="text-xs leading-relaxed">
-                    <strong>{topCommitTeam?.name}</strong> lidera en commits en
-                    este periodo.{" "}
-                    <span className="text-hs-brown">
-                      {leadingTool?.name} concentra el{" "}
-                      {percent(leadingTool?.tokens ?? 0, totals.tokens)} de los
-                      tokens.
-                    </span>
-                  </p>
-                </div>
+                <ActivityChart
+                  samples={samples}
+                  metric={chartMetric}
+                  timeline={timeline}
+                />
+                {topCommitTeam && (
+                  <div className="mt-5 flex items-start gap-3 bg-hs-teal/10 p-3">
+                    <Activity
+                      className="mt-0.5 size-4 shrink-0 text-hs-teal"
+                      aria-hidden
+                    />
+                    <p className="text-xs leading-relaxed">
+                      <strong>{topCommitTeam?.name}</strong> lidera en pushes en
+                      este periodo.{" "}
+                      <span className="text-hs-brown">
+                        {leadingTool?.name} concentra el{" "}
+                        {percent(leadingTool?.tokens ?? 0, totals.tokens)} de los
+                        tokens.
+                      </span>
+                    </p>
+                  </div>
+                )}
               </Panel>
               <Panel
-                title="Tokens vs. commits"
+                title="Tokens vs. pushes"
                 eyebrow="Consumo y contribuciones por equipo"
               >
                 <TeamScatter teams={teams} onSelect={openTeam} />
@@ -901,12 +913,13 @@ export function InsightsView({
             samples={eventSamples}
             teams={eventTeams}
             onSelect={openTeam}
+            timeline={timeline}
           />
         </Tabs.Content>
       </Tabs.Root>
 
       <footer className="border-t border-hs-ink/20 pt-5 text-xs leading-relaxed text-pretty text-hs-brown">
-        Demo con equipos, proyectos y métricas ficticios.
+        {INSIGHTS_FOOTER[live.status]}
       </footer>
 
       <Dialog

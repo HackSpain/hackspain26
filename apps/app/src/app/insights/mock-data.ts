@@ -3,52 +3,88 @@ export const HARNESSES = [
     color: "#d96b2a",
     id: "claude-code",
     mark: "CC",
-    models: [0, 100, 0, 0],
     name: "Claude Code",
   },
   {
     color: "#35858a",
     id: "codex",
     mark: ">_",
-    models: [100, 0, 0, 0],
     name: "Codex",
   },
   {
     color: "#1e3958",
     id: "cursor",
     mark: "Cu",
-    models: [42, 43, 12, 3],
     name: "Cursor",
   },
   {
     color: "#8b6b9f",
     id: "opencode",
     mark: "OC",
-    models: [28, 38, 19, 15],
     name: "OpenCode",
   },
   {
     color: "#a67516",
     id: "cline",
     mark: "Cl",
-    models: [21, 52, 18, 9],
     name: "Cline",
   },
   {
     color: "#677558",
     id: "copilot",
     mark: "Co",
-    models: [57, 34, 6, 3],
     name: "Copilot",
+  },
+  // The rest of the harnesses the watcher collects (apps/cli/src/watcher).
+  {
+    color: "#3f6fd1",
+    id: "gemini-cli",
+    mark: "Ge",
+    name: "Gemini CLI",
+  },
+  {
+    color: "#6a4bc4",
+    id: "qwen-code",
+    mark: "Qw",
+    name: "Qwen Code",
+  },
+  {
+    color: "#b8432f",
+    id: "kilo-code",
+    mark: "Ki",
+    name: "Kilo Code",
+  },
+  {
+    color: "#d97757",
+    id: "pi",
+    mark: "Pi",
+    name: "Pi",
+  },
+  {
+    color: "#8b5cf6",
+    id: "omp",
+    mark: "Om",
+    name: "Oh My Pi",
+  },
+  {
+    color: "#6a4fd8",
+    id: "antigravity",
+    mark: "Ag",
+    name: "Antigravity",
+  },
+  {
+    color: "#2f63c9",
+    id: "devin",
+    mark: "Dv",
+    name: "Devin",
   },
 ] as const;
 
-export const MODELS = ["GPT", "Claude", "Gemini", "Otros"] as const;
-export const TRACKS = ["Agents", "DevTools", "Impacto"] as const;
+export const TRACKS: string[] = [];
 export const PERIODS = [
-  { buckets: 24, id: "event", label: "Todo el evento" },
-  { buckets: 12, id: "6h", label: "Últimas 6 horas" },
-  { buckets: 2, id: "1h", label: "Última hora" },
+  { buckets: 24, id: "event", label: "Todo el evento", minutes: 0 },
+  { buckets: 12, id: "6h", label: "Últimas 6 horas", minutes: 360 },
+  { buckets: 2, id: "1h", label: "Última hora", minutes: 60 },
 ] as const;
 
 export type Period = (typeof PERIODS)[number]["id"];
@@ -66,153 +102,12 @@ export interface Team {
   primary: HarnessId;
   secondary: HarnessId;
   color: string;
+  /** Team logo, when the owner uploaded one. */
+  logoUrl?: string;
 }
 
-export const TEAMS: Team[] = [
-  {
-    color: "#d96b2a",
-    description:
-      "Un espacio de trabajo donde agentes y personas construyen juntos.",
-    id: "tortilla",
-    members: 4,
-    name: "Tortilla Overflow",
-    primary: "claude-code",
-    project: "AgentOS",
-    secondary: "codex",
-    track: "Agents",
-  },
-  {
-    color: "#35858a",
-    description:
-      "Del primer commit a una demo desplegada, sin salir del terminal.",
-    id: "siesta",
-    members: 3,
-    name: "Siesta.sh",
-    primary: "codex",
-    project: "Deploy & chill",
-    secondary: "cursor",
-    track: "DevTools",
-  },
-  {
-    color: "#1e3958",
-    description:
-      "Agentes que conectan iniciativas locales con las personas que las necesitan.",
-    id: "paella",
-    members: 4,
-    name: "Paella Intelligence",
-    primary: "cursor",
-    project: "Barrio",
-    secondary: "claude-code",
-    track: "Impacto",
-  },
-  {
-    color: "#8b6b9f",
-    description:
-      "Revisiones de código que explican el contexto y proponen el siguiente paso.",
-    id: "gitana",
-    members: 4,
-    name: "Git Happens",
-    primary: "claude-code",
-    project: "Reviewmate",
-    secondary: "opencode",
-    track: "DevTools",
-  },
-  {
-    color: "#a67516",
-    description:
-      "Memoria compartida para equipos de agentes que trabajan en tareas largas.",
-    id: "context",
-    members: 3,
-    name: "Context Cowboys",
-    primary: "opencode",
-    project: "Memory Lane",
-    secondary: "codex",
-    track: "Agents",
-  },
-  {
-    color: "#677558",
-    description: "Un tutor que adapta sus explicaciones a cada estudiante.",
-    id: "churros",
-    members: 4,
-    name: "Churros & Code",
-    primary: "cursor",
-    project: "Aula abierta",
-    secondary: "cline",
-    track: "Impacto",
-  },
-  {
-    color: "#35858a",
-    description:
-      "Herramientas de desarrollo que siguen funcionando sin conexión.",
-    id: "localhost",
-    members: 3,
-    name: "Localhost Heroes",
-    primary: "codex",
-    project: "Local First",
-    secondary: "copilot",
-    track: "DevTools",
-  },
-  {
-    color: "#d96b2a",
-    description:
-      "Un estudio creativo para convertir una idea en una historia interactiva.",
-    id: "prompt",
-    members: 4,
-    name: "Prompt Fiction",
-    primary: "claude-code",
-    project: "Scene",
-    secondary: "cursor",
-    track: "Agents",
-  },
-  {
-    color: "#a67516",
-    description:
-      "Rutas compartidas para reducir los desplazamientos de una comunidad.",
-    id: "cache",
-    members: 3,
-    name: "Caché con leche",
-    primary: "cline",
-    project: "Green Route",
-    secondary: "opencode",
-    track: "Impacto",
-  },
-  {
-    color: "#677558",
-    description:
-      "Un copiloto para mantener las entregas de equipos pequeños en movimiento.",
-    id: "merge",
-    members: 4,
-    name: "Merge y punto",
-    primary: "copilot",
-    project: "Shipyard",
-    secondary: "codex",
-    track: "DevTools",
-  },
-  {
-    color: "#8b6b9f",
-    description:
-      "Agentes que investigan y preparan decisiones con fuentes trazables.",
-    id: "neural",
-    members: 3,
-    name: "Neural Nomads",
-    primary: "opencode",
-    project: "Compass",
-    secondary: "claude-code",
-    track: "Agents",
-  },
-  {
-    color: "#1e3958",
-    description:
-      "Una ayuda cotidiana para coordinar las tareas de cuidado en familia.",
-    id: "404",
-    members: 4,
-    name: "404 Sleep Not Found",
-    primary: "cursor",
-    project: "Cuida",
-    secondary: "copilot",
-    track: "Impacto",
-  },
-];
+// Insights telemetry is not connected yet. Never substitute fictional teams.
+export const TEAMS: Team[] = [];
 
 export interface Sample {
   teamId: string;
@@ -225,80 +120,52 @@ export interface Sample {
   cachedTokens: number;
 }
 
-// Deterministic, fictional event telemetry. No participant data or API calls.
-const BASE_SAMPLES: Sample[] = TEAMS.flatMap((team, teamIndex) =>
-  Array.from({ length: 24 }, (_, bucket) =>
-    [team.primary, team.secondary].map((harness, toolIndex) => {
-      let phaseIndex = 2;
-      if (bucket < 4) {
-        phaseIndex = 0;
-      } else if (bucket < 18) {
-        phaseIndex = 1;
-      }
-      const rhythms = [
-        [0.65, 1.05, 1.8],
-        [1.25, 1, 0.55],
-        [0.9, 1.05, 1.1],
-      ];
-      const wave =
-        (0.65 + ((bucket * 7 + teamIndex * 3) % 9) / 12) *
-        rhythms[teamIndex % rhythms.length][phaseIndex];
-      const share = toolIndex === 0 ? 0.76 : 0.24;
-      const tokens =
-        Math.round(((15 - teamIndex) * 25_000 * wave * share) / 100) * 100;
-      const commits = Math.max(
-        0,
-        Math.round(
-          (4 + ((teamIndex * 5 + bucket * 3) % 15)) *
-            share *
-            wave *
-            (0.75 + teamIndex / 22)
-        )
-      );
-      return {
-        bucket,
-        cachedTokens: Math.round(tokens * (0.28 + (teamIndex % 5) * 0.09)),
-        commits,
-        harness,
-        pullRequests: Math.floor(commits / (3 + (teamIndex % 3))),
-        sessions: Math.max(1, Math.round((5 + (bucket % 6)) * share * wave)),
-        teamId: team.id,
-        tokens,
-      };
-    })
-  ).flat()
-);
-
-export function getSamples(tick: number): Sample[] {
-  return BASE_SAMPLES.map((sample, index) => {
-    if (sample.bucket !== 23) {
-      return sample;
-    }
-    const updates = Math.floor((tick + (index % 12)) / 12);
-    const tokens = updates * (1200 + (index % 7) * 400);
-    return {
-      ...sample,
-      cachedTokens: sample.cachedTokens + Math.round(tokens * 0.4),
-      commits: sample.commits + updates,
-      sessions: sample.sessions + updates,
-      tokens: sample.tokens + tokens,
-    };
-  });
+// Keep metrics at zero until an actual telemetry source is connected.
+export function getSamples(): Sample[] {
+  return [];
 }
 
+/**
+ * The buckets a period covers. On a real timeline "the last 6 hours" ends at
+ * the bucket the clock is in (not at the end of the event) and is as many
+ * whole buckets as it takes to cover the period, so with two-hour buckets
+ * "the last hour" is the current bucket.
+ */
+export function periodBuckets(
+  period: Period,
+  timeline?: Timeline,
+  now = Date.now()
+): { from: number; to: number } {
+  const option = PERIODS.find((item) => item.id === period);
+  if (timeline?.startsAt === undefined) {
+    return { from: 24 - (option?.buckets ?? 24), to: 23 };
+  }
+  if (!option?.minutes) {
+    return { from: 0, to: 23 };
+  }
+  const elapsed = (now - timeline.startsAt) / 60_000;
+  const to = Math.min(23, Math.max(0, Math.floor(elapsed / timeline.bucketMinutes)));
+  const span = Math.max(1, Math.ceil(option.minutes / timeline.bucketMinutes));
+  return { from: Math.max(0, to - span + 1), to };
+}
+
+/** `teams` defaults to the static list; live callers pass the real ones. */
 export function filterSamples(
   samples: Sample[],
   period: Period,
-  track: string
+  track: string,
+  teams: Team[] = TEAMS,
+  timeline?: Timeline
 ): Sample[] {
-  const buckets = PERIODS.find((item) => item.id === period)?.buckets ?? 24;
+  const { from, to } = periodBuckets(period, timeline);
   const ids = new Set(
-    TEAMS.filter((team) => track === "all" || team.track === track).map(
-      (team) => team.id
-    )
+    teams
+      .filter((team) => track === "all" || team.track === track)
+      .map((team) => team.id)
   );
   return samples.filter(
-    (sample) => sample.bucket >= 24 - buckets && ids.has(sample.teamId)
+    (sample) =>
+      sample.bucket >= from && sample.bucket <= to && ids.has(sample.teamId)
   );
 }
 
@@ -328,8 +195,15 @@ export function sumSamples(samples: Sample[]): Totals {
   return totals;
 }
 
-export function teamRows(samples: Sample[]) {
-  return TEAMS.filter((team) =>
+/** Totals per bucket, preserving the order in which buckets appear. */
+export function bucketTotals(samples: Sample[]): Totals[] {
+  return [...new Set(samples.map((sample) => sample.bucket))].map((bucket) =>
+    sumSamples(samples.filter((sample) => sample.bucket === bucket))
+  );
+}
+
+export function teamRows(samples: Sample[], teams: Team[] = TEAMS) {
+  return teams.filter((team) =>
     samples.some((sample) => sample.teamId === team.id)
   ).map((team) => ({
     ...team,
@@ -350,11 +224,49 @@ export function harnessRows(samples: Sample[]) {
 }
 export type HarnessRow = ReturnType<typeof harnessRows>[number];
 
-export function timeLabel(bucket: number): string {
-  return `${String(9 + Math.floor(bucket / 2)).padStart(2, "0")}:${bucket % 2 ? "30" : "00"}`;
+/**
+ * Where the buckets sit in real time. Without one, charts keep the 12-hour
+ * day of the static layout (09:00, 30 minutes a bucket).
+ */
+export type Timeline = { startsAt?: number; bucketMinutes: number };
+
+const REAL_TIME = new Intl.DateTimeFormat("es-ES", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Madrid",
+  weekday: "short",
+});
+
+/** "30 minutos", "2 horas", "1 h 58 min": how long one bucket lasts. */
+export function bucketSpan(timeline?: Timeline): string {
+  const minutes = Math.round(timeline?.bucketMinutes ?? 30);
+  if (minutes < 60) {
+    return `${minutes} minutos`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (rest === 0) {
+    return hours === 1 ? "1 hora" : `${hours} horas`;
+  }
+  return `${hours} h ${rest} min`;
+}
+
+/** Minutes since the start as a clock time: "sáb 10:30" on a real timeline. */
+export function minuteLabel(minutes: number, timeline?: Timeline): string {
+  if (timeline?.startsAt === undefined) {
+    return `${String(9 + Math.floor(minutes / 60)).padStart(2, "0")}:${String(Math.round(minutes % 60)).padStart(2, "0")}`;
+  }
+  return REAL_TIME.format(new Date(timeline.startsAt + minutes * 60_000));
+}
+
+export function timeLabel(bucket: number, timeline?: Timeline): string {
+  return minuteLabel(bucket * (timeline?.bucketMinutes ?? 30), timeline);
 }
 
 export function compact(value: number): string {
+  if (value >= 1_000_000_000) {
+    return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 2 }).format(value / 1_000_000_000)} B`;
+  }
   if (value >= 1_000_000) {
     return `${new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 }).format(value / 1_000_000)} M`;
   }

@@ -19,8 +19,15 @@ import {
   MilestoneChart,
   CostChart,
 } from "./evolution-charts";
-import { compact, number, percent } from "./mock-data";
-import type { Sample, TeamRow } from "./mock-data";
+import {
+  compact,
+  minuteLabel,
+  number,
+  percent,
+  sumSamples,
+  timeLabel,
+} from "./mock-data";
+import type { Sample, TeamRow, Timeline } from "./mock-data";
 import {
   concurrencyRows,
   eventTime,
@@ -28,7 +35,6 @@ import {
   money,
   phaseRows,
   SNAPSHOT_MINUTE,
-  technologyRows,
   usageUsd,
 } from "./event-data";
 
@@ -68,14 +74,16 @@ export function LiveTechnologyStacks() {
   return (
     <Panel
       title="Stacks más usados"
-      eyebrow="Detectado de los repos vinculados"
+      eyebrow="Detectado automáticamente de los repos"
     >
       {histogram === undefined ? (
         <p className="text-sm text-hs-brown">Cargando stacks…</p>
       ) : total === 0 ? (
         <p className="text-sm text-hs-brown">
-          Aún no hay stacks. Se leen del repo al vincularlo con{" "}
-          <code className="font-mono text-xs">hackspain team repo</code>.
+          Aún no hay stacks. Se leen solos del repo (también en monorepos) al
+          vincularlo con{" "}
+          <code className="font-mono text-xs">hackspain team repo</code> o al
+          ponerlo en el proyecto.
         </p>
       ) : (
         <>
@@ -122,71 +130,148 @@ export function LiveTechnologyStacks() {
         </>
       )}
       <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
-        Datos reales del repo. El resto de insights de esta página es una demo.
+        {total === 0
+          ? "Datos reales del repo."
+          : `${histogram?.auto ?? 0} de ${total} stacks de proyecto detectados desde GitHub; no es un recuento de repos vinculados.`}
       </p>
     </Panel>
   );
 }
 
-export function TechnologyStacks({ teams }: { teams: TeamRow[] }) {
-  const [category, setCategory] = useState("Frontend");
-  const rows = technologyRows(
-    teams.map((team) => team.id),
-    category
+/**
+ * What the real data supports, and nothing else. The phases, the overlapping
+ * sessions, the milestones and the cost below are built for the static
+ * layout (a 12-hour day, synthetic session intervals, a made-up price); on
+ * real telemetry they would be inventions next to real numbers.
+ */
+function RealEvolution({
+  samples,
+  teams,
+  timeline,
+}: {
+  samples: Sample[];
+  teams: TeamRow[];
+  timeline: Timeline;
+}) {
+  const [teamId, setTeamId] = useState("all");
+  const selectedTeam = teams.find((team) => team.id === teamId);
+  const scope = selectedTeam?.id ?? "all";
+  const scoped = samples.filter(
+    (sample) => scope === "all" || sample.teamId === scope
   );
+  const totals = sumSamples(scoped);
+  const perBucket = new Map<number, number>();
+  for (const sample of scoped) {
+    perBucket.set(
+      sample.bucket,
+      (perBucket.get(sample.bucket) ?? 0) + sample.tokens
+    );
+  }
+  const [peakBucket, peakTokens] = [...perBucket].toSorted(
+    (a, b) => b[1] - a[1]
+  )[0] ?? [0, 0];
+  const perHour = 60 / timeline.bucketMinutes;
+  const active = new Set(scoped.map((sample) => sample.harness)).size;
+
   return (
-    <Panel
-      title="Stacks más usados"
-      eyebrow="Tecnologías declaradas por los equipos"
-      action={
-        <Select value={category} onValueChange={setCategory}>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg">Evolución del evento</h2>
+          <p className="mt-1 text-xs text-hs-brown">
+            Desde {minuteLabel(0, timeline)} hasta{" "}
+            {minuteLabel(timeline.bucketMinutes * 24, timeline)}, en tramos de{" "}
+            {Math.round(timeline.bucketMinutes)} minutos. Uso reportado por
+            hackspain watch.
+          </p>
+        </div>
+        <Select value={scope} onValueChange={setTeamId}>
           <SelectTrigger
-            aria-label="Categoría de tecnologías"
-            className="min-h-10 border text-xs sm:w-32"
+            aria-label="Equipo para analizar"
+            className="min-h-11 border sm:w-56"
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {["all", "Frontend", "Backend", "Datos"].map((item) => (
-              <SelectItem key={item} value={item}>
-                {item === "all" ? "Todas" : item}
+            <SelectItem value="all">Todos los equipos</SelectItem>
+            {teams.map((team) => (
+              <SelectItem key={team.id} value={team.id}>
+                {team.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      }
-    >
-      <div className="space-y-4">
-        {rows.map((row) => (
-          <div key={row.name}>
-            <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-              <span className="font-semibold">{row.name}</span>
-              <span className="text-hs-brown tabular-nums">
-                {row.teams.length} equipos ·{" "}
-                {percent(row.teams.length, teams.length)}
-              </span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-hs-sand">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  backgroundColor: row.color,
-                  width: `${(row.teams.length / Math.max(teams.length, 1)) * 100}%`,
-                }}
-              />
-            </div>
-          </div>
-        ))}
       </div>
-      <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
-        Un equipo puede utilizar varias tecnologías. No son los harnesses de sus
-        agentes.
-      </p>
-    </Panel>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryMetric
+          label="Tokens procesados"
+          value={compact(totals.tokens)}
+          detail={`${compact(totals.cachedTokens)} servidos desde caché`}
+        />
+        <SummaryMetric
+          label="Tramo más intenso"
+          value={`${compact(peakTokens * perHour)}/h`}
+          detail={
+            peakTokens
+              ? `${timeLabel(peakBucket, timeline)}–${timeLabel(peakBucket + 1, timeline)}`
+              : "Sin actividad todavía"
+          }
+        />
+        <SummaryMetric
+          label="Sesiones de agentes"
+          value={number(totals.sessions)}
+          detail={`${active} herramientas en uso`}
+        />
+        <SummaryMetric
+          label="Pushes y pull requests"
+          value={`${number(totals.commits)} · ${number(totals.pullRequests)}`}
+          detail="Actividad en los repos de los equipos"
+        />
+      </div>
+      <Panel
+        title="Ritmo de consumo"
+        eyebrow={
+          selectedTeam ? selectedTeam.name : "Consumo conjunto de los equipos"
+        }
+      >
+        <ConsumptionChart
+          samples={scoped}
+          color={selectedTeam?.color ?? "#1e3958"}
+          timeline={timeline}
+        />
+      </Panel>
+    </div>
   );
 }
 
 export function EventInsights({
+  samples,
+  teams,
+  onSelect,
+  timeline,
+}: {
+  samples: Sample[];
+  teams: TeamRow[];
+  onSelect: (team: TeamRow) => void;
+  /** A real timeline switches to the view that only shows real numbers. */
+  timeline?: Timeline;
+}) {
+  if (timeline?.startsAt !== undefined) {
+    if (samples.length === 0) {
+      return (
+        <Panel title="Evolución del evento" eyebrow="Actividad del evento">
+          <p className="text-sm text-hs-brown">
+            Sin datos de actividad todavía.
+          </p>
+        </Panel>
+      );
+    }
+    return <RealEvolution samples={samples} teams={teams} timeline={timeline} />;
+  }
+  return <StaticEvolution samples={samples} teams={teams} onSelect={onSelect} />;
+}
+
+function StaticEvolution({
   samples,
   teams,
   onSelect,
@@ -211,6 +296,13 @@ export function EventInsights({
     () => concurrencyRows(scopedSamples),
     [scopedSamples]
   );
+  if (samples.length === 0) {
+    return (
+      <Panel title="Evolución del evento" eyebrow="Actividad del evento">
+        <p className="text-sm text-hs-brown">Sin datos de actividad todavía.</p>
+      </Panel>
+    );
+  }
   const peak = Math.max(...concurrency.map((row) => row.total), 0);
   const snapshot = concurrency[SNAPSHOT_MINUTE]?.total ?? 0;
   const milestones = MILESTONES.filter((milestone) =>
@@ -221,18 +313,17 @@ export function EventInsights({
   );
   const costRows = scopedTeams
     .map((team) => ({
-      cost: usageUsd(
-        scopedSamples.filter((sample) => sample.teamId === team.id)
-      ),
+      cost: usageUsd(team),
       team,
     }))
     .toSorted((a, b) => b.cost - a.cost);
-  const meanCost = usageUsd(scopedSamples) / Math.max(scopedTeams.length, 1);
+  const totalCost = usageUsd(sumSamples(scopedSamples));
+  const meanCost = totalCost / Math.max(scopedTeams.length, 1);
   const ratio = phases[0].hourlyTokens
     ? phases[2].hourlyTokens / phases[0].hourlyTokens
     : 0;
   const color = selectedTeam?.color ?? "#1e3958";
-  const benchmark = usageUsd(samples) / Math.max(teams.length, 1);
+  const benchmark = usageUsd(sumSamples(samples)) / Math.max(teams.length, 1);
 
   return (
     <div className="space-y-5">
@@ -363,7 +454,7 @@ export function EventInsights({
         <Tabs.Content value="cost">
           <Panel
             title="Gasto estimado de usage"
-            eyebrow={`${money(meanCost)} de media por equipo · ${money(usageUsd(scopedSamples))} en total`}
+            eyebrow={`${money(meanCost)} de media por equipo · ${money(totalCost)} en total`}
           >
             <CostChart
               rows={costRows}

@@ -8,11 +8,11 @@ import { api } from "@convex/_generated/api";
 import { AuthScreen, FormError, LoadingText, errorMessage } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePrivateUrlParameter } from "@/lib/private-url-parameter";
 
 function CliAuthCard() {
-  // Not `?code=`: the Convex Auth middleware consumes and strips a `code`
-  // query param on every route (its own OAuth/magic-link verifier).
-  const code = useSearchParams().get("hs-code")?.trim() ?? "";
+  const queryCode = useSearchParams().get("hs-code")?.trim() ?? "";
+  const { value: code } = usePrivateUrlParameter("hs-code", queryCode);
   const approve = useMutation(api.cliAuth.approve);
   const [pending, setPending] = useState(false);
   const [approved, setApproved] = useState(false);

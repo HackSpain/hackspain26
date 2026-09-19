@@ -9,6 +9,13 @@ import { MetaLink, MetaRow, SocialMeta } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, Frame } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   attendanceLabel,
@@ -20,6 +27,8 @@ import {
   submissionStatusLabel,
 } from "@/lib/utils";
 import { urlDisplay, urlLabel } from "@/lib/urls";
+
+const NO_TYPE = "none";
 
 export type ParticipantRef =
   | { kind: "signup"; id: Id<"signups"> }
@@ -66,6 +75,8 @@ export function ParticipantDetail({
   const setAttendance = useMutation(api.admin.setAttendance);
   const setAccepted = useMutation(api.admin.setAccepted);
   const setNotes = useMutation(api.admin.setNotes);
+  const setUserType = useMutation(api.admin.setUserType);
+  const userTypes = useQuery(api.userTypes.list);
   const [notes, setNotesValue] = useState<string | null>(null);
 
   const noteValue = notes ?? detail.user?.adminNotes ?? "";
@@ -95,6 +106,9 @@ export function ParticipantDetail({
               ) : null}
               {staffRole ? (
                 <Badge className="whitespace-nowrap">{staffRole}</Badge>
+              ) : null}
+              {user?.userType ? (
+                <Badge className="whitespace-nowrap">{user.userType.label}</Badge>
               ) : null}
             </CardTitle>
           </CardHeader>
@@ -139,11 +153,49 @@ export function ParticipantDetail({
             )}
             {user ? (
               <>
-                {user.role === "admin" ? (
-                  <p className="text-sm text-hs-brown">
-                    Los admins ya tienen acceso de juez.
-                  </p>
-                ) : null}
+                <div className="space-y-2">
+                  <label
+                    htmlFor={`user-type-${user._id}`}
+                    className="font-bungee text-xs uppercase"
+                  >
+                    Tipo de usuario
+                  </label>
+                  <Select
+                    value={user.userType?._id ?? NO_TYPE}
+                    disabled={userTypes === undefined}
+                    onValueChange={(value) =>
+                      void setUserType({
+                        typeId: value === NO_TYPE ? null : (value as Id<"userTypes">),
+                        userId: user._id,
+                      })
+                    }
+                  >
+                    <SelectTrigger id={`user-type-${user._id}`} aria-label="Tipo de usuario">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_TYPE}>
+                        Sin tipo{" "}
+                        <span className="text-xs text-hs-brown">
+                          · usa el tipo por defecto
+                        </span>
+                      </SelectItem>
+                      {(userTypes ?? []).map((type) => (
+                        <SelectItem key={type._id} value={type._id}>
+                          {type.label}
+                          {type.isDefault ? (
+                            <span className="text-xs text-hs-brown"> · por defecto</span>
+                          ) : null}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {userTypes !== undefined && userTypes.length === 0 ? (
+                    <p className="text-xs text-hs-brown">
+                      Aún no hay tipos. Créalos en Admin → Tipos.
+                    </p>
+                  ) : null}
+                </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <Button
                     variant="outline"
@@ -159,24 +211,6 @@ export function ParticipantDetail({
                   >
                     Quitar admin
                   </Button>
-                  {user.role === "admin" ? null : (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        onClick={() => void setRole({ userId: user._id, role: "judge" })}
-                      >
-                        Hacer juez
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        onClick={() => void setRole({ userId: user._id, role: "user" })}
-                      >
-                        Quitar juez
-                      </Button>
-                    </>
-                  )}
                   <Button
                     className="w-full sm:w-auto"
                     onClick={() =>

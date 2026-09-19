@@ -1,44 +1,25 @@
-export const TV_WIDGET_KINDS = [
-  "banner",
-  "ticker",
-  "clock",
-  "message",
-  "insightsStats",
-  "insightsActivity",
-  "insightsHarness",
-  "insightsStacks",
-  "insightsScatter",
-  "insightsLeaderboard",
-  "insightsEvolution",
-  "liveCommits",
-  "liveAgents",
-  "liveTokens",
-  "liveLeaderboard",
-  "feed",
-  "sponsorGrid",
-  "sponsorTicker",
-] as const;
+import type { Infer } from "convex/values";
+import type {
+  tvFeedModeValidator,
+  tvFeedSourceValidator,
+  tvFontWeightValidator,
+  tvSponsorValidator,
+  tvTickerSpeedValidator,
+  tvWidgetKindValidator,
+  tvWidgetValidator,
+} from "@convex/lib/tvValidators";
 
-export type TvWidgetKind = (typeof TV_WIDGET_KINDS)[number];
+export { layoutTvBox } from "../../convex/lib/tvLayout";
 
-export type TvSponsorTier = "gold" | "silver" | "community";
-export type TvTickerSpeed = "slow" | "normal" | "fast";
-export type TvFeedMode = "latest" | "rotate";
-export type TvFeedSource = "all" | "participants" | "github";
+export type TvWidgetKind = Infer<typeof tvWidgetKindValidator>;
+export type TvSponsor = Infer<typeof tvSponsorValidator>;
+export type TvSponsorTier = TvSponsor["tier"];
+export type TvTickerSpeed = Infer<typeof tvTickerSpeedValidator>;
+export type TvFeedMode = Infer<typeof tvFeedModeValidator>;
+export type TvFeedSource = Infer<typeof tvFeedSourceValidator>;
 export const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
 export type TvFontSize = (typeof TV_FONT_SIZES)[number];
-export type TvFontWeight = "normal" | "medium" | "semibold" | "bold";
-
-export const TV_FONT_SIZE_OPTIONS: readonly {
-  value: TvFontSize;
-  label: string;
-}[] = [
-  { value: 0.85, label: "Pequeño" },
-  { value: 1.1, label: "Normal" },
-  { value: 1.5, label: "Grande" },
-  { value: 2, label: "Enorme" },
-  { value: 2.75, label: "Titular" },
-];
+export type TvFontWeight = Infer<typeof tvFontWeightValidator>;
 
 export const TV_FONT_WEIGHT_OPTIONS: readonly {
   value: TvFontWeight;
@@ -85,20 +66,6 @@ export function isTvFontWeight(value: string): value is TvFontWeight {
   );
 }
 
-export function defaultTvFontSize(kind: TvWidgetKind): TvFontSize {
-  if (kind === "banner" || kind === "clock") {
-    return 2.75;
-  }
-  if (kind === "ticker") {
-    return 1.5;
-  }
-  return 1.1;
-}
-
-export function defaultTvFontWeight(): TvFontWeight {
-  return "normal";
-}
-
 export function tvHasBackground(background?: boolean): boolean {
   return background !== false;
 }
@@ -130,12 +97,33 @@ export function tvFontWeightClass(fontWeight?: TvFontWeight): string | undefined
   return fontWeight ? TV_FONT_WEIGHT_CLASS[fontWeight] : undefined;
 }
 
-export type TvSponsor = {
-  name: string;
-  logoUrl: string;
-  href: string;
-  tier: TvSponsorTier;
-};
+const DEFAULT_TV_SPONSORS: TvSponsor[] = [
+  { name: "Cursor", logoUrl: "/sponsors/cursor.svg", href: "https://cursor.com", tier: "gold" },
+  { name: "fal.ai", logoUrl: "/sponsors/fal.svg", href: "https://fal.ai", tier: "gold" },
+  { name: "Cognition", logoUrl: "/sponsors/cognition.svg", href: "https://cognition.ai", tier: "gold" },
+  { name: "HappyRobot", logoUrl: "/sponsors/happyrobot.png", href: "https://www.happyrobot.ai", tier: "gold" },
+  { name: "Exa", logoUrl: "/sponsors/exa.svg", href: "https://exa.ai", tier: "silver" },
+  { name: "Convex", logoUrl: "/sponsors/convex.svg", href: "https://www.convex.dev", tier: "silver" },
+  { name: "Vercel", logoUrl: "/sponsors/vercel.svg", href: "https://vercel.com", tier: "silver" },
+  { name: "QuiverAI", logoUrl: "/sponsors/quiver_ai.svg", href: "https://quiver.ai", tier: "silver" },
+  { name: "Cloudflare", logoUrl: "/sponsors/cloudflare.svg", href: "https://www.cloudflare.com", tier: "silver" },
+  { name: "Tinybird", logoUrl: "/sponsors/tinybird.svg", href: "https://www.tinybird.co", tier: "silver" },
+  { name: "Helmcode", logoUrl: "/sponsors/helmcode.svg", href: "https://helmcode.com", tier: "silver" },
+  { name: "OneCoWork", logoUrl: "/sponsors/onecowork.svg", href: "https://www.onecowork.com", tier: "community" },
+  { name: "Embat", logoUrl: "/sponsors/embat.png", href: "https://www.embat.io", tier: "gold" },
+  { name: "THEKER", logoUrl: "/sponsors/theker.svg", href: "https://www.theker.ai", tier: "gold" },
+  { name: "Prosper AI", logoUrl: "/sponsors/prosper_ai.svg", href: "https://www.getprosper.ai", tier: "gold" },
+  { name: "Maisa", logoUrl: "/sponsors/maisa.png", href: "https://maisa.ai", tier: "gold" },
+];
+
+export function resolveTvSponsors(sponsors?: TvSponsor[]): TvSponsor[] {
+  const custom = (sponsors ?? []).filter((row) => row.name.trim());
+  return custom.length > 0 ? custom : DEFAULT_TV_SPONSORS;
+}
+
+export function usingDefaultTvSponsors(sponsors?: TvSponsor[]): boolean {
+  return (sponsors ?? []).every((row) => !row.name.trim());
+}
 
 export function sponsorSiteOrigin(href: string): string | null {
   const raw = href.trim();
@@ -171,36 +159,7 @@ export function sponsorLogoSources(sponsor: {
   return [`${origin}/logo.svg`, `${origin}/favicon.ico`];
 }
 
-export type TvWidget = {
-  _id: string;
-  kind: TvWidgetKind;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  z: number;
-  text: string;
-  sponsors?: TvSponsor[];
-  tickerSpeed?: TvTickerSpeed;
-  feedMode?: TvFeedMode;
-  feedSource?: TvFeedSource;
-  fontSize?: number;
-  fontWeight?: TvFontWeight;
-  background?: boolean;
-};
-
-export const TV_TEXT_KINDS = new Set<TvWidgetKind>([
-  "banner",
-  "ticker",
-  "message",
-]);
-
-export const TV_SPONSOR_KINDS = new Set<TvWidgetKind>([
-  "sponsorGrid",
-  "sponsorTicker",
-]);
-
-export const TV_FEED_KINDS = new Set<TvWidgetKind>(["feed"]);
+export type TvWidget = Infer<typeof tvWidgetValidator> & { _id: string };
 
 export const TV_PALETTE: readonly {
   kind: TvWidgetKind;
@@ -273,6 +232,12 @@ export const TV_PALETTE: readonly {
     group: "live",
   },
   {
+    kind: "liveModels",
+    label: "Modelos",
+    hint: "Ranking de modelos por tokens",
+    group: "live",
+  },
+  {
     kind: "liveLeaderboard",
     label: "Equipos",
     hint: "Clasificación animada",
@@ -303,33 +268,3 @@ export const TICKER_DURATION: Record<TvTickerSpeed, string> = {
   normal: "24s",
   fast: "12s",
 };
-
-export const TV_MIN_SIZE = 8;
-export const TV_SNAP = 1;
-
-export function clampTv(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) {
-    return min;
-  }
-  return Math.min(max, Math.max(min, value));
-}
-
-export function snapTv(value: number) {
-  return Math.round(value / TV_SNAP) * TV_SNAP;
-}
-
-export function layoutTvBox(input: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}) {
-  const w = clampTv(input.w, TV_MIN_SIZE, 100);
-  const h = clampTv(input.h, TV_MIN_SIZE, 100);
-  return {
-    x: clampTv(input.x, 0, 100 - w),
-    y: clampTv(input.y, 0, 100 - h),
-    w,
-    h,
-  };
-}

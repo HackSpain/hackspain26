@@ -1,21 +1,23 @@
 import { describe, expect, test } from "bun:test";
 import { stripAnsi, width } from "../src/lib/style";
+import { box, fit, wrap } from "../src/lib/tui";
 import {
   IDLE_AFTER_MS,
   IDLE_INTERVAL_MS,
+  STACK_REFRESH_MS,
   scanIntervalFor,
+  stackRefreshDue,
 } from "../src/watcher/index";
-import { box, diffFrame, fit, frame, gauge, wrap } from "../src/watcher/screen";
+import { diffFrame, frame, gauge } from "../src/watcher/screen";
 import {
-  BUCKET_MS,
   createState,
   recordEvent,
   recordNotification,
-  seriesWindow,
 } from "../src/watcher/state";
 import { validEvent } from "./schema.test";
 
 const NOW = Date.UTC(2026, 8, 19, 12, 0, 0);
+const MINUTE_MS = 60 * 1000;
 
 function sampleState() {
   const state = createState({
@@ -36,14 +38,14 @@ function sampleState() {
   });
   state.startedAt = NOW - 5 * 60 * 1000;
   state.harnesses = [
-    { found: true, id: "claude-code", requests: 0, tokens: 0 },
-    { found: false, id: "codex", requests: 0, tokens: 0 },
+    { cached: 0, found: true, id: "claude-code", requests: 0, tokens: 0 },
+    { cached: 0, found: false, id: "codex", requests: 0, tokens: 0 },
   ];
   for (let i = 0; i < 6; i++) {
     recordEvent(state, {
       ...validEvent,
       eventId: `e${i}`,
-      occurredAt: new Date(NOW - i * BUCKET_MS).toISOString(),
+      occurredAt: new Date(NOW - i * MINUTE_MS).toISOString(),
       sessionId: i < 3 ? "s1" : "s2",
     });
   }
@@ -109,6 +111,9 @@ describe("frame", () => {
     expect(text).toContain("Keep this open");
     expect(text.replaceAll(/[│\s]+/g, " ")).toContain("never prompts or code");
     expect(text).toContain("Domènec");
+    expect(text).toContain("Team");
+    expect(text).toContain("Project");
+    expect(text).toContain("Repo");
     expect(text).toContain("Quijote Labs");
     expect(text).toContain("Claude Code");
     expect(text).toContain("● live");
@@ -142,7 +147,7 @@ describe("frame", () => {
     );
     expect(tall).toContain("██╗");
     expect(short).not.toContain("██╗");
-    expect(short).toContain("HACKSPAIN");
+    expect(short).toContain("hackspain");
   });
 
   test("paused is visible in the status line", () => {
@@ -151,6 +156,32 @@ describe("frame", () => {
     const lines = frame(state, { columns: 100, rows: 30 }, { now: NOW });
     expect(stripAnsi(lines.at(-1) ?? "")).toContain("paused");
     expect(stripAnsi(lines.at(-1) ?? "")).toContain("p resume");
+  });
+
+  test("outside the hackathon window the board says it is not recording", () => {
+    const state = sampleState();
+    const hour = 3_600_000;
+    const render = (window: { since: number; until: number } | null) =>
+      frame({ ...state, window }, { columns: 120, rows: 30 }, { now: NOW }).map(
+        (line) => stripAnsi(line)
+      );
+
+    const before = render({ since: NOW + hour, until: NOW + 49 * hour });
+    expect(before[1]).toContain("Not recording yet: telemetry starts");
+    expect(before.at(-1)).toContain("not recording");
+
+    const after = render({ since: NOW - 49 * hour, until: NOW - hour });
+    expect(after[1]).toContain("Not recording: the hackathon ended");
+    expect(after.at(-1)).toContain("not recording");
+
+    const unscheduled = render(null);
+    expect(unscheduled[1]).toContain("no hackathon is scheduled");
+    expect(unscheduled.at(-1)).toContain("not recording");
+
+    const during = render({ since: NOW - hour, until: NOW + hour });
+    expect(during.join("\n")).not.toContain("ot recording");
+    // Same height either way: the notice takes a row, it does not add one.
+    expect(before).toHaveLength(during.length);
   });
 });
 
@@ -214,13 +245,41 @@ describe("primitives", () => {
     ).toBe(120_000);
   });
 
+  test("asks for a stack re-read at start, then every half hour, only for a team during the event", () => {
+    const due = { inEvent: true, lastAskedAt: 0, now: NOW, teamId: "t1" };
+    expect(stackRefreshDue(due)).toBe(true);
+    expect(stackRefreshDue({ ...due, lastAskedAt: NOW - 60_000 })).toBe(false);
+    expect(
+      stackRefreshDue({ ...due, lastAskedAt: NOW - STACK_REFRESH_MS - 1 })
+    ).toBe(true);
+    expect(stackRefreshDue({ ...due, teamId: undefined })).toBe(false);
+    expect(stackRefreshDue({ ...due, inEvent: false })).toBe(false);
+    expect(stackRefreshDue({ ...due, once: true })).toBe(false);
+  });
+
   test("state keeps recent requests newest first and per-harness tokens", () => {
     const state = sampleState();
     expect(state.recent).toHaveLength(6);
     expect(state.recent[0]?.at).toBeGreaterThan(state.recent[5]?.at ?? 0);
-    expect(state.harnesses[0]?.tokens).toBe(6 * 100);
-    expect(seriesWindow(state, 8, NOW).map((p) => p.requests)).toEqual([
-      0, 0, 1, 1, 1, 1, 1, 1,
-    ]);
+    // Fresh tokens (10 in + 20 out per event); cache traffic (30 + 40) apart.
+    expect(state.harnesses[0]?.tokens).toBe(6 * 30);
+    expect(state.harnesses[0]?.cached).toBe(6 * 70);
   });
+});
+
+test("watcher diagnostics stay visible and cannot inject terminal controls", () => {
+  const state = sampleState();
+  state.log.push("devin: cannot read database\u001b[2J\nwill retry");
+  for (const size of [
+    { columns: 120, rows: 40 },
+    { columns: 60, rows: 20 },
+  ]) {
+    const lines = frame(state, size, { now: NOW });
+    expect(lines).toHaveLength(size.rows);
+    expect(stripAnsi(lines.at(-2) ?? "")).toContain(
+      "Last diagnostic: devin: cannot read"
+    );
+    expect(lines.at(-2)).not.toContain("\u001b[2J");
+    expect(stripAnsi(lines.at(-1) ?? "")).toContain("q quit");
+  }
 });

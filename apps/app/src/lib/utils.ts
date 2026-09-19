@@ -1,32 +1,10 @@
+import type { PerkType } from "@convex/lib/validators";
 import { clsx } from "clsx";
 import type { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
-}
-
-export type PhoneVerifyFailure =
-  | "no_challenge"
-  | "expired"
-  | "too_many_attempts"
-  | "incorrect";
-
-export function phoneVerifyMessage(reason: PhoneVerifyFailure): string {
-  switch (reason) {
-    case "no_challenge": {
-      return "Pide primero un código al teléfono";
-    }
-    case "expired": {
-      return "Ese código ha caducado. Pide uno nuevo.";
-    }
-    case "too_many_attempts": {
-      return "Demasiados intentos. Pide un código nuevo.";
-    }
-    case "incorrect": {
-      return "Código incorrecto";
-    }
-  }
 }
 
 export function displayedAttendance(
@@ -48,9 +26,6 @@ export function displayedAttendance(
 export function roleLabel(role: string | undefined): string | undefined {
   if (role === "admin") {
     return "admin";
-  }
-  if (role === "judge") {
-    return "juez";
   }
   return undefined;
 }
@@ -92,8 +67,6 @@ export function claimStatusLabel(status: string): string {
   }
 }
 
-export type IdentifierType = "email" | "github" | "twitter";
-
 export function teamMemberStatusLabel(status: string): string {
   if (status === "member") {
     return "Miembro";
@@ -117,16 +90,6 @@ export function identifierTypeLabel(type: string): string {
   return type;
 }
 
-export function identifierPlaceholder(type: IdentifierType): string {
-  if (type === "email") {
-    return "name@email.com";
-  }
-  if (type === "github") {
-    return "username";
-  }
-  return "@handle";
-}
-
 export function submissionStatusLabel(status: string): string {
   if (status === "draft") {
     return "Borrador";
@@ -137,14 +100,22 @@ export function submissionStatusLabel(status: string): string {
   return status;
 }
 
-export function perkTypeLabel(type: string): string {
-  if (type === "email") {
-    return "Solicitud por email";
+export function perkTypeLabel(type: PerkType): string {
+  switch (type) {
+    case "email": {
+      return "Solicitud por email";
+    }
+    case "code": {
+      return "Código";
+    }
+    case "external": {
+      return "Enlace externo";
+    }
+    default: {
+      const _exhaustive: never = type;
+      return _exhaustive;
+    }
   }
-  if (type === "code") {
-    return "Código";
-  }
-  return type;
 }
 
 export function joinDotLabel(...parts: (string | null | undefined)[]): string {
@@ -166,4 +137,40 @@ export function notificationStatusLabel(status: string): string {
     return "En cola";
   }
   return status;
+}
+
+/**
+ * Epoch ms ⇄ the value of an `<input type="datetime-local">`, which is the
+ * browser's local wall-clock time with no zone. Admins edit the window from
+ * Spain, so the stored instant matches what they typed.
+ */
+export function toDatetimeLocal(ms: number | undefined): string {
+  if (ms === undefined) {
+    return "";
+  }
+  const date = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function fromDatetimeLocal(value: string): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? undefined : ms;
+}
+
+const EVENT_DATE = new Intl.DateTimeFormat("es-ES", {
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  month: "long",
+  timeZone: "Europe/Madrid",
+  weekday: "long",
+});
+
+/** "sábado, 3 de octubre, 10:00" in Madrid time, matching the server copy. */
+export function formatEventDate(ms: number): string {
+  return EVENT_DATE.format(new Date(ms));
 }

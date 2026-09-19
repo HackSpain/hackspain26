@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { neon } from "@neondatabase/serverless";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
+import { buildUrls } from "../convex/lib/urls";
 
 type SignupRow = {
   id: string;
@@ -90,25 +91,13 @@ function urlsFromNeon(row: {
   linkedin_url: string | null;
   github_url: string | null;
   web_url: string | null;
-}): { kind: "x" | "linkedin" | "github" | "web"; url: string }[] {
-  const urls: { kind: "x" | "linkedin" | "github" | "web"; url: string }[] = [];
-  const xUrl = optional(row.x_url);
-  const linkedinUrl = optional(row.linkedin_url);
-  const githubUrl = optional(row.github_url);
-  const webUrl = optional(row.web_url);
-  if (xUrl) {
-    urls.push({ kind: "x", url: xUrl });
-  }
-  if (linkedinUrl) {
-    urls.push({ kind: "linkedin", url: linkedinUrl });
-  }
-  if (githubUrl) {
-    urls.push({ kind: "github", url: githubUrl });
-  }
-  if (webUrl) {
-    urls.push({ kind: "web", url: webUrl });
-  }
-  return urls;
+}) {
+  return buildUrls([
+    { kind: "x", url: row.x_url },
+    { kind: "linkedin", url: row.linkedin_url },
+    { kind: "github", url: row.github_url },
+    { kind: "web", url: row.web_url },
+  ]);
 }
 
 function chunk<T>(items: T[], size: number): T[][] {

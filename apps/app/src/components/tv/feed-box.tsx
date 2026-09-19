@@ -2,29 +2,31 @@
 
 import { useQuery } from "convex/react";
 import { ImageIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import type { TvFeedMode, TvFeedSource } from "@/lib/tv";
-import { cn } from "@/lib/utils";
-import { usePageVisible, usePrefersReducedMotion } from "./motion";
+import {
+  FLASH_LAYER_CLASS,
+  flashGold,
+  gsap,
+  settle,
+  SplitText,
+  TV_EASE_OUT,
+  TV_EASE_POP,
+  TV_REDUCED_FADE,
+  useGSAP,
+  useStreamShift,
+} from "./gsap";
+import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
 
-function useTick(ms: number) {
-  const visible = usePageVisible();
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!visible) return;
-    const timer = window.setInterval(() => setTick((value) => value + 1), ms);
-    return () => window.clearInterval(timer);
-  }, [ms, visible]);
-  return tick;
-}
+const ROTATE_MS = 8000;
 
 function useNow(ms: number) {
   const visible = usePageVisible();
   const [now, setNow] = useState(0);
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {return;}
     const boot = window.setTimeout(() => setNow(Date.now()), 0);
     const timer = window.setInterval(() => setNow(Date.now()), ms);
     return () => {
@@ -36,21 +38,21 @@ function useNow(ms: number) {
 }
 
 function timeAgo(at: number, now: number): string {
-  if (now === 0) return "";
+  if (now === 0) {return "";}
   const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
   const seconds = Math.round((at - now) / 1000);
-  if (Math.abs(seconds) < 60) return "ahora mismo";
+  if (Math.abs(seconds) < 60) {return "ahora mismo";}
   const minutes = Math.round(seconds / 60);
-  if (Math.abs(minutes) < 60) return rtf.format(minutes, "minute");
+  if (Math.abs(minutes) < 60) {return rtf.format(minutes, "minute");}
   const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) return rtf.format(hours, "hour");
+  if (Math.abs(hours) < 24) {return rtf.format(hours, "hour");}
   return new Date(at).toLocaleString("es-ES", {
     dateStyle: "medium",
     timeStyle: "short",
   });
 }
 
-type FeedPost = {
+export type FeedPost = {
   _id: string;
   kind: "post" | "github";
   authorName: string;
@@ -58,50 +60,300 @@ type FeedPost = {
   text: string;
   hasImage: boolean;
   createdAt: number;
+  repo?: string;
+  sha?: string;
 };
 
-function FeedCard({
-  post,
-  now,
-  large = false,
-  enter = false,
-}: {
-  post: FeedPost;
-  now: number;
-  large?: boolean;
-  enter?: boolean;
-}) {
+/** Demo screens hand the feed canned posts instead of the Convex query. */
+export const FeedDemoContext = createContext<FeedPost[] | null>(null);
+
+function FeedHeader({ title = "Feed", aside }: { title?: string; aside?: string }) {
   return (
-    <article
-      className={cn(
-        "border border-hs-ink/15 bg-hs-sand/40 px-2.5 py-2 text-hs-ink",
-        enter && "tv-stream-row",
-      )}
-    >
-      <p className="font-bungee text-[10px] uppercase">{post.authorName}</p>
-      <p className="text-[11px] text-hs-brown">
+    <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-hs-ink/15 pb-[0.5cqw]">
+      <p className="font-bungee text-[clamp(0.6rem,1.05cqw,1.4rem)] leading-none">
+        {title}
+      </p>
+      {aside ? (
+        <p className="text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown tabular-nums">
+          {aside}
+        </p>
+      ) : null}
+    </header>
+  );
+}
+
+function CommitCard({ post, now }: { post: FeedPost; now: number }) {
+  return (
+    <article className="relative border-l-[3px] border-hs-navy bg-hs-sand/40 px-[0.7cqw] py-[0.45cqw] text-hs-ink">
+      <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
+      <p className="flex items-baseline justify-between gap-[0.5cqw] text-[clamp(0.5rem,0.7cqw,0.95rem)] text-hs-brown">
+        <span className="truncate">
+          <span className="font-bold uppercase text-hs-navy">Commit</span>
+          {" · "}
+          {post.repo || post.teamName || "repo"} · {post.authorName}
+        </span>
+        <span className="shrink-0">{timeAgo(post.createdAt, now)}</span>
+      </p>
+      <p className="mt-[0.15cqw] truncate text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold">
+        {post.text}
+      </p>
+      {post.sha ? (
+        <p
+          data-sha={post.sha}
+          className="font-mono text-[clamp(0.5rem,0.65cqw,0.9rem)] tabular-nums text-hs-navy"
+        >
+          {post.sha}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+function FeedCard({ post, now }: { post: FeedPost; now: number }) {
+  if (post.kind === "github") {
+    return <CommitCard post={post} now={now} />;
+  }
+  return (
+    <article className="relative border-l-[3px] border-hs-ink/15 bg-hs-sand/40 px-[0.7cqw] py-[0.5cqw] text-hs-ink">
+      <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
+      <p className="font-bungee text-[clamp(0.5rem,0.7cqw,0.95rem)] uppercase">
+        {post.authorName}
+      </p>
+      <p className="text-[clamp(0.5rem,0.7cqw,0.95rem)] text-hs-brown">
         {post.teamName ? `${post.teamName} · ` : ""}
         {timeAgo(post.createdAt, now)}
       </p>
       {post.text ? (
-        <p
-          className={cn(
-            "mt-1 text-pretty break-words text-hs-ink",
-            large
-              ? "line-clamp-8 text-[clamp(0.95rem,2.2cqw,1.4rem)] leading-snug"
-              : "line-clamp-4 text-xs leading-snug",
-          )}
-        >
+        <p className="mt-[0.25cqw] line-clamp-4 text-pretty break-words text-[clamp(0.6rem,0.85cqw,1.15rem)] leading-snug text-hs-ink">
           {post.text}
         </p>
       ) : null}
       {post.hasImage ? (
-        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-hs-brown">
-          <ImageIcon className="size-3" aria-hidden />
+        <span className="mt-[0.35cqw] inline-flex items-center gap-1 text-[clamp(0.5rem,0.65cqw,0.9rem)] text-hs-brown">
+          <ImageIcon className="size-[0.8cqw]" aria-hidden />
           Foto
         </span>
       ) : null}
     </article>
+  );
+}
+
+function FeedStream({
+  posts,
+  now,
+  source,
+}: {
+  posts: FeedPost[];
+  now: number;
+  source: TvFeedSource;
+}) {
+  const listRef = useRef<HTMLOListElement>(null);
+  const shown = posts.slice(0, source === "all" ? 8 : 6);
+  const ids = useMemo(() => shown.map((post) => post._id), [shown]);
+  const onEnter = useCallback((rows: HTMLElement[]) => {
+    flashGold(rows, 1.8);
+    for (const row of rows) {
+      const sha = row.querySelector<HTMLElement>("[data-sha]");
+      if (!sha?.dataset.sha) {continue;}
+      gsap.to(sha, {
+        duration: 0.9,
+        scrambleText: { text: sha.dataset.sha, chars: "0123456789abcdef", speed: 0.5 },
+      });
+    }
+  }, []);
+  useStreamShift(listRef, ids, onEnter);
+  const commits = posts.filter((post) => post.kind === "github").length;
+  const aside =
+    source === "all"
+      ? `${posts.length - commits} posts · ${commits} commits`
+      : source === "github"
+        ? `${posts.length} commits`
+        : `${posts.length} publicaciones`;
+
+  return (
+    <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
+      <FeedHeader title={source === "all" ? "Feed · Commits" : "Feed"} aside={aside} />
+      <ol
+        ref={listRef}
+        className="mt-[0.6cqw] min-h-0 flex-1 space-y-[0.4cqw] overflow-hidden"
+      >
+        {shown.map((post) => (
+          <li key={post._id}>
+            <FeedCard post={post} now={now} />
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/**
+ * One post at a time. The outgoing card fades up, the incoming one reveals
+ * author by character and body by masked line; a gold bar counts down to the
+ * next rotation.
+ */
+function FeedSpotlight({
+  posts,
+  index,
+  now,
+}: {
+  posts: FeedPost[];
+  index: number;
+  now: number;
+}) {
+  const reduced = usePrefersReducedMotion();
+  const target = posts[index % posts.length];
+  const [shown, setShown] = useState<FeedPost | undefined>(target);
+  const card = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+  const targetId = target?._id;
+  const shownId = shown?._id;
+
+  useEffect(() => {
+    if (!target || targetId === shownId) {return;}
+    if (!card.current) {
+      setShown(target);
+      return;
+    }
+    // Exit is shorter than the entrance; blur hides the two texts overlapping.
+    const tween = gsap.to(
+      card.current,
+      reduced
+        ? { opacity: 0, duration: TV_REDUCED_FADE * 0.75, ease: "none", onComplete: () => setShown(target) }
+        : {
+            yPercent: -4,
+            opacity: 0,
+            filter: "blur(3px)",
+            duration: 0.28,
+            ease: "power2.in",
+            onComplete: () => setShown(target),
+          },
+    );
+    return () => {
+      settle(tween);
+    };
+  }, [target, targetId, shownId, reduced]);
+
+  useGSAP(
+    () => {
+      const el = card.current;
+      if (!el) {return;}
+      const timeline = gsap.timeline();
+      if (bar.current) {
+        timeline.fromTo(
+          bar.current,
+          { scaleX: 0 },
+          {
+            scaleX: 1,
+            duration: (ROTATE_MS - 400) / 1000,
+            ease: "none",
+            transformOrigin: "0% 50%",
+          },
+          0,
+        );
+      }
+      if (reduced) {
+        timeline.fromTo(
+          el,
+          { opacity: 0 },
+          { opacity: 1, duration: TV_REDUCED_FADE, ease: "none" },
+          0,
+        );
+        return;
+      }
+      timeline.fromTo(
+        el,
+        { yPercent: 4, opacity: 0, filter: "blur(3px)" },
+        {
+          yPercent: 0,
+          opacity: 1,
+          filter: "blur(0px)",
+          duration: 0.5,
+          ease: TV_EASE_OUT,
+          clearProps: "filter",
+        },
+        0,
+      );
+      const author = el.querySelector<HTMLElement>("[data-author]");
+      const body = el.querySelector<HTMLElement>("[data-body]");
+      if (author) {
+        SplitText.create(author, {
+          type: "chars",
+          onSplit: (self) =>
+            gsap.from(self.chars, {
+              yPercent: 100,
+              opacity: 0,
+              duration: 0.5,
+              ease: TV_EASE_POP,
+              stagger: 0.025,
+              delay: 0.1,
+            }),
+        });
+      }
+      if (body) {
+        SplitText.create(body, {
+          type: "lines",
+          mask: "lines",
+          autoSplit: true,
+          onSplit: (self) =>
+            gsap.from(self.lines, {
+              yPercent: 100,
+              opacity: 0,
+              duration: 0.7,
+              ease: TV_EASE_OUT,
+              stagger: 0.07,
+              delay: 0.2,
+            }),
+        });
+      }
+    },
+    { dependencies: [shownId, reduced], revertOnUpdate: true },
+  );
+
+  if (!shown) {return null;}
+  const position = posts.findIndex((post) => post._id === shown._id);
+
+  return (
+    <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
+      <FeedHeader
+        aside={`${Math.max(position, 0) + 1} / ${posts.length}`}
+      />
+      <div className="mt-[0.5cqw] h-[0.3cqw] shrink-0 bg-hs-ink/10">
+        <div ref={bar} className="h-full w-full origin-left scale-x-0 bg-hs-gold" />
+      </div>
+      <div
+        key={shown._id}
+        ref={card}
+        className="mt-[0.9cqw] flex min-h-0 flex-1 flex-col"
+      >
+        <p
+          data-author
+          className="font-bungee text-[clamp(0.8rem,1.5cqw,2rem)] leading-none uppercase"
+        >
+          {shown.authorName}
+        </p>
+        <p className="mt-[0.3cqw] text-[clamp(0.55rem,0.8cqw,1.1rem)] text-hs-brown">
+          {shown.teamName ? `${shown.teamName} · ` : ""}
+          {timeAgo(shown.createdAt, now)}
+        </p>
+        <div className="mt-[0.8cqw] min-h-0 flex-1 overflow-hidden border-l-[0.35cqw] border-hs-gold pl-[0.9cqw]">
+          {shown.text ? (
+            <p
+              data-body
+              className="text-pretty break-words text-[clamp(0.9rem,2cqw,1.7rem)] leading-snug"
+            >
+              {shown.text}
+            </p>
+          ) : null}
+        </div>
+        {shown.hasImage ? (
+          <span className="mt-[0.5cqw] inline-flex shrink-0 items-center gap-1 text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
+            <ImageIcon className="size-[0.9cqw]" aria-hidden />
+            Foto adjunta
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -112,10 +364,15 @@ export function FeedBox({
   mode?: TvFeedMode;
   source?: TvFeedSource;
 }) {
-  const reduced = usePrefersReducedMotion();
-  const posts = useQuery(api.tv.listFeed, { source });
+  const demo = useContext(FeedDemoContext);
+  const remote = useQuery(api.tv.listFeed, demo ? "skip" : { source });
+  const posts = demo
+    ? demo.filter((post) =>
+        source === "all" ? true : post.kind === (source === "github" ? "github" : "post"),
+      )
+    : remote;
   const now = useNow(30_000);
-  const rotateTick = useTick(8000);
+  const rotateTick = useTick(ROTATE_MS);
 
   if (posts === undefined) {
     return <div className="h-full bg-hs-paper" />;
@@ -130,43 +387,18 @@ export function FeedBox({
   }
 
   if (mode === "rotate") {
-    const post = posts[rotateTick % posts.length];
-    if (!post) return null;
-    return (
-      <div className="flex h-full flex-col bg-hs-paper p-3 text-hs-ink">
-        <p className="font-bungee text-xs">Feed</p>
-        <div
-          key={post._id}
-          className={cn("mt-2 min-h-0 flex-1", !reduced && "tv-stream-row")}
-        >
-          <FeedCard post={post} now={now} large />
-        </div>
-      </div>
-    );
+    return <FeedSpotlight posts={posts} index={rotateTick} now={now} />;
   }
 
-  const shown = posts.slice(0, 6);
-
-  return (
-    <div className="flex h-full flex-col bg-hs-paper p-3 text-hs-ink">
-      <p className="font-bungee text-xs">Feed</p>
-      <ol className="mt-2 min-h-0 flex-1 space-y-1.5 overflow-hidden">
-        {shown.map((post, index) => (
-          <li key={post._id}>
-            <FeedCard post={post} now={now} enter={!reduced && index === 0} />
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
+  return <FeedStream posts={posts} now={now} source={source} />;
 }
 
-const MODES: Array<{ id: TvFeedMode; label: string }> = [
+const MODES: { id: TvFeedMode; label: string }[] = [
   { id: "latest", label: "Últimas" },
   { id: "rotate", label: "Una a una" },
 ];
 
-const SOURCES: Array<{ id: TvFeedSource; label: string }> = [
+const SOURCES: { id: TvFeedSource; label: string }[] = [
   { id: "participants", label: "Participantes" },
   { id: "github", label: "GitHub" },
   { id: "all", label: "Todas" },

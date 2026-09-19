@@ -1,16 +1,14 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { requireEventOpen } from "./eventWindow";
+import { canJudge } from "./userTypes";
 import type { Role } from "./validators";
 
 type Ctx = QueryCtx | MutationCtx;
 
 export function isAdmin(user: Pick<Doc<"users">, "role">): boolean {
   return user.role === "admin";
-}
-
-export function isJudge(user: Pick<Doc<"users">, "role">): boolean {
-  return user.role === "judge" || user.role === "admin";
 }
 
 export function resolvedLoginRole(
@@ -20,10 +18,8 @@ export function resolvedLoginRole(
   if (allowlisted || existing === "admin") {
     return "admin";
   }
-  if (existing === "judge") {
-    return "judge";
-  }
-  return "user";
+  // "judge" is a legacy value; userTypes.ensureDefaults moves it to a type.
+  return existing ?? "user";
 }
 
 export async function getCurrentUser(ctx: Ctx): Promise<Doc<"users">> {
@@ -48,7 +44,7 @@ export async function requireAdmin(ctx: Ctx): Promise<Doc<"users">> {
 
 export async function requireJudge(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
-  if (!isJudge(user)) {
+  if (!(await canJudge(ctx, user))) {
     throw new Error("Se necesita acceso de juez");
   }
   return user;
@@ -74,21 +70,35 @@ export async function requireAccepted(ctx: Ctx): Promise<Doc<"users">> {
 }
 
 export async function requireOnboarded(ctx: Ctx): Promise<Doc<"users">> {
-  const user = await getCurrentUser(ctx);
-  if (user.role === "admin") {
-    return user;
-  }
-  const signup = await getSignupForUser(ctx, user);
-  if (!signup) {
-    throw new Error("No hay inscripción a la hackathon con este email");
-  }
-  if (!signupIsAccepted(signup)) {
-    throw new Error("Aún no te han aceptado");
-  }
-  if (!user.onboardingComplete) {
+  const user = await requireAccepted(ctx);
+  if (user.role !== "admin" && !user.onboardingComplete) {
     throw new Error("Confirma tus datos primero");
   }
   return user;
+}
+
+/** Onboarded and inside the hackathon window (admins skip both). */
+export async function requireInEvent(ctx: Ctx): Promise<Doc<"users">> {
+  const user = await requireOnboarded(ctx);
+  await requireEventOpen(ctx, user);
+  return user;
+}
+
+export async function requireJudgeInEvent(ctx: Ctx): Promise<Doc<"users">> {
+  const user = await requireJudge(ctx);
+  await requireEventOpen(ctx, user);
+  return user;
+}
+
+/** Boolean form of `requireOnboarded` for callers that degrade instead of throwing. */
+export async function isOnboarded(ctx: Ctx, user: Doc<"users">): Promise<boolean> {
+  if (user.role === "admin") {
+    return true;
+  }
+  if (!user.onboardingComplete) {
+    return false;
+  }
+  return signupIsAccepted(await getSignupForUser(ctx, user));
 }
 
 export async function getSignupForUser(

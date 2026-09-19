@@ -12,7 +12,7 @@ Public marketing site for [HackSpain](https://hackspain.com) — Hack Spain 2026
 | **Data** | [PostgreSQL](https://www.postgresql.org/) ([Neon](https://neon.tech/)) with [Drizzle ORM](https://orm.drizzle.team/) |
 | **Forms & validation** | [React Hook Form](https://react-hook-form.com/), [Zod](https://zod.dev/) |
 | **Email** | Resend API, plain text and HTML |
-| **Observability** | [Sentry](https://sentry.io/), [@vercel/analytics](https://vercel.com/docs/analytics), [@vercel/speed-insights](https://vercel.com/docs/speed-insights) |
+| **Observability** | [Better Stack](https://betterstack.com/) via its Sentry-compatible SDK, [@vercel/analytics](https://vercel.com/docs/analytics), [@vercel/speed-insights](https://vercel.com/docs/speed-insights) |
 | **Bot protection** | [BotID](https://botid.vercel.app/) on signup endpoints |
 | **Tooling** | TypeScript, [Oxlint](https://oxc.rs/docs/guide/usage/linter.html), [Ultracite](https://www.ultracite.ai/) / Biome (`pnpm lint`, `pnpm fix`), [Knip](https://knip.dev/) |
 

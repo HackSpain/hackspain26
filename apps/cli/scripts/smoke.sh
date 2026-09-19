@@ -39,8 +39,8 @@ step "track list"; run track list | jq -c '{open: .data.submissionsOpen, n: (.da
 first="$(run track list | jq -r '.data.tracks[0].slug')"
 second="$(run track list | jq -r '.data.tracks[1].slug')"
 step "track register $first"; run track register "$first" | jq -c '.data'
-step "track move $first -> $second"; run track move "$first" "$second" | jq -c '.data.tracks'
-step "track unregister $second"; run track unregister "$second" | jq -c '.data.tracks'
+step "track register $second (switch)"; run track register "$second" | jq -c '.data.tracks'
+step "track unregister"; run track unregister | jq -c '.data.tracks'
 step "unknown track exits 2"; set +e; run track register nope >/dev/null; [[ $? -eq 2 ]] && echo "exit 2 ok"; set -e
 
 step "project after track register"

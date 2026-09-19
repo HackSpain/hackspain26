@@ -155,6 +155,7 @@ export function httpSink(
         ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
       },
       method: "POST",
+      signal: AbortSignal.timeout(15_000),
     });
     if (!response.ok) {
       throw new CliError(

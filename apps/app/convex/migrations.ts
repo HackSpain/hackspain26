@@ -1,5 +1,6 @@
+import type { AnyDataModel, GenericMutationCtx } from "convex/server";
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import {
   ambassadorFieldsValidator,
@@ -280,4 +281,133 @@ export const rewriteLegacyUrls = mutation({
     signupsRewritten: v.number(),
     ambassadorsRewritten: v.number(),
   }),
+});
+
+/**
+ * SMS verification was removed; the phone itself stays. Clears the legacy
+ * `phoneConfirmed` and `phoneVerificationTime` fields on `users` and empties
+ * the old `phoneChallenges` table (no longer in the schema) so the two
+ * optional fields can be dropped from `schema.ts` afterwards.
+ */
+export const dropPhoneVerification = mutation({
+  args: { secret: v.string() },
+  handler: async (ctx, args) => {
+    assertMigrationSecret(args.secret);
+    let usersCleared = 0;
+    for (const user of await ctx.db.query("users").collect()) {
+      if (
+        user.phoneConfirmed === undefined &&
+        user.phoneVerificationTime === undefined
+      ) {
+        continue;
+      }
+      await ctx.db.patch(user._id, {
+        phoneConfirmed: undefined,
+        phoneVerificationTime: undefined,
+      });
+      usersCleared += 1;
+    }
+    // The table is gone from the schema, so it is queried untyped.
+    const untyped = ctx.db as unknown as GenericMutationCtx<AnyDataModel>["db"];
+    let challengesDeleted = 0;
+    for (const row of await untyped.query("phoneChallenges").collect()) {
+      await untyped.delete(row._id);
+      challengesDeleted += 1;
+    }
+    return { usersCleared, challengesDeleted };
+  },
+  returns: v.object({
+    usersCleared: v.number(),
+    challengesDeleted: v.number(),
+  }),
+});
+
+/**
+ * Backfill for profile-picture thumbnails (convex/lib/photo.ts). Uploads
+ * made before the picker produced its own copy have `avatarId` but no
+ * `avatarThumbId`; scripts/backfill-avatar-thumbnails.ts resizes each one
+ * locally with sharp and stores the result through these three endpoints.
+ * Guarded by MIGRATION_SECRET like the Neon import.
+ */
+export const listAvatarsWithoutThumbnail = query({
+  args: { secret: v.string() },
+  handler: async (ctx, args) => {
+    assertMigrationSecret(args.secret);
+    const users = await ctx.db.query("users").collect();
+    const out: { userId: Id<"users">; avatarId: Id<"_storage">; url: string }[] =
+      [];
+    for (const user of users) {
+      if (!user.avatarId || user.avatarThumbId) {
+        continue;
+      }
+      const url = await ctx.storage.getUrl(user.avatarId);
+      if (url) {
+        out.push({ avatarId: user.avatarId, url, userId: user._id });
+      }
+    }
+    return out;
+  },
+  returns: v.array(
+    v.object({
+      avatarId: v.id("_storage"),
+      url: v.string(),
+      userId: v.id("users"),
+    })
+  ),
+});
+
+export const avatarThumbnailUploadUrl = mutation({
+  args: { secret: v.string() },
+  handler: async (ctx, args) => {
+    assertMigrationSecret(args.secret);
+    return await ctx.storage.generateUploadUrl();
+  },
+  returns: v.string(),
+});
+
+/** Attaches the thumbnail, unless the person changed their picture meanwhile. */
+export const setAvatarThumbnail = mutation({
+  args: {
+    avatarId: v.id("_storage"),
+    secret: v.string(),
+    thumbId: v.id("_storage"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    assertMigrationSecret(args.secret);
+    const user = await ctx.db.get(args.userId);
+    if (!user || user.avatarId !== args.avatarId || user.avatarThumbId) {
+      await ctx.storage.delete(args.thumbId);
+      return false;
+    }
+    await ctx.db.patch(user._id, { avatarThumbId: args.thumbId });
+    return true;
+  },
+  returns: v.boolean(),
+});
+
+/** Run with the old optional fields still in the deployed schema, then remove them. */
+export const dropCheckInMetadata = internalMutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    let cleared = 0;
+    for (const pass of await ctx.db.query("eventPasses").collect()) {
+      if (!("checkedInBy" in pass) && !("checkedInVia" in pass)) {
+        continue;
+      }
+      await ctx.db.replace(pass._id, {
+        userId: pass.userId,
+        signupId: pass.signupId,
+        code: pass.code,
+        status: pass.status,
+        codeSentAt: pass.codeSentAt,
+        checkedInAt: pass.checkedInAt,
+        createdAt: pass.createdAt,
+        updatedAt: pass.updatedAt,
+      });
+      cleared += 1;
+    }
+    return cleared;
+  },
 });

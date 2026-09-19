@@ -134,3 +134,80 @@ export const redeem = internalMutation({
     return row.userId;
   },
 });
+
+/**
+ * Browser handoff, the device flow in reverse. A CLI that already holds a
+ * session calls `startWebHandoff` (through /api/cli/rpc), opens
+ * /cli-auth/handoff?hs-token=… in the browser, and that page signs in with
+ * the `cli-handoff` credentials provider (convex/auth.ts), which redeems the
+ * token here. The Next.js auth proxy sets the ordinary dashboard cookies, so
+ * logging in on the CLI is enough to be logged in on the web.
+ *
+ * Tokens are random, single-use, bound to the CLI user, and live two
+ * minutes: long enough for a browser to open, short enough that a leaked
+ * terminal line or history entry is worthless.
+ */
+
+const HANDOFF_TTL_MS = 2 * 60 * 1000;
+const HANDOFF_TOKEN_BYTES = 32;
+
+function randomToken(): string {
+  const bytes = new Uint8Array(HANDOFF_TOKEN_BYTES);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCodePoint(byte);
+  }
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/, "");
+}
+
+/** Mint a single-use token for the signed-in CLI user. */
+export const startWebHandoff = authedMutation({
+  args: {},
+  returns: v.object({ token: v.string(), expiresAt: v.number() }),
+  handler: async (ctx) => {
+    const stale = await ctx.db
+      .query("cliWebHandoffs")
+      .withIndex("by_expires", (q) => q.lt("expiresAt", Date.now()))
+      .take(EXPIRED_SWEEP_LIMIT);
+    for (const row of stale) {
+      await ctx.db.delete(row._id);
+    }
+    const token = randomToken();
+    const now = Date.now();
+    const expiresAt = now + HANDOFF_TTL_MS;
+    await ctx.db.insert("cliWebHandoffs", {
+      token,
+      userId: ctx.user._id,
+      createdAt: now,
+      expiresAt,
+    });
+    return { token, expiresAt };
+  },
+});
+
+/**
+ * Single-use exchange, called only by the `cli-handoff` provider in auth.ts.
+ * Deletes the row whatever the outcome so a token is never tried twice.
+ */
+export const redeemWebHandoff = internalMutation({
+  args: { token: v.string() },
+  returns: v.union(v.id("users"), v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("cliWebHandoffs")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .unique();
+    if (!row) {
+      return null;
+    }
+    await ctx.db.delete(row._id);
+    if (row.expiresAt < Date.now()) {
+      return null;
+    }
+    return row.userId;
+  },
+});

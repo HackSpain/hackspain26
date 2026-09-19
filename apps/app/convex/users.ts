@@ -3,16 +3,24 @@ import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   authedMutation,
-  authedQuery,
-  onboardedMutation,
+  profileMutation,
 } from "./lib/customFunctions";
-import { meValidator, signupPublicValidator } from "./lib/validators";
+import { meValidator } from "./lib/validators";
 import { defaultedAttendance } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";
 import { fail } from "./lib/errors";
 import { parseEventDetails } from "./lib/eventDetails";
-import { normalizeGithub, normalizeTwitter } from "./lib/normalize";
-import { urlOf, urlsFromRecord } from "./lib/urls";
+import { eventIsOpen, eventPhase, getEventWindow } from "./lib/eventWindow";
+import { imagePathFor } from "./lib/files";
+import { missingProfileFields } from "./lib/profile";
+import { effectiveSections, userTypeFor } from "./lib/userTypes";
+import {
+  normalizeGithub,
+  normalizePhone,
+  normalizeTwitter,
+  PHONE_ERROR,
+} from "./lib/normalize";
+import { urlOf } from "./lib/urls";
 import { membershipForUser } from "./lib/team";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -89,6 +97,15 @@ export async function resolvePendingInvites(
   }
 }
 
+export function avatarUrlFor(
+  user: Pick<Doc<"users">, "avatarId" | "image">
+): string | undefined {
+  if (user.avatarId) {
+    return imagePathFor(user.avatarId);
+  }
+  return user.image;
+}
+
 export const me = query({
   args: {},
   handler: async (ctx) => {
@@ -101,13 +118,29 @@ export const me = query({
       return null;
     }
     const signup = await getSignupForUser(ctx, user);
+    const type = await userTypeFor(ctx, user);
+    const sections = effectiveSections(user, type);
+    const window = await getEventWindow(ctx);
+    const phase = eventPhase(window, Date.now());
+    const profileMissing = missingProfileFields(user);
+    const xUrl = urlOf(signup?.urls, "x");
     return {
       _id: user._id,
       email: user.email,
+      event: {
+        endsAt: window.endsAt,
+        open: user.role === "admin" || eventIsOpen(phase),
+        phase,
+        startsAt: window.startsAt,
+      },
       name: user.name ?? signup?.fullName,
       role: user.role,
+      avatarUrl: avatarUrlFor(user),
+      canRemoveAvatar: Boolean(user.avatarId && user.image?.trim()),
+      canJudge: sections.includes("judging"),
+      sections,
+      userType: type ? { label: type.label, slug: type.slug } : undefined,
       phone: user.phone,
-      phoneConfirmed: user.phoneConfirmed,
       notificationConsent: user.notificationConsent,
       notificationConsentAt: user.notificationConsentAt,
       attendanceStatus: defaultedAttendance(
@@ -124,28 +157,16 @@ export const me = query({
       githubUsername: user.githubUsername ?? signup?.githubUsername,
       githubLinked: user.githubLinkedAt !== undefined,
       githubCanReadRepos: Boolean(user.githubAccessToken),
+      profileComplete: profileMissing.length === 0,
+      profileMissing,
+      twitterHandle: user.twitterHandle,
+      suggestedTwitterHandle:
+        user.twitterHandle ??
+        signup?.twitterHandle ??
+        (xUrl ? normalizeTwitter(xUrl) || undefined : undefined),
     };
   },
   returns: v.union(meValidator, v.null()),
-});
-
-export const mySignup = authedQuery({
-  args: {},
-  handler: async (ctx) => {
-    const signup = await getSignupForUser(ctx, ctx.user);
-    if (!signup) {
-      return null;
-    }
-    return {
-      fullName: signup.fullName,
-      email: signup.email,
-      urls: urlsFromRecord(signup),
-      achievements: signup.achievements,
-      freeTime: signup.freeTime,
-      wantsAmbassador: signup.wantsAmbassador,
-    };
-  },
-  returns: v.union(signupPublicValidator, v.null()),
 });
 
 export const attachAfterLogin = authedMutation({
@@ -201,7 +222,136 @@ export const setName = authedMutation({
   returns: v.string(),
 });
 
-export const setAttendance = onboardedMutation({
+/** Contact number for the venue. Normalised to E.164, never verified. */
+export const setPhone = authedMutation({
+  args: { phone: v.string() },
+  handler: async (ctx, args) => {
+    const phone = normalizePhone(args.phone);
+    if (!phone) {
+      fail("VALIDATION", PHONE_ERROR);
+    }
+    await ctx.db.patch(ctx.user._id, { phone });
+    return phone;
+  },
+  returns: v.string(),
+});
+
+const TWITTER_HANDLE = /^[a-z0-9_]{1,15}$/;
+
+/** Empty clears the handle. Accepts "@ana", "ana" or an x.com / twitter.com URL. */
+export const setTwitterHandle = authedMutation({
+  args: { handle: v.string() },
+  handler: async (ctx, args) => {
+    const handle = normalizeTwitter(args.handle);
+    if (!handle) {
+      await ctx.db.patch(ctx.user._id, { twitterHandle: undefined });
+      return null;
+    }
+    if (!TWITTER_HANDLE.test(handle)) {
+      fail("VALIDATION", "Ese usuario de X no parece válido");
+    }
+    await ctx.db.patch(ctx.user._id, { twitterHandle: handle });
+    const signup = await getSignupForUser(ctx, ctx.user);
+    await resolvePendingInvites(
+      ctx,
+      ctx.user._id,
+      ctx.user.email,
+      signup?._id ?? ctx.user.signupId,
+      ctx.user.githubUsername ?? signup?.githubUsername,
+      handle
+    );
+    return handle;
+  },
+  returns: v.union(v.string(), v.null()),
+});
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+/** The browser-made 128px copy; anything bigger is not a thumbnail. */
+const MAX_THUMB_BYTES = 256 * 1024;
+
+async function assertImage(
+  ctx: MutationCtx,
+  imageId: Id<"_storage">,
+  maxBytes: number
+): Promise<void> {
+  const meta = await ctx.db.system.get(imageId);
+  if (!meta) {
+    fail("NOT_FOUND", "La imagen no se ha subido");
+  }
+  if (!meta.contentType?.startsWith("image/")) {
+    fail("VALIDATION", "Solo se admiten imágenes");
+  }
+  if (meta.size > maxBytes) {
+    fail("VALIDATION", "La foto no puede superar 2 MB");
+  }
+}
+
+/** Upload target for a profile picture. POST the file there, then call setAvatar. */
+export const generateAvatarUploadUrl = authedMutation({
+  args: {},
+  handler: async (ctx) => await ctx.storage.generateUploadUrl(),
+  returns: v.string(),
+});
+
+/**
+ * `thumbId` is the small square copy the browser made of the same picture
+ * (src/components/avatar-picker.tsx). Without it the map falls back to
+ * resizing the full upload on every request, so the picker always sends one
+ * when it can.
+ */
+export const setAvatar = authedMutation({
+  args: { imageId: v.id("_storage"), thumbId: v.optional(v.id("_storage")) },
+  handler: async (ctx, args) => {
+    await assertImage(ctx, args.imageId, MAX_AVATAR_BYTES);
+    if (args.thumbId) {
+      await assertImage(ctx, args.thumbId, MAX_THUMB_BYTES);
+    }
+    const previous = ctx.user.avatarId;
+    const previousThumb = ctx.user.avatarThumbId;
+    await ctx.db.patch(ctx.user._id, {
+      avatarId: args.imageId,
+      avatarThumbId: args.thumbId,
+    });
+    if (previous && previous !== args.imageId) {
+      await ctx.storage.delete(previous);
+    }
+    if (previousThumb && previousThumb !== args.thumbId) {
+      await ctx.storage.delete(previousThumb);
+    }
+    return imagePathFor(args.imageId);
+  },
+  returns: v.string(),
+});
+
+/** Only while the GitHub avatar remains: a photo is required (convex/lib/profile.ts). */
+export const removeAvatar = authedMutation({
+  args: {},
+  handler: async (ctx) => {
+    const previous = ctx.user.avatarId;
+    if (!previous) {
+      return null;
+    }
+    if (!ctx.user.image?.trim()) {
+      fail(
+        "VALIDATION",
+        "Sube otra foto antes de quitar esta: sin foto no puedes usar el panel"
+      );
+    }
+    const previousThumb = ctx.user.avatarThumbId;
+    await ctx.db.patch(ctx.user._id, {
+      avatarId: undefined,
+      avatarThumbId: undefined,
+    });
+    await ctx.storage.delete(previous);
+    if (previousThumb) {
+      await ctx.storage.delete(previousThumb);
+    }
+    return null;
+  },
+  returns: v.null(),
+});
+
+export const setAttendance = profileMutation({
   args: {
     attendanceStatus: v.union(v.literal("attending"), v.literal("cancelled")),
   },
@@ -214,7 +364,7 @@ export const setAttendance = onboardedMutation({
   returns: v.null(),
 });
 
-export const setNotificationConsent = onboardedMutation({
+export const setNotificationConsent = profileMutation({
   args: { consent: v.boolean() },
   handler: async (ctx, args) => {
     await ctx.db.patch(ctx.user._id, {
@@ -226,7 +376,7 @@ export const setNotificationConsent = onboardedMutation({
   returns: v.null(),
 });
 
-export const updateEventDetails = onboardedMutation({
+export const updateEventDetails = profileMutation({
   args: {
     dietaryDetails: v.optional(v.string()),
     dietaryRestrictions: v.string(),

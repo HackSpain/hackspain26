@@ -1,8 +1,11 @@
-import { createHash } from "node:crypto";
-import { RawTree } from "@rawtree/sdk";
-import type { JsonObject } from "@rawtree/sdk";
-
-const DEFAULT_TELEMETRY_TABLE = "hackspain_telemetry";
+import type { CanonicalModel, TokenCounts } from "./canonical";
+import { telemetryWindow } from "./window";
+import {
+  canonicalModel,
+  TELEMETRY_SCHEMA,
+  TELEMETRY_SCHEMA_V1,
+  totalTokens,
+} from "./canonical";
 
 export const TELEMETRY_BATCH_MAX = 200;
 export const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
@@ -20,15 +23,27 @@ const HARNESSES = [
   "opencode",
   "cline",
   "copilot",
+  "gemini-cli",
+  "qwen-code",
+  "kilo-code",
+  "pi",
+  "omp",
+  "antigravity",
+  "devin",
 ] as const;
-const MODEL_FAMILIES = ["claude", "gpt", "gemini", "other"] as const;
 
 type EventType = (typeof EVENT_TYPES)[number];
 type Harness = (typeof HARNESSES)[number];
-type ModelFamily = (typeof MODEL_FAMILIES)[number];
 
+/**
+ * What is stored: always `hackspain.telemetry.v2`, with every derived field
+ * (`model.name`, `model.family`, `model.provider`, `tokens.total`) computed
+ * here by `./canonical`, never trusted from the client. A v1 event from an
+ * older binary goes through the same code, so rows do not differ by harness
+ * or by CLI version.
+ */
 export type TelemetryEvent = {
-  schema: "hackspain.telemetry.v1";
+  schema: typeof TELEMETRY_SCHEMA;
   type: EventType;
   eventId: string;
   occurredAt: string;
@@ -36,26 +51,15 @@ export type TelemetryEvent = {
   harness: Harness;
   harnessVersion?: string;
   sessionId: string;
-  project?: { dirHash: string; name: string; gitBranch?: string };
-  model?: { raw: string; family: ModelFamily; provider?: string };
-  tokens?: {
-    input: number;
-    output: number;
-    cacheRead: number;
-    cacheWrite: number;
-    reasoning?: number;
-  };
-  costUsd?: number;
+  project?: { dirHash: string; name: string; gitBranch?: string; repo?: string };
+  model?: CanonicalModel;
+  tokens?: TokenCounts & { total: number };
   identity: { userId: string; teamId?: string; clientVersion: string };
-  native?: Record<string, unknown>;
+  /** Harness-specific, never comparable across harnesses. */
+  native?: { requestId?: string; costUsd?: number };
 };
 
-export class RawTreeConfigurationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RawTreeConfigurationError";
-  }
-}
+const REPO_SLUG_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -96,18 +100,25 @@ function parseProject(
   if (!isRecord(value)) {
     return null;
   }
-  const { dirHash, name, gitBranch } = value;
+  const { dirHash, name, gitBranch, repo } = value;
   if (
     typeof dirHash !== "string" ||
     !/^[a-f\d]{16}$/i.test(dirHash) ||
     !isBoundedString(name, MAX_SHORT_STRING_LENGTH) ||
     name.includes("/") ||
     name.includes("\\") ||
-    !isOptionalBoundedString(gitBranch, MAX_SHORT_STRING_LENGTH)
+    !isOptionalBoundedString(gitBranch, MAX_SHORT_STRING_LENGTH) ||
+    !isOptionalBoundedString(repo, MAX_SHORT_STRING_LENGTH) ||
+    (typeof repo === "string" && !REPO_SLUG_PATTERN.test(repo))
   ) {
     return null;
   }
-  return { dirHash, name, ...(gitBranch ? { gitBranch } : {}) };
+  return {
+    dirHash,
+    name,
+    ...(gitBranch ? { gitBranch } : {}),
+    ...(repo ? { repo } : {}),
+  };
 }
 
 function parseModel(
@@ -119,40 +130,51 @@ function parseModel(
   if (!isRecord(value)) {
     return null;
   }
-  const { raw, family, provider } = value;
+  const { raw, provider } = value;
   if (
     !isBoundedString(raw, MAX_SHORT_STRING_LENGTH) ||
-    !MODEL_FAMILIES.includes(family as ModelFamily) ||
     !isOptionalBoundedString(provider, MAX_SHORT_STRING_LENGTH)
   ) {
     return null;
   }
-  return {
-    family: family as ModelFamily,
-    raw,
-    ...(provider ? { provider } : {}),
-  };
+  // name, family and provider are derived here, whatever the client sent.
+  return canonicalModel(raw, provider);
 }
 
+function isCost(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+/**
+ * `requestId` only from Claude Code; `costUsd` from the harnesses that price
+ * their own requests. v1 carried the price at the top level (`legacyCost`).
+ */
 function parseNative(
   value: unknown,
-  harness: Harness
+  harness: Harness,
+  legacyCost: unknown
 ): TelemetryEvent["native"] | null | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (!isRecord(value) || harness !== "claude-code") {
+  if (value !== undefined && !isRecord(value)) {
     return null;
   }
-  const keys = Object.keys(value);
+  const { requestId, costUsd, ...unknown } = value ?? {};
+  const cost = costUsd ?? legacyCost;
   if (
-    keys.length !== 1 ||
-    keys[0] !== "requestId" ||
-    !isBoundedString(value.requestId, MAX_EVENT_ID_LENGTH)
+    Object.keys(unknown).length > 0 ||
+    (cost !== undefined && !isCost(cost)) ||
+    (requestId !== undefined &&
+      (harness !== "claude-code" ||
+        !isBoundedString(requestId, MAX_EVENT_ID_LENGTH)))
   ) {
     return null;
   }
-  return { requestId: value.requestId };
+  if (requestId === undefined && cost === undefined) {
+    return undefined;
+  }
+  return {
+    ...(requestId === undefined ? {} : { requestId }),
+    ...(cost === undefined ? {} : { costUsd: cost }),
+  };
 }
 
 function parseTokens(
@@ -174,13 +196,34 @@ function parseTokens(
   ) {
     return null;
   }
-  return {
+  const counts = {
     cacheRead,
     cacheWrite,
     input,
     output,
     ...(reasoning === undefined ? {} : { reasoning }),
   };
+  return { ...counts, total: totalTokens(counts) };
+}
+
+/**
+ * Nothing outside the hackathon window is stored, for anybody: organisers
+ * included, and nothing at all while no hackathon is scheduled. Judged on
+ * the time the harness recorded (`occurredAt`), not on when the watcher read
+ * or sent it. The CLI applies the same window
+ * (apps/cli/src/watcher/window.ts); older binaries do not, and this is the
+ * check that keeps RawTree clean either way.
+ */
+export function occurredInWindow(
+  occurredAt: string,
+  window: { startsAt?: number; endsAt?: number }
+): boolean {
+  const collection = telemetryWindow(window);
+  if (!collection) {
+    return false;
+  }
+  const at = Date.parse(occurredAt);
+  return at >= collection.startsAt && at < collection.endsAt;
 }
 
 export function parseTelemetryEvent(
@@ -198,17 +241,13 @@ export function parseTelemetryEvent(
   const harness = HARNESSES.includes(value.harness as Harness)
     ? (value.harness as Harness)
     : null;
-  let native: ReturnType<typeof parseNative> | null | undefined;
-  if (harness) {
-    native = parseNative(value.native, harness);
-  } else if (value.native === undefined) {
-    native = undefined;
-  } else {
-    native = null;
-  }
+  const native = harness
+    ? parseNative(value.native, harness, value.costUsd)
+    : null;
 
   if (
-    value.schema !== "hackspain.telemetry.v1" ||
+    (value.schema !== TELEMETRY_SCHEMA &&
+      value.schema !== TELEMETRY_SCHEMA_V1) ||
     !EVENT_TYPES.includes(value.type as EventType) ||
     !isBoundedString(value.eventId, MAX_EVENT_ID_LENGTH) ||
     !isDate(value.occurredAt) ||
@@ -219,11 +258,7 @@ export function parseTelemetryEvent(
     project === null ||
     model === null ||
     tokens === null ||
-    (value.type === "usage" && tokens === undefined) ||
-    (value.costUsd !== undefined &&
-      (typeof value.costUsd !== "number" ||
-        !Number.isFinite(value.costUsd) ||
-        value.costUsd < 0)) ||
+    (value.type === "usage" && (tokens === undefined || model === undefined)) ||
     !isRecord(identity) ||
     identity.userId !== authenticated.userId ||
     !isOptionalBoundedString(identity.teamId, MAX_SESSION_ID_LENGTH) ||
@@ -234,7 +269,7 @@ export function parseTelemetryEvent(
   }
 
   return {
-    schema: value.schema,
+    schema: TELEMETRY_SCHEMA,
     type: value.type as EventType,
     eventId: value.eventId,
     occurredAt: value.occurredAt,
@@ -245,7 +280,6 @@ export function parseTelemetryEvent(
     ...(project ? { project } : {}),
     ...(model ? { model } : {}),
     ...(tokens ? { tokens } : {}),
-    ...(value.costUsd === undefined ? {} : { costUsd: value.costUsd }),
     identity: {
       userId: authenticated.userId,
       ...(authenticated.teamId ? { teamId: authenticated.teamId } : {}),
@@ -253,87 +287,4 @@ export function parseTelemetryEvent(
     },
     ...(native ? { native } : {}),
   };
-}
-
-function toJsonObject(event: TelemetryEvent): JsonObject {
-  return structuredClone(event) as JsonObject;
-}
-
-function sortedUniqueEvents(events: TelemetryEvent[]): TelemetryEvent[] {
-  const sorted = [...events].toSorted((left, right) =>
-    left.eventId.localeCompare(right.eventId)
-  );
-  for (let index = 1; index < sorted.length; index++) {
-    if (sorted[index - 1]?.eventId === sorted[index]?.eventId) {
-      throw new Error(
-        `Duplicate telemetry event id: ${sorted[index]?.eventId}`
-      );
-    }
-  }
-  return sorted;
-}
-
-function deduplicatingFetch(
-  fetchImpl: typeof fetch,
-  token: string
-): typeof fetch {
-  return ((input, init) => {
-    const inputUrl = input instanceof Request ? input.url : String(input);
-    const url = new URL(inputUrl);
-    url.searchParams.set("deduplicate_insert", "enable");
-    url.searchParams.set("insert_deduplication_token", token);
-    return fetchImpl(url.toString(), init);
-  }) as typeof fetch;
-}
-
-export async function storeTelemetryEvents(
-  events: TelemetryEvent[],
-  fetchImpl: typeof fetch = fetch
-): Promise<void> {
-  if (events.length === 0) {
-    return;
-  }
-
-  const apiKey = process.env.RAWTREE_API_KEY;
-  const database = process.env.RAWTREE_DATABASE;
-  if (!apiKey || !database) {
-    throw new RawTreeConfigurationError(
-      "RAWTREE_API_KEY and RAWTREE_DATABASE are required"
-    );
-  }
-
-  const table = process.env.RAWTREE_TELEMETRY_TABLE ?? DEFAULT_TELEMETRY_TABLE;
-  const orderedEvents = sortedUniqueEvents(events);
-  const token = createHash("sha256")
-    .update("hackspain.telemetry.insert.v1\0")
-    .update(database)
-    .update("\0")
-    .update(table)
-    .update("\0")
-    .update(
-      JSON.stringify(
-        orderedEvents.map(({ eventId, identity }) => [identity.userId, eventId])
-      )
-    )
-    .digest("hex");
-
-  const rawtree = new RawTree({
-    apiKey,
-    database,
-    ...(process.env.RAWTREE_BASE_URL
-      ? { baseUrl: process.env.RAWTREE_BASE_URL }
-      : {}),
-    fetch: deduplicatingFetch(fetchImpl, token),
-    userAgent: "hackspain-dashboard/1.0",
-  });
-  const result = await rawtree.insert({
-    signal: AbortSignal.timeout(10_000),
-    table,
-    values: orderedEvents.map(toJsonObject),
-  });
-  if (result.inserted !== 0 && result.inserted !== orderedEvents.length) {
-    throw new Error(
-      `RawTree inserted ${result.inserted} of ${orderedEvents.length} telemetry events`
-    );
-  }
 }

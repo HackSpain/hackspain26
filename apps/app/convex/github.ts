@@ -7,11 +7,11 @@ import { resolvePendingInvites } from "./users";
 const STATE_TTL_MS = 10 * 60 * 1000;
 
 export function githubRedirectUri(): string {
-  const site = process.env.CONVEX_SITE_URL;
-  if (!site) {
+  const convexSite = process.env.CONVEX_SITE_URL;
+  if (!convexSite) {
     throw new Error("CONVEX_SITE_URL no está configurada");
   }
-  return `${site.replace(/\/$/, "")}/github/callback`;
+  return `${convexSite.replace(/\/$/, "")}/github/callback`;
 }
 
 function randomState(): string {
@@ -20,9 +20,15 @@ function randomState(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** A dashboard path such as "/onboarding": one leading slash, no scheme or host. */
+const SAME_ORIGIN_PATH = /^\/(?!\/)[^\s\\]*$/;
+
 export const startLink = authedMutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    /** Where the callback should land; must be a same-origin path, else `/`. */
+    returnTo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const clientId = process.env.GITHUB_CLIENT_ID;
     if (!clientId) {
       throw new Error("La vinculación con GitHub no está configurada");
@@ -35,15 +41,23 @@ export const startLink = authedMutation({
       await ctx.db.delete(row._id);
     }
     const state = randomState();
+    const returnTo =
+      args.returnTo && SAME_ORIGIN_PATH.test(args.returnTo)
+        ? args.returnTo
+        : undefined;
     await ctx.db.insert("githubLinkStates", {
       userId: ctx.user._id,
       state,
       expiresAt: Date.now() + STATE_TTL_MS,
+      returnTo,
     });
     const url = new URL("https://github.com/login/oauth/authorize");
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", githubRedirectUri());
-    url.searchParams.set("scope", "read:user repo");
+    // Public repository contents do not require a repository scope. In
+    // particular, `public_repo` would still grant write access to every public
+    // repo, so only request the profile permission used to link the account.
+    url.searchParams.set("scope", "read:user");
     url.searchParams.set("state", state);
     return { url: url.toString() };
   },
@@ -78,9 +92,12 @@ export const consumeState = internalMutation({
     if (row.expiresAt < Date.now()) {
       return null;
     }
-    return row.userId;
+    return { returnTo: row.returnTo, userId: row.userId };
   },
-  returns: v.union(v.id("users"), v.null()),
+  returns: v.union(
+    v.object({ returnTo: v.optional(v.string()), userId: v.id("users") }),
+    v.null()
+  ),
 });
 
 export const linkAccount = internalMutation({

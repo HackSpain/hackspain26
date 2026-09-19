@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -153,6 +154,54 @@ describe("claude-code", () => {
 });
 
 describe("jsonl-tail", () => {
+  test("reads chunk boundaries, Unicode, blank lines and an unfinished tail", () => {
+    const file = join(dir, "chunks.jsonl");
+    const cursors = memoryCursorStore();
+    const first = `${"a".repeat(65_535)}😀`;
+    const second = "é".repeat(70_000);
+    const complete = `${first}\n \r\n${second}\r\n`;
+    writeFileSync(file, `${complete}unfinished😀`);
+    const result = tailJsonl(file, cursors);
+    expect(result.lines).toEqual([first, `${second}\r`]);
+    expect(result.cursor.offset).toBe(Buffer.byteLength(complete));
+    cursors.set(file, result.cursor);
+    expect(tailJsonl(file, cursors).lines).toEqual([]);
+    appendFileSync(file, "done\n");
+    const next = tailJsonl(file, cursors);
+    expect(next.lines).toEqual(["unfinished😀done"]);
+    cursors.set(file, next.cursor);
+    expect(tailJsonl(file, cursors).lines).toEqual([]);
+  });
+
+  test("advances by source bytes even when UTF-8 is malformed", () => {
+    const file = join(dir, "invalid.jsonl");
+    const cursors = memoryCursorStore();
+    writeFileSync(file, Buffer.from([255, 10, 97]));
+    const first = tailJsonl(file, cursors);
+    expect(first.lines).toEqual(["�"]);
+    expect(first.cursor.offset).toBe(2);
+    cursors.set(file, first.cursor);
+    appendFileSync(file, "b\n");
+    const next = tailJsonl(file, cursors);
+    expect(next.lines).toEqual(["ab"]);
+    expect(next.cursor.offset).toBe(5);
+  });
+
+  test("replacing an inode resets session metadata even at the same size", () => {
+    const file = join(dir, "rotated.jsonl");
+    const replacement = join(dir, "replacement.jsonl");
+    const cursors = memoryCursorStore();
+    writeFileSync(file, "old\n");
+    const first = tailJsonl(file, cursors);
+    cursors.set(file, { ...first.cursor, mark: "old", seenSessions: ["old"] });
+    writeFileSync(replacement, "new\n");
+    renameSync(replacement, file);
+    const next = tailJsonl(file, cursors);
+    expect(next.lines).toEqual(["new"]);
+    expect(next.cursor.mark).toBeUndefined();
+    expect(next.cursor.seenSessions).toEqual([]);
+  });
+
   test("leaves a partial trailing line for the next read and survives rotation", () => {
     const file = join(dir, "t.jsonl");
     const cursors = memoryCursorStore();
@@ -265,6 +314,32 @@ describe("codex", () => {
 describe("cline", () => {
   const taskDir = join(FIXTURES, "cline", "tasks", "1758276000000");
 
+  test("model changes use the last metadata entry at or before each request", () => {
+    const messages = [5, 20, 30].map((ts) => ({
+      say: "api_req_started",
+      text: '{"tokensIn":1}',
+      ts,
+      type: "say",
+    }));
+    const task = {
+      messages,
+      metadata: {
+        model_usage: [
+          { model_id: "middle", ts: 20 },
+          { model_id: "first", ts: 10 },
+          { model_id: "last", ts: 20 },
+        ],
+      },
+      taskId: "model-switch",
+    };
+    expect(
+      normalizeCline(task, 0).events.map((event) => event.model?.raw)
+    ).toEqual(["first", "last", "last"]);
+    expect(
+      normalizeCline({ ...task, metadata: undefined }, 0).events[0]?.model?.raw
+    ).toBe("unknown");
+  });
+
   test("normalize: completed requests only, stops at the in-flight one, model from metadata", () => {
     const task = {
       messages: JSON.parse(
@@ -337,6 +412,8 @@ describe("opencode", () => {
             input: 100,
             output: 20,
             reasoning: 5,
+            // As OpenCode writes it: reasoning counted next to the output.
+            total: 175,
           },
         })
       );
@@ -373,7 +450,8 @@ describe("opencode", () => {
       cacheRead: 50,
       cacheWrite: 0,
       input: 100,
-      output: 20,
+      // 20 output + 5 reasoning: output includes reasoning for every harness.
+      output: 25,
       reasoning: 5,
     });
     expect(first[1]?.costUsd).toBe(0.01);

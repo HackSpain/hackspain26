@@ -22,6 +22,7 @@ export function getAllSitemapPageUrls(): string[] {
     `${o}/ambassador`,
     `${o}/brand`,
     `${o}/privacy`,
+    `${o}/conduct`,
   ];
   return [...new Set(raw.map(normalizeSitemapPageUrl))];
 }

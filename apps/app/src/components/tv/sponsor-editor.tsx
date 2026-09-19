@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { TvSponsor, TvSponsorTier, TvTickerSpeed } from "@/lib/tv";
+import {
+  usingDefaultTvSponsors,
+  type TvSponsor,
+  type TvSponsorTier,
+  type TvTickerSpeed,
+} from "@/lib/tv";
 
 const TIERS: TvSponsorTier[] = ["gold", "silver", "community"];
 const SPEEDS: TvTickerSpeed[] = ["slow", "normal", "fast"];
@@ -42,6 +47,12 @@ export function SponsorEditor({
       onPointerDown={(event) => event.stopPropagation()}
     >
       <p className="font-bungee text-sm">Sponsors</p>
+      {usingDefaultTvSponsors(sponsors) ? (
+        <p className="mt-1 text-xs text-hs-brown">
+          Sin lista propia se muestran los sponsors de HackSpain. Añade los
+          tuyos para sustituirlos.
+        </p>
+      ) : null}
       <div className="mt-2 space-y-3">
         {rows.map((row, index) => (
           <div key={index} className="grid gap-2 border-b border-hs-ink/15 pb-2">

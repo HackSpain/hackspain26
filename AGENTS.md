@@ -1,169 +1,22 @@
-# HackSpain monorepo
+# Working on HackSpain
 
-Marketing site for HackSpain 2026 (Madrid) at https://hackspain.com, plus the participant/admin dashboard and the `hackspain` CLI.
+pnpm monorepo: `apps/web` is the Astro landing on Neon/Drizzle; `apps/app` is the Next.js dashboard with Convex; `apps/cli` is the Bun CLI. Setup and commands: [README](README.md) and [CLI README](apps/cli/README.md).
 
-Setup, env vars, and Convex login live in the [README](README.md). pnpm workspaces. Node ≥ 22.12. The CLI still compiles and tests with Bun.
+## Documentation
 
-```text
-apps/web    # Astro 6 landing (Vercel, React islands, Tailwind v4, Neon/Drizzle)
-apps/app    # Next.js dashboard + Convex (auth, CRM, teams, perks, feed, TV)
-apps/cli    # `hackspain` terminal client for participants (Bun binary, same Convex backend)
-```
+- Consult relevant entries in [docs/learnings.md](docs/learnings.md) before working in an affected area.
+- Add or update a learning when the task establishes a non-obvious, project-specific fact that will prevent a recurring or costly mistake. Record the evidence, consequence, and prevention/verification step. Mark unknown causes explicitly. Skip routine debugging, generic advice, and unverified theories; update an existing entry rather than duplicating it.
+- Keep this file for project-specific constraints and traps that are hard to infer from code. Personal preferences belong in each contributor's local agent configuration. Put setup in README and historical explanations in learnings. Correct documentation that the task proves stale; avoid feature inventories and permanent bans based solely on past implementations.
 
-```sh
-pnpm install
-pnpm dev                 # landing — localhost:4321
-pnpm dev:app             # dashboard — localhost:3000
-pnpm dev:convex          # Convex dev (not production deploy)
-pnpm dev:all             # landing + dashboard + Convex
-pnpm migrate:convex      # Neon → Convex. Idempotent on email. Do not run unless importing.
-```
+## Project traps
 
-Do not run `pnpm --filter app exec convex deploy` unless you are shipping Convex to production.
-
-Copy `apps/web/.env.example` → `apps/web/.env` for signup APIs. Copy `apps/app/.env.example` → `apps/app/.env.local` for the dashboard. Static landing pages run without a database.
-
-## Feature status
-
-Public signup still writes Neon; Convex `signups` come from `pnpm migrate:convex` (or CRM). Insights stay mock. Watcher telemetry uploads to RawTree (`POST /api/cli/telemetry`).
-
-| Area | Status |
-| --- | --- |
-| Landing mosaic, signup, attendance, badges | **Live** (Neon). Signups closed 9 Aug. Shortlist and prefill are gone. |
-| Auth, onboarding, profile, GitHub link, feed, perks, tracks, CRM | **Live** (Convex). Submit is `/submit` (not CLI); stays closed until an admin opens the window. Home features it from Sunday 08:00 Madrid. |
-| Teams | **Live**. This branch makes `/teams` read-only; create/join/transfer are CLI. |
-| CLI (commands + watch) | **Live** against `/api/cli/*`. Submit is dashboard-only. |
-| Venue TV, judging, repo stack tags | **This branch.** `/tv`, `/admin/tv`, `/judging`. |
-| Insights (`/insights`) | **Mock UI only.** |
-
-## Landing (`apps/web`)
-
-Astro 6 with server output on Vercel, React islands, Tailwind CSS v4, Motion. Synced from the marketing repo at `origin/master` (`49337e0`). Trailing slashes are off (`trailingSlash: "never"`). Public copy is Spanish-first; there is no `/en` / `/es` locale prefix.
-
-### Layout
-
-```text
-apps/web/src/
-├── components/          # mosaic, pages, sections, share badge, forms
-├── data/                # SEO, section routes, llms.txt, mentors/judges
-├── db/                  # Drizzle client + schema (Neon)
-├── layouts/layout.astro # SEO + JSON-LD
-├── lib/                 # Zod validation, email, badge
-├── middleware.ts        # AEO: Accept text/markdown on landing URLs → llms.txt
-└── pages/               # routes + /api/*
-```
-
-Interactive pages are Astro shells that mount one React island with `client:load`.
-
-### Routes
-
-| Path | Role | Prerender |
-| --- | --- | --- |
-| `/`, `/mission`, `/tracks`, `/gran-premio`, `/mentores`, `/apuntate` | Landing mosaic sections | no |
-| `/signup` | Hackathon signup | yes |
-| `/ambassador` | Ambassador application | yes |
-| `/privacy` | Privacy | yes |
-| `/asistencia` | Mentor/sponsor attendance | no |
-| `/confirmacion`, `/comparte`, `/cancelacion` | Place confirmation, badge share, cancellation | no |
-| `/api/signup`, `/api/mentor-sponsor-signup` | JSON POST | no |
-| `/llms.txt` | Machine-readable site summary | yes |
-
-Landing section slugs live in `src/data/section-routes.ts`. Adding a section means updating that list, mosaic cells, `landing-meta.ts` SEO arrays, and a root alias page.
-
-### SEO
-
-- Page titles, descriptions, keywords, JSON-LD: `src/data/landing-meta.ts` and `src/layouts/layout.astro`.
-- `src/data/llms.txt` is the AEO source. Middleware serves it when `Accept` includes `text/markdown`. Keep it in sync with visible copy.
-
-### Design
-
-Brand tokens are defined twice on the landing and must stay in sync:
-
-- CSS / Tailwind: `src/styles/global.css` `@theme` (`--color-hs-*`, `--font-bungee`)
-- TS: `src/components/theme/palette.ts`
-
-The dashboard remaps the same hex values onto shadcn tokens in `apps/app/src/app/globals.css`.
-
-Fonts: DM Sans (body), Bungee (display / buttons). Landing buttons use `src/components/ui/button-styles.ts`. Forms use `src/components/form/*`.
-
-Landing motion is a full-viewport mosaic (`landing-page`, `cells.ts` / `cells-compact.ts`). Do not turn it into a normal scrolling page. Respect `prefers-reduced-motion`.
-
-### Forms and APIs
-
-Validation is Zod in `src/lib/signup-validation.ts` and `src/lib/mentor-sponsor-validation.ts`. The API parses the body with those helpers. Do not invent a second schema in the React form.
-
-`POST` handlers (`prerender = false`) check BotID, require `application/json`, reject duplicate emails (409), write through `getDb()`, and send transactional mail through Resend when configured.
-
-Tables in `src/db/schema.ts` include `hackathon_signups`, `hackathon_pre_signups`, and `mentor_sponsor_signups`. Change schema with Drizzle (`pnpm db:generate` then migrate). Do not hand-edit applied SQL as the source of truth.
-
-New dashboard data lives in Convex, not Neon. Keep using Neon for the public signup API until that is migrated separately.
-
-## Dashboard (`apps/app`)
-
-Next.js App Router + Convex + Convex Auth (email OTP) + shadcn.
-
-Wrappers: `authedQuery` / `authedMutation` / `accepted*` / `onboarded*` / `adminQuery` / `adminMutation`.
-
-Sign in with the `/signup` email. No signup row means `/unregistered`. Accepted hackers confirm details on `/onboarding`. Everyone else with a signup sees `/pending`. Admins mark accepted in CRM and bypass participant gates. Admin role: `ADMIN_EMAILS` Convex env, or CRM “Make admin”.
-
-Phone OTP without Twilio requires Convex env `ALLOW_PHONE_STUB=true` (dev only); otherwise `requestPhoneCode` throws "SMS is not configured". Users still must enter the code.
-
-Email OTP: Convex env `ALLOW_EMAIL_OTP_STUB=true` (dev only) lets `00000000` stand in for the real code. Real codes stay random (Convex Auth looks codes up by hash with `.unique()`, so a fixed code would collide across accounts); `ResendOTP` records the real code in `devOtpCodes` and the `auth:signIn` wrapper swaps `00000000` for it. Ignored whenever `AUTH_RESEND_KEY` is set.
-
-GitHub linking is a custom OAuth flow, not a Convex Auth provider (Convex Auth only links OAuth to the signed-in user by verified email). `github.startLink` stores a one-time state and returns the GitHub authorize URL; the HTTP route `/github/callback` (`convex/http.ts`) exchanges the code, then `internal.github.linkAccount` writes `githubId` / `githubUsername` / `githubLinkedAt` on `users`, copies the handle onto the signup, and resolves pending team invites. Needs Convex env `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SITE_URL`. The dashboard shows a "vincula tu GitHub" banner until `githubLinkedAt` is set; the callback redirects to `SITE_URL/?github=linked|cancelled|expired|taken|error`.
-
-Profiles store social links as `urls: { kind, url }[]`. `githubUsername` / `twitterHandle` stay denormalized for team lookup. One submission can enter multiple challenges via `challengeIds` and records partner perks in `perkIds`. Submit stays closed until an admin opens the window. Drafts can be saved before that.
-
-`pnpm migrate:convex` is idempotent on email. It uses `apps/web/.env` for Neon. `approval_status = confirmed` emails are marked accepted. Re-runs do not un-accept someone an admin already marked. Waitlist / pending / rejected stay unaccepted.
-
-### Dashboard routes
-
-| Path | Role |
-| --- | --- |
-| `/login` | Email OTP |
-| `/unregistered` | Signed in, email not in `signups` |
-| `/pending` | Signup exists, not accepted |
-| `/onboarding` | Accepted hacker confirms phone, diet, travel, attend/cancel |
-| `/` | Home |
-| `/participantes` | Directory + connections graph (demo data) |
-| `/cli` | CLI install and command guide |
-| `/cli-auth` | Approve a CLI device login |
-| `/tv` | Public venue screen (no login) |
-| `/judging` | Assigned judging queues |
-| `/profile` | Edit phone, diet, travel, consent, attendance |
-| `/teams` | Read-only team view; create/join via CLI |
-| `/perks` | Catalog + claim |
-| `/tracks` | Challenge catalog. Submit lives on `/submit`. |
-| `/submit` | Project delivery: YouTube video (3 min), public GitHub repo, optional product URL. One track at a time. Featured on home from Sunday 08:00 Madrid. |
-| `/feed` | Shared posts + GitHub activity from team repos |
-| `/insights` | Event analytics UI. Mock data only; do not query Convex here. |
-| `/admin` | CRM |
-| `/admin/users/[id]` | Participant detail, accept, role, notes |
-| `/admin/perks` | Perk CRUD + code pools |
-| `/admin/applications` | Email perk applications queue |
-| `/admin/tracks` | Track copy, submission window, projects per challenge |
-| `/admin/notifications` | Broadcast email to audiences |
-| `/admin/tv` | Venue screen canvas editor |
-
-## CLI (`apps/cli`)
-
-Commander + `@clack/prompts` on Bun, compiled to standalone binaries with `bun build --compile`. See [apps/cli/README.md](apps/cli/README.md).
-
-- The CLI never talks to Convex. It calls the dashboard's `/api/cli/*` route handlers (`apps/app/src/app/api/cli`), which run allowlisted Convex functions server-side with the participant's own Convex Auth session (`fetchQuery` / `fetchMutation` / `fetchAction` from `convex/nextjs` with the bearer token). Same users as the web login. Add a function to `_lib/functions.ts` when a command needs it; `/api/cli(.*)` is public in `src/middleware.ts` because it authenticates with the bearer token, not the cookie.
-- Backend types come from `apps/app/convex/_generated/api.d.ts` via a type-only import in `src/lib/api.ts`; at runtime `api.x.y` is only the name `"x:y"`. Run `pnpm dev:convex` after changing Convex functions so the CLI typecheck sees them.
-- Functions the CLI calls throw `ConvexError({ code, message })` from `convex/lib/errors.ts`; the route relays them as `{ kind: "convex", data }` and the CLI raises `RemoteError`. Older web-facing functions throw plain `Error`; `src/lib/errors.ts` maps those Spanish gate messages to English hints and exit codes.
-- Credentials: `~/.config/hackspain/credentials.json`, refreshed through `/api/cli/auth/refresh` under a lock file (Convex Auth rotates refresh tokens; a stale reuse logs every process out). State (cursors, spool) goes to `~/.local/state/hackspain/`. From a source checkout the CLI targets `http://localhost:3000` (`pnpm dev:app`); release binaries target `https://app.hackspain.com`.
-- `--json` prints exactly one JSON object on stdout and disables prompts; everything else goes to stderr.
-- `hackspain watch` collects AI-harness usage into the canonical `hackspain.telemetry.v1` event (`apps/cli/src/watcher/schema.ts`, documented in `apps/cli/docs/telemetry-schema.md`). Collectors live in `src/watcher/collectors/` and must fail soft. Events go to a local NDJSON spool; the exact HTTP batch is persisted before upload and retried across restarts. `POST /api/cli/telemetry` (`apps/app/src/app/api/cli/telemetry/route.ts`) authenticates, validates, and inserts through `@rawtree/sdk` with a stable RawTree deduplication token. RawTree needs `RAWTREE_API_KEY` with `write_only` permission and `RAWTREE_DATABASE` in the dashboard environment; the default table is `hackspain_telemetry`. The insights page still reads mock data. Organiser broadcasts are polled through `/api/cli/rpc` (`notifications:forMe`). Fixtures under `apps/cli/test/fixtures` are redacted; a test rejects home paths.
-- Telemetry update checklist: when adding or changing collected data, update `apps/cli/src/watcher/schema.ts`, the matching type and validator in `apps/app/src/app/api/cli/telemetry/rawtree.ts`, `apps/cli/docs/telemetry-schema.md`, the relevant collector/ingestion tests, and every RawTree query or dashboard that consumes it. A new optional field can use RawTree's Dynamic schema without a migration. Renaming a field, changing its type, or changing its meaning is breaking: bump `SCHEMA`, document the compatibility window, and keep ingestion compatible with the previous version during rollout. Keep `native` small, add every permitted key to both validators, and never place prompts, responses, code, full paths, environment variables, credentials, or harness account ids in telemetry. RawTree insert deduplication only protects the retry window: consumers must deduplicate permanently by `(identity.userId, eventId)` before aggregating.
-- Feed: `posts` table (`convex/feed.ts`: list/post/remove, images in Convex file storage via `feed.generateUploadUrl`; the CLI uploads through `/api/cli/upload`). Posts carry `imagePath` (`/api/files/<storageId>`), never a Convex storage URL: `src/app/api/files/[id]/route.ts` checks the cookie or bearer session, asks `feed.imageUrl` (only ids attached to a post resolve) and streams the bytes under our domain; unauthenticated requests are redirected to `/login`. GitHub activity is polled server-side by `convex/crons.ts` → `internal.githubFeed.pollRepos` every 3 minutes from each team's `repoUrl`, deduped on `externalId`, with ETags so quiet repos cost nothing. **`GITHUB_TOKEN` must be set on the Convex deployment**: unauthenticated calls share 60/hour per egress IP and Convex's shared IPs are always exhausted. GitHub's Events API returns trimmed payloads (no commit list, no PR title), so pushes are described from ref + sha and pull requests get one extra detail request. Changing a team's repo resets its ETag; dissolving a team deletes its GitHub posts. `pnpm --filter app exec convex run githubFeed:purgeRepo '{"repo":"org/name"}'` clears a repo's posts.
-- `hackspain profile` mirrors `src/app/profile/page.tsx` minus attendance (the CLI is used at the venue) plus a name (`users.setName`, `users.updateEventDetails`, `users.setNotificationConsent`, `onboarding.requestPhoneCode/verifyPhoneCode`, `github.startLink/unlink`); `auth login` runs `completeProfile` afterwards, which asks for a missing name, unconfirmed phone (accepted users only) or GitHub link, each skippable. GitHub linking is the same OAuth flow: the CLI prints the authorise URL and the callback lands on the dashboard.
-- Lint with Oxlint and `ultracite` (Biome); run it with `pnpm lint`. CLI tests use Bun's test runner through `pnpm test`.
-
-## Conventions
-
-- Match existing files. Prefer editing the island and its Astro page over new frameworks or extra CSS files.
-- No `any`. Strict TypeScript.
-- Server secrets stay in `import.meta.env` (landing) or Convex/Next server env. Never prefix Discord or the database URL with `PUBLIC_`.
-- Illustrations are SVGs under `apps/web/src/assets/`. Quiver scripts regenerate them.
-- Verify UI in the browser. Landing and dashboard do not share a layout.
+- Production Convex deploys through the dashboard's Vercel build (`pnpm vercel-build`). Do not use `convex deploy` for local validation. Signup migration imports real Neon data; seed/reset/clear and OTP stubs are development-only.
+- Public signup still writes Neon; dashboard data belongs in Convex. Changing that boundary is a migration, not a routine endpoint edit.
+- Landing brand tokens are duplicated in `apps/web/src/styles/global.css` and `apps/web/src/components/theme/palette.ts`; keep them synchronized. `apps/web/src/data/llms.txt` is served by middleware for markdown requests and must follow visible copy changes.
+- Convex access wrappers enforce both permissions and event timing. Use `onboarded*` for new event features; use `anytimeOnboarded*` only when intentionally available outside the event. Check `apps/app/convex/lib/auth.ts` before choosing a wrapper.
+- The CLI reaches Convex through allowlisted `/api/cli/*` handlers using the participant's bearer session. Public middleware routing does not remove endpoint authentication. Keep generated backend API imports type-only in the CLI; shared pure helpers are separate runtime dependencies.
+- Preserve the CLI refresh-token lock: concurrent reuse of rotating tokens can invalidate sessions. Auth handoffs use `hs-code` / `hs-token`; a query parameter named `code` is consumed by Convex Auth middleware.
+- CLI `--json` is a machine-readable contract: exactly one JSON object on stdout, no prompts, other output on stderr.
+- Telemetry changes must preserve the [schema contract](apps/cli/docs/telemetry-schema.md), shared canonicalization, old-client/spool compatibility, and corresponding ingestion/query changes. Consumers permanently deduplicate by `(identity.userId, eventId)`; transport retry protection is insufficient.
+- Telemetry excludes prompts, responses, code, full paths, credentials, and harness account IDs. The scheduled collection window uses `occurredAt`, including for admins; no schedule means no recording.
+- Project submit is dashboard `/submit` (YouTube + public GitHub + optional product URL), not the CLI. One team, one track. The home Submit tile features from Sunday 08:00 Europe/Madrid (`apps/app/src/lib/event.ts`). CLI `saveDraft` still stores a draft; `hackspain submit` is gone.

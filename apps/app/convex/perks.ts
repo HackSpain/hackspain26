@@ -2,8 +2,8 @@ import { v } from "convex/values";
 import {
   adminMutation,
   adminQuery,
-  onboardedMutation,
-  onboardedQuery,
+  anytimeOnboardedMutation,
+  anytimeOnboardedQuery,
 } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
 import {
@@ -15,12 +15,13 @@ import {
 import { membershipForUser } from "./lib/team";
 import {
   claimStatusValidator,
+  claimTypeValidator,
   perkAnswerValidator,
   perkInputValidator,
   perkTypeValidator,
 } from "./lib/validators";
 import type { Doc } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 function perkFields(perk: Doc<"perks">) {
   return {
@@ -31,6 +32,7 @@ function perkFields(perk: Doc<"perks">) {
     description: perk.description,
     type: perk.type,
     sponsorUrl: perk.sponsorUrl,
+    instructions: perk.instructions,
     inputs: perk.inputs ?? [],
     active: perk.active,
   };
@@ -59,11 +61,29 @@ async function claimWithCode(
   };
 }
 
-function cleanSponsorUrl(raw: string): string | undefined {
+function cleanSponsorUrl(raw: string, required = false): string | undefined {
   const url = raw.trim();
-  if (!url) return undefined;
-  if (!isHttpUrl(url)) throw new Error("La URL del sponsor debe empezar por http:// o https://");
+  if (!url) {
+    if (required) {
+      throw new Error("La URL es obligatoria");
+    }
+    return undefined;
+  }
+  if (!isHttpUrl(url)) {
+    throw new Error("La URL debe empezar por http:// o https://");
+  }
   return url;
+}
+
+function cleanInstructions(raw: string, required = false): string | undefined {
+  const text = raw.trim();
+  if (!text) {
+    if (required) {
+      throw new Error("Las instrucciones son obligatorias");
+    }
+    return undefined;
+  }
+  return text;
 }
 
 function cleanInputs(raw: PerkInput[]): PerkInput[] {
@@ -80,6 +100,7 @@ const perkReturn = v.object({
   description: v.string(),
   type: perkTypeValidator,
   sponsorUrl: v.optional(v.string()),
+  instructions: v.optional(v.string()),
   inputs: v.array(perkInputValidator),
   active: v.boolean(),
   availableCodes: v.optional(v.number()),
@@ -90,14 +111,14 @@ const claimReturn = v.object({
   perkId: v.id("perks"),
   title: v.string(),
   company: v.string(),
-  type: perkTypeValidator,
+  type: claimTypeValidator,
   status: claimStatusValidator,
   code: v.optional(v.string()),
   answers: v.array(perkAnswerValidator),
   createdAt: v.number(),
 });
 
-export const listCatalog = onboardedQuery({
+export const listCatalog = anytimeOnboardedQuery({
   args: {},
   returns: v.array(
     v.object({
@@ -137,25 +158,7 @@ export const listCatalog = onboardedQuery({
   },
 });
 
-export const myClaims = onboardedQuery({
-  args: {},
-  returns: v.array(claimReturn),
-  handler: async (ctx) => {
-    const claims = await ctx.db
-      .query("perkClaims")
-      .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
-      .collect();
-    const rows = [];
-    for (const claim of claims) {
-      const perk = await ctx.db.get(claim.perkId);
-      if (!perk) continue;
-      rows.push(await claimWithCode(ctx, claim, perk));
-    }
-    return rows;
-  },
-});
-
-export const claim = onboardedMutation({
+export const claim = anytimeOnboardedMutation({
   args: {
     perkId: v.id("perks"),
     answers: v.optional(v.array(perkAnswerValidator)),
@@ -171,6 +174,20 @@ export const claim = onboardedMutation({
       )
       .unique();
     if (existing) throw new Error("Ya has reclamado este perk");
+
+    switch (perk.type) {
+      case "external": {
+        throw new Error("Este perk se reclama en la web del partner");
+      }
+      case "code":
+      case "email": {
+        break;
+      }
+      default: {
+        const _exhaustive: never = perk.type;
+        throw new Error(_exhaustive);
+      }
+    }
 
     const checked = validateAnswers(perk.inputs ?? [], args.answers);
     if (!checked.ok) fail("VALIDATION", checked.message);
@@ -225,6 +242,7 @@ export const adminList = adminQuery({
       description: v.string(),
       type: perkTypeValidator,
       sponsorUrl: v.optional(v.string()),
+      instructions: v.optional(v.string()),
       inputs: v.array(perkInputValidator),
       active: v.boolean(),
       codeCount: v.number(),
@@ -263,6 +281,7 @@ export const adminCreate = adminMutation({
     description: v.string(),
     type: perkTypeValidator,
     sponsorUrl: v.optional(v.string()),
+    instructions: v.optional(v.string()),
     inputs: v.optional(v.array(perkInputValidator)),
     codes: v.optional(v.array(v.string())),
   },
@@ -273,8 +292,10 @@ export const adminCreate = adminMutation({
     if (!company || !title) {
       throw new Error("La empresa y el título son obligatorios");
     }
-    const sponsorUrl = cleanSponsorUrl(args.sponsorUrl ?? "");
-    const inputs = cleanInputs(args.inputs ?? []);
+    const external = args.type === "external";
+    const sponsorUrl = cleanSponsorUrl(args.sponsorUrl ?? "", external);
+    const instructions = cleanInstructions(args.instructions ?? "", external);
+    const inputs = external ? [] : cleanInputs(args.inputs ?? []);
     const now = Date.now();
     const perkId = await ctx.db.insert("perks", {
       company,
@@ -283,6 +304,7 @@ export const adminCreate = adminMutation({
       description: args.description.trim(),
       type: args.type,
       sponsorUrl,
+      instructions,
       inputs: inputs.length > 0 ? inputs : undefined,
       active: true,
       createdBy: ctx.user._id,
@@ -290,12 +312,9 @@ export const adminCreate = adminMutation({
       updatedAt: now,
     });
     if (args.type === "code") {
-      const unique = new Set(
-        (args.codes ?? [])
-          .map((code) => code.trim())
-          .filter((code) => code.length > 0),
-      );
-      for (const code of unique) {
+      for (const raw of args.codes ?? []) {
+        const code = raw.trim();
+        if (!code) continue;
         await ctx.db.insert("perkCodes", {
           perkId,
           code,
@@ -314,8 +333,9 @@ export const adminUpdate = adminMutation({
     title: v.optional(v.string()),
     value: v.optional(v.string()),
     description: v.optional(v.string()),
-    /** Empty string clears the link. */
+    /** Empty string clears the link. External perks cannot clear it. */
     sponsorUrl: v.optional(v.string()),
+    instructions: v.optional(v.string()),
     inputs: v.optional(v.array(perkInputValidator)),
     active: v.optional(v.boolean()),
     codesToAdd: v.optional(v.array(v.string())),
@@ -324,6 +344,7 @@ export const adminUpdate = adminMutation({
   handler: async (ctx, args) => {
     const perk = await ctx.db.get(args.perkId);
     if (!perk) throw new Error("Perk no encontrado");
+    const external = perk.type === "external";
     const patch: Partial<Doc<"perks">> = { updatedAt: Date.now() };
     if (args.company !== undefined) {
       const company = args.company.trim();
@@ -337,8 +358,13 @@ export const adminUpdate = adminMutation({
     }
     if (args.value !== undefined) patch.value = args.value.trim();
     if (args.description !== undefined) patch.description = args.description.trim();
-    if (args.sponsorUrl !== undefined) patch.sponsorUrl = cleanSponsorUrl(args.sponsorUrl);
-    if (args.inputs !== undefined) {
+    if (args.sponsorUrl !== undefined) {
+      patch.sponsorUrl = cleanSponsorUrl(args.sponsorUrl, external);
+    }
+    if (args.instructions !== undefined) {
+      patch.instructions = cleanInstructions(args.instructions, external);
+    }
+    if (args.inputs !== undefined && !external) {
       const inputs = cleanInputs(args.inputs);
       patch.inputs = inputs.length > 0 ? inputs : undefined;
     }
@@ -346,20 +372,14 @@ export const adminUpdate = adminMutation({
     await ctx.db.patch(perk._id, patch);
 
     if (perk.type === "code" && args.codesToAdd) {
-      const existing = await ctx.db
-        .query("perkCodes")
-        .withIndex("by_perk", (q) => q.eq("perkId", perk._id))
-        .collect();
-      const have = new Set(existing.map((row) => row.code));
       for (const raw of args.codesToAdd) {
         const code = raw.trim();
-        if (!code || have.has(code)) continue;
+        if (!code) continue;
         await ctx.db.insert("perkCodes", {
           perkId: perk._id,
           code,
           available: true,
         });
-        have.add(code);
       }
     }
     return null;
@@ -371,6 +391,72 @@ async function teamNameFor(ctx: QueryCtx, userId: Doc<"users">["_id"]) {
   if (!membership) return undefined;
   const team = await ctx.db.get(membership.teamId);
   return team?.name;
+}
+
+async function attachCodeToClaim(
+  ctx: MutationCtx,
+  claim: Doc<"perkClaims">,
+  raw: string,
+) {
+  const code = raw.trim();
+  if (!code) {
+    return claim.codeId;
+  }
+  const existing = await ctx.db
+    .query("perkCodes")
+    .withIndex("by_perk", (q) => q.eq("perkId", claim.perkId))
+    .collect();
+  const copies = existing.filter((row) => row.code === code);
+  const match =
+    copies.find((row) => row.assignedTo === claim.userId) ??
+    copies.find((row) => row.available);
+  const now = Date.now();
+  if (copies.length > 0 && !match) {
+    throw new Error("Ese código ya está asignado a otra persona");
+  }
+  if (match) {
+    if (match.assignedTo && match.assignedTo !== claim.userId) {
+      throw new Error("Ese código ya está asignado a otra persona");
+    }
+    if (claim.codeId && claim.codeId !== match._id) {
+      const previous = await ctx.db.get(claim.codeId);
+      if (previous && previous.assignedTo === claim.userId) {
+        await ctx.db.patch(previous._id, {
+          available: true,
+          assignedTo: undefined,
+          assignedAt: undefined,
+        });
+      }
+    }
+    await ctx.db.patch(match._id, {
+      available: false,
+      assignedTo: claim.userId,
+      assignedAt: now,
+    });
+    return match._id;
+  }
+  return await ctx.db.insert("perkCodes", {
+    perkId: claim.perkId,
+    code,
+    available: false,
+    assignedTo: claim.userId,
+    assignedAt: now,
+  });
+}
+
+async function releaseClaimCode(
+  ctx: MutationCtx,
+  claim: Doc<"perkClaims">,
+) {
+  if (!claim.codeId) return;
+  const assigned = await ctx.db.get(claim.codeId);
+  if (assigned && assigned.assignedTo === claim.userId) {
+    await ctx.db.patch(assigned._id, {
+      available: true,
+      assignedTo: undefined,
+      assignedAt: undefined,
+    });
+  }
 }
 
 /** Every participant who claimed or applied for one perk, with their answers. */
@@ -418,6 +504,52 @@ export const adminRequests = adminQuery({
   },
 });
 
+/** Every code in a perk pool, with who claimed it when assigned. */
+export const adminCodes = adminQuery({
+  args: { perkId: v.id("perks") },
+  returns: v.array(
+    v.object({
+      _id: v.id("perkCodes"),
+      code: v.string(),
+      available: v.boolean(),
+      userId: v.optional(v.id("users")),
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      teamName: v.optional(v.string()),
+      assignedAt: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const codes = await ctx.db
+      .query("perkCodes")
+      .withIndex("by_perk", (q) => q.eq("perkId", args.perkId))
+      .collect();
+    const rows = [];
+    for (const row of codes) {
+      const user = row.assignedTo ? await ctx.db.get(row.assignedTo) : null;
+      rows.push({
+        _id: row._id,
+        code: row.code,
+        available: row.available,
+        userId: row.assignedTo,
+        name: user?.name,
+        email: user?.email,
+        teamName: row.assignedTo ? await teamNameFor(ctx, row.assignedTo) : undefined,
+        assignedAt: row.assignedAt,
+      });
+    }
+    return rows.toSorted((a, b) => {
+      if (a.available !== b.available) {
+        return a.available ? 1 : -1;
+      }
+      if (!a.available) {
+        return (b.assignedAt ?? 0) - (a.assignedAt ?? 0);
+      }
+      return a.code.localeCompare(b.code, "es");
+    });
+  },
+});
+
 export const adminApplications = adminQuery({
   args: {
     status: v.optional(claimStatusValidator),
@@ -432,6 +564,7 @@ export const adminApplications = adminQuery({
       email: v.optional(v.string()),
       name: v.optional(v.string()),
       status: claimStatusValidator,
+      code: v.optional(v.string()),
       answers: v.array(v.object({ label: v.string(), value: v.string() })),
       createdAt: v.number(),
     }),
@@ -449,6 +582,11 @@ export const adminApplications = adminQuery({
       const perk = await ctx.db.get(claim.perkId);
       const user = await ctx.db.get(claim.userId);
       if (!perk) continue;
+      let code: string | undefined;
+      if (claim.codeId) {
+        const assigned = await ctx.db.get(claim.codeId);
+        code = assigned?.code;
+      }
       const labels = new Map((perk.inputs ?? []).map((input) => [input.key, input.label]));
       rows.push({
         _id: claim._id,
@@ -459,6 +597,7 @@ export const adminApplications = adminQuery({
         email: user?.email,
         name: user?.name,
         status: claim.status,
+        code,
         answers: (claim.answers ?? []).map((answer) => ({
           label: labels.get(answer.key) ?? answer.key,
           value: answer.value,
@@ -474,6 +613,7 @@ export const adminSetApplicationStatus = adminMutation({
   args: {
     claimId: v.id("perkClaims"),
     status: v.union(v.literal("pending"), v.literal("added"), v.literal("rejected")),
+    code: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -482,8 +622,22 @@ export const adminSetApplicationStatus = adminMutation({
     if (claim.type !== "email") {
       throw new Error("Aquí solo se revisan solicitudes de perks por email");
     }
+    if (args.status === "rejected") {
+      await releaseClaimCode(ctx, claim);
+      await ctx.db.patch(claim._id, {
+        status: args.status,
+        codeId: undefined,
+        updatedAt: Date.now(),
+      });
+      return null;
+    }
+    const codeId =
+      args.status === "added"
+        ? await attachCodeToClaim(ctx, claim, args.code ?? "")
+        : claim.codeId;
     await ctx.db.patch(claim._id, {
       status: args.status,
+      codeId,
       updatedAt: Date.now(),
     });
     return null;
