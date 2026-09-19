@@ -291,8 +291,9 @@ export const listFeed = query({
 /**
  * The meme screen: the latest posts flagged as memes, newest first. Public
  * like the rest of the venue screens, so the picture is a storage URL rather
- * than the app's session-bound file route. Reads the meme index only, so
- * ordinary posts and commits do not rerun it.
+ * than the app's session-bound file route. Reads the meme index and each
+ * meme's reactions row, so ordinary posts and commits do not rerun it.
+ * Reactions are emoji and counts, never who reacted.
  */
 export const listMemes = query({
   args: {},
@@ -304,6 +305,9 @@ export const listMemes = query({
       text: v.string(),
       imageUrl: v.optional(v.string()),
       createdAt: v.number(),
+      /** Most used first. */
+      reactions: v.array(v.object({ emoji: v.string(), count: v.number() })),
+      commentCount: v.number(),
     }),
   ),
   handler: async (ctx) => {
@@ -314,9 +318,13 @@ export const listMemes = query({
       .take(12);
     return await Promise.all(
       rows.map(async (row) => {
-        const [post, imageUrl] = await Promise.all([
+        const [post, imageUrl, social] = await Promise.all([
           toTvFeedPost(ctx, row),
           row.imageId ? ctx.storage.getUrl(row.imageId) : null,
+          ctx.db
+            .query("postSocial")
+            .withIndex("by_post", (q) => q.eq("postId", row._id))
+            .unique(),
         ]);
         return {
           _id: post._id,
@@ -325,6 +333,10 @@ export const listMemes = query({
           text: post.text,
           imageUrl: imageUrl ?? undefined,
           createdAt: post.createdAt,
+          reactions: (social?.reactions ?? [])
+            .map((reaction) => ({ emoji: reaction.emoji, count: reaction.userIds.length }))
+            .toSorted((a, b) => b.count - a.count),
+          commentCount: social?.commentCount ?? 0,
         };
       }),
     );

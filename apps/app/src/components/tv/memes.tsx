@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
-import { EMPTY_REEL, FRESH_HOLD_MS, NEW_TAG_MS, ROTATION_HOLD_MS, demoMemes, memeAge, memeCaption, reelAdvance, reelArrive } from "@/lib/tv-memes";
+import { EMPTY_REEL, FRESH_HOLD_MS, NEW_TAG_MS, ROTATION_HOLD_MS, demoMemes, memeAge, memeCaption, reactionTotal, reelAdvance, reelArrive, topReactions } from "@/lib/tv-memes";
 import type { Reel, TvMeme } from "@/lib/tv-memes";
 import { cn } from "@/lib/utils";
 import { Diagonal } from "./market";
@@ -76,6 +76,27 @@ function Picture({ meme, cover = false, mini = false }: { meme: TvMeme; cover?: 
   );
 }
 
+/** The meme's reactions, most used first. Counts flash when they move; a new emoji pops in. */
+function Reactions({ meme, limit, className }: { meme: TvMeme; limit: number; className?: string }) {
+  const reduced = useReducedMotion();
+  const { shown, rest } = topReactions(meme, limit);
+  return (
+    <ul aria-label="Reacciones" className={cn("flex min-w-0 items-center gap-[calc(var(--u)*0.5)] [--hsx-flash:var(--color-hs-red)]", className)}>
+      <AnimatePresence initial={false} mode="popLayout">
+        {shown.map((reaction) => (
+          <motion.li key={reaction.emoji} layout={!reduced} initial={{ opacity: 0, scale: reduced ? 1 : 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.35, ease: EASE }}
+            className="flex shrink-0 items-center gap-[calc(var(--u)*0.35)] border-[length:calc(var(--line)*0.6)] border-hs-ink bg-hs-paper px-[calc(var(--u)*0.6)] py-[calc(var(--u)*0.3)] leading-none text-hs-ink">
+            <span className="hsx-lg">{reaction.emoji}</span>
+            <span key={reaction.count} className="hsx-title hsx-num hsx-md hsx-flash">{reaction.count}</span>
+          </motion.li>
+        ))}
+      </AnimatePresence>
+      {rest > 0 ? <li className="hsx-title hsx-num hsx-sm shrink-0 leading-none">+{rest}</li> : null}
+    </ul>
+  );
+}
+
 function Feature({ meme, fresh, hold, turn, position, visible, now, mini = false }: { meme: TvMeme | undefined; fresh: boolean; hold: number; turn: number; position: string; visible: boolean; now: number | undefined; mini?: boolean }) {
   const reduced = useReducedMotion();
   if (!meme) {
@@ -87,6 +108,7 @@ function Feature({ meme, fresh, hold, turn, position, visible, now, mini = false
     );
   }
   const caption = memeCaption(meme.text);
+  const reacted = reactionTotal(meme) > 0;
   return (
     <section className="flex min-h-0 flex-col gap-[var(--line)]" aria-live="polite">
       <div className="relative min-h-0 flex-1 overflow-hidden bg-hs-paper">
@@ -108,7 +130,7 @@ function Feature({ meme, fresh, hold, turn, position, visible, now, mini = false
           ) : null}
         </AnimatePresence>
       </div>
-      <div className={cn("grid shrink-0 gap-[var(--line)]", mini ? "h-[22%] grid-cols-[minmax(0,1fr)_auto_calc(var(--u)*4.5)]" : "h-[15%] grid-cols-[minmax(0,1fr)_auto_calc(var(--u)*8)]")}>
+      <div className={cn("grid shrink-0 gap-[var(--line)]", mini ? "h-[22%] grid-cols-[minmax(0,1fr)_auto_auto]" : "h-[15%] grid-cols-[minmax(0,1fr)_auto_auto_calc(var(--u)*8)]")}>
         <div className={cn("relative flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.5)] overflow-hidden px-[calc(var(--u)*1.6)] transition-colors duration-500", fresh ? "bg-hs-gold" : "bg-hs-paper")}>
           <p className="flex min-w-0 items-baseline gap-[calc(var(--u)*0.8)] leading-none">
             <span className="hsx-title hsx-lg truncate">{meme.authorName}</span>
@@ -119,11 +141,18 @@ function Feature({ meme, fresh, hold, turn, position, visible, now, mini = false
             <div key={`${turn}-${visible}`} className="hsx-progress h-full origin-left bg-hs-orange" style={{ animationDuration: `${hold}ms`, animationPlayState: visible ? "running" : "paused" }} />
           </div>
         </div>
+        {/* The full screen always keeps the cell, so the first reaction does not reflow the bar. */}
+        {mini && !reacted ? null : (
+          <div className={cn("flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.45)] bg-hs-teal px-[calc(var(--u)*1.2)] leading-none text-hs-paper", mini ? "max-w-[38cqw]" : "max-w-[34cqw]")}>
+            {mini ? null : <p className="hsx-label">{reacted ? "Reacciones" : "Reacciona desde el feed"}</p>}
+            {reacted ? <Reactions meme={meme} limit={mini ? 3 : 5} /> : <p className="hsx-title hsx-lg" aria-hidden>+ 😂 🔥 💀</p>}
+          </div>
+        )}
         <div className="flex flex-col items-center justify-center gap-[calc(var(--u)*0.4)] bg-hs-navy px-[calc(var(--u)*1.6)] leading-none text-hs-paper">
           <span className="hsx-label">{now === undefined ? "Publicado" : memeAge(meme.createdAt, now)}</span>
           <span className="hsx-title hsx-num hsx-lg">{position}</span>
         </div>
-        <Diagonal bg={fresh ? "bg-hs-red" : "bg-hs-teal"} tri={fresh ? "bg-hs-paper" : "bg-hs-gold"} corner="br" />
+        {mini ? null : <Diagonal bg={fresh ? "bg-hs-red" : "bg-hs-teal"} tri={fresh ? "bg-hs-paper" : "bg-hs-gold"} corner="br" />}
       </div>
     </section>
   );
@@ -139,7 +168,12 @@ function Wall({ memes, currentId, now }: { memes: TvMeme[]; currentId: string | 
           <motion.li key={meme._id} layout={!reduced} initial={{ opacity: 0, scale: reduced ? 1 : 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.5, ease: EASE }} className="relative min-h-0 min-w-0 overflow-hidden bg-hs-paper">
             <Picture meme={meme} cover />
-            <p className="hsx-xs absolute inset-x-0 bottom-0 truncate bg-hs-ink px-[calc(var(--u)*0.7)] py-[calc(var(--u)*0.35)] font-bold text-hs-paper">{meme.authorName}{meme.teamName ? ` · ${meme.teamName}` : ""}</p>
+            <p className="hsx-xs absolute inset-x-0 bottom-0 flex items-center gap-[calc(var(--u)*0.6)] bg-hs-ink px-[calc(var(--u)*0.7)] py-[calc(var(--u)*0.35)] font-bold text-hs-paper [--hsx-flash:var(--color-hs-gold)]">
+              <span className="min-w-0 flex-1 truncate">{meme.authorName}{meme.teamName ? ` · ${meme.teamName}` : ""}</span>
+              {reactionTotal(meme) > 0 ? (
+                <span className="hsx-num shrink-0">{topReactions(meme, 2).shown.map((reaction) => reaction.emoji).join("")} <span key={reactionTotal(meme)} className="hsx-flash">{reactionTotal(meme)}</span></span>
+              ) : null}
+            </p>
             {now !== undefined && now - meme.createdAt < NEW_TAG_MS ? <span className="hsx-title hsx-xs absolute top-0 left-0 bg-hs-gold px-[calc(var(--u)*0.6)] py-[calc(var(--u)*0.35)] text-hs-ink">Nuevo</span> : null}
             {meme._id === currentId ? <span aria-hidden className="pointer-events-none absolute inset-0 border-[length:calc(var(--line)*2.2)] border-hs-gold" /> : null}
           </motion.li>

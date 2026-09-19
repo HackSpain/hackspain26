@@ -7,7 +7,22 @@ export type TvMeme = {
   text: string;
   imageUrl?: string;
   createdAt: number;
+  /** Most used first. Optional: a screen left open across a deploy may still get the old shape. */
+  reactions?: MemeReaction[];
+  commentCount?: number;
 };
+
+export type MemeReaction = { emoji: string; count: number };
+
+/** The reactions that fit on screen, and how many people reacted with the ones that do not. */
+export function topReactions(meme: Pick<TvMeme, "reactions">, limit: number): { shown: MemeReaction[]; rest: number } {
+  const all = (meme.reactions ?? []).filter((reaction) => reaction.count > 0).toSorted((a, b) => b.count - a.count);
+  return { rest: all.slice(limit).reduce((sum, reaction) => sum + reaction.count, 0), shown: all.slice(0, limit) };
+}
+
+export function reactionTotal(meme: Pick<TvMeme, "reactions">): number {
+  return (meme.reactions ?? []).reduce((sum, reaction) => sum + reaction.count, 0);
+}
 
 /** A meme that has just arrived holds the big cell longer than one on rotation. */
 export const FRESH_HOLD_MS = 20_000;
@@ -98,6 +113,16 @@ function demoImage(index: number, shape: keyof typeof DEMO_SHAPES): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
+const DEMO_EMOJI = ["😂", "🔥", "💀", "👀", "🚀", "❤️", "🫠"];
+
+/** Reactions that pile up the longer a demo meme has been on the wall. */
+function demoReactions(index: number, age: number): MemeReaction[] {
+  return [0, 1, 2, 3].flatMap((slot) => {
+    const count = Math.max(0, (age + 1) * (4 - slot) - slot * 2 + ((index + slot) % 3));
+    return count > 0 ? [{ count, emoji: DEMO_EMOJI[(index + slot) % DEMO_EMOJI.length] }] : [];
+  });
+}
+
 const DEMO_START = 4;
 const DEMO_CYCLE = DEMO_MEMES.length - DEMO_START + 1;
 
@@ -116,5 +141,8 @@ export function demoMemes(step: number, startedAt: number, stepMs: number): TvMe
     ...(shape ? { imageUrl: demoImage(index, shape) } : {}),
     // The starting wall is old news; the rest are stamped with the step that posts them.
     createdAt: index < DEMO_START ? startedAt - (DEMO_START - index) * 17 * 60_000 : cycleStart + (index - DEMO_START + 1) * stepMs,
+    // A meme that has only just been posted has none yet, so the first ones can be seen arriving.
+    reactions: index === posted - 1 && index >= DEMO_START ? [] : demoReactions(index, posted - 1 - index),
+    commentCount: (index * 3) % 5,
   })).toReversed();
 }

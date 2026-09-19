@@ -137,8 +137,12 @@ como meme, hoy las que llevan `#meme`):
   primero, y después sigue la rotación. Lo que ya estaba al abrir la pantalla no
   cuenta como nuevo.
 - Un meme sin imagen sale como cartel con su texto. El pie quita la etiqueta `#meme`.
+- Las reacciones del feed salen en vivo: en el pie del meme grande, los cinco emojis
+  más usados con su contador (tres en la mini) y un `+N` con el resto; en cada celda
+  del muro, los dos emojis principales y el total. Sólo emojis y cifras, nunca quién
+  reaccionó. Una reacción no cuenta como meme nuevo ni mueve la rotación.
 - Es una suscripción a `tv.listMemes`, pública como el resto de pantallas: publica
-  nombre, equipo, texto y la URL de almacenamiento de la imagen, porque la ruta
+  nombre, equipo, texto, reacciones y la URL de almacenamiento de la imagen, porque la ruta
   `/api/files` de la app exige sesión. Todo lo que lleve `#meme` sale en la pantalla
   de la sala; borrar la publicación (su autor o un admin) la retira al momento.
 - La rotación se detiene con la pestaña en segundo plano.
