@@ -2,6 +2,69 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — TV presence does not prove configuration delivery
+
+**Evidence and consequence.** Named screens sent HTTP heartbeats but ignored their
+configuration responses, making command delivery depend entirely on WebSocket.
+In a local browser with the Convex WebSocket unavailable, a controlled successful
+heartbeat response rendered its notice only after restoring HTTP delivery. A later
+response with a lower revision did not replace it. This verifies the fallback;
+the reported Safari tablet failure has not been reproduced on the affected device.
+
+**Prevention and verification.** Apply heartbeat configurations through the same
+reload/version handling as subscriptions. Discard HTTP responses overtaken by a
+subscription and never roll back either configuration or reload versions, including
+after WebSocket reconnects. HTTP connectivity covers configuration and commands;
+individual live widgets still need their own subscriptions. Verify the affected
+tablet after deployment before claiming the Safari incident is resolved.
+
+## 2026-09-19 — Copilot CLI usage is cumulative and shutdown-only
+
+**Evidence and consequence.** Copilot CLI's released session schema stores per-model token totals
+in `session.shutdown.data.modelMetrics` under
+`~/.copilot/session-state/<session>/events.jsonl`. The runtime normalizes `inputTokens` as the
+total including cache reads and writes, while the session log records another cumulative shutdown
+when a session is resumed. Counting every shutdown as an independent request would double-count
+the earlier portion; treating `inputTokens` as uncached would double-count cache tokens. There is
+no equivalent stable local usage record for editor Copilot Chat or cloud coding-agent sessions.
+
+**Prevention and verification.** Persist the last per-model totals in the file cursor, emit only
+non-negative growth, and subtract both cache counters from canonical input. Use the shutdown id
+plus sorted model index for stable event ids. Attribute usage to the shutdown timestamp and state
+the limitation: a crash, a session left open past the event, or a CLI transition that omits the
+shutdown cannot be reconstructed. Fixtures must cover cache normalization, resumed-session
+deltas, restart cursors, and the session-directory fallback.
+
+## 2026-09-19 — Cursor usage is available at hook time, not in transcripts
+
+**Evidence and consequence.** Current Cursor agent transcripts under `~/.cursor/projects` retain
+messages but no token usage. Cursor's current local runtime passes `conversation_id`,
+`generation_id`, model, version, workspace roots, and input/output/cache counters to the
+`afterAgentResponse` user hook. Treating the transcript as a usage source would either report
+fabricated estimates or leave Cursor invisible.
+
+**Prevention and verification.** Install one additive user hook from `hackspain watch`, preserve
+all existing Cursor hooks, and allowlist only usage metadata into HackSpain's private local state;
+never retain the hook's response text or user email. Cursor input includes cache reads and writes,
+so subtract both before canonicalization. Deduplicate with `(conversation_id, generation_id)` and
+accept that sessions before installation and cloud agents cannot be backfilled. Focused tests must
+cover hook merging, the privacy allowlist, cache normalization, restart deduplication, and invalid
+configuration failing without overwriting the user's file.
+
+## 2026-09-19 — GitHub Insights reads the feed's canonical event names
+
+**Evidence.** GitHub's API sends `PushEvent` and `PullRequestEvent`, but `githubFeed:pollRepos` deliberately stores the normalized values `push` and `pull_request` in feed posts. Insights compared stored posts with the upstream API names, so production returned zero GitHub activity even when the feed contained events. Teams may link several repositories, so one ETag on the team also cannot represent every poll target.
+
+**Prevention and verification.** Keep stored GitHub event names in the shared `GITHUB_FEED_EVENTS` contract and aggregate those canonical values. Poll the submission repo and every URL from `teamRepoList`, retaining ETags per repository with the old primary ETag only as a migration fallback. When neither source declares a repo, the CLI may fall back to a GitHub origin observed from an authenticated agent session; sanitize it locally to `owner/repo`, never transmit the raw remote or path, and never let an observed repo override official project configuration. Focused tests must cover API-to-feed normalization, the names accepted by Insights, official-source precedence, observed fallback, credential removal, and Git worktrees.
+
+## 2026-09-19 — Sanitize remote text before adding terminal styling
+
+**Evidence and consequence.** Feed fields reached the CLI renderer before sanitization, and `fit()` returned strings unchanged when they already fit. Bun reproduced OSC clipboard, hyperlink, cursor, DCS, and C1 sequences as terminal instructions rather than visible text, so a participant-controlled post could forge terminal output or modify the clipboard in compatible terminals.
+
+**Correction and prevention.** Pass every remote feed field through `terminalText()` before applying HackSpain's own ANSI styling. That boundary uses Bun's maintained ANSI parser, removes residual Unicode control and bidirectional formatting characters, and preserves only tabs and line feeds needed by the renderer. Do not sanitize after adding trusted colors, and do not rely on truncation as a security boundary.
+
+**Verification.** Keep focused feed tests for OSC 52, OSC 8, CSI, DCS, carriage returns, and bidirectional controls, alongside the full CLI check. New terminal surfaces that render server, repository, or participant data must use the same boundary.
+
 ## 2026-09-18 — Backend routes must not receive browser bot challenges
 
 **Symptom and evidence.** During the investigation from 17:00 Europe/Madrid (15:00 UTC), Vercel's managed bot filter returned 429s for `/betterstack/web-vitals` and some `/api/auth` requests. The existing bypass covered only `^/api/(cli|files)/` and a separate GET `/api/tv` monitor. It left auth and observability endpoints exposed to challenges. Better Stack's `@logtail/next@0.4.0` fetch fallback also attempted to replace the browser User-Agent with `next-logtail/v0.4.0`, which was associated with the challenged telemetry requests.

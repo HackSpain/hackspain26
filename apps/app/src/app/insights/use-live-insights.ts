@@ -23,6 +23,10 @@ export type LiveInsightData = {
   teams: Team[];
   /** Technologies per project; `auto` of `total` were read from a repo. */
   stacks: TvInsights["stacks"];
+  /** Models by tokens over the window, most used first. */
+  models: TvInsights["models"];
+  /** The few people on the individual ranking, tokens and GitHub activity each. */
+  people: TvInsights["people"];
   /** Minutes each of the 24 buckets covers; the hackathon is not 12 hours. */
   bucketMinutes: number;
   startsAt?: number;
@@ -31,6 +35,8 @@ export type LiveInsightData = {
 
 const EMPTY: LiveInsightData = {
   bucketMinutes: 30,
+  models: [],
+  people: [],
   samples: [],
   stacks: { auto: 0, rows: [], total: 0 },
   status: "loading",
@@ -97,6 +103,7 @@ export function toInsightData(payload: TvInsights): LiveInsightData {
     color: TEAM_COLORS[index % TEAM_COLORS.length] ?? "#d96b2a",
     description: "",
     id: team.id,
+    ...(team.logoUrl ? { logoUrl: team.logoUrl } : {}),
     members: team.members,
     name: team.name,
     primary: mainHarness(team.id, 0),
@@ -126,6 +133,9 @@ export function toInsightData(payload: TvInsights): LiveInsightData {
   return {
     bucketMinutes,
     endsAt,
+    // Older servers answer without `models` or `people`; their boxes then show the empty state.
+    models: payload.models ?? [],
+    people: payload.people ?? [],
     samples: [...byKey.values()].toSorted((a, b) => a.bucket - b.bucket),
     stacks: payload.stacks,
     startsAt,
@@ -189,10 +199,20 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+let override: LiveInsightData | null = null;
+
+/** Demo screens feed every live widget synthetic numbers instead of `/api/tv/insights`. */
+export function setLiveInsightsOverride(data: LiveInsightData | null): void {
+  override = data;
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
 export function useLiveInsights(): LiveInsightData {
   return useSyncExternalStore(
     subscribe,
-    () => current,
+    () => override ?? current,
     () => EMPTY
   );
 }

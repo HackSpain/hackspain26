@@ -21,7 +21,11 @@ export const validEvent: TelemetryEvent = {
   },
   observedAt: "2026-09-19T10:00:05.000Z",
   occurredAt: "2026-09-19T10:00:00.000Z",
-  project: { dirHash: "9f2c1a7b3e4d5c6a", name: "agentos" },
+  project: {
+    dirHash: "9f2c1a7b3e4d5c6a",
+    name: "agentos",
+    repo: "hackspain/agentos",
+  },
   schema: SCHEMA,
   sessionId: "s1",
   tokens: { cacheRead: 30, cacheWrite: 40, input: 10, output: 20, total: 100 },
@@ -46,6 +50,16 @@ describe("validateEvent", () => {
         project: { dirHash: "9f2c1a7b3e4d5c6a", name: "/home/x" },
       })
     ).toContain("project.name must be a basename, not a path");
+    expect(
+      validateEvent({
+        ...validEvent,
+        project: {
+          dirHash: "9f2c1a7b3e4d5c6a",
+          name: "agentos",
+          repo: "https://github.com/hackspain/agentos",
+        },
+      })
+    ).toContain("project needs dirHash and name");
     expect(
       validateEvent({ ...validEvent, model: { family: "llama", raw: "x" } })
     ).toContain("model needs raw, name, provider and a known family");

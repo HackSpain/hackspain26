@@ -20,6 +20,8 @@ import { antigravityCollector } from "./collectors/antigravity";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
+import { copilotCollector } from "./collectors/copilot";
+import { cursorCollector } from "./collectors/cursor";
 import { devinCollector } from "./collectors/devin";
 import { geminiCliCollector } from "./collectors/gemini-cli";
 import { grokCollector } from "./collectors/grok";
@@ -59,11 +61,13 @@ import { collectionWindow, inWindow, windowPhase } from "./window";
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
   codexCollector,
+  cursorCollector,
   geminiCliCollector,
   qwenCodeCollector,
   openCodeCollector,
   kiloCodeCollector,
   clineCollector,
+  copilotCollector,
   piCollector,
   ompCollector,
   antigravityCollector,
@@ -99,6 +103,8 @@ export type WatchDeps = {
   memory?: MemoryStore;
   /** Usage events recorded by earlier runs, replayed onto the board; defaults to the spool. */
   history?: Iterable<TelemetryEvent>;
+  /** Installs a pending CLI update; true asks the watcher to exit cleanly for restart. */
+  checkForUpdate?: () => Promise<boolean>;
 };
 
 const RECENT_IDS_CAP = 5000;
@@ -114,6 +120,7 @@ export const STACK_REFRESH_MS = 30 * 60 * 1000;
 /** After this long without a usage event, scans slow down to save battery. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000;
 export const IDLE_INTERVAL_MS = 60 * 1000;
+const UPDATE_RECHECK_MS = 5 * 60 * 1000;
 
 /**
  * Scan cadence: the configured interval while there is activity, at most
@@ -329,11 +336,16 @@ export async function runWatch(
     );
   }
   const batcher = createBatcher(sinks, log);
+  const pendingRepoObservations = new Set<string>();
+  const sentRepoObservations = new Set<string>();
   const recording: Batcher = {
     ...batcher,
     push: (event) => {
       if (state) {
         recordEvent(state, event);
+      }
+      if (event.project?.repo) {
+        pendingRepoObservations.add(event.project.repo);
       }
       batcher.push(event);
     },
@@ -346,12 +358,34 @@ export async function runWatch(
     ...(teamId ? { teamId } : {}),
     clientVersion: VERSION,
   });
+  const reportObservedRepos = async (): Promise<void> => {
+    if (!(options.uploadUrl && teamId)) {
+      return;
+    }
+    for (const repo of pendingRepoObservations) {
+      const key = `${teamId}:${repo}`;
+      if (sentRepoObservations.has(key)) {
+        pendingRepoObservations.delete(repo);
+        continue;
+      }
+      try {
+        await session.client.mutation(api.teams.observeRepo, { repo });
+        sentRepoObservations.add(key);
+        pendingRepoObservations.delete(repo);
+      } catch (error) {
+        log(`repo observation failed: ${String(error)}`);
+      }
+    }
+  };
   // Nobody records outside the hackathon window, and without a window
   // nothing is recorded at all; `ctx` is only ever scanned with one set.
   let { window } = options;
   const ctx: CollectorContext = { cursors, log, since: 0 };
   const applyWindow = (next: CollectionWindow | null): void => {
     window = next;
+    for (const collector of collectors) {
+      collector.setWindow?.(next);
+    }
     if (state) {
       state.window = next;
     }
@@ -375,6 +409,7 @@ export async function runWatch(
 
   const discovered: string[] = [];
   for (const c of collectors) {
+    await c.prepare?.(log);
     if ((await c.discover()).length > 0) {
       discovered.push(c.id);
     }
@@ -618,6 +653,7 @@ export async function runWatch(
     const scanned: ScanResult = window
       ? await scanOnce(collectors, ctx, recording, identity(), recent)
       : { byHarness: {}, events: 0, skipped: 0 };
+    await reportObservedRepos();
     const ok = await batcher.flush();
     if (ok) {
       cursors.save();
@@ -665,11 +701,18 @@ export async function runWatch(
       await pollFeed();
     }
     let nextScan = Date.now() + interval();
+    let nextUpdateCheck = Date.now() + UPDATE_RECHECK_MS;
     if (state) {
       state.nextScanAt = nextScan;
     }
     while (!(stopping || state?.stopRequested)) {
       const now = Date.now();
+      if (now >= nextUpdateCheck) {
+        nextUpdateCheck = now + UPDATE_RECHECK_MS;
+        if (await deps.checkForUpdate?.()) {
+          return EXIT.OK;
+        }
+      }
       if (now >= nextScan) {
         if (state?.paused) {
           nextScan = Date.now() + 1000;

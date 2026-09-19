@@ -10,6 +10,7 @@ const payload: TvInsights = {
   ],
   buckets: 24,
   generatedAt: 0,
+  people: [{ id: "u1", name: "Ana", pullRequests: 1, pushes: 3, team: "Los Compiladores", tokens: 200 }],
   // What the aggregate returned on a real ClickHouse for the sample events.
   samples: [
     { bucket: 0, cachedTokens: 70, harness: "claude-code", requests: 1, sessions: 1, teamId: "t1", tokens: 100 },

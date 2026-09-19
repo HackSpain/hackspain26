@@ -55,6 +55,7 @@ const MAX_SESSION_ID_LENGTH = 256;
 const MAX_SHORT_STRING_LENGTH = 256;
 const MAX_VERSION_LENGTH = 64;
 const DIR_HASH_PATTERN = /^[a-f\d]{16}$/i;
+const REPO_SLUG_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 export type TelemetryEvent = {
   schema: typeof SCHEMA;
@@ -68,8 +69,13 @@ export type TelemetryEvent = {
   harness: HarnessId;
   harnessVersion?: string;
   sessionId: string;
-  /** sha256 of the working directory plus its basename; never the full path. */
-  project?: { dirHash: string; name: string; gitBranch?: string };
+  /** Sanitized project identity; never a full path or raw Git remote URL. */
+  project?: {
+    dirHash: string;
+    name: string;
+    gitBranch?: string;
+    repo?: string;
+  };
   /** Derived from what the harness logged, the same way for every harness. */
   model?: CanonicalModel;
   /**
@@ -287,7 +293,9 @@ export function validateEvent(value: unknown): string[] {
       typeof p.dirHash !== "string" ||
       !DIR_HASH_PATTERN.test(p.dirHash) ||
       !isBoundedString(p.name, MAX_SHORT_STRING_LENGTH) ||
-      !isOptionalBoundedString(p.gitBranch, MAX_SHORT_STRING_LENGTH)
+      !isOptionalBoundedString(p.gitBranch, MAX_SHORT_STRING_LENGTH) ||
+      !isOptionalBoundedString(p.repo, MAX_SHORT_STRING_LENGTH) ||
+      (typeof p.repo === "string" && !REPO_SLUG_PATTERN.test(p.repo))
     ) {
       problems.push("project needs dirHash and name");
     } else if (p.name.includes("/") || p.name.includes("\\")) {

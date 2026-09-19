@@ -91,6 +91,7 @@ export function toOtlpLogRecord(event: TelemetryEvent): OtlpLogRecord {
       ["hackspain.project.dir_hash", project?.dirHash],
       ["hackspain.project.name", project?.name],
       ["hackspain.project.git_branch", project?.gitBranch],
+      ["hackspain.project.repo", project?.repo],
       ["hackspain.native.request_id", event.native?.requestId],
     ]),
     body: { stringValue: event.type },

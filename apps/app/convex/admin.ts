@@ -8,12 +8,15 @@ import {
   submissionStatusValidator,
 } from "./lib/validators";
 import { countsAsAttending } from "./lib/attendance";
+import { findSignupByEmail, findUserByEmail } from "./lib/auth";
+import { parseEmailList } from "./lib/normalize";
 import { urlsFromRecord, urlsValidator } from "./lib/urls";
 import { findOwnedSubmission, membershipForUser } from "./lib/team";
 import { userTypeSummaryValidator } from "./lib/userTypes";
 import type { Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { UrlEntry } from "./lib/urls";
+import type { Role } from "./lib/validators";
 
 async function teamForUser(
   ctx: QueryCtx,
@@ -515,6 +518,152 @@ export const setUserType = adminMutation({
     return null;
   },
   returns: v.null(),
+});
+
+const MAX_ADD_PEOPLE = 50;
+
+const addPeopleRoleValidator = v.union(v.literal("user"), v.literal("admin"));
+
+function nameFromEmail(email: string): string {
+  const local = email.split("@")[0] ?? email;
+  return local.replaceAll(/[._+-]+/g, " ").trim() || email;
+}
+
+async function upsertPerson(
+  ctx: MutationCtx,
+  email: string,
+  role: "user" | "admin",
+  userTypeId: Id<"userTypes"> | undefined,
+  name: string | undefined,
+  actorId: Id<"users">
+): Promise<"added" | "updated" | "skipped"> {
+  const existingUser = await findUserByEmail(ctx, email);
+  const signup = await findSignupByEmail(ctx, email);
+  const fullName = name ?? signup?.fullName ?? nameFromEmail(email);
+
+  if (existingUser) {
+    if (existingUser._id === actorId && role !== "admin") {
+      throw new Error("No puedes quitarte el rol de admin a ti mismo");
+    }
+    if (signup && role === "user" && signup.accepted !== true) {
+      await ctx.db.patch(signup._id, { accepted: true });
+    }
+    const patch: {
+      name?: string;
+      role?: Role;
+      signupId?: Id<"signups">;
+      userTypeId?: Id<"userTypes">;
+    } = {};
+    if (existingUser.role !== role) {
+      patch.role = role;
+    }
+    if (userTypeId && existingUser.userTypeId !== userTypeId) {
+      patch.userTypeId = userTypeId;
+    }
+    if (!existingUser.name) {
+      patch.name = fullName;
+    }
+    if (signup && !existingUser.signupId) {
+      patch.signupId = signup._id;
+    }
+    if (Object.keys(patch).length === 0) {
+      return "skipped";
+    }
+    await ctx.db.patch(existingUser._id, patch);
+    return existingUser.role === role &&
+      (!userTypeId || existingUser.userTypeId === userTypeId)
+      ? "skipped"
+      : "updated";
+  }
+
+  let signupId = signup?._id;
+  if (role === "user") {
+    if (!signupId) {
+      signupId = await ctx.db.insert("signups", {
+        email,
+        fullName,
+        urls: [],
+        wantsAmbassador: false,
+        accepted: true,
+        createdAt: Date.now(),
+      });
+    } else if (signup && signup.accepted !== true) {
+      await ctx.db.patch(signup._id, { accepted: true });
+    }
+  }
+
+  await ctx.db.insert("users", {
+    email,
+    name: fullName,
+    role,
+    signupId,
+    userTypeId,
+    notificationConsent: false,
+    attendanceStatus: "attending",
+    onboardingComplete: false,
+  });
+  return "added";
+}
+
+export const addPeople = adminMutation({
+  args: {
+    emails: v.array(v.string()),
+    name: v.optional(v.string()),
+    role: addPeopleRoleValidator,
+    userTypeId: v.optional(v.id("userTypes")),
+  },
+  handler: async (ctx, args) => {
+    const parsed = parseEmailList(args.emails);
+    if (parsed.emails.length === 0) {
+      throw new Error("Añade al menos un email válido");
+    }
+    if (parsed.emails.length > MAX_ADD_PEOPLE) {
+      throw new Error(`Como máximo ${MAX_ADD_PEOPLE} emails de una vez`);
+    }
+    if (args.userTypeId) {
+      const type = await ctx.db.get(args.userTypeId);
+      if (!type) {
+        throw new Error("Tipo no encontrado");
+      }
+    }
+
+    const name = args.name?.trim().replaceAll(/\s+/g, " ") || undefined;
+    const singleName = parsed.emails.length === 1 ? name : undefined;
+
+    let added = 0;
+    let updated = 0;
+    let skipped = 0;
+    for (const email of parsed.emails) {
+      const result = await upsertPerson(
+        ctx,
+        email,
+        args.role,
+        args.userTypeId,
+        singleName,
+        ctx.user._id
+      );
+      if (result === "added") {
+        added += 1;
+      } else if (result === "updated") {
+        updated += 1;
+      } else {
+        skipped += 1;
+      }
+    }
+
+    return {
+      added,
+      updated,
+      skipped,
+      invalid: parsed.invalid,
+    };
+  },
+  returns: v.object({
+    added: v.number(),
+    updated: v.number(),
+    skipped: v.number(),
+    invalid: v.array(v.string()),
+  }),
 });
 
 export const setAccepted = adminMutation({

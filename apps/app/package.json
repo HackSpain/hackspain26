@@ -18,6 +18,7 @@
     "vercel-build": "convex deploy --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'pnpm run build'",
     "migrate": "tsx scripts/migrate-from-postgres.ts",
     "backfill:avatars": "tsx scripts/backfill-avatar-thumbnails.ts",
+    "icons:tv": "tsx scripts/generate-tv-icons.ts",
     "seed": "convex run seed:run",
     "seed:reset": "convex run seed:run '{\"reset\":true}'",
     "seed:clear": "convex run seed:clear"
@@ -25,6 +26,7 @@
   "dependencies": {
     "@auth/core": "0.41.3",
     "@convex-dev/auth": "^0.0.95",
+    "@gsap/react": "^2.1.2",
     "@logtail/next": "0.4.0",
     "@neondatabase/serverless": "^1.0.2",
     "@oslojs/crypto": "^1.0.1",
@@ -56,6 +58,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "simple-icons": "^16.31.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
     "typescript": "^5"

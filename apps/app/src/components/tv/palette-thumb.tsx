@@ -115,6 +115,29 @@ function thumb(kind: TvWidgetKind) {
         </Paper>
       );
     }
+    case "liveModels": {
+      return (
+        <Paper>
+          <p className="font-bungee text-[8px] uppercase">Modelos</p>
+          <div className="mt-1.5 space-y-1">
+            {(
+              [
+                ["claude-sonnet-4-5", 90, "bg-hs-orange"],
+                ["gpt-5-codex", 62, "bg-hs-teal"],
+                ["gemini-2-5-pro", 34, "bg-hs-navy"],
+              ] as const
+            ).map(([name, width, color]) => (
+              <div key={name} className="space-y-0.5">
+                <p className="truncate font-mono text-[7px] leading-none">{name}</p>
+                <span className="block h-1 bg-hs-ink/10">
+                  <span className={cn("block h-full", color)} style={{ width: `${width}%` }} />
+                </span>
+              </div>
+            ))}
+          </div>
+        </Paper>
+      );
+    }
     case "liveTokens": {
       return (
         <div className="flex size-full flex-col justify-between bg-hs-gold p-2 text-hs-ink">

@@ -15,6 +15,12 @@ Windows: download `hackspain-windows-x64.exe` from the
 [releases page](https://github.com/HackSpain/hackspain26/releases) and rename it `hackspain.exe`.
 Binaries are self-contained; nothing else to install.
 
+Release binaries also check for a newer version in interactive sessions, at most once every six
+hours. A running watcher keeps checking, so it can update and restart itself without another
+command. When a release exists, the CLI downloads it, verifies `SHA256SUMS`, replaces itself
+atomically and restarts the command. Source checkouts, `--json`, non-interactive commands,
+help/version and the update command skip the check. Set `HACKSPAIN_NO_AUTO_UPDATE=1` to opt out.
+
 ```
 hackspain                       # where you stand, then a navigable menu (interactive terminals only)
 hackspain auth login            # sign in via the browser (approve on the dashboard's /cli-auth page),
@@ -91,7 +97,7 @@ next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--jso
 `--plain` use the line-by-line mode instead.
 
 Every 30 s it reads the local session logs of the
-AI coding harnesses it finds (Claude Code, Codex, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin, Grok), normalises them into one
+AI coding harnesses it finds (Claude Code, Codex, Cursor, GitHub Copilot CLI, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin, Grok), normalises them into one
 schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
 (`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
 `/api/cli/telemetry` with your session. The server authenticates and validates batches, then
@@ -118,6 +124,21 @@ recording on its own, opened after the end it delivers what is left, and while n
 scheduled it records nothing. In all three cases an orange "Not recording" line under the header
 and in the status bar says so. The window is checked again every five minutes, so a schedule set
 or moved while the watcher is open is picked up.
+
+For Cursor, the first `hackspain watch` adds one user-level `afterAgentResponse` entry to
+`~/.cursor/hooks.json`, preserving every hook already there. Cursor invokes the installed
+HackSpain binary after each response; it retains only the model, version, conversation and
+generation ids, token counters, timestamp, and workspace needed for the same normalized event.
+Prompt and response text, tool data, email, and full paths are never written to the telemetry
+spool or uploaded. The hook keeps recording locally while the watcher is closed, so the next run
+catches up; Cursor activity before the hook was installed cannot be recovered.
+
+GitHub Copilot support covers Copilot CLI sessions. Copilot writes cumulative per-model usage to
+`~/.copilot/session-state/<session>/events.jsonl` when a session shuts down; the watcher reports
+only the increase from each later shutdown when a session is resumed. Close the Copilot session
+cleanly before the hackathon ends so its final usage is persisted. Copilot Chat inside an editor,
+cloud coding-agent sessions, crashed processes, and CLI sessions that never write a shutdown
+record cannot be reconstructed from these local files.
 
 The watcher remembers. `~/.local/state/hackspain/watch-memory.json` keeps the first start, the
 last scan and the latest organiser announcements, and the local spool keeps every usage event, so

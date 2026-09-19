@@ -40,5 +40,17 @@ export const BRAND = `${c.gold("⚡")} ${c.bold("hackspain")}`;
 
 export const stripAnsi = Bun.stripANSI;
 
+const CONTROL_CHARACTER = /\p{Cc}/gu;
+const BIDI_CONTROL = /\p{Bidi_Control}/gu;
+
+/** Plain text from remote sources, safe to place inside our own terminal chrome. */
+export function terminalText(text: string): string {
+  return stripAnsi(text)
+    .replaceAll(BIDI_CONTROL, "")
+    .replaceAll(CONTROL_CHARACTER, (character) =>
+      character === "\n" || character === "\t" ? character : ""
+    );
+}
+
 /** Visible terminal width, including ANSI, emoji and wide characters. */
 export const width = Bun.stringWidth;

@@ -10,17 +10,23 @@ import { compact, harnessRows, number, percent, timeLabel } from "@/app/insights
 import { useLiveInsights } from "@/app/insights/use-live-insights";
 import type { LiveInsightData } from "@/app/insights/use-live-insights";
 import { resolveTvSponsors } from "@/lib/tv";
+import { HARNESS_ICONS, TECH_ICONS } from "@/lib/tv-icons";
 import {
-  MARKET_BUCKETS, currentBucket, demoFeed, demoInsights, feedWindow, marketSeries, marketSlides, marketTeams, marketTotals,
+  MARKET_BUCKETS, currentBucket, demoFeed, demoInsights, marketPeople, marketSeries, marketSides, marketSlides, marketTeams, marketTotals,
 } from "@/lib/tv-market";
-import type { MarketPost, MarketSeries, MarketSlide, MarketTeam } from "@/lib/tv-market";
+import type {
+  MarketPeopleMetric, MarketPerson, MarketPost, MarketSeries, MarketSide, MarketSlide, MarketTeam,
+} from "@/lib/tv-market";
 import { cn } from "@/lib/utils";
+import { initialsOf } from "@/components/avatar";
 import { useClock, usePageVisible, useTick } from "./motion";
+import { MilestoneBroadcast } from "./milestone-broadcast";
 
 const SLIDE_MS = 12_000;
-const FEED_MS = 4500;
+const SIDE_MS = 10_000;
 const RANKING_ROWS = 7;
 const FEED_ROWS = 6;
+const PEOPLE_ROWS = 8;
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 function Spark({ values, className }: { values: number[]; className?: string }) {
@@ -32,6 +38,23 @@ function Spark({ values, className }: { values: number[]; className?: string }) 
     <svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden className={cn("h-full w-full overflow-visible", className)}>
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </svg>
+  );
+}
+
+/**
+ * A person's photo, a team's logo or a product's mark, square like the rank badge.
+ * Without one, or when it fails to load, the initials (or `mark`) stand in.
+ * `logo` fits the whole mark inside instead of cropping it like a photo.
+ */
+function Face({ name, src, mark, logo = false, className }: { name: string; src?: string; mark?: string; logo?: boolean; className?: string }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  return (
+    <span aria-hidden className={cn("flex aspect-square shrink-0 items-center justify-center overflow-hidden border-[length:calc(var(--line)*0.5)] border-hs-ink", logo ? "bg-hs-paper" : "bg-hs-sand", className)}>
+      {src && failed !== src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(src)} className={cn("size-full", logo ? "object-contain p-[14%]" : "object-cover")} />
+      ) : <span className="hsx-title text-[0.75em] text-hs-brown">{mark ?? initialsOf(name)}</span>}
+    </span>
   );
 }
 
@@ -106,11 +129,14 @@ function TeamTape({ teams }: { teams: MarketTeam[] }) {
         {teams.length ? (
           <Marquee seconds={Math.max(40, teams.length * 6)}>
             {teams.map((team) => (
-              <span key={team.id} className="hsx-md flex items-baseline gap-[calc(var(--u)*0.7)] px-[calc(var(--u)*1.6)] whitespace-nowrap">
-                <span className="hsx-num opacity-50">{String(team.rank).padStart(2, "0")}</span>
+              <span key={team.id} className="hsx-md flex items-baseline gap-[calc(var(--u)*0.85)] border-r border-hs-paper/15 px-[calc(var(--u)*1.6)] whitespace-nowrap">
+                <span className="flex items-baseline gap-[calc(var(--u)*0.45)]">
+                  <span className="hsx-num opacity-50">{String(team.rank).padStart(2, "0")}</span>
+                  <Move move={team.move} />
+                </span>
+                {team.logoUrl ? <Face name={team.name} src={team.logoUrl} className="h-[calc(var(--u)*1.7)] self-center border-hs-paper/40" /> : null}
                 <span className="font-bold">{team.name}</span>
                 <span className="hsx-num text-hs-gold">{compact(team.tokens)}</span>
-                <Move move={team.move} />
               </span>
             ))}
           </Marquee>
@@ -215,9 +241,12 @@ function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
             className={cn(RANKING_GRID, "border-b border-hs-ink/15")}>
             <span className={cn("hsx-title hsx-num flex aspect-square items-center justify-center", team.rank === 1 ? "bg-hs-gold" : team.rank <= 3 ? "bg-hs-sand" : "text-hs-brown")}>{team.rank}</span>
             <Move move={team.move} />
-            <span className="min-w-0 leading-tight">
-              <span className="block truncate font-bold">{team.name}</span>
-              {team.project ? <span className="hsx-xs block truncate text-hs-brown">{team.project}</span> : null}
+            <span className="flex min-w-0 items-center gap-[calc(var(--u)*0.8)]">
+              <Face name={team.name} src={team.logoUrl} className="h-[calc(var(--u)*2.6)]" />
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate font-bold">{team.name}</span>
+                {team.project ? <span className="hsx-xs block truncate text-hs-brown">{team.project}</span> : null}
+              </span>
             </span>
             <span className={cn("h-[calc(var(--u)*1.7)]", team.move < 0 ? "text-[var(--hsx-down)]" : "text-[var(--hsx-up)]")}><Spark values={team.trend} /></span>
             <span className="hsx-num text-right font-bold"><Figure value={team.tokens}>{compact(team.tokens)}</Figure></span>
@@ -231,18 +260,21 @@ function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
   );
 }
 
-function Bars({ rows }: { rows: { key: string; name: string; detail: string; share: number; value: string; color: string }[] }) {
+function Bars({ rows }: { rows: { key: string; name: string; detail: string; share: number; value: string; color: string; icon?: string; mark?: string }[] }) {
   return (
     <ol className="hsx-md grid h-full grid-flow-col grid-cols-2 gap-x-[calc(var(--u)*2.4)]" style={{ gridTemplateRows: `repeat(${Math.max(1, Math.ceil(rows.length / 2))}, minmax(0, 1fr))` }}>
       {rows.map((row, index) => (
-        <li key={row.key} className="flex flex-col justify-center gap-[calc(var(--u)*0.4)]">
-          <div className="flex items-baseline justify-between gap-[calc(var(--u)*0.8)]">
-            <span className="truncate font-bold">{row.name}<span className="hsx-xs ml-[calc(var(--u)*0.6)] font-normal text-hs-brown">{row.detail}</span></span>
-            <span className="hsx-num shrink-0 font-semibold">{row.value}</span>
-          </div>
-          <div className="h-[calc(var(--u)*0.7)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand">
-            <motion.div className="h-full origin-left" style={{ backgroundColor: row.color, width: `${Math.max(row.share * 100, 1)}%` }}
-              initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.1 + index * 0.05, duration: 0.7, ease: EASE }} />
+        <li key={row.key} className="flex min-w-0 items-center gap-[calc(var(--u)*0.9)]">
+          <Face name={row.name} src={row.icon} mark={row.mark} logo className="h-[calc(var(--u)*2.6)]" />
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-[calc(var(--u)*0.4)]">
+            <div className="flex items-baseline justify-between gap-[calc(var(--u)*0.8)]">
+              <span className="truncate font-bold">{row.name}<span className="hsx-xs ml-[calc(var(--u)*0.6)] font-normal text-hs-brown">{row.detail}</span></span>
+              <span className="hsx-num shrink-0 font-semibold">{row.value}</span>
+            </div>
+            <div className="h-[calc(var(--u)*0.7)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand">
+              <motion.div className="h-full origin-left" style={{ backgroundColor: row.color, width: `${Math.max(row.share * 100, 1)}%` }}
+                initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.1 + index * 0.05, duration: 0.7, ease: EASE }} />
+            </div>
           </div>
         </li>
       ))}
@@ -265,7 +297,7 @@ function Board({ data, series, teams }: { data: LiveInsightData; series: MarketS
     herramientas: ["Herramientas de IA", "Cuota de tokens · sesiones"],
     pulso: ["El pulso del evento", `Tokens acumulados y por tramo · ${percent(cached, tokens)} desde caché`],
     ranking: ["Clasificación de equipos", slide.kind === "ranking" ? `Por tokens · página ${slide.page + 1} de ${slide.pages}` : ""],
-    stacks: ["Con qué construimos", `Leído de los repos de ${data.stacks.auto} de ${data.stacks.total} proyectos`],
+    stacks: ["Con qué construimos", `${data.stacks.auto} de ${data.stacks.total} stacks detectados desde GitHub`],
   };
   const [title, detail] = heading[slide.kind];
   return (
@@ -290,11 +322,11 @@ function Board({ data, series, teams }: { data: LiveInsightData; series: MarketS
             {slide.kind === "pulso" ? <PulseSlide series={series} data={data} /> : null}
             {slide.kind === "ranking" ? <RankingSlide teams={teams} page={slide.page} /> : null}
             {slide.kind === "herramientas" ? (tools.length ? <Bars rows={tools.map((row) => ({
-              color: row.color, detail: `${number(row.sessions)} sesiones · ${row.teams} equipos`, key: row.id, name: row.name,
+              color: row.color, detail: `${number(row.sessions)} sesiones · ${row.teams} equipos`, icon: HARNESS_ICONS[row.id], key: row.id, mark: row.mark, name: row.name,
               share: row.tokens / Math.max(tools[0]?.tokens ?? 1, 1), value: percent(row.tokens, toolTokens),
             }))} /> : <Empty>Sin herramientas en uso todavía</Empty>) : null}
             {slide.kind === "stacks" ? (stacks.length ? <Bars rows={stacks.map((row, index) => ({
-              color: STACK_COLORS[index % STACK_COLORS.length] ?? "#eab619", detail: row.category, key: row.name, name: row.name,
+              color: STACK_COLORS[index % STACK_COLORS.length] ?? "#eab619", detail: row.category, icon: TECH_ICONS[row.name], key: row.name, name: row.name,
               share: row.count / Math.max(stacks[0]?.count ?? 1, 1), value: `${row.count} / ${data.stacks.total}`,
             }))} /> : <Empty>Sin tecnologías detectadas todavía</Empty>) : null}
           </motion.div>
@@ -311,39 +343,102 @@ function ago(now: number, then: number): string {
   return minutes < 1440 ? `${Math.floor(minutes / 60)} h` : `${Math.floor(minutes / 1440)} d`;
 }
 
-function Feed({ posts }: { posts: MarketPost[] | undefined }) {
+function FeedRows({ posts, waiting }: { posts: MarketPost[]; waiting: boolean }) {
   const reduced = useReducedMotion();
-  const tick = useTick(FEED_MS);
   const minute = useClock();
-  // A new post resets the rotation, so it lands at the top instead of waiting for its turn.
-  const newest = posts?.[0]?._id;
-  const [anchor, setAnchor] = useState({ newest, tick });
-  if (anchor.newest !== newest) { setAnchor({ newest, tick }); }
-  const rows = feedWindow(posts ?? [], tick - anchor.tick, FEED_ROWS);
+  const rows = posts.slice(0, FEED_ROWS);
+  if (rows.length === 0) {
+    return <div className="h-full bg-hs-paper text-hs-ink"><Empty>{waiting ? "Cargando actividad" : "La actividad aparecerá aquí"}</Empty></div>;
+  }
+  return (
+    <ol className="grid h-full gap-[var(--line)] overflow-hidden" style={{ gridTemplateRows: `repeat(${FEED_ROWS}, minmax(0, 1fr))` }}>
+      <AnimatePresence initial={false} mode="popLayout">
+        {rows.map((post) => (
+          <motion.li key={post._id} layout={!reduced} initial={{ opacity: 0, y: reduced ? 0 : -24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.45, ease: EASE }} className="flex min-h-0 flex-col justify-center gap-[calc(var(--u)*0.35)] bg-hs-paper px-[calc(var(--u)*1.3)] text-hs-ink">
+            <p className="hsx-sm flex items-center gap-[calc(var(--u)*0.6)]">
+              <span className={cn("hsx-num hsx-xs px-[calc(var(--u)*0.45)] py-[calc(var(--u)*0.1)] font-bold text-hs-paper", post.kind === "github" ? "bg-hs-navy" : "bg-hs-orange")}>{post.kind === "github" ? "GIT" : "POST"}</span>
+              <span className="truncate font-bold">{post.authorName}</span>
+              {post.teamName ? <span className="truncate text-hs-brown">{post.teamName}</span> : null}
+              <span className="hsx-num hsx-xs ml-auto shrink-0 text-hs-brown">{minute ? ago(minute.getTime(), post.createdAt) : ""}</span>
+            </p>
+            <p className="line-clamp-2 text-[length:calc(var(--u)*1.3)] leading-snug break-words">{post.text}</p>
+          </motion.li>
+        ))}
+      </AnimatePresence>
+    </ol>
+  );
+}
+
+// Widths in --u, not em: the header row is set smaller than the rows and must share their columns.
+const PEOPLE_GRID = "grid grid-cols-[calc(var(--u)*2.4)_minmax(0,1fr)_calc(var(--u)*4.6)_calc(var(--u)*3.6)_calc(var(--u)*2)] items-center whitespace-nowrap gap-x-[calc(var(--u)*0.9)]";
+
+/** Both individual rankings share the columns; the one that orders the board reads in ink, the rest in brown. */
+function PeopleRows({ people, metric }: { people: MarketPerson[]; metric: MarketPeopleMetric }) {
+  const rows = marketPeople(people, metric, PEOPLE_ROWS);
+  const lead = (on: boolean) => (on ? "font-bold" : "text-hs-brown");
+  return (
+    <div className="hsx-md flex h-full flex-col bg-hs-paper px-[calc(var(--u)*1.3)] pt-[calc(var(--u)*0.9)] text-hs-ink">
+      <div className={cn(PEOPLE_GRID, "hsx-label shrink-0 border-b-[length:var(--line)] border-hs-ink pb-[calc(var(--u)*0.5)]")}>
+        <span>#</span><span>Persona</span><span className="text-right">Tokens</span><span className="text-right">Pushes</span><span className="text-right">PR</span>
+      </div>
+      <ol className="grid min-h-0 flex-1" style={{ gridTemplateRows: `repeat(${PEOPLE_ROWS}, minmax(0, 1fr))` }}>
+        {rows.map((person, index) => (
+          <motion.li key={person.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.045, duration: 0.4, ease: EASE }}
+            className={cn(PEOPLE_GRID, "border-b border-hs-ink/15")}>
+            <span className={cn("hsx-title hsx-num flex aspect-square items-center justify-center", index === 0 ? "bg-hs-gold" : index < 3 ? "bg-hs-sand" : "text-hs-brown")}>{index + 1}</span>
+            <span className="flex min-w-0 items-center gap-[calc(var(--u)*0.7)]">
+              <Face name={person.name} src={person.photoUrl} className="h-[calc(var(--u)*2.6)]" />
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate font-bold">{person.name}</span>
+                {person.team ? <span className="hsx-xs block truncate text-hs-brown">{person.team}</span> : null}
+              </span>
+            </span>
+            <span className={cn("hsx-num text-right", lead(metric === "tokens"))}>{person.tokens > 0 ? <Figure value={person.tokens}>{compact(person.tokens)}</Figure> : "·"}</span>
+            <span className={cn("hsx-num text-right", lead(metric === "git"))}>{person.pushes > 0 ? <Figure value={person.pushes}>{number(person.pushes)}</Figure> : "·"}</span>
+            <span className={cn("hsx-num text-right", lead(metric === "git"))}>{person.pullRequests > 0 ? number(person.pullRequests) : "·"}</span>
+          </motion.li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+const SIDE_HEAD: Record<MarketSide, { title: string; detail: string; tone: string }> = {
+  commits: { detail: "Pushes y PR al momento", title: "En GitHub", tone: "bg-hs-navy text-hs-paper" },
+  git: { detail: "Pushes y PR por persona", title: "Top GitHub", tone: "bg-hs-orange text-hs-paper" },
+  posts: { detail: "Publicaciones", title: "Última hora", tone: "bg-hs-red text-hs-paper" },
+  tokens: { detail: "Tokens por persona", title: "Top tokens", tone: "bg-hs-gold text-hs-ink" },
+};
+
+type MarketFeed = { posts: MarketPost[] | undefined; commits: MarketPost[] | undefined };
+
+/** The side column: posts, GitHub and one individual ranking, a turn each. */
+function Side({ feed, people }: { feed: MarketFeed; people: MarketPerson[] }) {
+  const reduced = useReducedMotion();
+  const tick = useTick(SIDE_MS);
+  const posts = feed.posts?.length ?? 0;
+  const commits = feed.commits?.length ?? 0;
+  const sides = useMemo(() => marketSides({ commits, posts }, people), [commits, posts, people]);
+  const side = sides[tick % sides.length] ?? "posts";
+  const head = SIDE_HEAD[side];
   return (
     <section className="flex min-h-0 flex-col gap-[var(--line)]">
-      <header className="flex shrink-0 items-center justify-between bg-hs-red px-[calc(var(--u)*1.3)] py-[calc(var(--u)*0.9)] text-hs-paper">
-        <h2 className="hsx-title hsx-lg">Última hora</h2>
-        <p className="hsx-label">Feed y GitHub</p>
+      <header className={cn("relative flex shrink-0 items-center justify-between gap-[calc(var(--u)*1)] px-[calc(var(--u)*1.3)] py-[calc(var(--u)*0.9)] transition-colors duration-300", head.tone)}>
+        <h2 className="hsx-title hsx-lg shrink-0">{head.title}</h2>
+        <p className="hsx-label truncate">{head.detail}</p>
+        {sides.length > 1 ? <span key={tick} aria-hidden className="hsx-progress absolute inset-x-0 bottom-0 h-[calc(var(--u)*0.3)] origin-left bg-current opacity-45" style={{ animationDuration: `${SIDE_MS}ms` }} /> : null}
       </header>
-      {rows.length === 0 ? <div className="min-h-0 flex-1 bg-hs-paper text-hs-ink"><Empty>{posts ? "La actividad aparecerá aquí" : "Cargando actividad"}</Empty></div> : (
-        <ol className="grid min-h-0 flex-1 gap-[var(--line)] overflow-hidden" style={{ gridTemplateRows: `repeat(${FEED_ROWS}, minmax(0, 1fr))` }}>
-          <AnimatePresence initial={false} mode="popLayout">
-            {rows.map(({ post, entered }) => (
-              <motion.li key={`${post._id}:${entered}`} layout={!reduced} initial={{ opacity: 0, y: reduced ? 0 : -24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                transition={{ duration: 0.45, ease: EASE }} className="flex min-h-0 flex-col justify-center gap-[calc(var(--u)*0.35)] bg-hs-paper px-[calc(var(--u)*1.3)] text-hs-ink">
-                <p className="hsx-sm flex items-center gap-[calc(var(--u)*0.6)]">
-                  <span className={cn("hsx-num hsx-xs px-[calc(var(--u)*0.45)] py-[calc(var(--u)*0.1)] font-bold text-hs-paper", post.kind === "github" ? "bg-hs-navy" : "bg-hs-orange")}>{post.kind === "github" ? "GIT" : "POST"}</span>
-                  <span className="truncate font-bold">{post.authorName}</span>
-                  {post.teamName ? <span className="truncate text-hs-brown">{post.teamName}</span> : null}
-                  <span className="hsx-num hsx-xs ml-auto shrink-0 text-hs-brown">{minute ? ago(minute.getTime(), post.createdAt) : ""}</span>
-                </p>
-                <p className="line-clamp-2 text-[length:calc(var(--u)*1.3)] leading-snug break-words">{post.text}</p>
-              </motion.li>
-            ))}
-          </AnimatePresence>
-        </ol>
-      )}
+      <div className="relative min-h-0 flex-1">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={side} className="h-full"
+            initial={{ opacity: 0, y: reduced ? 0 : 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduced ? 0 : -10 }} transition={{ duration: reduced ? 0.15 : 0.4, ease: EASE }}>
+            {side === "posts" || side === "commits"
+              ? <FeedRows posts={feed[side] ?? []} waiting={feed[side] === undefined} />
+              : <PeopleRows people={people} metric={side} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </section>
   );
 }
@@ -370,37 +465,39 @@ function SponsorStrip() {
   );
 }
 
-function MarketStage({ data, posts, demo }: { data: LiveInsightData; posts: MarketPost[] | undefined; demo: boolean }) {
+function MarketStage({ data, feed, demo }: { data: LiveInsightData; feed: MarketFeed; demo: boolean }) {
   const series = useMemo(() => marketSeries(data.samples), [data.samples]);
   const teams = useMemo(() => marketTeams(data.samples, data.teams), [data.samples, data.teams]);
   const bucket = currentBucket(data.samples);
   return (
-    <main className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
+    <main className="relative h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
       <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] px-[var(--line)] pt-[var(--line)] pb-[calc(var(--u)*1.2)]">
-        <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1fr)_calc(var(--u)*7)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
-          <Diagonal bg="bg-hs-paper" tri="bg-hs-orange" corner="tl" className="portrait:hidden" />
-          <div className="flex items-center justify-center bg-hs-paper px-[calc(var(--u)*1.4)]">
-            <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-[74%] w-auto" />
+        <header className="grid h-[9%] shrink-0 grid-cols-[minmax(0,1.45fr)_minmax(0,2.4fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 items-center justify-between gap-[calc(var(--u)*1.5)] bg-hs-paper px-[calc(var(--u)*1.6)]">
+            <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-[62%] w-auto min-w-0" />
+            <p className="hsx-label flex shrink-0 items-center gap-[calc(var(--u)*0.55)] border-l-[length:var(--line)] border-hs-ink/20 pl-[calc(var(--u)*1.2)] text-hs-red">
+              <span className="size-[calc(var(--u)*0.65)] rounded-full bg-current" />{demo ? "Demo" : "En directo"}
+            </p>
           </div>
-          <p className="hsx-title hsx-lg flex items-center justify-center gap-[calc(var(--u)*0.7)] bg-hs-red text-hs-paper">
-            <span className="tv-pulse size-[calc(var(--u)*0.9)] rounded-full bg-hs-paper" />{demo ? "Demo" : "En directo"}
-          </p>
-          <div className="flex flex-col justify-center gap-[calc(var(--u)*0.55)] bg-hs-paper px-[calc(var(--u)*1.6)] leading-none portrait:col-span-4 portrait:row-start-2">
+          <div className="flex flex-col justify-center gap-[calc(var(--u)*0.65)] bg-hs-paper px-[calc(var(--u)*1.8)] leading-none portrait:col-span-3 portrait:row-start-2">
             <p className="hsx-label flex justify-between"><span>Tramo del hackathon</span><span className="hsx-num font-bold text-hs-ink">{bucket + 1} / {MARKET_BUCKETS}</span></p>
-            <div className="flex gap-[calc(var(--line)*0.6)]" aria-hidden>
-              {Array.from({ length: MARKET_BUCKETS }, (_, index) => <span key={index} className={cn("h-[calc(var(--u)*0.9)] flex-1 border-[length:calc(var(--line)*0.5)] border-hs-ink", index < bucket ? "bg-hs-teal" : index === bucket ? "tv-pulse bg-hs-gold" : "bg-hs-sand")} />)}
+            <div className="relative h-[calc(var(--u)*0.85)] overflow-hidden border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand" aria-hidden>
+              <span className="absolute inset-y-0 left-0 bg-hs-teal" style={{ width: `${(bucket / MARKET_BUCKETS) * 100}%` }} />
+              <span className="absolute inset-y-0 bg-hs-gold" style={{ left: `${(bucket / MARKET_BUCKETS) * 100}%`, width: `${100 / MARKET_BUCKETS}%` }} />
             </div>
           </div>
           <Clock startsAt={data.startsAt} endsAt={data.endsAt} />
-          <Diagonal bg="bg-hs-teal" tri="bg-hs-orange" corner="br" className="portrait:hidden" />
         </header>
         <TeamTape teams={teams} />
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <div className="flex min-h-0 flex-col gap-[var(--line)]">
-            <Kpis series={series} />
-            <Board data={data} series={series} teams={teams} />
+        <div className="relative min-h-0 flex-1">
+          <div className="grid h-full min-h-0 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="flex min-h-0 flex-col gap-[var(--line)]">
+              <Kpis series={series} />
+              <Board data={data} series={series} teams={teams} />
+            </div>
+            <Side feed={feed} people={data.people} />
           </div>
-          <Feed posts={posts} />
+          <MilestoneBroadcast data={data} replayInitial={demo} />
         </div>
         <SponsorStrip />
       </div>
@@ -410,16 +507,21 @@ function MarketStage({ data, posts, demo }: { data: LiveInsightData; posts: Mark
 
 function LiveMarket() {
   const data = useLiveInsights();
-  const posts = useQuery(api.tv.listFeed, { source: "all" });
-  return <MarketStage data={data} posts={posts} demo={false} />;
+  const posts = useQuery(api.tv.listFeed, { source: "participants" });
+  const commits = useQuery(api.tv.listFeed, { source: "github" });
+  const feed = useMemo(() => ({ commits, posts }), [commits, posts]);
+  return <MarketStage data={data} feed={feed} demo={false} />;
 }
 
 function DemoMarket() {
   const [startedAt] = useState(() => Date.now());
   const step = useTick(4000);
   const data = useMemo(() => demoInsights(step, startedAt), [step, startedAt]);
-  const posts = useMemo(() => demoFeed(startedAt), [startedAt]);
-  return <MarketStage data={data} posts={posts} demo />;
+  const feed = useMemo(() => {
+    const all = demoFeed(startedAt);
+    return { commits: all.filter((post) => post.kind === "github"), posts: all.filter((post) => post.kind === "post") };
+  }, [startedAt]);
+  return <MarketStage data={data} feed={feed} demo />;
 }
 
 export function MarketScreen({ demo = false }: { demo?: boolean }) {

@@ -10,6 +10,7 @@ export type MarketTeam = {
   id: string;
   name: string;
   project: string;
+  logoUrl?: string;
   tokens: number;
   /** Tokens spent in the bucket the board is currently in. */
   recent: number;
@@ -91,7 +92,7 @@ export function marketTeams(samples: Sample[], teams: Team[]): MarketTeam[] {
     let running = 0;
     const trend = perBucket.map((value) => { running += value; return running; });
     return {
-      id: team.id, name: team.name, project: team.project,
+      id: team.id, logoUrl: team.logoUrl, name: team.name, project: team.project,
       pullRequests, pushes, recent: perBucket[current] ?? 0, tokens: running, trend,
     };
   });
@@ -116,22 +117,6 @@ export type MarketPost = {
   createdAt: number;
 };
 
-/**
- * The feed shows `size` rows and recycles: every step pushes the list down one
- * place and brings the oldest post back in at the top, so all of them get air.
- * `entered` is the step a row came in on, which keeps its key stable while it
- * travels down.
- */
-export function feedWindow<T extends { _id: string }>(posts: T[], step: number, size: number): { post: T; entered: number }[] {
-  const count = Math.min(size, posts.length);
-  const rows: { post: T; entered: number }[] = [];
-  for (let index = 0; index < count; index += 1) {
-    const post = posts[(((index - step) % posts.length) + posts.length) % posts.length];
-    if (post) { rows.push({ entered: step - index, post }); }
-  }
-  return rows;
-}
-
 /** What the board cycles through: every ranking page gets a turn, the charts in between. */
 export type MarketSlide =
   | { kind: "pulso" } | { kind: "herramientas" } | { kind: "stacks" }
@@ -147,6 +132,34 @@ export function marketSlides(teamCount: number, pageSize: number): MarketSlide[]
     if (page < pages) { slides.push({ kind: "ranking", page, pages }); }
   }
   return slides;
+}
+
+export type MarketPerson = LiveInsightData["people"][number];
+export type MarketPeopleMetric = "tokens" | "git";
+
+export function personScore(person: MarketPerson, metric: MarketPeopleMetric): number {
+  return metric === "tokens" ? person.tokens : person.pushes + person.pullRequests;
+}
+
+/** The individual ranking by one metric, best first. People with nothing on it stay off. */
+export function marketPeople(people: MarketPerson[], metric: MarketPeopleMetric, rows: number): MarketPerson[] {
+  return people
+    .filter((person) => personScore(person, metric) > 0)
+    .toSorted((a, b) => personScore(b, metric) - personScore(a, metric) || a.name.localeCompare(b.name, "es"))
+    .slice(0, rows);
+}
+
+/** What the side column cycles through: the feed split in two (posts, then GitHub) and then one individual ranking. */
+export type MarketSide = "posts" | "commits" | MarketPeopleMetric;
+
+/** A view with nothing to show gives up its turn; with nothing at all the column waits on the posts. */
+export function marketSides(feed: { posts: number; commits: number }, people: MarketPerson[]): MarketSide[] {
+  const feeds: MarketSide[] = [];
+  if (feed.posts > 0) { feeds.push("posts"); }
+  if (feed.commits > 0) { feeds.push("commits"); }
+  if (feeds.length === 0) { feeds.push("posts"); }
+  const rankings = (["tokens", "git"] as const).filter((metric) => people.some((person) => personScore(person, metric) > 0));
+  return rankings.length ? rankings.flatMap((metric) => [...feeds, metric]) : feeds;
 }
 
 /* ------------------------------------------------------------------ demo */
@@ -173,6 +186,35 @@ const DEMO_HARNESSES: [HarnessId, number][] = [
   ["gemini-cli", 0.07], ["copilot", 0.04], ["cline", 0.03],
 ];
 const DEMO_BUCKET = 15;
+const DEMO_MODELS: [name: string, family: string, provider: string, share: number][] = [
+  ["claude-sonnet-4-5", "claude", "anthropic", 0.31], ["gpt-5-codex", "gpt", "openai", 0.22],
+  ["claude-opus-4-1", "claude", "anthropic", 0.14], ["gemini-2-5-pro", "gemini", "google", 0.11],
+  ["gpt-5", "gpt", "openai", 0.08], ["qwen3-coder", "qwen", "alibaba", 0.05],
+  ["kimi-k2", "other", "moonshot", 0.04], ["gemini-2-5-flash", "gemini", "google", 0.03],
+];
+
+const DEMO_PEOPLE: [name: string, team: string][] = [
+  ["Lucía Fernández", "Los Molinos"], ["Dani Ortega", "Rocinante Labs"], ["Marta Villacampa", "Sancho Stack"],
+  ["Irene Sanz", "Dulcinea"], ["Pablo Ruiz", "La Mancha ML"], ["Nuria Campos", "Clavileño"],
+  ["Sara Devesa", "Barataria"], ["Jorge Quílez", "Tizona"], ["Álex Moreno", "Maese Pedro"],
+  ["martaog", "Alcalá Bytes"], ["Hugo Lera", "Galeotes"], ["Carla Pons", "Toboso Tech"],
+];
+
+function demoPeople(step: number): MarketPerson[] {
+  const random = seeded(1605);
+  return DEMO_PEOPLE.map(([name, team], index) => {
+    const tokens = Math.round((0.3 + random() * 1.7) * 9_000_000);
+    const pushes = Math.round(random() * 38);
+    // A few people keep working while the board is on, so places change.
+    const live = index % 4 === 0 ? (step + index) % 40 : 0;
+    return {
+      id: `demo-person-${index}`, name, team,
+      pullRequests: Math.round(random() * 5),
+      pushes: index % 5 === 4 ? 0 : pushes + Math.floor(live / 8),
+      tokens: index % 6 === 5 ? 0 : tokens + live * 260_000,
+    };
+  });
+}
 
 /**
  * Invented teams and numbers for `/tv?view=panel&demo=1`, never mixed with real
@@ -207,14 +249,24 @@ export function demoInsights(step: number, now: number): LiveInsightData {
   }
   const bucketMs = 2 * 3_600_000;
   const startsAt = now - (DEMO_BUCKET + 0.6) * bucketMs;
+  const total = samples.reduce((sum, sample) => sum + sample.tokens, 0);
+  // Shares drift with `step` so the ranking visibly trades places.
+  const models = DEMO_MODELS.map(([name, family, provider, share], index) => {
+    const wobble = 1 + 0.18 * Math.sin((step + index * 5) / 3);
+    return {
+      family, name, provider,
+      requests: Math.round(total * share * wobble / 38_000),
+      tokens: Math.round(total * share * wobble),
+    };
+  }).toSorted((a, b) => b.tokens - a.tokens);
   return {
-    bucketMinutes: bucketMs / 60_000, endsAt: startsAt + MARKET_BUCKETS * bucketMs, samples,
+    bucketMinutes: bucketMs / 60_000, endsAt: startsAt + MARKET_BUCKETS * bucketMs, models, people: demoPeople(step), samples,
     stacks: {
       auto: 14, total: DEMO_TEAMS.length,
       rows: [
         ["TypeScript", "language", 15], ["React", "frontend", 13], ["Next.js", "frontend", 11],
-        ["Python", "language", 9], ["Tailwind CSS", "frontend", 9], ["Convex", "backend", 7],
-        ["FastAPI", "backend", 5], ["Postgres", "data", 5], ["Vercel AI SDK", "ai", 4],
+        ["Python", "language", 9], ["Tailwind", "frontend", 9], ["Convex", "backend", 7],
+        ["FastAPI", "backend", 5], ["Postgres", "data", 5], ["AI SDK", "ai", 4],
         ["Cloudflare Workers", "infra", 3], ["Tinybird", "data", 3], ["Rust", "language", 2],
       ].map(([name, category, count]) => ({ category: String(category), count: Number(count), name: String(name) })),
     },

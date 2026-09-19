@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { fetchUsage, parseUsageRows, usageSql } from "./usage";
+import { fetchUsage, modelsSql, parseModelRows, parsePersonRows, parseUsageRows, peopleSql, usageSql } from "./usage";
 
 const window = {
   buckets: 24,
@@ -47,6 +47,47 @@ describe("usageSql", () => {
   });
 });
 
+describe("modelsSql", () => {
+  test("dedupes on the permanent key and groups by the normalised model name", () => {
+    const sql = modelsSql("hackspain_otel_logs", window);
+    expect(sql).toContain("GROUP BY userId, id");
+    expect(sql).toContain("any(toString(`gen_ai.request.model`)) AS model");
+    expect(sql).toContain("any(toString(`hackspain.model.family`)) AS family");
+    expect(sql).toContain("any(toString(`gen_ai.provider.name`)) AS provider");
+    expect(sql).toContain("at >= 1789749900 AND at < 1789920000");
+    expect(sql).toContain("GROUP BY model");
+    expect(() => modelsSql("t; DROP TABLE x", window)).toThrow();
+  });
+});
+
+test("peopleSql dedupes on the permanent key and sums tokens per person", () => {
+  const sql = peopleSql("hackspain_otel_logs", window);
+  expect(sql).toContain("GROUP BY userId, id");
+  expect(sql).toContain("at >= 1789749900 AND at < 1789920000 AND userId != ''");
+  expect(sql).toContain("GROUP BY userId\n");
+  expect(() => peopleSql("t; DROP TABLE x", window)).toThrow();
+});
+
+test("parsePersonRows drops rows without a user", () => {
+  expect(
+    parsePersonRows([{ tokens: "900", userId: "u1" }, { tokens: 5 }, { tokens: 5, userId: "" }, null])
+  ).toEqual([{ tokens: 900, userId: "u1" }]);
+});
+
+test("parseModelRows fills family and provider and drops nameless rows", () => {
+  expect(
+    parseModelRows([
+      { family: "gpt", name: "gpt-5-codex", provider: "openai", requests: "3", tokens: "900" },
+      { name: "mystery", tokens: 5 },
+      { family: "claude", tokens: 5 },
+      null,
+    ])
+  ).toEqual([
+    { family: "gpt", name: "gpt-5-codex", provider: "openai", requests: 3, tokens: 900 },
+    { family: "other", name: "mystery", provider: "unknown", requests: 0, tokens: 5 },
+  ]);
+});
+
 test("parseUsageRows accepts numbers or numeric strings and drops junk", () => {
   expect(
     parseUsageRows([
@@ -90,6 +131,8 @@ describe("fetchUsage", () => {
     delete process.env.RAWTREE_API_KEY;
     process.env.RAWTREE_DATABASE = "hackspain";
     expect(await fetchUsage(window)).toEqual({
+      models: [],
+      people: [],
       rows: [],
       status: "unconfigured",
     });
@@ -107,10 +150,15 @@ describe("fetchUsage", () => {
         sql: (JSON.parse(String(init?.body)) as { sql: string }).sql,
         url: String(input),
       });
+      const sql = (JSON.parse(String(init?.body)) as { sql: string }).sql;
+      let data: unknown[] = [{ bucket: 0, cachedTokens: 70, harness: "claude-code", requests: 1, sessions: 1, teamId: "t1", tokens: 100 }];
+      if (sql.includes("GROUP BY model")) {
+        data = [{ family: "claude", name: "claude-sonnet-4-5", provider: "anthropic", requests: 1, tokens: 100 }];
+      } else if (sql.includes("GROUP BY userId\n")) {
+        data = [{ tokens: 100, userId: "u1" }];
+      }
       return Response.json({
-        data: [
-          { bucket: 0, cachedTokens: 70, harness: "claude-code", requests: 1, sessions: 1, teamId: "t1", tokens: 100 },
-        ],
+        data,
         meta: [],
         rows: 1,
         statistics: { bytes_read: 0, elapsed: 0, rows_read: 0 },
@@ -119,10 +167,17 @@ describe("fetchUsage", () => {
     const result = await fetchUsage(window, fetchImpl);
     expect(result.status).toBe("ok");
     expect(result.rows).toHaveLength(1);
+    expect(result.models).toEqual([
+      { family: "claude", name: "claude-sonnet-4-5", provider: "anthropic", requests: 1, tokens: 100 },
+    ]);
+    expect(result.people).toEqual([{ tokens: 100, userId: "u1" }]);
+    // One aggregate per table read: usage per team/harness/bucket, models and people.
+    expect(calls).toHaveLength(3);
     expect(calls[0]?.url).toContain("https://rawtree.test/v1/query");
     expect(calls[0]?.url).toContain("database=hackspain");
     expect(calls[0]?.auth).toBe("Bearer rt_read_write");
     expect(calls[0]?.sql).toContain("FROM hackspain_otel_logs");
+    expect(calls[1]?.sql).toContain("FROM hackspain_otel_logs");
   });
 
   test("no table yet (before the first event) is empty, not an error", async () => {
@@ -134,6 +189,8 @@ describe("fetchUsage", () => {
         { status: 404 }
       )) as unknown as typeof fetch;
     expect(await fetchUsage(window, missing)).toEqual({
+      models: [],
+      people: [],
       rows: [],
       status: "empty",
     });

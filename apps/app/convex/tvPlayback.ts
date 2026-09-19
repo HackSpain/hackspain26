@@ -1,9 +1,13 @@
 import { v } from "convex/values";
 import type { Infer } from "convex/values";
 import { api } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import { getSignupForUser } from "./lib/auth";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import { getEventWindow } from "./lib/eventWindow";
+import { GITHUB_FEED_EVENTS } from "./lib/github";
+import { externalThumbnail } from "./lib/photo";
 import { histogramReturn, stackHistogram } from "./stack";
 import { messageReturn, widgetReturn } from "./tv";
 import { SCREEN_OFFLINE_MS, screenConfig, screenConfigValidator, screenKey, screenPresetValidator } from "./lib/tvScreens";
@@ -175,6 +179,18 @@ export const removeScreen = adminMutation({
 /** The TV charts split the hackathon into this many equal buckets. */
 export const INSIGHT_BUCKETS = 24;
 
+export function githubActivityKind(
+  event: string
+): typeof GITHUB_FEED_EVENTS.push | typeof GITHUB_FEED_EVENTS.pullRequest | null {
+  if (event === GITHUB_FEED_EVENTS.push) {
+    return GITHUB_FEED_EVENTS.push;
+  }
+  if (event === GITHUB_FEED_EVENTS.pullRequest) {
+    return GITHUB_FEED_EVENTS.pullRequest;
+  }
+  return null;
+}
+
 /**
  * What the TV's insight boxes need from Convex, next to the AI usage that
  * /api/tv/insights reads from RawTree: the hackathon window, the teams as
@@ -198,8 +214,13 @@ export const insightsBase = query({
             .withIndex("by_team", (q) => q.eq("teamId", team._id))
             .collect(),
         ]);
+        // A storage URL, not /api/files: the screens have no session.
+        const logoUrl = team.logoId
+          ? await ctx.storage.getUrl(team.logoId)
+          : null;
         return {
           id: team._id,
+          ...(logoUrl ? { logoUrl } : {}),
           members: members.filter((member) => member.status === "member")
             .length,
           name: team.name,
@@ -211,6 +232,10 @@ export const insightsBase = query({
     const activity = new Map<
       string,
       { teamId: string; bucket: number; pushes: number; pullRequests: number }
+    >();
+    const actors = new Map<
+      string,
+      { login: string; teamId: string; pushes: number; pullRequests: number }
     >();
     const { startsAt, endsAt } = window;
     if (startsAt !== undefined && endsAt !== undefined && endsAt > startsAt) {
@@ -225,9 +250,8 @@ export const insightsBase = query({
         if (post.kind !== "github" || !post.teamId || !post.github) {
           continue;
         }
-        const push = post.github.event === "PushEvent";
-        const pullRequest = post.github.event === "PullRequestEvent";
-        if (!(push || pullRequest)) {
+        const event = githubActivityKind(post.github.event);
+        if (!event) {
           continue;
         }
         const bucket = Math.floor((post.createdAt - startsAt) / bucketMs);
@@ -238,13 +262,28 @@ export const insightsBase = query({
           pushes: 0,
           teamId: post.teamId,
         };
-        row.pushes += push ? 1 : 0;
-        row.pullRequests += pullRequest ? 1 : 0;
+        row.pushes += event === GITHUB_FEED_EVENTS.push ? 1 : 0;
+        row.pullRequests += event === GITHUB_FEED_EVENTS.pullRequest ? 1 : 0;
         activity.set(key, row);
+        // `users.githubUsername` is stored lowercase; GitHub logins are not.
+        const login = post.github.actor?.toLowerCase();
+        if (!login) {
+          continue;
+        }
+        const actor = actors.get(login) ?? {
+          login,
+          pullRequests: 0,
+          pushes: 0,
+          teamId: post.teamId,
+        };
+        actor.pushes += event === GITHUB_FEED_EVENTS.push ? 1 : 0;
+        actor.pullRequests += event === GITHUB_FEED_EVENTS.pullRequest ? 1 : 0;
+        actors.set(login, actor);
       }
     }
     return {
       activity: [...activity.values()],
+      actors: [...actors.values()],
       stacks: await stackHistogram(ctx),
       teams: rows,
       window,
@@ -259,10 +298,20 @@ export const insightsBase = query({
         teamId: v.string(),
       })
     ),
+    /** GitHub activity per login over the window, as the feed already names it. */
+    actors: v.array(
+      v.object({
+        login: v.string(),
+        pullRequests: v.number(),
+        pushes: v.number(),
+        teamId: v.string(),
+      })
+    ),
     stacks: histogramReturn,
     teams: v.array(
       v.object({
         id: v.string(),
+        logoUrl: v.optional(v.string()),
         members: v.number(),
         name: v.string(),
         project: v.string(),
@@ -273,4 +322,71 @@ export const insightsBase = query({
       startsAt: v.optional(v.number()),
     }),
   }),
+});
+
+/** How many people the TV's individual ranking shows per metric. */
+export const INSIGHT_PEOPLE = 8;
+
+/**
+ * Names for the individual ranking: the people /api/tv/insights picked by
+ * tokens (user ids from telemetry) and by GitHub activity (logins from the
+ * feed). Display name, photo, team and login only, like the feed and the team map.
+ */
+export const insightsPeople = query({
+  args: { userIds: v.array(v.string()), logins: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const found = new Map<string, Doc<"users">>();
+    for (const value of args.userIds.slice(0, INSIGHT_PEOPLE)) {
+      const id = ctx.db.normalizeId("users", value);
+      const user = id ? await ctx.db.get(id) : null;
+      if (user) {
+        found.set(user._id, user);
+      }
+    }
+    for (const value of args.logins.slice(0, INSIGHT_PEOPLE)) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_github", (q) => q.eq("githubUsername", value.toLowerCase()))
+        .first();
+      if (user) {
+        found.set(user._id, user);
+      }
+    }
+    return await Promise.all(
+      [...found.values()].map(async (user) => {
+        const [signup, membership] = await Promise.all([
+          getSignupForUser(ctx, user),
+          ctx.db
+            .query("teamMembers")
+            .withIndex("by_user", (q) => q.eq("userId", user._id))
+            .first(),
+        ]);
+        const team =
+          membership?.status === "member"
+            ? await ctx.db.get(membership.teamId)
+            : null;
+        // Same photo as the team map: a storage URL, since the screens have no session.
+        const photoId = user.avatarThumbId ?? user.avatarId;
+        const photoUrl =
+          (photoId ? await ctx.storage.getUrl(photoId) : null) ??
+          (user.image ? externalThumbnail(user.image) : null);
+        return {
+          id: user._id as string,
+          name: user.name || signup?.fullName || "Participante",
+          ...(photoUrl ? { photoUrl } : {}),
+          team: team?.name ?? "",
+          ...(user.githubUsername ? { login: user.githubUsername } : {}),
+        };
+      })
+    );
+  },
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      login: v.optional(v.string()),
+      name: v.string(),
+      photoUrl: v.optional(v.string()),
+      team: v.string(),
+    })
+  ),
 });

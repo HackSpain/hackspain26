@@ -51,13 +51,15 @@ export type TelemetryEvent = {
   harness: Harness;
   harnessVersion?: string;
   sessionId: string;
-  project?: { dirHash: string; name: string; gitBranch?: string };
+  project?: { dirHash: string; name: string; gitBranch?: string; repo?: string };
   model?: CanonicalModel;
   tokens?: TokenCounts & { total: number };
   identity: { userId: string; teamId?: string; clientVersion: string };
   /** Harness-specific, never comparable across harnesses. */
   native?: { requestId?: string; costUsd?: number };
 };
+
+const REPO_SLUG_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -98,18 +100,25 @@ function parseProject(
   if (!isRecord(value)) {
     return null;
   }
-  const { dirHash, name, gitBranch } = value;
+  const { dirHash, name, gitBranch, repo } = value;
   if (
     typeof dirHash !== "string" ||
     !/^[a-f\d]{16}$/i.test(dirHash) ||
     !isBoundedString(name, MAX_SHORT_STRING_LENGTH) ||
     name.includes("/") ||
     name.includes("\\") ||
-    !isOptionalBoundedString(gitBranch, MAX_SHORT_STRING_LENGTH)
+    !isOptionalBoundedString(gitBranch, MAX_SHORT_STRING_LENGTH) ||
+    !isOptionalBoundedString(repo, MAX_SHORT_STRING_LENGTH) ||
+    (typeof repo === "string" && !REPO_SLUG_PATTERN.test(repo))
   ) {
     return null;
   }
-  return { dirHash, name, ...(gitBranch ? { gitBranch } : {}) };
+  return {
+    dirHash,
+    name,
+    ...(gitBranch ? { gitBranch } : {}),
+    ...(repo ? { repo } : {}),
+  };
 }
 
 function parseModel(

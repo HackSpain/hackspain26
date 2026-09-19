@@ -21,6 +21,7 @@ const event: TelemetryEvent = {
     dirHash: "9f2c1a7b3e4d5c6a",
     gitBranch: "main",
     name: "agentos",
+    repo: "hackspain/agentos",
   },
   schema: "hackspain.telemetry.v2",
   sessionId: "session-1",
@@ -96,6 +97,7 @@ describe("toOtlpLogs", () => {
       "hackspain.project.dir_hash",
       "hackspain.project.name",
       "hackspain.project.git_branch",
+      "hackspain.project.repo",
       "hackspain.native.request_id",
     ]);
     expect(attribute(record, "gen_ai.request.model")).toEqual({
@@ -111,6 +113,9 @@ describe("toOtlpLogs", () => {
     });
     expect(attribute(record, "hackspain.model.raw")).toEqual({
       stringValue: "claude-fable-5-1-20260101",
+    });
+    expect(attribute(record, "hackspain.project.repo")).toEqual({
+      stringValue: "hackspain/agentos",
     });
     expect(attribute(record, "hackspain.usage.total_tokens")).toEqual({
       intValue: "14",

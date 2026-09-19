@@ -5,7 +5,15 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
-import { githubAuthHeader, githubHeaders, repoSlug } from "./lib/github";
+import type { Doc } from "./_generated/dataModel";
+import {
+  GITHUB_FEED_EVENTS,
+  githubAuthHeader,
+  githubHeaders,
+  repoSlug,
+} from "./lib/github";
+import { urlOf } from "./lib/urls";
+import { teamRepoList } from "./stack";
 
 /**
  * Pulls public GitHub activity for every team repo into the feed.
@@ -31,16 +39,67 @@ const eventInput = v.object({
   url: v.string(),
 });
 
+type PollableTeam = Pick<
+  Doc<"teams">,
+  | "_id"
+  | "githubEtag"
+  | "githubEtags"
+  | "observedRepoUrls"
+  | "repoUrl"
+  | "repoUrls"
+>;
+
+export function pollTargetsForTeam(
+  team: PollableTeam,
+  submissionRepo?: string
+) {
+  const primaryRepo = repoSlug(team.repoUrl);
+  const official = [submissionRepo, ...teamRepoList(team)].filter(
+    (url): url is string => Boolean(repoSlug(url))
+  );
+  const candidates = official.length > 0
+    ? official
+    : (team.observedRepoUrls ?? []);
+  const seen = new Set<string>();
+  return candidates.flatMap((url) => {
+    const repo = repoSlug(url);
+    if (!repo || seen.has(repo)) {
+      return [];
+    }
+    seen.add(repo);
+    return [{
+      teamId: team._id,
+      repo,
+      etag:
+        team.githubEtags?.[repo] ??
+        (repo === primaryRepo ? team.githubEtag : undefined),
+    }];
+  });
+}
+
 export const reposToPoll = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const teams = await ctx.db.query("teams").collect();
+    const [teams, submissions] = await Promise.all([
+      ctx.db.query("teams").collect(),
+      ctx.db.query("submissions").collect(),
+    ]);
+    const submissionRepos = new Map<string, string>();
+    for (const submission of submissions) {
+      const repo = urlOf(submission.urls, "repo");
+      if (!submission.teamId || !repo) {
+        continue;
+      }
+      if (
+        submission.status === "submitted" ||
+        !submissionRepos.has(submission.teamId)
+      ) {
+        submissionRepos.set(submission.teamId, repo);
+      }
+    }
     const out = [];
     for (const team of teams) {
-      const repo = repoSlug(team.repoUrl);
-      if (repo) {
-        out.push({ teamId: team._id, repo, etag: team.githubEtag });
-      }
+      out.push(...pollTargetsForTeam(team, submissionRepos.get(team._id)));
     }
     return out;
   },
@@ -127,8 +186,21 @@ export const recordEvents = internalMutation({
       });
       inserted++;
     }
+    const team = await ctx.db.get(args.teamId);
+    const githubEtags = Object.fromEntries(
+      Object.entries(team?.githubEtags ?? {}).filter(
+        ([repo]) => repo !== args.repo
+      )
+    );
+    if (args.etag) {
+      githubEtags[args.repo] = args.etag;
+    }
     await ctx.db.patch(args.teamId, {
-      githubEtag: args.etag,
+      githubEtag:
+        team && repoSlug(team.repoUrl) === args.repo
+          ? args.etag
+          : team?.githubEtag,
+      githubEtags,
       githubPolledAt: Date.now(),
     });
     return inserted;
@@ -185,7 +257,7 @@ export function describeEvent(
         return null;
       }
       return {
-        event: "push",
+        event: GITHUB_FEED_EVENTS.push,
         text: `${actor} pushed to ${branch} (${p.head.slice(0, 7)})`,
         url: `https://github.com/${repo}/commit/${p.head}`,
       };
@@ -208,7 +280,7 @@ export function describeEvent(
       const title = firstLine(pr.title);
       return {
         detailUrl: pr.title === undefined ? pr.url : undefined,
-        event: "pull_request",
+        event: GITHUB_FEED_EVENTS.pullRequest,
         text: `${actor} ${verb} #${number}${title ? `: ${title}` : ""}`,
         url: `https://github.com/${repo}/pull/${number}`,
       };
@@ -219,7 +291,7 @@ export function describeEvent(
       }
       const rel = p.release ?? {};
       return {
-        event: "release",
+        event: GITHUB_FEED_EVENTS.release,
         text: `${actor} published release ${rel.name || rel.tag_name || ""}`.trim(),
         url: rel.html_url ?? `https://github.com/${repo}/releases`,
       };
@@ -229,7 +301,7 @@ export function describeEvent(
         return null;
       }
       return {
-        event: "tag",
+        event: GITHUB_FEED_EVENTS.tag,
         text: `${actor} tagged ${p.ref ?? ""}`.trim(),
         url: `https://github.com/${repo}/releases/tag/${p.ref ?? ""}`,
       };

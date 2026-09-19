@@ -13,6 +13,7 @@ import { openMemory } from "../watcher/memory";
 import { startScreen, summaryLines } from "../watcher/screen";
 import { createState, feedLive, scrollFeed } from "../watcher/state";
 import { collectionWindow, windowNotice } from "../watcher/window";
+import { autoUpdate, restartCurrentCommand } from "./update";
 
 type WatchFlags = {
   once?: boolean;
@@ -88,6 +89,23 @@ export function registerWatch(program: Command): void {
         uploadUrl,
         verbose: Boolean(flags.verbose),
       };
+      let updatedVersion: string | undefined;
+      const checkForUpdate = async (): Promise<boolean> => {
+        updatedVersion = await autoUpdate(process.argv.slice(2), {
+          silent: true,
+        });
+        return Boolean(updatedVersion);
+      };
+
+      const restartAfterUpdate = async (): Promise<void> => {
+        if (!updatedVersion) {
+          return;
+        }
+        ui.success(
+          `Updated to ${updatedVersion} while watching. Restarting watch…`
+        );
+        process.exit(await restartCurrentCommand());
+      };
 
       if (fullScreen) {
         const state = createState({
@@ -135,6 +153,7 @@ export function registerWatch(program: Command): void {
         try {
           await runWatch(options, {
             announce: () => process.stdout.write("\x07"),
+            checkForUpdate,
             log: () => undefined,
             me,
             memory,
@@ -147,6 +166,7 @@ export function registerWatch(program: Command): void {
           screen.stop();
           releaseLock();
         }
+        await restartAfterUpdate();
         console.log();
         ui.intro("watch");
         for (const line of summaryLines(state)) {
@@ -184,6 +204,7 @@ export function registerWatch(program: Command): void {
           `📣 ${c.bold(subject)} ${c.dim(`· organisers · ${new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`)}`
         );
       };
+      let code: number;
       try {
         ui.intro(
           flags.once
@@ -208,8 +229,9 @@ export function registerWatch(program: Command): void {
             )
           );
         }
-        const code = await runWatch(options, {
+        code = await runWatch(options, {
           announce,
+          checkForUpdate,
           log,
           me,
           memory,
@@ -217,9 +239,10 @@ export function registerWatch(program: Command): void {
           session,
           teamId: team?._id,
         });
-        process.exitCode = code;
       } finally {
         releaseLock();
       }
+      await restartAfterUpdate();
+      process.exitCode = code;
     });
 }

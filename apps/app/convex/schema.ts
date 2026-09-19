@@ -264,6 +264,8 @@ export default defineSchema({
     joinCode: v.optional(v.string()),
     repoUrl: v.optional(v.string()),
     repoUrls: v.optional(v.array(v.string())),
+    /** Sanitized GitHub remotes seen in authenticated local agent sessions. */
+    observedRepoUrls: v.optional(v.array(v.string())),
     /** Team logo uploaded by the owner, served as /api/files/<id>. */
     logoId: v.optional(v.id("_storage")),
     techStack: v.optional(v.array(v.string())),
@@ -271,6 +273,7 @@ export default defineSchema({
     techStackSource: v.optional(v.literal("repo")),
     // GitHub feed polling: ETag for conditional requests, last poll time.
     githubEtag: v.optional(v.string()),
+    githubEtags: v.optional(v.record(v.string(), v.string())),
     githubPolledAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),

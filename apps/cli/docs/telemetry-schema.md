@@ -39,10 +39,10 @@ local spool. Batches contain at most 200 events, and each event is limited to 32
 | `eventId` | string | `${harness}:${sessionId}:${nativeId}`. Global dedupe key for queries and downstream processing |
 | `occurredAt` | ISO-8601 UTC | When the harness recorded it. The hackathon window and every time bucket use this one, so usage read days later still lands when it happened |
 | `observedAt` | ISO-8601 UTC | When the watcher read it |
-| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` \| `pi` \| `omp` \| `antigravity` \| `devin` \| `grok` | Same ids as the insights dashboard. `cursor` and `copilot` have no local logs, so no collector yet |
+| `harness` | `claude-code` \| `codex` \| `cursor` \| `opencode` \| `cline` \| `copilot` \| `gemini-cli` \| `qwen-code` \| `kilo-code` \| `pi` \| `omp` \| `antigravity` \| `devin` \| `grok` | Same ids as the insights dashboard |
 | `harnessVersion` | string? | e.g. Claude Code `2.1.261`, Codex `0.130.0` |
 | `sessionId` | string | Harness session / task id |
-| `project` | `{ dirHash, name, gitBranch? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path. `gitBranch` is the harness's own when it logs one (Claude Code, Codex, Qwen Code), else read from the repository's `.git/HEAD`, so every harness reports it; absent outside a repository or on a detached HEAD |
+| `project` | `{ dirHash, name, gitBranch?, repo? }`? | `dirHash` = first 16 hex of sha256(cwd); `name` = basename only. Never a full path. `gitBranch` is the harness's own when it logs one (Claude Code, Codex, Copilot CLI, Qwen Code), else read from the repository's `.git/HEAD`; absent outside a repository or on a detached HEAD. `repo` is only the sanitized `owner/name` of a `github.com` origin; the raw remote URL, credentials and non-GitHub remotes never leave the machine |
 | `model` | `{ raw, name, family, provider }` | Required for `usage`. `raw` is exactly what the harness logged. `name` is the grouping key: lower case, no gateway path, variant tag, release date or cloud prefix, version dots as dashes, so `anthropic/claude-sonnet-4.5`, `claude-sonnet-4-5-20250929` and `us.anthropic.claude-sonnet-4-5-20250929-v1:0` are all `claude-sonnet-4-5`. `family` ∈ `claude` \| `gpt` \| `gemini` \| `qwen` \| `other`. `provider` is always set: who served the request when the harness says (as a slug, aliases folded), else who makes the model (`anthropic`, `openai`, `google`, `alibaba`, `unknown`) |
 | `tokens` | `{ input, output, cacheRead, cacheWrite, total, reasoning? }`? | Non-negative integers. Required for `usage`. For every harness: `input` excludes cache reads, `output` includes `reasoning`, `total` = `input + output + cacheRead + cacheWrite`. `reasoning` is a breakdown of `output`, absent when the harness does not report it (Cline) |
 | `identity` | `{ userId, teamId?, clientVersion }` | Stamped by the CLI from the logged-in user and their team at flush time |
@@ -57,8 +57,10 @@ buckets on `occurredAt`.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | claude-code | `~/.claude/projects/<slug>/<session>.jsonl`, lines with `type: "assistant"` | `sessionId` | `message.id` (several lines per response repeat it: dedupe) | `usage.input_tokens` | `usage.output_tokens` | `usage.cache_read_input_tokens` | `usage.cache_creation_input_tokens` | `message.model` (skip `<synthetic>`) |
 | codex | `~/.codex/sessions/**/rollout-*.jsonl`, `event_msg` with `payload.type: "token_count"` | `session_meta.payload.session_id` | line index | `last_token_usage.input_tokens − cached_input_tokens` | `output_tokens` | `cached_input_tokens` | `cache_write_input_tokens` | `turn_context.payload.model` |
+| cursor | HackSpain's user-level `afterAgentResponse` hook in `~/.cursor/hooks.json`, allowlisted into the local state log | `conversation_id` | `generation_id` | `input_tokens − cache_read_tokens − cache_write_tokens` | `output_tokens` | `cache_read_tokens` | `cache_write_tokens` | `model`; common hook input also supplies `cursor_version` and `workspace_roots` |
 | opencode | `~/.local/share/opencode/opencode.db`, table `message`, assistant rows with `time.completed` | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
 | cline | VS Code globalStorage `saoudrizwan.claude-dev/tasks/<task>/ui_messages.json`, `say: "api_req_started"` | task id | entry `ts` | `tokensIn` | `tokensOut` | `cacheReads` | `cacheWrites` | `task_metadata.json` `model_usage` |
+| copilot | `~/.copilot/session-state/<session>/events.jsonl`, cumulative `session.shutdown.data.modelMetrics` from Copilot CLI | `session.start.data.sessionId`, else the directory name | shutdown `id` + sorted model index | increase in `usage.inputTokens` − increases in both cache counters | increase in `usage.outputTokens` (already includes reasoning) | increase in `usage.cacheReadTokens` | increase in `usage.cacheWriteTokens` | each key in `modelMetrics`; `usage.reasoningTokens` → `reasoning`; `session.start.data.copilotVersion` → `harnessVersion` |
 | gemini-cli | `~/.gemini/tmp/<project>/chats/session-*.jsonl` (subagents one level deeper), records with `type: "gemini"` and a `tokens` object (a turn is appended again with the same `id` once usage arrives: dedupe) | metadata line `sessionId`, else the file name's short id | message `id` | `tokens.input − tokens.cached` | `tokens.output + tokens.thoughts` | `tokens.cached` | 0 (implicit caching) | `model`; `tokens.thoughts` → `reasoning` |
 | kilo-code | `~/.local/share/kilo/kilo*.db` (OpenCode fork, same `message` table; channel builds use `kilo-<channel>.db`) | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
 | qwen-code | `~/.qwen/projects/<slug>/chats/<session>.jsonl` (`QWEN_HOME` overrides), records with `type: "assistant"` and `usageMetadata` | `sessionId` | record `uuid` | `promptTokenCount − cachedContentTokenCount` | `candidatesTokenCount`, plus `thoughtsTokenCount` when the total counts it apart | `cachedContentTokenCount` | 0 | `model`; `thoughtsTokenCount` → `reasoning`; `version` → `harnessVersion` |
@@ -69,7 +71,7 @@ buckets on `occurredAt`.
 | grok | `~/.grok/logs/unified.jsonl`, lines with `msg: "shell.turn.inference_done"`; session metadata in `~/.grok/sessions/<encoded-cwd>/<session>/summary.json` | `sid` | `ts` | `ctx.prompt_tokens − ctx.cached_prompt_tokens` | `ctx.completion_tokens` | `ctx.cached_prompt_tokens` | 0 | summary `current_model_id`; `ctx.reasoning_tokens` → `reasoning`; `ver` → `harnessVersion` |
 
 Reasoning tokens go to `tokens.reasoning` when the harness reports them (Claude thinking,
-Codex `reasoning_output_tokens`, OpenCode `tokens.reasoning`, Gemini CLI and Qwen Code thought
+Codex `reasoning_output_tokens`, Copilot `reasoningTokens`, OpenCode `tokens.reasoning`, Gemini CLI and Qwen Code thought
 counts). Codex, OpenCode, Gemini CLI and Qwen Code formats are written from their documented
 shapes or recorder source and fixtures, not from a local install; collectors log and skip
 anything they cannot parse. Gemini-style prompt counts include the cached part, so `input` is
@@ -98,7 +100,7 @@ Only persisted assistant usage is collected, not compaction summaries or estimat
 
 - `tokens.cacheWrite` is always 0 for Gemini CLI, Qwen Code and Antigravity: their caching is
   implicit and no write is billed or reported.
-- `harnessVersion` exists only where the harness logs it (Claude Code, Codex, Qwen Code).
+- `harnessVersion` exists only where the harness logs it (Claude Code, Codex, Copilot CLI, Cursor, Qwen Code).
 - Devin reports no reasoning count, and its model is the session's at read time: a `/model`
   switch mid-session is attributed to the new model for every message of that session.
 - Antigravity's step schema is undocumented: the field numbers come from decoding real
@@ -106,10 +108,18 @@ Only persisted assistant usage is collected, not compaction summaries or estimat
   model code no conversation names is reported as `unknown`.
 - Cline reports no reasoning count, and its `tokensIn` follows whatever the provider adapter did
   with cached tokens; there is no total in the record to check it against.
-- Codex, Gemini CLI, Qwen Code, Kilo Code, Pi and Oh My Pi collectors are written from documented formats, not
+- Codex, Copilot CLI, Gemini CLI, Qwen Code, Kilo Code, Pi and Oh My Pi collectors are written from documented formats, not
   checked against a local install. Claude Code, OpenCode, Antigravity and Devin are checked against
   real logs.
-- `cursor` and `copilot` keep no local usage logs, so they have no collector.
+- Cursor's own transcripts omit usage. Its collector starts with the first `hackspain watch`,
+  which installs one user hook without replacing existing hooks. The hook allowlists usage
+  metadata into HackSpain's private local state and discards response text, email and tool data.
+  It covers local IDE and CLI sessions that run user hooks, not earlier sessions or cloud agents.
+- Copilot CLI persists usage only at `session.shutdown`, as cumulative totals per model. The
+  collector diffs later shutdowns after a resume and attributes each increment to that shutdown's
+  timestamp. Sessions that crash, stay open beyond the collection window, or switch with a CLI
+  path that omits the shutdown record cannot be recovered. Editor Copilot Chat and cloud coding
+  agents use other stores and are not collected.
 
 ## Collection window
 
@@ -148,7 +158,7 @@ There is one log record per event: `timeUnixNano` is `occurredAt`, `observedTime
 | `harness` / `harnessVersion` | `hackspain.harness` / `hackspain.harness.version` |
 | `identity.userId` / `teamId` | `hackspain.user.id` / `hackspain.team.id` |
 | `identity.clientVersion` | resource `service.version` (`service.name` is `hackspain-cli`) |
-| `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` |
+| `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` / `repo` |
 
 Native OTLP has no insert deduplication guarantee, so queries on the logs table dedupe on
 (`hackspain.user.id`, `event.id`).
@@ -158,6 +168,8 @@ Native OTLP has no insert deduplication guarantee, so queries on the logs table 
 - No prompt or response text, ever. Fixtures under `apps/cli/test/fixtures` are redacted and a
   test fails if a home path sneaks in.
 - Working directories are hashed; only the last path segment is kept.
+- Git remotes are reduced locally to a GitHub `owner/repo`; raw URLs, credentials and
+  non-GitHub remotes are discarded.
 - No harness account ids. Identity is the HackSpain user and team.
 - `native` keys are allowlisted in both CLI and server validation; unknown keys are rejected.
 - Only the hackathon window is recorded; nothing from before or after it leaves the machine, and
@@ -166,5 +178,5 @@ Native OTLP has no insert deduplication guarantee, so queries on the logs table 
 ## Example
 
 ```json
-{"schema":"hackspain.telemetry.v2","type":"usage","eventId":"claude-code:eb2f547c:msg_011CekYx","occurredAt":"2026-09-19T10:18:23.076Z","observedAt":"2026-09-19T10:18:30.002Z","harness":"claude-code","harnessVersion":"2.1.261","sessionId":"eb2f547c","project":{"dirHash":"9f2c1a7b3e4d5c6a","name":"agentos","gitBranch":"main"},"model":{"raw":"claude-fable-5-1","name":"claude-fable-5-1","family":"claude","provider":"anthropic"},"tokens":{"input":2,"output":344,"cacheRead":26445,"cacheWrite":13687,"reasoning":127,"total":40478},"identity":{"userId":"j57…","teamId":"k97…","clientVersion":"0.5.0"},"native":{"requestId":"req_011…"}}
+{"schema":"hackspain.telemetry.v2","type":"usage","eventId":"claude-code:eb2f547c:msg_011CekYx","occurredAt":"2026-09-19T10:18:23.076Z","observedAt":"2026-09-19T10:18:30.002Z","harness":"claude-code","harnessVersion":"2.1.261","sessionId":"eb2f547c","project":{"dirHash":"9f2c1a7b3e4d5c6a","name":"agentos","gitBranch":"main","repo":"hackspain/agentos"},"model":{"raw":"claude-fable-5-1","name":"claude-fable-5-1","family":"claude","provider":"anthropic"},"tokens":{"input":2,"output":344,"cacheRead":26445,"cacheWrite":13687,"reasoning":127,"total":40478},"identity":{"userId":"j57…","teamId":"k97…","clientVersion":"0.5.0"},"native":{"requestId":"req_011…"}}
 ```
