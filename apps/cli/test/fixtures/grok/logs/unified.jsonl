@@ -1,0 +1,4 @@
+{"ts":"2026-09-19T09:59:00.000Z","ver":"1.0.13","sid":"session-known","msg":"shell.turn.started","ctx":{"prompt":"PRIVATE_PROMPT"}}
+{"ts":"2026-09-19T10:00:00.000Z","ver":"1.0.13","sid":"session-known","msg":"shell.turn.inference_done","ctx":{"loop_index":1,"prompt_tokens":1000,"cached_prompt_tokens":800,"completion_tokens":100,"reasoning_tokens":75}}
+{"ts":"2026-09-19T10:01:00.000Z","ver":"1.0.13","sid":"session-known","msg":"shell.turn.inference_done","ctx":{"loop_index":2,"prompt_tokens":0,"cached_prompt_tokens":0,"completion_tokens":0,"reasoning_tokens":0}}
+{"ts":"2026-09-19T10:02:00.000Z","ver":"1.0.13","sid":"session-missing","msg":"shell.turn.inference_done","ctx":{"loop_index":1,"prompt_tokens":250,"cached_prompt_tokens":200,"completion_tokens":25,"reasoning_tokens":20}}
