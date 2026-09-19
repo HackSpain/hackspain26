@@ -25,6 +25,8 @@ import { MilestoneBroadcast } from "./milestone-broadcast";
 const SLIDE_MS = 12_000;
 const SIDE_MS = 10_000;
 const MINI_SLIDE_MS = 5000;
+// Submission deadline: 20 September 2026, 11:00 in Europe/Madrid (UTC+02:00).
+const SUBMISSION_DEADLINE = Date.parse("2026-09-20T11:00:00+02:00");
 const RANKING_ROWS = 7;
 const FEED_ROWS = 6;
 const PEOPLE_ROWS = 8;
@@ -73,22 +75,14 @@ function Move({ move }: { move: number }) {
   );
 }
 
-function Clock({ startsAt, endsAt }: { startsAt?: number; endsAt?: number }) {
+function Clock() {
   const now = useClock();
-  const time = now?.getTime();
-  let label = "En marcha";
-  let target: number | undefined;
-  if (time !== undefined && startsAt !== undefined && endsAt !== undefined) {
-    if (time < startsAt) { label = "Empieza en"; target = startsAt; }
-    else if (time < endsAt) { label = "Quedan"; target = endsAt; }
-    else { label = "Hackathon terminado"; }
-  }
-  const left = target !== undefined && time !== undefined ? Math.max(0, Math.floor((target - time) / 1000)) : null;
+  const left = now ? Math.max(0, Math.floor((SUBMISSION_DEADLINE - now.getTime()) / 1000)) : null;
   const pad = (value: number) => String(value).padStart(2, "0");
   return (
     <>
       <div className="flex flex-col items-center justify-center bg-hs-gold leading-none text-hs-ink">
-        <span className="hsx-label">{label}</span>
+        <span className="hsx-label">{left === 0 ? "Plazo terminado" : "Quedan"}</span>
         {left !== null ? <span className="hsx-title hsx-num hsx-xl mt-[calc(var(--u)*0.4)]">{pad(Math.floor(left / 3600))}:{pad(Math.floor(left / 60) % 60)}:{pad(left % 60)}</span> : null}
       </div>
       <div className="flex flex-col items-center justify-center bg-hs-teal leading-none text-hs-paper">
@@ -483,14 +477,14 @@ function MiniMarketStage({ data, posts, demo, series, teams }: {
     { label: "Pushes a GitHub", shown: loading ? "—" : compact(totals.pushes), tone: "bg-hs-teal text-hs-paper" },
   ];
   return (
-    <main className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo · Panel mini">
+    <main className="h-dvh w-full overflow-hidden bg-hs-ink px-[5vw] py-[5vh] text-hs-ink [container-type:size]" aria-label="HackSpain en directo · Panel mini">
       <div className="hsx hsx-mini flex h-full flex-col gap-[var(--line)] p-[var(--line)]">
         <header className="grid h-[16%] shrink-0 grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)] gap-[var(--line)] portrait:h-[20%] portrait:grid-cols-2 portrait:grid-rows-2">
           <div className="flex min-w-0 items-center justify-between gap-[var(--u)] bg-hs-paper px-[var(--u)] portrait:col-span-2">
             <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-auto max-h-[65%] w-[75%] min-w-0 object-contain portrait:w-auto" />
             <span className="hsx-sm shrink-0 font-bold text-hs-red">{demo ? "Demo" : <span title="En directo" aria-label="En directo">●</span>}</span>
           </div>
-          <Clock startsAt={data.startsAt} endsAt={data.endsAt} />
+          <Clock />
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,0.8fr)_minmax(0,1.5fr)]">
@@ -580,7 +574,7 @@ function MarketStage({ data, feed, demo, mini }: { data: LiveInsightData; feed: 
               <span className="absolute inset-y-0 bg-hs-gold" style={{ left: `${(bucket / MARKET_BUCKETS) * 100}%`, width: `${100 / MARKET_BUCKETS}%` }} />
             </div>
           </div>
-          <Clock startsAt={data.startsAt} endsAt={data.endsAt} />
+          <Clock />
         </header>
         <TeamTape teams={teams} />
         <div className="relative min-h-0 flex-1">
