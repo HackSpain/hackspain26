@@ -30,6 +30,14 @@ import { urlDisplay, urlLabel } from "@/lib/urls";
 
 const NO_TYPE = "none";
 
+function formatCheckInAt(at: number) {
+  return new Date(at).toLocaleString("es-ES", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Madrid",
+  });
+}
+
 export type ParticipantRef =
   | { kind: "signup"; id: Id<"signups"> }
   | { kind: "user"; id: Id<"users"> };
@@ -195,11 +203,6 @@ export function ParticipantDetail({
               {user?.userType ? (
                 <Badge className="whitespace-nowrap">{user.userType.label}</Badge>
               ) : null}
-              {checkedIn ? (
-                <Badge variant="gold" className="whitespace-nowrap">
-                  check-in
-                </Badge>
-              ) : null}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -213,17 +216,6 @@ export function ParticipantDetail({
             {signup?.achievements ? (
               <MetaRow label="Logros">{signup.achievements}</MetaRow>
             ) : null}
-            <MetaRow label="Check-in">
-              <span className="tabular-nums">
-                {pass?.checkedInAt !== undefined
-                  ? new Date(pass.checkedInAt).toLocaleString("es-ES", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                      timeZone: "Europe/Madrid",
-                    })
-                  : "Pendiente"}
-              </span>
-            </MetaRow>
           </CardContent>
         </Card>
         <Card>
@@ -254,31 +246,41 @@ export function ParticipantDetail({
             )}
             {signup || user ? (
               <div className="space-y-2">
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  {checkedIn ? (
+                <p className="font-bungee text-xs uppercase">Check-in</p>
+                {checkedIn && pass?.checkedInAt !== undefined ? (
+                  <Frame className="flex flex-col gap-2 border-hs-teal bg-hs-teal/10 sm:flex-row sm:flex-wrap sm:items-center">
+                    <p className="text-sm font-medium text-pretty">
+                      Dentro ·{" "}
+                      <span className="tabular-nums">{formatCheckInAt(pass.checkedInAt)}</span>
+                    </p>
                     <Button
                       variant="outline"
                       className="w-full sm:w-auto"
                       disabled={checkInBusy}
+                      aria-busy={checkInBusy}
                       onClick={() => void clearCheckIn()}
                     >
-                      {checkInBusy ? "Deshaciendo…" : "Deshacer check-in"}
+                      Deshacer
                     </Button>
-                  ) : (
+                  </Frame>
+                ) : (
+                  <div className="space-y-2">
                     <Button
+                      variant="teal"
                       className="w-full sm:w-auto"
                       disabled={checkInBusy || signup?.accepted === false}
+                      aria-busy={checkInBusy}
                       onClick={() => void markCheckedIn()}
                     >
-                      {checkInBusy ? "Marcando…" : "Marcar check-in"}
+                      Marcar check-in
                     </Button>
-                  )}
-                </div>
-                {signup && !signup.accepted ? (
-                  <p className="text-xs text-hs-brown">
-                    Acepta al participante para poder hacer el check-in.
-                  </p>
-                ) : null}
+                    {signup && !signup.accepted ? (
+                      <p className="text-xs text-pretty text-hs-brown">
+                        Acepta al participante para poder hacer el check-in.
+                      </p>
+                    ) : null}
+                  </div>
+                )}
                 <FormError message={checkInError} />
               </div>
             ) : null}
@@ -383,70 +385,76 @@ export function ParticipantDetail({
         <CardHeader>
           <CardTitle>Equipo y perks</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p>
-            Equipo: {team?.name ?? "—"}
-            {team?.isOwner ? " · dueño" : null}
-            {team && team.status !== "member" ? " · invitado" : null}
-          </p>
-          {signup || user ? (
-            <div className="space-y-2">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
-                <Select
-                  value={selectedTeamId}
-                  disabled={teams === undefined || teamBusy}
-                  onValueChange={(value) => setTeamChoice(value as Id<"teams">)}
-                >
-                  <SelectTrigger className="sm:max-w-xs" aria-label="Equipo">
-                    <SelectValue placeholder="Elige un equipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(teams ?? []).map((option) => (
-                      <SelectItem key={option._id} value={option._id}>
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  className="w-full sm:w-auto"
-                  disabled={
-                    teamBusy ||
-                    !selectedTeamId ||
-                    (selectedTeamId === team?._id && team.status === "member")
-                  }
-                  onClick={() => void placeOnTeam()}
-                >
-                  {teamBusy ? "Guardando…" : "Asignar al equipo"}
-                </Button>
-                {team ? (
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    disabled={teamBusy}
-                    onClick={() => void dropFromTeam()}
+        <CardContent className="space-y-4 text-sm">
+          <div className="space-y-2">
+            <p className="font-bungee text-xs uppercase">Equipo</p>
+            <p className="flex flex-wrap items-center gap-2 text-pretty font-medium">
+              <span>{team?.name ?? "Sin equipo"}</span>
+              {team?.isOwner ? <Badge>dueño</Badge> : null}
+              {team && team.status !== "member" ? <Badge>invitado</Badge> : null}
+            </p>
+            {signup || user ? (
+              <div className="space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+                  <Select
+                    value={selectedTeamId}
+                    disabled={teams === undefined || teamBusy}
+                    onValueChange={(value) => setTeamChoice(value as Id<"teams">)}
                   >
-                    Quitar del equipo
-                  </Button>
+                    <SelectTrigger className="sm:max-w-xs" aria-label="Asignar a un equipo">
+                      <SelectValue placeholder="Elige un equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(teams ?? []).map((option) => (
+                        <SelectItem key={option._id} value={option._id}>
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedTeamId &&
+                  !(selectedTeamId === team?._id && team.status === "member") ? (
+                    <Button
+                      className="w-full sm:w-auto"
+                      disabled={teamBusy}
+                      aria-busy={teamBusy}
+                      onClick={() => void placeOnTeam()}
+                    >
+                      Asignar
+                    </Button>
+                  ) : null}
+                  {team ? (
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      disabled={teamBusy}
+                      aria-busy={teamBusy}
+                      onClick={() => void dropFromTeam()}
+                    >
+                      Quitar
+                    </Button>
+                  ) : null}
+                </div>
+                {teams !== undefined && teams.length === 0 ? (
+                  <p className="text-xs text-pretty text-hs-brown">Aún no hay equipos.</p>
                 ) : null}
+                <FormError message={teamError} />
               </div>
-              {teams !== undefined && teams.length === 0 ? (
-                <p className="text-xs text-hs-brown">Aún no hay equipos.</p>
-              ) : null}
-              <FormError message={teamError} />
-            </div>
-          ) : null}
-          {detail.claims.length === 0 ? (
-            <p>Sin perks reclamados.</p>
-          ) : (
-            detail.claims.map((claim) => (
-              <Frame key={claim._id} className="flex flex-wrap items-center gap-2">
-                <span>{perkName(claim.company, claim.title)}</span>
-                <Badge>{claimStatusLabel(claim.status)}</Badge>
-                {claim.code ? <code className="break-all">{claim.code}</code> : null}
-              </Frame>
-            ))
-          )}
+            ) : null}
+          </div>
+          <div className="space-y-2 border-t-2 border-hs-ink/15 pt-3">
+            {detail.claims.length === 0 ? (
+              <p>Sin perks reclamados.</p>
+            ) : (
+              detail.claims.map((claim) => (
+                <Frame key={claim._id} className="flex flex-wrap items-center gap-2">
+                  <span>{perkName(claim.company, claim.title)}</span>
+                  <Badge>{claimStatusLabel(claim.status)}</Badge>
+                  {claim.code ? <code className="break-all">{claim.code}</code> : null}
+                </Frame>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
       {detail.submission ? (
