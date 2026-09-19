@@ -12,6 +12,7 @@ import { demoFeed, demoInsights } from "@/lib/tv-market";
 import { FeedDemoContext } from "./feed-box";
 import type { FeedPost } from "./feed-box";
 import { MarketScreen } from "./market";
+import { MemesScreen } from "./memes";
 import { TeamsScreen } from "./teams";
 import { useClock, useTick } from "./motion";
 import { SponsorsScreen } from "./sponsors-screen";
@@ -72,6 +73,8 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
   if (config.preset === "panel-mini") { return <MarketScreen demo={demo} mini />; }
   if (config.preset === "panelv2") { return <PanelV2Screen demo={demo} />; }
   if (config.preset === "equipos") { return <TeamsScreen demo={demo} />; }
+  if (config.preset === "memes") { return <MemesScreen demo={demo} />; }
+  if (config.preset === "memes-mini") { return <MemesScreen demo={demo} mini />; }
   if (config.preset === "patrocinadores") { return <SponsorsScreen />; }
   return (
     <main className="flex h-dvh w-full flex-col gap-[4vmin] overflow-hidden bg-hs-ink p-[4vmin] text-hs-paper">

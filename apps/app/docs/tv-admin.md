@@ -124,6 +124,32 @@ agrupado por equipo, pensado para dejarlo puesto mientras se forman los equipos:
 segundos, y vuelve a empezar (`src/lib/tv-teams.ts`). El modo en vivo del mapa
 (`live` en `network-canvas.tsx`) no cambia el comportamiento de `/participantes`.
 
+## Memes
+
+`/tv?screen=hall&view=memes` enseña los memes del feed (las publicaciones marcadas
+como meme, hoy las que llevan `#meme`):
+
+- La celda grande rota por los 12 últimos, 10 segundos cada uno. Al lado, un muro
+  con los 6 más recientes; el que está en grande lleva marco dorado y los de los
+  últimos 10 minutos la etiqueta "Nuevo".
+- Cuando alguien publica un meme, entra en grande al momento con el sello "Nuevo
+  meme" y se queda 20 segundos. Si llegan varios seguidos hacen cola, el más antiguo
+  primero, y después sigue la rotación. Lo que ya estaba al abrir la pantalla no
+  cuenta como nuevo.
+- Un meme sin imagen sale como cartel con su texto. El pie quita la etiqueta `#meme`.
+- Es una suscripción a `tv.listMemes`, pública como el resto de pantallas: publica
+  nombre, equipo, texto y la URL de almacenamiento de la imagen, porque la ruta
+  `/api/files` de la app exige sesión. Todo lo que lleve `#meme` sale en la pantalla
+  de la sala; borrar la publicación (su autor o un admin) la retira al momento.
+- La rotación se detiene con la pestaña en segundo plano.
+
+`view=memes-mini` es la misma pantalla para televisores pequeños: un solo meme cada
+vez, sin muro, con letra más grande y el margen de seguridad del panel mini. La
+rotación, los memes nuevos y los datos son los mismos.
+
+`/tv?view=memes&demo=1` (o `memes-mini`) usa memes inventados con dibujos de la marca, publica uno
+nuevo cada 15 segundos y vuelve a empezar (`src/lib/tv-memes.ts`).
+
 ## Entradas y tamaños de pantalla
 
 El contenido ocupa todo el viewport, sin un lienzo fijo de 1920 × 1080 ni barras
