@@ -7,10 +7,11 @@ import { api } from "@convex/_generated/api";
 import { compact, harnessRows, number, percent, timeLabel } from "@/app/insights/mock-data";
 import { useLiveInsights } from "@/app/insights/use-live-insights";
 import type { LiveInsightData } from "@/app/insights/use-live-insights";
+import { HARNESS_ICONS, TECH_ICONS } from "@/lib/tv-icons";
 import {
-  MARKET_BUCKETS, currentBucket, demoFeed, demoInsights, marketSeries, marketTeams, marketTotals,
+  MARKET_BUCKETS, currentBucket, demoFeed, demoInsights, marketPeople, marketSeries, marketSides, marketTeams, marketTotals,
 } from "@/lib/tv-market";
-import type { MarketPost, MarketSeries, MarketTeam } from "@/lib/tv-market";
+import type { MarketPeopleMetric, MarketPerson, MarketPost, MarketSeries, MarketSide, MarketTeam } from "@/lib/tv-market";
 import { cn } from "@/lib/utils";
 import { FeedDemoContext } from "./feed-box";
 import type { FeedPost } from "./feed-box";
@@ -19,15 +20,19 @@ import {
   useBarScale, useCountUp, useGSAP, useHistoryScroll, useRankRows, useStreamShift,
 } from "./gsap";
 import { LiveCommitPulseBox } from "./live-boxes";
-import { Empty, Move, SponsorStrip, StageHeader, TeamTape, ago } from "./market";
+import { Empty, Face, Move, SponsorStrip, StageHeader, TeamTape, ago } from "./market";
+import { MilestoneBroadcast } from "./milestone-broadcast";
 import { useClock, usePrefersReducedMotion, useTick } from "./motion";
 
 const SLIDE_MS = 12_000;
 const HISTORY_MS = 6500;
+const SIDE_MS = 10_000;
 const RANKING_ROWS = 7;
 const FEED_ROWS = 6;
+const PEOPLE_ROWS = 8;
 
 type Post = MarketPost & { repo?: string; sha?: string };
+type Feed = { posts: Post[] | undefined; commits: Post[] | undefined };
 
 /* ------------------------------------------------------------------ */
 /* Sparkline that draws itself once and then morphs between updates.   */
@@ -305,7 +310,7 @@ function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
   );
 }
 
-type BarRow = { key: string; name: string; detail: string; share: number; value: string; color: string };
+type BarRow = { key: string; name: string; detail: string; share: number; value: string; color: string; icon?: string; mark?: string };
 
 function BarRowView({ row }: { row: BarRow }) {
   const reduced = usePrefersReducedMotion();
@@ -324,14 +329,17 @@ function BarRowView({ row }: { row: BarRow }) {
   }, [row.share, reduced]);
 
   return (
-    <li data-row className="flex flex-col justify-center gap-[calc(var(--u)*0.4)]">
-      <div className="flex items-baseline justify-between gap-[calc(var(--u)*0.8)]">
-        <span className="truncate font-bold">{row.name}<span className="hsx-xs ml-[calc(var(--u)*0.6)] font-normal text-hs-brown">{row.detail}</span></span>
-        <span className="hsx-num shrink-0 font-semibold">{row.value}</span>
-      </div>
-      <div className="h-[calc(var(--u)*0.7)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand">
-        <div ref={bar} className="relative h-full origin-left overflow-hidden" style={{ backgroundColor: row.color, transform: "scaleX(0)" }}>
-          <span ref={shine} aria-hidden className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-hs-paper to-transparent opacity-0" />
+    <li data-row className="flex min-w-0 items-center gap-[calc(var(--u)*0.9)]">
+      <Face name={row.name} src={row.icon} mark={row.mark} logo className="h-[calc(var(--u)*2.6)]" />
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-[calc(var(--u)*0.4)]">
+        <div className="flex items-baseline justify-between gap-[calc(var(--u)*0.8)]">
+          <span className="truncate font-bold">{row.name}<span className="hsx-xs ml-[calc(var(--u)*0.6)] font-normal text-hs-brown">{row.detail}</span></span>
+          <span className="hsx-num shrink-0 font-semibold">{row.value}</span>
+        </div>
+        <div className="h-[calc(var(--u)*0.7)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand">
+          <div ref={bar} className="relative h-full origin-left overflow-hidden" style={{ backgroundColor: row.color, transform: "scaleX(0)" }}>
+            <span ref={shine} aria-hidden className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-hs-paper to-transparent opacity-0" />
+          </div>
         </div>
       </div>
     </li>
@@ -441,7 +449,7 @@ function Board({ data, series, teams }: { data: LiveInsightData; series: MarketS
     modelos: ["Modelos en uso", `${models.length} modelos · cuota de tokens`],
     pulso: ["El pulso del evento", `Tokens acumulados y por tramo · ${percent(cached, tokens)} desde caché`],
     ranking: ["Clasificación de equipos", shown.kind === "ranking" ? `Por tokens · página ${shown.page + 1} de ${shown.pages}` : ""],
-    stacks: ["Con qué construimos", `Leído de los repos de ${data.stacks.auto} de ${data.stacks.total} proyectos`],
+    stacks: ["Con qué construimos", `${data.stacks.auto} de ${data.stacks.total} stacks detectados desde GitHub`],
   };
   const [title, detail] = heading[shown.kind];
   const active = tick % slides.length;
@@ -466,7 +474,7 @@ function Board({ data, series, teams }: { data: LiveInsightData; series: MarketS
           {shown.kind === "pulso" ? <PulseSlide series={series} data={data} /> : null}
           {shown.kind === "ranking" ? <RankingSlide teams={teams} page={shown.page} /> : null}
           {shown.kind === "herramientas" ? (tools.length ? <Bars rows={tools.map((row) => ({
-            color: row.color, detail: `${number(row.sessions)} sesiones · ${row.teams} equipos`, key: row.id, name: row.name,
+            color: row.color, detail: `${number(row.sessions)} sesiones · ${row.teams} equipos`, icon: HARNESS_ICONS[row.id], key: row.id, mark: row.mark, name: row.name,
             share: row.tokens / Math.max(tools[0]?.tokens ?? 1, 1), value: percent(row.tokens, toolTokens),
           }))} /> : <Empty>Sin herramientas en uso todavía</Empty>) : null}
           {shown.kind === "modelos" ? (models.length ? <Bars rows={models.map((row) => ({
@@ -474,7 +482,7 @@ function Board({ data, series, teams }: { data: LiveInsightData; series: MarketS
             share: row.tokens / Math.max(models[0]?.tokens ?? 1, 1), value: `${compact(row.tokens)} · ${percent(row.tokens, modelTokens)}`,
           }))} /> : <Empty>Sin modelos registrados todavía</Empty>) : null}
           {shown.kind === "stacks" ? (stacks.length ? <Bars rows={stacks.map((row, index) => ({
-            color: STACK_COLORS[index % STACK_COLORS.length] ?? "#eab619", detail: row.category, key: row.name, name: row.name,
+            color: STACK_COLORS[index % STACK_COLORS.length] ?? "#eab619", detail: row.category, icon: TECH_ICONS[row.name], key: row.name, name: row.name,
             share: row.count / Math.max(stacks[0]?.count ?? 1, 1), value: `${row.count} / ${data.stacks.total}`,
           }))} /> : <Empty>Sin tecnologías detectadas todavía</Empty>) : null}
         </div>
@@ -502,12 +510,12 @@ function FeedCard({ post, now }: { post: Post; now: number | undefined }) {
   );
 }
 
-function Feed({ posts }: { posts: Post[] | undefined }) {
+function FeedRows({ posts, waiting }: { posts: Post[]; waiting: boolean }) {
   const minute = useClock();
   const listRef = useRef<HTMLOListElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
-  const ids = useMemo(() => (posts ?? []).map((post) => post._id), [posts]);
+  const ids = useMemo(() => posts.map((post) => post._id), [posts]);
   const onEnter = useCallback((rows: HTMLElement[]) => {
     flashGold(rows, 1.8);
     for (const row of rows) {
@@ -534,30 +542,157 @@ function Feed({ posts }: { posts: Post[] | undefined }) {
     const observer = new ResizeObserver(measure);
     observer.observe(box);
     return () => observer.disconnect();
-  }, [posts?.length]);
+  }, [posts.length]);
+
+  if (posts.length === 0) {
+    return <div className="h-full bg-hs-paper text-hs-ink"><Empty>{waiting ? "Cargando actividad" : "La actividad aparecerá aquí"}</Empty></div>;
+  }
+  return (
+    <div ref={viewport} className="h-full overflow-hidden">
+      <div ref={scroller}>
+        <ol ref={listRef} className="relative flex flex-col gap-[var(--line)]">
+          {posts.map((post) => (
+            <li key={post._id} className="relative shrink-0 overflow-hidden" style={{ height: rowHeight ?? `calc(100% / ${FEED_ROWS})` }}>
+              <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
+              <FeedCard post={post} now={minute?.getTime()} />
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+const PEOPLE_GRID = "grid grid-cols-[calc(var(--u)*2.4)_minmax(0,1fr)_calc(var(--u)*4.6)_calc(var(--u)*3.6)_calc(var(--u)*2)] items-center whitespace-nowrap gap-x-[calc(var(--u)*0.9)]";
+
+function PersonRow({ person, index, metric, rows, rowRef }: {
+  person: MarketPerson; index: number; metric: MarketPeopleMetric; rows: number; rowRef: (node: HTMLElement | null) => void;
+}) {
+  const reduced = usePrefersReducedMotion();
+  const tokens = useCountUp(person.tokens, compact);
+  const pushes = useCountUp(person.pushes, number);
+  const flash = useRef<HTMLSpanElement>(null);
+  const previous = useRef(index);
+  const lead = (on: boolean) => (on ? "font-bold" : "text-hs-brown");
+
+  useLayoutEffect(() => {
+    const before = previous.current;
+    previous.current = index;
+    if (reduced || index >= before || !flash.current) {return;}
+    const tween = flashGold(flash.current, 1.6);
+    return () => {
+      if (tween) {settle(tween);}
+    };
+  }, [index, reduced]);
+
+  return (
+    <li ref={rowRef} className={cn(PEOPLE_GRID, "absolute inset-x-0 top-0 border-b border-hs-ink/15")} style={{ height: `${100 / rows}%` }}>
+      <span ref={flash} data-flash aria-hidden className={FLASH_LAYER_CLASS} />
+      <span className={cn("hsx-title hsx-num flex aspect-square items-center justify-center", index === 0 ? "bg-hs-gold" : index < 3 ? "bg-hs-sand" : "text-hs-brown")}>{index + 1}</span>
+      <span className="flex min-w-0 items-center gap-[calc(var(--u)*0.7)]">
+        <Face name={person.name} src={person.photoUrl} className="h-[calc(var(--u)*2.6)]" />
+        <span className="min-w-0 leading-tight">
+          <span className="block truncate font-bold">{person.name}</span>
+          {person.team ? <span className="hsx-xs block truncate text-hs-brown">{person.team}</span> : null}
+        </span>
+      </span>
+      <span className={cn("hsx-num text-right", lead(metric === "tokens"))}>{person.tokens > 0 ? <span ref={tokens}>{compact(person.tokens)}</span> : "·"}</span>
+      <span className={cn("hsx-num text-right", lead(metric === "git"))}>{person.pushes > 0 ? <span ref={pushes}>{number(person.pushes)}</span> : "·"}</span>
+      <span className={cn("hsx-num text-right", lead(metric === "git"))}>{person.pullRequests > 0 ? number(person.pullRequests) : "·"}</span>
+    </li>
+  );
+}
+
+function PeopleRows({ people, metric }: { people: MarketPerson[]; metric: MarketPeopleMetric }) {
+  const rows = useMemo(() => marketPeople(people, metric, PEOPLE_ROWS), [people, metric]);
+  const order = useMemo(() => rows.map((person) => person.id), [rows]);
+  const register = useRankRows(order);
+  return (
+    <div className="hsx-md flex h-full flex-col bg-hs-paper px-[calc(var(--u)*1.3)] pt-[calc(var(--u)*0.9)] text-hs-ink">
+      <div className={cn(PEOPLE_GRID, "hsx-label shrink-0 border-b-[length:var(--line)] border-hs-ink pb-[calc(var(--u)*0.5)]")}>
+        <span>#</span><span>Persona</span><span className="text-right">Tokens</span><span className="text-right">Pushes</span><span className="text-right">PR</span>
+      </div>
+      <ol className="relative min-h-0 flex-1">
+        {rows.map((person, index) => (
+          <PersonRow key={person.id} person={person} index={index} metric={metric} rows={PEOPLE_ROWS} rowRef={register(person.id)} />
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+const SIDE_HEAD: Record<MarketSide, { title: string; detail: string; tone: string }> = {
+  commits: { detail: "Pushes y PR al momento", title: "En GitHub", tone: "bg-hs-navy text-hs-paper" },
+  git: { detail: "Pushes y PR por persona", title: "Top GitHub", tone: "bg-hs-orange text-hs-paper" },
+  posts: { detail: "Publicaciones", title: "Última hora", tone: "bg-hs-red text-hs-paper" },
+  tokens: { detail: "Tokens por persona", title: "Top tokens", tone: "bg-hs-gold text-hs-ink" },
+};
+
+/** Side column: posts, GitHub and the individual rankings take turns, wiping between them. */
+function Side({ feed, people }: { feed: Feed; people: MarketPerson[] }) {
+  const reduced = usePrefersReducedMotion();
+  const tick = useTick(SIDE_MS);
+  const posts = feed.posts?.length ?? 0;
+  const commits = feed.commits?.length ?? 0;
+  const sides = useMemo(() => marketSides({ commits, posts }, people), [commits, posts, people]);
+  const target = sides[tick % sides.length] ?? "posts";
+  const [shown, setShown] = useState<MarketSide>(target);
+  const stage = useRef<HTMLDivElement>(null);
+  const progress = useRef<HTMLSpanElement>(null);
+  const head = SIDE_HEAD[shown];
+
+  useEffect(() => {
+    if (target === shown) {return;}
+    const el = stage.current;
+    if (reduced || !el) {
+      setShown(target);
+      return;
+    }
+    const tween = gsap.to(el, { clipPath: "inset(100% 0% 0% 0%)", y: -14, duration: 0.36, ease: "power3.in", onComplete: () => setShown(target) });
+    return () => {
+      tween.kill();
+    };
+  }, [target, shown, reduced]);
+
+  useGSAP(
+    () => {
+      const el = stage.current;
+      if (!el) {return;}
+      if (reduced) {
+        gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: TV_REDUCED_FADE, ease: "none", clearProps: "opacity" });
+        return;
+      }
+      gsap.fromTo(
+        el,
+        { clipPath: "inset(0% 0% 100% 0%)", y: 18 },
+        { clipPath: "inset(0% 0% 0% 0%)", y: 0, duration: 0.65, ease: TV_EASE_OUT, clearProps: "clipPath,transform" },
+      );
+    },
+    { dependencies: [shown, reduced] },
+  );
+
+  useGSAP(
+    () => {
+      if (!progress.current || sides.length < 2) {return;}
+      gsap.fromTo(progress.current, { scaleX: 0 }, { scaleX: 1, duration: SIDE_MS / 1000, ease: "none", transformOrigin: "0% 50%" });
+    },
+    { dependencies: [tick, sides.length] },
+  );
 
   return (
     <section data-v2 className="flex min-h-0 flex-col gap-[var(--line)]">
-      <header className="flex shrink-0 items-center justify-between bg-hs-red px-[calc(var(--u)*1.3)] py-[calc(var(--u)*0.9)] text-hs-paper">
-        <h2 className="hsx-title hsx-lg">Última hora</h2>
-        <p className="hsx-label">Feed y GitHub</p>
+      <header className={cn("relative flex shrink-0 items-center justify-between gap-[calc(var(--u)*1)] px-[calc(var(--u)*1.3)] py-[calc(var(--u)*0.9)] transition-colors duration-300", head.tone)}>
+        <h2 className="hsx-title hsx-lg shrink-0">{head.title}</h2>
+        <p className="hsx-label truncate">{head.detail}</p>
+        {sides.length > 1 ? <span ref={progress} aria-hidden className="absolute inset-x-0 bottom-0 h-[calc(var(--u)*0.3)] origin-left bg-current opacity-45" /> : null}
       </header>
-      {!posts || posts.length === 0 ? (
-        <div className="min-h-0 flex-1 bg-hs-paper text-hs-ink"><Empty>{posts ? "La actividad aparecerá aquí" : "Cargando actividad"}</Empty></div>
-      ) : (
-        <div ref={viewport} className="min-h-0 flex-1 overflow-hidden">
-          <div ref={scroller}>
-            <ol ref={listRef} className="relative flex flex-col gap-[var(--line)]">
-              {posts.map((post) => (
-                <li key={post._id} className="relative shrink-0 overflow-hidden" style={{ height: rowHeight ?? `calc(100% / ${FEED_ROWS})` }}>
-                  <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
-                  <FeedCard post={post} now={minute?.getTime()} />
-                </li>
-              ))}
-            </ol>
-          </div>
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div ref={stage} key={shown} className="h-full">
+          {shown === "posts" || shown === "commits"
+            ? <FeedRows posts={feed[shown] ?? []} waiting={feed[shown] === undefined} />
+            : <PeopleRows people={people} metric={shown} />}
         </div>
-      )}
+      </div>
     </section>
   );
 }
@@ -588,24 +723,27 @@ function useStageEntrance(root: RefObject<HTMLElement | null>) {
   );
 }
 
-function PanelV2Stage({ data, posts, demo }: { data: LiveInsightData; posts: Post[] | undefined; demo: boolean }) {
+function PanelV2Stage({ data, feed, demo }: { data: LiveInsightData; feed: Feed; demo: boolean }) {
   const root = useRef<HTMLElement>(null);
   const series = useMemo(() => marketSeries(data.samples), [data.samples]);
   const teams = useMemo(() => marketTeams(data.samples, data.teams), [data.samples, data.teams]);
   const bucket = currentBucket(data.samples);
   useStageEntrance(root);
   return (
-    <main ref={root} className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
+    <main ref={root} className="relative h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
       <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] px-[var(--line)] pt-[var(--line)] pb-[calc(var(--u)*1.2)]">
         <StageHeader data={data} bucket={bucket} demo={demo} />
         <div data-v2 className="contents"><TeamTape teams={teams} /></div>
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)]">
-          <div className="flex min-h-0 flex-col gap-[var(--line)]">
-            <Kpis series={series} />
-            <div data-v2 className="h-[calc(var(--u)*5.2)] shrink-0"><LiveCommitPulseBox /></div>
-            <Board data={data} series={series} teams={teams} />
+        <div className="relative min-h-0 flex-1">
+          <div className="grid h-full min-h-0 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)]">
+            <div className="flex min-h-0 flex-col gap-[var(--line)]">
+              <Kpis series={series} />
+              <div data-v2 className="h-[calc(var(--u)*5.2)] shrink-0"><LiveCommitPulseBox /></div>
+              <Board data={data} series={series} teams={teams} />
+            </div>
+            <Side feed={feed} people={data.people} />
           </div>
-          <Feed posts={posts} />
+          <MilestoneBroadcast data={data} replayInitial={demo} />
         </div>
         <div data-v2 className="contents"><SponsorStrip /></div>
       </div>
@@ -615,8 +753,10 @@ function PanelV2Stage({ data, posts, demo }: { data: LiveInsightData; posts: Pos
 
 function LivePanel() {
   const data = useLiveInsights();
-  const posts = useQuery(api.tv.listFeed, { source: "all" });
-  return <PanelV2Stage data={data} posts={posts} demo={false} />;
+  const posts = useQuery(api.tv.listFeed, { source: "participants" });
+  const commits = useQuery(api.tv.listFeed, { source: "github" });
+  const feed = useMemo(() => ({ commits, posts }), [commits, posts]);
+  return <PanelV2Stage data={data} feed={feed} demo={false} />;
 }
 
 function DemoPanel() {
@@ -634,9 +774,13 @@ function DemoPanel() {
       })),
     [startedAt],
   );
+  const feed = useMemo(
+    () => ({ commits: posts.filter((post) => post.kind === "github"), posts: posts.filter((post) => post.kind === "post") }),
+    [posts],
+  );
   return (
     <FeedDemoContext value={posts}>
-      <PanelV2Stage data={data} posts={posts} demo />
+      <PanelV2Stage data={data} feed={feed} demo />
     </FeedDemoContext>
   );
 }

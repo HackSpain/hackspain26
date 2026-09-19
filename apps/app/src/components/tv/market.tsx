@@ -46,7 +46,7 @@ export function Spark({ values, className }: { values: number[]; className?: str
  * Without one, or when it fails to load, the initials (or `mark`) stand in.
  * `logo` fits the whole mark inside instead of cropping it like a photo.
  */
-function Face({ name, src, mark, logo = false, className }: { name: string; src?: string; mark?: string; logo?: boolean; className?: string }) {
+export function Face({ name, src, mark, logo = false, className }: { name: string; src?: string; mark?: string; logo?: boolean; className?: string }) {
   const [failed, setFailed] = useState<string | null>(null);
   return (
     <span aria-hidden className={cn("flex aspect-square shrink-0 items-center justify-center overflow-hidden border-[length:calc(var(--line)*0.5)] border-hs-ink", logo ? "bg-hs-paper" : "bg-hs-sand", className)}>
