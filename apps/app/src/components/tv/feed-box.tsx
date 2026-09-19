@@ -16,11 +16,13 @@ import {
   TV_EASE_POP,
   TV_REDUCED_FADE,
   useGSAP,
+  useHistoryScroll,
   useStreamShift,
 } from "./gsap";
 import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
 
 const ROTATE_MS = 8000;
+const HISTORY_STEP_MS = 6500;
 
 function useNow(ms: number) {
   const visible = usePageVisible();
@@ -148,8 +150,10 @@ function FeedStream({
   source: TvFeedSource;
 }) {
   const listRef = useRef<HTMLOListElement>(null);
-  const shown = posts.slice(0, source === "all" ? 8 : 6);
-  const ids = useMemo(() => shown.map((post) => post._id), [shown]);
+  const viewport = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const ids = useMemo(() => posts.map((post) => post._id), [posts]);
+  useHistoryScroll({ list: listRef, scroller, viewport }, ids.join("|"), useTick(HISTORY_STEP_MS));
   const onEnter = useCallback((rows: HTMLElement[]) => {
     flashGold(rows, 1.8);
     for (const row of rows) {
@@ -173,16 +177,17 @@ function FeedStream({
   return (
     <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
       <FeedHeader title={source === "all" ? "Feed · Commits" : "Feed"} aside={aside} />
-      <ol
-        ref={listRef}
-        className="mt-[0.6cqw] min-h-0 flex-1 space-y-[0.4cqw] overflow-hidden"
-      >
-        {shown.map((post) => (
-          <li key={post._id}>
-            <FeedCard post={post} now={now} />
-          </li>
-        ))}
-      </ol>
+      <div ref={viewport} className="mt-[0.6cqw] min-h-0 flex-1 overflow-hidden">
+        <div ref={scroller}>
+          <ol ref={listRef} className="relative space-y-[0.4cqw]">
+            {posts.map((post) => (
+              <li key={post._id}>
+                <FeedCard post={post} now={now} />
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
     </div>
   );
 }

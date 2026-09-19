@@ -129,12 +129,16 @@ export function useBarScale<T extends HTMLElement = HTMLDivElement>(
  * reordering never remounts anything. Each row must be absolutely positioned
  * with height = 100% / rows.
  */
-export function useRankRows(order: readonly string[], epoch = 0) {
+export function useRankRows(
+  order: readonly string[],
+  { epoch = 0, axis = "y" }: { epoch?: number; axis?: "x" | "y" } = {},
+) {
   const reduced = usePrefersReducedMotion();
   const nodes = useRef(new Map<string, HTMLElement>());
   const placed = useRef(new Set<string>());
   const seenEpoch = useRef(epoch);
   const key = order.join("|");
+  const prop = axis === "x" ? "xPercent" : "yPercent";
 
   const register = useCallback(
     (id: string) => (node: HTMLElement | null) => {
@@ -155,33 +159,43 @@ export function useRankRows(order: readonly string[], epoch = 0) {
     for (const [rank, id] of ids.entries()) {
       const el = nodes.current.get(id);
       if (!el) {continue;}
-      const yPercent = rank * 100;
+      const position = { [prop]: rank * 100 };
       if (reduced) {
         placed.current.add(id);
-        gsap.set(el, { yPercent });
+        gsap.set(el, position);
         continue;
       }
       if (!placed.current.has(id)) {
         placed.current.add(id);
-        gsap.set(el, { yPercent });
+        gsap.set(el, position);
         tweens.push(
-          gsap.from(el, {
-            x: -28,
-            rotationX: -55,
-            transformPerspective: 700,
-            transformOrigin: "0% 0%",
-            opacity: 0,
-            duration: 0.75,
-            ease: TV_EASE_OUT,
-            delay: 0.25 + rank * 0.07,
-            clearProps: "opacity",
-          }),
+          axis === "x"
+            ? gsap.from(el, {
+                y: 18,
+                scale: 0.6,
+                opacity: 0,
+                duration: 0.7,
+                ease: TV_EASE_OUT,
+                delay: 0.25 + rank * 0.05,
+                clearProps: "opacity",
+              })
+            : gsap.from(el, {
+                x: -28,
+                rotationX: -55,
+                transformPerspective: 700,
+                transformOrigin: "0% 0%",
+                opacity: 0,
+                duration: 0.75,
+                ease: TV_EASE_OUT,
+                delay: 0.25 + rank * 0.07,
+                clearProps: "opacity",
+              }),
         );
         continue;
       }
       tweens.push(
         gsap.to(el, {
-          yPercent,
+          ...position,
           duration: 0.7,
           ease: TV_EASE_MOVE,
           overwrite: "auto",
@@ -191,9 +205,57 @@ export function useRankRows(order: readonly string[], epoch = 0) {
     return () => {
       for (const tween of tweens) {settle(tween);}
     };
-  }, [key, reduced, epoch]);
+  }, [key, reduced, epoch, axis, prop]);
 
   return register;
+}
+
+/**
+ * Walks a newest-first list down through its older rows one step per tick,
+ * wrapping back to the top; a change in `idsKey` (new arrivals) resets it.
+ */
+export function useHistoryScroll(
+  refs: {
+    viewport: RefObject<HTMLElement | null>;
+    scroller: RefObject<HTMLElement | null>;
+    list: RefObject<HTMLElement | null>;
+  },
+  idsKey: string,
+  tick: number,
+) {
+  const reduced = usePrefersReducedMotion();
+  const cursor = useRef(0);
+
+  useLayoutEffect(() => {
+    cursor.current = 0;
+    if (refs.scroller.current) {gsap.set(refs.scroller.current, { y: 0 });}
+  }, [idsKey, refs.scroller]);
+
+  useEffect(() => {
+    const list = refs.list.current;
+    const box = refs.viewport.current;
+    const el = refs.scroller.current;
+    if (tick === 0 || reduced || !list || !box || !el) {return;}
+    const rows = [...list.children].filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    const maxScroll = list.offsetHeight - box.clientHeight;
+    if (maxScroll <= 0) {return;}
+    const current = rows[cursor.current];
+    const atEnd = current !== undefined && current.offsetTop >= maxScroll;
+    const next = atEnd || cursor.current + 1 >= rows.length ? 0 : cursor.current + 1;
+    cursor.current = next;
+    const target = next === 0 ? 0 : Math.min(rows[next]?.offsetTop ?? 0, maxScroll);
+    const tween = gsap.to(el, {
+      y: -target,
+      duration: next === 0 ? 1.1 : 0.85,
+      ease: TV_EASE_MOVE,
+      overwrite: "auto",
+    });
+    return () => {
+      settle(tween);
+    };
+  }, [tick, reduced, refs.list, refs.scroller, refs.viewport]);
 }
 
 /**

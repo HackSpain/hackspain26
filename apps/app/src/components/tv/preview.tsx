@@ -315,6 +315,22 @@ export const TvWidgetPreview = memo(function TvWidgetPreview({
         </Frame>
       );
     }
+    case "liveCommitPulse": {
+      return (
+        <Frame title="Commits">
+          <div className="relative h-6">
+            <span className="absolute inset-x-0 top-1/2 h-px bg-hs-ink/30" />
+            {[12, 36, 60, 84].map((left) => (
+              <span
+                key={left}
+                className="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-hs-ink"
+                style={{ left: `${left}%` }}
+              />
+            ))}
+          </div>
+        </Frame>
+      );
+    }
     case "liveModels": {
       return (
         <Frame title="Modelos">
