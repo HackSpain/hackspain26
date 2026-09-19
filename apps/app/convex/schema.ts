@@ -230,6 +230,15 @@ export default defineSchema({
     updatedAt: v.number(),
     submittedAt: v.optional(v.number()),
     generalGroup: v.optional(v.number()),
+    trackVideos: v.optional(
+      v.array(
+        v.object({
+          submittedAt: v.number(),
+          trackId: v.id("tracks"),
+          videoUrl: v.string(),
+        })
+      )
+    ),
     techStack: v.optional(v.array(v.string())),
     techStackAt: v.optional(v.number()),
     techStackSource: v.optional(v.literal("repo")),

@@ -47,8 +47,7 @@ hackspain stack set nextjs convex claude-code
 
 hackspain track list
 hackspain track register [slug] | unregister
-hackspain submit [--draft]      # interactive form; flags for scripts
-hackspain project show | list
+hackspain project show | list   # submit is on the dashboard: /submit
 hackspain perk list
 
 hackspain milestone add firstCommit|firstBuild|firstDemo|custom [--label …] [--at ISO]
@@ -223,8 +222,9 @@ team repo (`hackspain team repo <url>`) every three minutes from a Convex cron a
 opened and merged pull requests, releases and tags. Nothing is read from the hacker's machine:
 push often and it shows up.
 
-Tracks live on the project: `track register` saves a draft with the chosen challenges, and
-`submit` freezes everything. Commands that need a team, an accepted signup, or completed
+Tracks live on the project: `track register` saves a draft with the chosen challenges.
+Final submit is on the dashboard (`/submit`): YouTube video, public GitHub repo, optional
+product link. Commands that need a team, an accepted signup, or completed
 onboarding fail fast with the next step to take.
 
 ## Develop

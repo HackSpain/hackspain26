@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -152,23 +153,26 @@ type CatalogRow = {
   perk: { _id: Id<"perks">; company: string; title: string };
 };
 
-function CliCallout() {
+function SubmitCallout() {
   return (
     <Frame
       tone="navy"
       className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
     >
       <p className="text-hs-navy">
-        Los retos y el envío del proyecto viven en la CLI de hackspain:{" "}
-        <code className="font-mono text-xs">
-          hackspain track register/unregister · hackspain submit
-        </code>
+        Entra en el reto desde la CLI. La entrega (vídeo, repo y producto) es
+        en Submit.
       </p>
-      <ProjectCliDialog>
-        <Button variant="outline" className="w-full shrink-0 sm:w-auto">
-          Comandos del proyecto
+      <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+        <Button asChild>
+          <Link href="/submit">Ir a Submit</Link>
         </Button>
-      </ProjectCliDialog>
+        <ProjectCliDialog>
+          <Button variant="outline" className="w-full sm:w-auto">
+            Cómo apuntarse
+          </Button>
+        </ProjectCliDialog>
+      </div>
     </Frame>
   );
 }
@@ -179,24 +183,32 @@ function NoProject({ submissionsOpen }: { submissionsOpen: boolean }) {
       <CardHeader>
         <CardTitle>Todavía no tienes proyecto</CardTitle>
         <CardDescription>
-          Entra en un reto y guarda el proyecto desde la CLI. Un equipo entra
-          en un solo reto.
+          Entra en un reto desde la CLI. Un equipo entra en un solo reto. La
+          entrega es en Submit.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-hs-brown">
           Empieza con{" "}
-          <code className="font-mono text-xs">hackspain track register &lt;slug&gt;</code>{" "}
-          y guarda los datos con{" "}
-          <code className="font-mono text-xs">hackspain submit --draft</code>
+          <code className="font-mono text-xs">hackspain track register &lt;slug&gt;</code>
           {submissionsOpen
-            ? ". Cuando esté listo, "
-            : ". El envío aún no está abierto; cuando lo esté, "}
-          <code className="font-mono text-xs">hackspain submit</code>.
+            ? ". Cuando esté listo, entrega en "
+            : ". El envío aún no está abierto; cuando lo esté, entrega en "}
+          <Link href="/submit" className="font-medium text-hs-navy underline underline-offset-4">
+            /submit
+          </Link>
+          .
         </p>
-        <ProjectCliDialog>
-          <Button className="w-full sm:w-auto">Cómo apuntarse y enviar</Button>
-        </ProjectCliDialog>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/submit">Ir a Submit</Link>
+          </Button>
+          <ProjectCliDialog>
+            <Button variant="outline" className="w-full sm:w-auto">
+              Cómo apuntarse
+            </Button>
+          </ProjectCliDialog>
+        </div>
       </CardContent>
     </Card>
   );
@@ -230,8 +242,8 @@ function MyProject({
           {submitted
             ? "Enviado y bloqueado. Ya está en manos del jurado."
             : submissionsOpen
-              ? "Borrador. Envíalo con hackspain submit cuando esté listo."
-              : "Borrador. El envío se abrirá más adelante; sigue guardando con hackspain submit --draft."}
+              ? "Borrador. Entrégalo en Submit cuando esté listo."
+              : "Borrador. El envío se abrirá más adelante; puedes preparar los enlaces en Submit."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -239,13 +251,13 @@ function MyProject({
           <p className="text-sm whitespace-pre-wrap">{mine.description}</p>
         ) : (
           <p className="text-sm text-hs-brown">
-            Sin descripción todavía. Añádela con{" "}
-            <code className="font-mono text-xs">hackspain submit --draft --description "…"</code>.
+            Sin descripción todavía. El vídeo de Submit cubre qué habéis
+            hecho y por qué.
           </p>
         )}
 
         <div className="space-y-2">
-          <p className="font-bungee text-xs">Retos</p>
+          <p className="font-bungee text-xs">Reto</p>
           {entered.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {entered.map((track) => (
@@ -269,7 +281,10 @@ function MyProject({
                   <MetaLink href={entry.url}>{urlDisplay(kind, entry.url)}</MetaLink>
                 ) : (
                   <span className="text-hs-brown">
-                    Sin {urlLabel(kind).toLowerCase()} · <code className="font-mono text-xs">hackspain submit --draft --{kind} &lt;url&gt;</code>
+                    Sin {urlLabel(kind).toLowerCase()} · se pide en{" "}
+                    <Link href="/submit" className="text-hs-navy underline underline-offset-4">
+                      Submit
+                    </Link>
                   </span>
                 )}
               </MetaRow>
@@ -300,11 +315,14 @@ function MyProject({
             </div>
           ) : (
             <p className="text-sm text-hs-brown">
-              Ninguna marcada. Se eligen en{" "}
-              <code className="font-mono text-xs">hackspain submit</code>.
+              Ninguna marcada. Se eligen en Submit.
             </p>
           )}
         </div>
+
+        <Button asChild className="w-full sm:w-auto">
+          <Link href="/submit">{submitted ? "Ver envío" : "Ir a Submit"}</Link>
+        </Button>
       </CardContent>
     </Card>
   );
@@ -334,11 +352,12 @@ export default function TracksPage() {
   }
 
   const entered = new Set(mine?.challengeIds);
+  const submittedIds = new Set((mine?.submittedTracks ?? []).map((row) => row._id));
 
   return (
     <Page
       title="Retos"
-      description="Un proyecto, un reto. Se gestiona desde la CLI; aquí ves cómo va."
+      description="Un proyecto, un reto. Te apuntas desde la CLI; la entrega es en Submit."
     >
       {tracks.length === 0 ? (
         <p className="text-hs-brown">Cargando retos…</p>
@@ -349,10 +368,12 @@ export default function TracksPage() {
               <CardHeader>
                 <CardTitle className="flex min-h-12 items-center justify-between gap-3">
                   <TrackLogo track={track} className="h-9 max-w-56" />
-                  {entered.has(track._id) ? (
+                  {submittedIds.has(track._id) ? (
                     <Badge variant="gold" className="whitespace-nowrap">
-                      {mine?.status === "submitted" ? "Enviado" : "En el borrador"}
+                      Enviado
                     </Badge>
+                  ) : entered.has(track._id) ? (
+                    <Badge className="whitespace-nowrap">En el borrador</Badge>
                   ) : null}
                 </CardTitle>
                 <CardDescription className="border-t border-hs-ink/15 pt-3 text-base font-medium text-hs-ink">
@@ -401,7 +422,7 @@ export default function TracksPage() {
         </div>
       )}
 
-      <CliCallout />
+      <SubmitCallout />
 
       {mine ? (
         <MyProject

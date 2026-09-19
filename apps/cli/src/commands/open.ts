@@ -24,6 +24,7 @@ const PAGE_ALIASES: Record<string, string> = {
   tracks: "/tracks",
   track: "/tracks",
   project: "/tracks",
+  submit: "/submit",
   perks: "/perks",
   perk: "/perks",
   profile: "/profile",

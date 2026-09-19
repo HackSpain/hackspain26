@@ -79,6 +79,9 @@ async function applyPlan(
       ? `${c.dim("Entering:")} ${entered.map((t) => t.label).join(", ")}`
       : c.dim("Not entering any track right now.")
   );
+  if (entered.length > 0) {
+    ui.next([["app.hackspain.com/submit", "submit from the dashboard"]]);
+  }
 }
 
 export function registerTrack(program: Command): void {
@@ -136,6 +139,12 @@ export function registerTrack(program: Command): void {
       ui.next([
         ["hackspain track register [slug]", "enter one track"],
         ["hackspain track unregister", "leave it"],
+        [
+          "app.hackspain.com/submit",
+          settings.submissionsOpen
+            ? "submissions are open on the dashboard"
+            : "opens later on the dashboard",
+        ],
       ]);
     });
 

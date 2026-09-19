@@ -1,28 +1,41 @@
 import { v } from "convex/values";
-import type { ObjectType } from "convex/values";
+import { internal } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
+import { action, internalMutation } from "./_generated/server";
+import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
+import { requireOnboarded } from "./lib/auth";
 import {
   adminQuery,
   onboardedMutation,
   onboardedQuery,
 } from "./lib/customFunctions";
+import { fail } from "./lib/errors";
+import { inspectPublicGithubRepo } from "./lib/github";
 import {
   countGroups,
   DEFAULT_GENERAL_GROUP_COUNT,
   JUDGING_SETTINGS_KEY,
   pickBalancedGroup,
 } from "./lib/judging";
-import { submissionStatusValidator } from "./lib/validators";
-import { fail } from "./lib/errors";
+import {
+  parseGithubRepoUrl,
+  parseOptionalProductUrl,
+  parseProjectName,
+  parseYoutubeWatchUrl,
+} from "./lib/submission";
+import {
+  findOwnedSubmission,
+  membershipForUser,
+  teamLogoUrlFor,
+} from "./lib/team";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
+import { submissionStatusValidator } from "./lib/validators";
+import { scheduleStackScan } from "./stack";
 import {
   MAX_TEAMS_PER_TRACK,
   submissionsAreOpen,
   trackEntryCounts,
 } from "./tracks";
-import { findOwnedSubmission, membershipForUser, teamLogoUrlFor } from "./lib/team";
-import { scheduleStackScan } from "./stack";
-import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 const challengeSummary = v.object({
   _id: v.id("tracks"),
@@ -37,6 +50,14 @@ const perkSummary = v.object({
   title: v.string(),
 });
 
+const submittedTrackReturn = v.object({
+  _id: v.id("tracks"),
+  label: v.string(),
+  slug: v.string(),
+  submittedAt: v.number(),
+  videoUrl: v.string(),
+});
+
 const submissionReturn = v.object({
   _id: v.id("submissions"),
   challengeIds: v.array(v.id("tracks")),
@@ -49,6 +70,7 @@ const submissionReturn = v.object({
   status: submissionStatusValidator,
   submittedAt: v.optional(v.number()),
   submittedBy: v.id("users"),
+  submittedTracks: v.array(submittedTrackReturn),
   teamId: v.optional(v.id("teams")),
   teamLogoUrl: v.optional(v.string()),
   teamName: v.optional(v.string()),
@@ -56,6 +78,29 @@ const submissionReturn = v.object({
   updatedAt: v.number(),
   urls: urlsValidator,
 });
+
+function uniqueIds<T extends string>(ids: T[]): T[] {
+  return [...new Set(ids)];
+}
+
+function recordedTrackVideos(submission: Doc<"submissions">) {
+  if (submission.trackVideos && submission.trackVideos.length > 0) {
+    return submission.trackVideos;
+  }
+  if (submission.status !== "submitted") {
+    return [];
+  }
+  const videoUrl = urlOf(submission.urls, "video");
+  if (!videoUrl) {
+    return [];
+  }
+  const submittedAt = submission.submittedAt ?? submission.updatedAt;
+  return submission.challengeIds.map((trackId) => ({
+    submittedAt,
+    trackId,
+    videoUrl,
+  }));
+}
 
 async function hydrateSubmission(
   ctx: QueryCtx | MutationCtx,
@@ -71,6 +116,19 @@ async function hydrateSubmission(
         label: track.label,
         logoUrl: track.logoUrl,
         slug: track.slug,
+      });
+    }
+  }
+  const submittedTracks = [];
+  for (const entry of recordedTrackVideos(submission)) {
+    const track = await ctx.db.get(entry.trackId);
+    if (track) {
+      submittedTracks.push({
+        _id: track._id,
+        label: track.label,
+        slug: track.slug,
+        submittedAt: entry.submittedAt,
+        videoUrl: entry.videoUrl,
       });
     }
   }
@@ -97,6 +155,7 @@ async function hydrateSubmission(
     status: submission.status,
     submittedAt: submission.submittedAt,
     submittedBy: submission.submittedBy,
+    submittedTracks,
     teamId: submission.teamId,
     teamLogoUrl: teamLogoUrlFor(team),
     teamName: team?.name,
@@ -206,97 +265,235 @@ const projectArgs = {
   videoUrl: v.optional(v.string()),
 };
 
-async function upsertProject(
-  ctx: MutationCtx & { user: Doc<"users"> },
-  args: ObjectType<typeof projectArgs>,
-  mode: "draft" | "submit"
-) {
-  const existing = await findOwnedSubmission(ctx, ctx.user._id);
-  if (existing && existing.status === "submitted") {
-    throw new Error("Este proyecto ya está enviado");
-  }
-
-  const name = args.name.trim();
-  const description = args.description.trim();
-  const challengeIds = await resolveChallengeIds(
-    ctx,
-    args.challengeIds,
-    mode === "submit",
-    existing
-  );
-  const perkIds = await resolvePerkIds(ctx, args.perkIds);
-
-  if (mode === "submit") {
-    if (!(await submissionsAreOpen(ctx))) {
-      throw new Error("El envío de proyectos aún no está abierto");
-    }
-    if (name.length < 2) {
-      throw new Error("El nombre del proyecto es obligatorio");
-    }
-    if (description.length < 10) {
-      throw new Error("Añade una descripción breve del proyecto");
-    }
-    if (challengeIds.length === 0) {
-      throw new Error("Elige al menos un reto");
-    }
-  }
-
-  const membership = await membershipForUser(ctx, ctx.user._id);
-  const now = Date.now();
-  const fields = {
-    challengeIds,
-    description,
-    name,
-    perkIds,
-    status: (mode === "submit" ? "submitted" : "draft") as
-      | "draft"
-      | "submitted",
-    submittedBy: ctx.user._id,
-    teamId: membership?.teamId,
-    updatedAt: now,
-    urls: projectUrls(
-      args.repoUrl,
-      args.demoUrl,
-      args.videoUrl ?? urlOf(existing?.urls, "video"),
-    ),
-    ...(mode === "submit"
-      ? {
-          submittedAt: now,
-          generalGroup:
-            existing?.generalGroup ?? (await nextGeneralGroup(ctx)),
-        }
-      : {}),
-  };
-
-  const submissionId = existing
-    ? (await ctx.db.patch(existing._id, fields), existing._id)
-    : await ctx.db.insert("submissions", {
-        ...fields,
-        createdAt: now,
-      });
-  const repoUrl = args.repoUrl ?? urlOf(fields.urls, "repo");
-  if (repoUrl) {
-    await scheduleStackScan(ctx, {
-      force: mode === "submit",
-      repoUrls: [repoUrl],
-      submissionId,
-      teamId: membership?.teamId,
-      userId: ctx.user._id,
-    });
-  }
-  return submissionId;
-}
-
 export const saveDraft = onboardedMutation({
   args: projectArgs,
-  handler: async (ctx, args) => await upsertProject(ctx, args, "draft"),
+  handler: async (ctx, args) => {
+    const existing = await findOwnedSubmission(ctx, ctx.user._id);
+    if (existing && existing.status === "submitted") {
+      throw new Error("Este proyecto ya está enviado");
+    }
+
+    const challengeIds = await resolveChallengeIds(
+      ctx,
+      args.challengeIds,
+      false,
+      existing
+    );
+    const perkIds = await resolvePerkIds(ctx, args.perkIds);
+    const membership = await membershipForUser(ctx, ctx.user._id);
+    const now = Date.now();
+    const fields = {
+      challengeIds,
+      description: args.description.trim(),
+      name: args.name.trim(),
+      perkIds,
+      status: "draft" as const,
+      submittedBy: ctx.user._id,
+      teamId: membership?.teamId,
+      updatedAt: now,
+      urls: projectUrls(
+        args.repoUrl,
+        args.demoUrl,
+        args.videoUrl ?? urlOf(existing?.urls, "video")
+      ),
+    };
+
+    const submissionId = existing
+      ? (await ctx.db.patch(existing._id, fields), existing._id)
+      : await ctx.db.insert("submissions", {
+          ...fields,
+          createdAt: now,
+        });
+    const repoUrl = args.repoUrl ?? urlOf(fields.urls, "repo");
+    if (repoUrl) {
+      await scheduleStackScan(ctx, {
+        force: false,
+        repoUrls: [repoUrl],
+        submissionId,
+        teamId: membership?.teamId,
+        userId: ctx.user._id,
+      });
+    }
+    return submissionId;
+  },
   returns: v.id("submissions"),
 });
 
-export const submit = onboardedMutation({
-  args: projectArgs,
-  handler: async (ctx, args) => await upsertProject(ctx, args, "submit"),
+const commitArgs = {
+  challengeId: v.id("tracks"),
+  demoUrl: v.optional(v.string()),
+  name: v.string(),
+  perkIds: v.array(v.id("perks")),
+  repoUrl: v.string(),
+  videoUrl: v.string(),
+};
+
+export const commitTrack = internalMutation({
+  args: commitArgs,
+  handler: async (ctx, args) => {
+    const user = await requireOnboarded(ctx);
+    if (!(await submissionsAreOpen(ctx))) {
+      throw new Error("El envío de proyectos aún no está abierto");
+    }
+
+    const existing = await findOwnedSubmission(ctx, user._id);
+    const [challengeId] = await resolveChallengeIds(
+      ctx,
+      [args.challengeId],
+      true,
+      existing
+    );
+    if (!challengeId) {
+      throw new Error("Reto no encontrado");
+    }
+    if (
+      existing &&
+      existing.challengeIds.length > 0 &&
+      !existing.challengeIds.includes(challengeId)
+    ) {
+      fail("VALIDATION", "Un equipo solo puede entrar en un track.");
+    }
+    const perkIds = await resolvePerkIds(ctx, args.perkIds);
+    const already = existing ? recordedTrackVideos(existing) : [];
+    if (already.some((entry) => entry.trackId === challengeId)) {
+      throw new Error("Este reto ya está enviado");
+    }
+
+    const membership = await membershipForUser(ctx, user._id);
+    const now = Date.now();
+    const firstSubmit = !existing || existing.status !== "submitted";
+    const trackVideos = [
+      ...already,
+      { submittedAt: now, trackId: challengeId, videoUrl: args.videoUrl },
+    ];
+    const challengeIds = uniqueIds([
+      ...(existing?.challengeIds ?? []),
+      challengeId,
+    ]);
+    const firstVideo =
+      urlOf(existing?.urls, "video") ?? already[0]?.videoUrl ?? args.videoUrl;
+    const fields = {
+      challengeIds,
+      description: existing?.description ?? "",
+      name: args.name,
+      perkIds: perkIds.length > 0 ? perkIds : (existing?.perkIds ?? []),
+      status: "submitted" as const,
+      submittedAt: existing?.submittedAt ?? now,
+      submittedBy: existing?.submittedBy ?? user._id,
+      teamId: membership?.teamId ?? existing?.teamId,
+      trackVideos,
+      updatedAt: now,
+      urls: projectUrls(args.repoUrl, args.demoUrl, firstVideo),
+      ...(firstSubmit
+        ? {
+            generalGroup:
+              existing?.generalGroup ?? (await nextGeneralGroup(ctx)),
+          }
+        : {}),
+    };
+
+    const submissionId = existing
+      ? (await ctx.db.patch(existing._id, fields), existing._id)
+      : await ctx.db.insert("submissions", {
+          ...fields,
+          createdAt: now,
+        });
+    await scheduleStackScan(ctx, {
+      force: true,
+      repoUrls: [args.repoUrl],
+      submissionId,
+      teamId: membership?.teamId,
+      userId: user._id,
+    });
+    return submissionId;
+  },
   returns: v.id("submissions"),
+});
+
+const submitArgs = {
+  challengeId: v.id("tracks"),
+  demoUrl: v.optional(v.string()),
+  name: v.string(),
+  perkIds: v.optional(v.array(v.id("perks"))),
+  repoUrl: v.string(),
+  videoUrl: v.string(),
+};
+
+async function submitTrack(
+  ctx: ActionCtx,
+  args: {
+    challengeId: Id<"tracks">;
+    demoUrl?: string;
+    name: string;
+    perkIds?: Id<"perks">[];
+    repoUrl: string;
+    videoUrl: string;
+  }
+): Promise<Id<"submissions">> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("No has iniciado sesión");
+  }
+
+  const name = parseProjectName(args.name);
+  if (!name.ok) {
+    throw new Error(name.message);
+  }
+  const video = parseYoutubeWatchUrl(args.videoUrl);
+  if (!video.ok) {
+    throw new Error(video.message);
+  }
+  const repo = parseGithubRepoUrl(args.repoUrl);
+  if (!repo.ok) {
+    throw new Error(repo.message);
+  }
+  const demo = parseOptionalProductUrl(args.demoUrl);
+  if (!demo.ok) {
+    throw new Error(demo.message);
+  }
+  const publicRepo = await inspectPublicGithubRepo(repo.value);
+  if (!publicRepo.ok) {
+    throw new Error(publicRepo.message);
+  }
+
+  return await ctx.runMutation(internal.submissions.commitTrack, {
+    challengeId: args.challengeId,
+    demoUrl: demo.value,
+    name: name.value,
+    perkIds: args.perkIds ?? [],
+    repoUrl: publicRepo.url,
+    videoUrl: video.value,
+  });
+}
+
+export const submit = action({
+  args: submitArgs,
+  handler: submitTrack,
+  returns: v.id("submissions"),
+});
+
+export const verifyRepo = action({
+  args: { url: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("No has iniciado sesión");
+    }
+    const parsed = parseGithubRepoUrl(args.url);
+    if (!parsed.ok) {
+      return { message: parsed.message, ok: false as const };
+    }
+    const checked = await inspectPublicGithubRepo(parsed.value);
+    if (!checked.ok) {
+      return { message: checked.message, ok: false as const };
+    }
+    return { message: "Repo público", ok: true as const, url: checked.url };
+  },
+  returns: v.object({
+    message: v.string(),
+    ok: v.boolean(),
+    url: v.optional(v.string()),
+  }),
 });
 
 const publicSubmissionReturn = v.object({

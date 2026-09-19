@@ -9,7 +9,6 @@ import { registerPerk } from "../commands/perk";
 import { registerProfile } from "../commands/profile";
 import { registerProject } from "../commands/project";
 import { registerStack } from "../commands/stack";
-import { registerSubmit } from "../commands/submit";
 import { registerTeam } from "../commands/team";
 import { registerTelemetry } from "../commands/telemetry";
 import { registerTrack } from "../commands/track";
@@ -54,7 +53,6 @@ export function buildProgram(): Command {
   registerTeam(program);
   registerTrack(program);
   registerProject(program);
-  registerSubmit(program);
   registerPerk(program);
   registerMilestone(program);
   registerStack(program);

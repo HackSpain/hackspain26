@@ -43,10 +43,8 @@ step "track register $second (switch)"; run track register "$second" | jq -c '.d
 step "track unregister"; run track unregister | jq -c '.data.tracks'
 step "unknown track exits 2"; set +e; run track register nope >/dev/null; [[ $? -eq 2 ]] && echo "exit 2 ok"; set -e
 
-step "submit --draft"
-run submit --draft --name "Smoke project" --description "Written by scripts/smoke.sh for the CLI" \
-  --repo https://github.com/HackSpain/hackspain26 --track "$first" | jq -c '{status: .data.status, tracks: [.data.challenges[].slug]}'
-step "project show"; run project show | jq -c '.data.name'
+step "project after track register"
+run project show | jq -c '{name: .data.name, tracks: [.data.challenges[].slug]}'
 step "project list"; run project list | jq -c '.data | length'
 step "perk list"; run perk list | jq -c '.data | length'
 

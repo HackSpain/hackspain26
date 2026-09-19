@@ -58,7 +58,6 @@ export const CLI_FUNCTIONS: Record<string, Exposed> = {
   "submissions:mine": query(api.submissions.mine),
   "submissions:listPublic": query(api.submissions.listPublic),
   "submissions:saveDraft": mutation(api.submissions.saveDraft),
-  "submissions:submit": mutation(api.submissions.submit),
 
   // perks and milestones
   "perks:listCatalog": query(api.perks.listCatalog),

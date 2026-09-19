@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { EventClosedNotice, isEventOpen } from "@/components/event-closed-banner";
@@ -7,6 +8,16 @@ import { FeedComposer } from "@/components/feed-composer";
 import { FeedTimeline } from "@/components/feed-timeline";
 import { LoadingText, Page } from "@/components/page";
 import { SectionTiles } from "@/components/section-tiles";
+import { isSubmitFeatured } from "@/lib/event";
+
+function useNow(intervalMs = 30_000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(tick);
+  }, [intervalMs]);
+  return now;
+}
 
 /**
  * Home: the feed next to a launcher of section tiles. Sections open on their
@@ -14,13 +25,24 @@ import { SectionTiles } from "@/components/section-tiles";
  */
 export default function HomePage() {
   const me = useQuery(api.users.me);
-  if (!me) {return <LoadingText />;}
+  const now = useNow();
+  const eligible = Boolean(
+    me && (me.role === "admin" || (me.accepted && me.onboardingComplete))
+  );
+  const project = useQuery(api.submissions.mine, eligible ? {} : "skip");
+  if (!me) {
+    return <LoadingText />;
+  }
 
-  const eligible = me.role === "admin" || (me.accepted && me.onboardingComplete);
   // feed.list throws EVENT_CLOSED outside the window, so never mount it then.
   // Missing `event` (older users.me) counts as open, same as unscheduled.
   const eventOpen = isEventOpen(me.event);
   const canPost = eligible && eventOpen;
+  const featuredSubmit =
+    eventOpen &&
+    project !== undefined &&
+    isSubmitFeatured(now) &&
+    project?.status !== "submitted";
 
   return (
     <Page
@@ -39,6 +61,7 @@ export default function HomePage() {
         <SectionTiles
           sections={me.sections}
           eventOpen={eventOpen}
+          featuredSubmit={featuredSubmit}
           className="lg:sticky lg:top-5 lg:order-2 lg:-m-1 lg:max-h-[calc(100dvh-2.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-1 lg:[scrollbar-width:thin]"
         />
         <section aria-label="Feed" className="min-w-0 space-y-4 lg:order-1">

@@ -22,6 +22,12 @@ export const submissionStatusValidator = v.union(
   v.literal("submitted")
 );
 
+export const trackVideoValidator = v.object({
+  submittedAt: v.number(),
+  trackId: v.id("tracks"),
+  videoUrl: v.string(),
+});
+
 export const judgingContextValidator = v.union(
   v.object({
     group: v.number(),

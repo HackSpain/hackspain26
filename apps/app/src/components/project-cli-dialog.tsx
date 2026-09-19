@@ -19,10 +19,10 @@ export function ProjectCliDialog({ children }: { children: ReactNode }) {
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Retos y envío desde la CLI</DialogTitle>
+          <DialogTitle>Retos desde la CLI</DialogTitle>
           <DialogDescription>
-            El proyecto se apunta a los retos y se envía con la CLI de
-            hackspain, con la misma cuenta que este dashboard.
+            El equipo se apunta a un reto con la CLI de hackspain, con la
+            misma cuenta que este dashboard. La entrega es en Submit.
           </DialogDescription>
         </DialogHeader>
 
@@ -47,15 +47,17 @@ export function ProjectCliDialog({ children }: { children: ReactNode }) {
         </div>
 
         <div className="space-y-2">
-          <p className="font-bungee text-xs">3 · Guarda y envía el proyecto</p>
-          <CodeBlock>
-            {
-              "hackspain submit --draft            # guarda sin enviar, se puede editar\nhackspain submit                    # envía; pregunta lo que falte\nhackspain submit --name \"Ledgerito\" --repo https://github.com/org/repo --demo https://… --video https://…\nhackspain project show              # cómo está tu proyecto"
-            }
-          </CodeBlock>
+          <p className="font-bungee text-xs">3 · Entrega en el dashboard</p>
           <p className="text-sm text-hs-brown">
-            Un proyecto enviado queda bloqueado. El envío solo funciona mientras
-            la ventana esté abierta.
+            El vídeo de YouTube, el repo público y el enlace al producto se
+            envían en{" "}
+            <Link
+              href="/submit"
+              className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+            >
+              /submit
+            </Link>
+            . Un proyecto enviado queda bloqueado.
           </p>
         </div>
 

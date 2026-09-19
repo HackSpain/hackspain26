@@ -9,6 +9,7 @@ describe("normalizeDashboardPath", () => {
     expect(normalizeDashboardPath("feed")).toBe("/feed");
     expect(normalizeDashboardPath("Team")).toBe("/teams");
     expect(normalizeDashboardPath("perks")).toBe("/perks");
+    expect(normalizeDashboardPath("submit")).toBe("/submit");
   });
 
   test("passes explicit dashboard paths through", () => {
