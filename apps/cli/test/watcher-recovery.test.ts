@@ -6,7 +6,7 @@ import type { Session } from "../src/lib/api";
 import { EXIT } from "../src/lib/errors";
 import type { Me } from "../src/lib/me";
 import { cursorsPath, openCursorStore } from "../src/watcher/cursor-store";
-import { runWatch, stamp } from "../src/watcher/index";
+import { runWatch, saveRecentIds, stamp } from "../src/watcher/index";
 import { ephemeralMemory } from "../src/watcher/memory";
 import type { RawEvent, TelemetryEvent } from "../src/watcher/schema";
 import { spoolSink } from "../src/watcher/sinks/spool";
@@ -66,7 +66,6 @@ test("failed shutdown preserves disk cursors, and the next run recovers the even
           },
         },
       ],
-      history: [],
       log: (message: string) => logs.push(message),
       say: () => {},
       me: { _id: "user", role: "user" } as Me,
@@ -105,7 +104,10 @@ test("failed shutdown preserves disk cursors, and the next run recovers the even
   }
 });
 
-test("restart reconstructs native request aliases from the spool even without recent ids", async () => {
+test.each([
+  false,
+  true,
+])("restart distinguishes local recording from committed delivery (committed=%s)", async (committed) => {
   const dir = mkdtempSync(join(tmpdir(), "hs-otel-restart-"));
   const previous = {
     XDG_STATE_HOME: process.env.XDG_STATE_HOME,
@@ -132,6 +134,10 @@ test("restart reconstructs native request aliases from the spool even without re
         clientVersion: "test",
       }),
     ]);
+    if (committed) {
+      saveRecentIds(new Set([raw("already-counted").eventId]));
+    }
+    const state = createState({ me: { name: "Test" }, uploadEnabled: false });
     const collector: Collector = {
       id: "claude-code",
       discover: async () => ["transcript"],
@@ -158,6 +164,7 @@ test("restart reconstructs native request aliases from the spool even without re
         },
         {
           collectors: [collector],
+          state,
           me: { _id: "user", role: "user" } as Me,
           session: { client: {} } as Session,
           memory: ephemeralMemory(),
@@ -175,8 +182,10 @@ test("restart reconstructs native request aliases from the spool even without re
       )
     ).toBe(EXIT.OK);
     expect(delivered.map((event) => event.eventId)).toEqual([
+      ...(committed ? [] : ["claude-code:session:msg_old"]),
       "claude-code:session:msg_new",
     ]);
+    expect(state.totals.requests).toBe(3);
   } finally {
     delete process.env.XDG_STATE_HOME;
     delete process.env.LOCALAPPDATA;

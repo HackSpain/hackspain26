@@ -20,6 +20,12 @@ restart, transcript fallback and preservation of existing exporter settings. No 
 transcript fallback, not a timestamp or sequence heuristic. Cursor's documented native export is
 Enterprise/server-side to public HTTPS; it cannot be wired to a participant's loopback listener.
 
+A review reproduced a crash/retry regression when all spool records were treated as delivered:
+spool writes can succeed before an upload has even been staged. Rebuild delivery aliases only
+from successfully checkpointed recent ids; keep the board's local deduplication separate. Test
+restart with the actual spool and a failed sink, not an empty injected history. When adding a
+new Insights aggregate, use the same request correlation for people, models and team totals.
+
 ## 2026-09-19 — Watcher discovery and checkpoints can fail independently
 
 **Evidence and consequence.** Discovery and hook-window writes ran outside collector error

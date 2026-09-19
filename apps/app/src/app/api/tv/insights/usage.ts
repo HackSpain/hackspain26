@@ -112,16 +112,7 @@ export function peopleSql(table: string, window: UsageWindow): string {
   const start = Math.floor(window.startsAt / 1000);
   const end = Math.floor(window.endsAt / 1000);
   return `
-WITH events AS (
-  SELECT
-    toString(\`hackspain.user.id\`) AS userId,
-    toString(\`event.id\`) AS id,
-    any(intDiv(toInt64OrZero(toString(timeUnixNano)), 1000000000)) AS at,
-    any(toInt64OrZero(toString(\`hackspain.usage.total_tokens\`))) AS total
-  FROM ${table}
-  WHERE toString(eventName) = 'hackspain.usage'
-  GROUP BY userId, id
-)
+${deduplicatedEvents(table)}
 SELECT userId, sum(total) AS tokens
 FROM events
 WHERE at >= ${start} AND at < ${end} AND userId != ''

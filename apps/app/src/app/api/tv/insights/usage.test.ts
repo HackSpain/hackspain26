@@ -68,6 +68,7 @@ describe("modelsSql", () => {
 
 test("peopleSql dedupes on the permanent key and sums tokens per person", () => {
   const sql = peopleSql("hackspain_otel_logs", window);
+  expect(sql).toContain("GROUP BY userId, requestKey");
   expect(sql).toContain("GROUP BY userId, id");
   expect(sql).toContain("at >= 1789749900 AND at < 1789920000 AND userId != ''");
   expect(sql).toContain("GROUP BY userId\n");

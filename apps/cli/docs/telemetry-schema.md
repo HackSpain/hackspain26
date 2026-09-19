@@ -186,8 +186,11 @@ pause. `<state-dir>/claude-otel.jsonl` is consumed before transcripts through th
 scan/batch/spool pipeline. A fully consumed queue is atomically replaced only after successful
 sink delivery; interrupted writes are repaired before the exporter retries. User ids in this local
 queue come from the authenticated watcher, never from the producer's attributes. Read/restart
-failures retain transcript fallback. Recent aliases are also reconstructed from the local spool;
-permanent cross-device/old-client deduplication remains the dashboard's responsibility.
+failures retain transcript fallback. Spool records only restore delivery aliases when their ids
+were checkpointed after a successful flush: a local write alone does not prove upload. Board
+replay independently deduplicates all local records. Older events can be resent after the bounded
+recent-id history expires; permanent cross-device/old-client deduplication remains the dashboard's
+responsibility.
 
 Cursor Enterprise export requires a public endpoint and organization-to-participant identity
 mapping, so it is not connected to this loopback receiver. Cursor hooks and Devin SQLite remain

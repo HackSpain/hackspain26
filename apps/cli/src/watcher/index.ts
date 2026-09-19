@@ -380,11 +380,19 @@ export async function runWatch(
   // A supplied history may be a one-shot generator; aliases and board replay
   // both need it. The production spool remains streamed from disk.
   const history = deps.history ? [...deps.history] : undefined;
-  // The bounded recent ring alone cannot correlate delayed native logs with
-  // old transcript events. Rebuild aliases from the durable spool on restart.
+  const recorded = new Set<string>();
+  // A local spool write is not proof of delivery: a crash can happen before
+  // the upload has even been staged. Only extend successfully saved recent
+  // ids with aliases; retain all local identities separately for board replay.
   for (const event of history ?? readSpool()) {
     if (validateEvent(event).length === 0 && event.identity.userId === me._id) {
-      rememberTelemetry(recent, event);
+      rememberTelemetry(recorded, event);
+      if (
+        recent.has(event.eventId) ||
+        telemetryDedupKeys(event).some((key) => recent.has(key))
+      ) {
+        rememberTelemetry(recent, event);
+      }
     }
   }
   const sinks: Sink[] = [spoolSink(), ...(deps.extraSinks ?? [])];
@@ -402,7 +410,7 @@ export async function runWatch(
   const recording: Batcher = {
     ...batcher,
     push: (event) => {
-      if (state) {
+      if (state && !rememberTelemetry(recorded, event)) {
         recordEvent(state, event);
       }
       if (event.project?.repo) {
@@ -453,17 +461,9 @@ export async function runWatch(
     ctx.until = next.until;
     // An earlier `since` than the cursors were built with (the first
     // windowed run, or organisers moving the start) means reading the logs
-    // again. What this machine already reported is in the spool, so it is
-    // not sent twice.
+    // again. Committed recent ids avoid ordinary repeats; older deliveries
+    // may be sent again and are permanently deduplicated by the server.
     if (cursors.coverFrom(next.since)) {
-      for (const event of history ?? readSpool()) {
-        if (
-          validateEvent(event).length === 0 &&
-          event.identity.userId === me._id
-        ) {
-          rememberTelemetry(recent, event);
-        }
-      }
       log("reading harness logs again to cover the whole hackathon window");
     }
   };
