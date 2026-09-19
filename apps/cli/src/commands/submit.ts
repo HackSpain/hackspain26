@@ -28,6 +28,18 @@ type SubmitOptions = {
   yes?: boolean;
 };
 
+/** Scripts can submit a complete draft without repeating its required fields. */
+function flagOrStoredForSubmit(
+  flagValue: string | undefined,
+  storedValue: string | undefined,
+  interactive: boolean,
+  mode: "draft" | "submit"
+): string | undefined {
+  return (
+    flagValue ?? (mode === "submit" && !interactive ? storedValue : undefined)
+  );
+}
+
 export function registerSubmit(program: Command): void {
   program
     .command("submit")
@@ -78,17 +90,31 @@ export function registerSubmit(program: Command): void {
 
       const existing = projectArgsFrom(current);
 
-      const name = await textOrFlag(ctx, opts.name, {
+      const nameFlag = flagOrStoredForSubmit(
+        opts.name,
+        existing.name,
+        ctx.interactive,
+        mode
+      );
+      const name = await textOrFlag(ctx, nameFlag, {
         flag: "--name",
         initialValue: existing.name,
         message: "Project name",
+        optional: mode === "draft",
         validate: (v) =>
           v.trim().length >= 2 ? undefined : "At least 2 characters",
       });
-      const description = await textOrFlag(ctx, opts.description, {
+      const descriptionFlag = flagOrStoredForSubmit(
+        opts.description,
+        existing.description,
+        ctx.interactive,
+        mode
+      );
+      const description = await textOrFlag(ctx, descriptionFlag, {
         flag: "--description",
         initialValue: existing.description,
         message: "What does it do? (one or two sentences)",
+        optional: mode === "draft",
         validate: (v) =>
           mode === "draft" || v.trim().length >= 10
             ? undefined
@@ -130,7 +156,13 @@ export function registerSubmit(program: Command): void {
       const currentSlug = tracks.find(
         (t) => t._id === existing.challengeIds[0]
       )?.slug;
-      const trackSlug = await pickOne(ctx, opts.track, {
+      const trackFlag = flagOrStoredForSubmit(
+        opts.track,
+        currentSlug,
+        ctx.interactive,
+        mode
+      );
+      const trackSlug = await pickOne(ctx, trackFlag, {
         choices: tracks.map((t) => ({
           hint: `${t.teamCount}/${t.teamLimit}`,
           label: t.label,
