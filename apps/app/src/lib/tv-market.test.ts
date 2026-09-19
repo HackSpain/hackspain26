@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Sample, Team } from "@/app/insights/mock-data";
-import { demoInsights, marketSeries, marketSlides, marketTeams, marketTotals } from "./tv-market";
+import { demoInsights, marketPeople, marketSeries, marketSides, marketSlides, marketTeams, marketTotals } from "./tv-market";
 
 const team = (id: string, name: string): Team => ({
   color: "#000", description: "", id, members: 3, name, primary: "claude-code", project: "", secondary: "cursor", track: "",
@@ -40,6 +40,23 @@ test("every ranking page gets a turn, with the charts in between", () => {
   const slides = marketSlides(30, 7);
   assert.deepEqual(slides.filter((slide) => slide.kind === "ranking").map((slide) => slide.page), [0, 1, 2, 3, 4]);
   assert.equal(slides.length, 8);
+});
+
+test("each individual ranking orders by its own metric and leaves out people with nothing on it", () => {
+  const person = (id: string, tokens: number, pushes: number, pullRequests = 0) => ({ id, name: id, pullRequests, pushes, team: "", tokens });
+  const people = [person("ana", 900, 1), person("blas", 0, 4, 2), person("cruz", 300, 0)];
+  assert.deepEqual(marketPeople(people, "tokens", 8).map((row) => row.id), ["ana", "cruz"]);
+  assert.deepEqual(marketPeople(people, "git", 8).map((row) => row.id), ["blas", "ana"]);
+  assert.deepEqual(marketPeople(people, "git", 1).map((row) => row.id), ["blas"]);
+});
+
+test("the side column splits the feed in posts and GitHub, then gives one ranking its turn", () => {
+  const both = { commits: 3, posts: 2 };
+  assert.deepEqual(marketSides({ commits: 0, posts: 0 }, []), ["posts"]);
+  assert.deepEqual(marketSides(both, []), ["posts", "commits"]);
+  const onlyGit = [{ id: "gh:blas", name: "blas", pullRequests: 0, pushes: 2, team: "", tokens: 0 }];
+  assert.deepEqual(marketSides({ commits: 3, posts: 0 }, onlyGit), ["commits", "git"]);
+  assert.deepEqual(marketSides(both, demoInsights(0, 0).people), ["posts", "commits", "tokens", "posts", "commits", "git"]);
 });
 
 test("the demo is the same on every screen and only the bucket in progress moves", () => {

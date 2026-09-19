@@ -80,10 +80,25 @@ retícula de celdas de color de la landing:
   equipos por página, todas las páginas pasan), herramientas de IA y tecnologías.
 - El feed (publicaciones y GitHub) baja una fila cada 4,5 segundos y recicla las
   16 últimas; una publicación nueva entra arriba al momento.
+- La columna del feed rota en turnos de 10 segundos, con una barra de progreso en
+  la cabecera: publicaciones, GitHub y una clasificación individual (primero las
+  ocho personas con más tokens; a la vuelta siguiente, las ocho con más pushes y
+  pull requests). Cada fila de la clasificación enseña las dos cosas. Una vista sin
+  nada que enseñar cede su turno.
 - Una cinta de patrocinadores en tinta, como en la landing.
 
 Los datos son los de `/api/tv/insights` (RawTree y Convex, refresco cada 30
-segundos) y `tv.listFeed`; nada por persona. La rotación se detiene con la pestaña
+segundos) y `tv.listFeed`. Por persona solo sale lo de la clasificación individual:
+nombre, foto, equipo, tokens, pushes y pull requests de quienes caben en pantalla; el
+consumo del resto no sale del servidor. Los tokens se cruzan por el usuario de la
+CLI y GitHub por la cuenta vinculada; un login sin vincular aparece con su login y
+sin tokens. Las clasificaciones enseñan la foto de cada persona y el logo de cada
+equipo cuando los hay (un login sin vincular, su avatar público de GitHub) y sus
+iniciales cuando no; la cinta de equipos solo pone el logo si existe. Las herramientas
+de IA y las tecnologías llevan su logotipo desde `public/tv-icons`, que genera
+`pnpm icons:tv` (simple-icons y los logos de harness de la landing); hay que volver a
+ejecutarlo al ampliar el catálogo de stacks o los harness. Lo que no tiene logotipo
+enseña sus iniciales. La rotación se detiene con la pestaña
 en segundo plano y respeta movimiento reducido. `/tv?view=panel&demo=1` usa equipos
 y cifras inventados (`src/lib/tv-market.ts`), nunca mezclados con los reales.
 

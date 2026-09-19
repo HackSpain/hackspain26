@@ -25,9 +25,18 @@ export type ModelRow = {
   requests: number;
 };
 
+/** One person's tokens over the whole hackathon window, every harness together. */
+export type PersonUsageRow = {
+  /** `hackspain.user.id`: the Convex user id the CLI session belongs to. */
+  userId: string;
+  tokens: number;
+};
+
 export type UsageWindow = { startsAt: number; endsAt: number; buckets: number };
 
 const MODEL_ROWS = 12;
+/** Everybody at the hackathon fits; the route keeps only who the screen shows. */
+const PEOPLE_ROWS = 2000;
 
 /**
  * Same dedupe as `usageSql`, then tokens and requests per normalised model
@@ -65,6 +74,48 @@ GROUP BY model
 ORDER BY tokens DESC, model
 LIMIT ${MODEL_ROWS}
 `.trim();
+}
+
+/** Same dedupe as `usageSql`, then tokens per person, most first. */
+export function peopleSql(table: string, window: UsageWindow): string {
+  if (!TABLE_NAME.test(table)) {
+    throw new Error("Invalid telemetry table name");
+  }
+  const start = Math.floor(window.startsAt / 1000);
+  const end = Math.floor(window.endsAt / 1000);
+  return `
+WITH events AS (
+  SELECT
+    toString(\`hackspain.user.id\`) AS userId,
+    toString(\`event.id\`) AS id,
+    any(intDiv(toInt64OrZero(toString(timeUnixNano)), 1000000000)) AS at,
+    any(toInt64OrZero(toString(\`hackspain.usage.total_tokens\`))) AS total
+  FROM ${table}
+  WHERE toString(eventName) = 'hackspain.usage'
+  GROUP BY userId, id
+)
+SELECT userId, sum(total) AS tokens
+FROM events
+WHERE at >= ${start} AND at < ${end} AND userId != ''
+GROUP BY userId
+ORDER BY tokens DESC, userId
+LIMIT ${PEOPLE_ROWS}
+`.trim();
+}
+
+export function parsePersonRows(data: unknown[]): PersonUsageRow[] {
+  const rows: PersonUsageRow[] = [];
+  for (const entry of data) {
+    if (typeof entry !== "object" || entry === null) {
+      continue;
+    }
+    const row = entry as Record<string, unknown>;
+    if (typeof row.userId !== "string" || !row.userId) {
+      continue;
+    }
+    rows.push({ tokens: toCount(row.tokens), userId: row.userId });
+  }
+  return rows;
 }
 
 export function parseModelRows(data: unknown[]): ModelRow[] {
@@ -175,11 +226,11 @@ export function parseUsageRows(data: unknown[]): UsageRow[] {
 }
 
 export type UsageResult =
-  | { status: "ok"; rows: UsageRow[]; models: ModelRow[] }
+  | { status: "ok"; rows: UsageRow[]; models: ModelRow[]; people: PersonUsageRow[] }
   /** No RawTree key on this deployment. */
-  | { status: "unconfigured"; rows: []; models: [] }
+  | { status: "unconfigured"; rows: []; models: []; people: [] }
   /** The table does not exist until the first event of the hackathon lands. */
-  | { status: "empty"; rows: []; models: [] };
+  | { status: "empty"; rows: []; models: []; people: [] };
 
 /**
  * The dashboard uses one `read_write` RawTree key for ingestion and queries.
@@ -193,7 +244,7 @@ export async function fetchUsage(
   const apiKey = process.env.RAWTREE_API_KEY;
   const database = process.env.RAWTREE_DATABASE;
   if (!apiKey || !database) {
-    return { models: [], rows: [], status: "unconfigured" };
+    return { models: [], people: [], rows: [], status: "unconfigured" };
   }
   const rawtree = new RawTree({
     apiKey,
@@ -205,7 +256,7 @@ export async function fetchUsage(
     userAgent: "hackspain-dashboard/1.0",
   });
   try {
-    const [usage, models] = await Promise.all([
+    const [usage, models, people] = await Promise.all([
       rawtree.query({
         signal: AbortSignal.timeout(15_000),
         sql: usageSql(OTLP_LOGS_TABLE, window),
@@ -214,15 +265,20 @@ export async function fetchUsage(
         signal: AbortSignal.timeout(15_000),
         sql: modelsSql(OTLP_LOGS_TABLE, window),
       }),
+      rawtree.query({
+        signal: AbortSignal.timeout(15_000),
+        sql: peopleSql(OTLP_LOGS_TABLE, window),
+      }),
     ]);
     return {
       models: parseModelRows(models.data),
+      people: parsePersonRows(people.data),
       rows: parseUsageRows(usage.data),
       status: "ok",
     };
   } catch (error) {
     if (error instanceof RawTreeError && isMissingTable(error)) {
-      return { models: [], rows: [], status: "empty" };
+      return { models: [], people: [], rows: [], status: "empty" };
     }
     throw error;
   }

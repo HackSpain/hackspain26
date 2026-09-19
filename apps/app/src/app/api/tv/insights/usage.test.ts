@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { fetchUsage, modelsSql, parseModelRows, parseUsageRows, usageSql } from "./usage";
+import { fetchUsage, modelsSql, parseModelRows, parsePersonRows, parseUsageRows, peopleSql, usageSql } from "./usage";
 
 const window = {
   buckets: 24,
@@ -60,6 +60,20 @@ describe("modelsSql", () => {
   });
 });
 
+test("peopleSql dedupes on the permanent key and sums tokens per person", () => {
+  const sql = peopleSql("hackspain_otel_logs", window);
+  expect(sql).toContain("GROUP BY userId, id");
+  expect(sql).toContain("at >= 1789749900 AND at < 1789920000 AND userId != ''");
+  expect(sql).toContain("GROUP BY userId\n");
+  expect(() => peopleSql("t; DROP TABLE x", window)).toThrow();
+});
+
+test("parsePersonRows drops rows without a user", () => {
+  expect(
+    parsePersonRows([{ tokens: "900", userId: "u1" }, { tokens: 5 }, { tokens: 5, userId: "" }, null])
+  ).toEqual([{ tokens: 900, userId: "u1" }]);
+});
+
 test("parseModelRows fills family and provider and drops nameless rows", () => {
   expect(
     parseModelRows([
@@ -118,6 +132,7 @@ describe("fetchUsage", () => {
     process.env.RAWTREE_DATABASE = "hackspain";
     expect(await fetchUsage(window)).toEqual({
       models: [],
+      people: [],
       rows: [],
       status: "unconfigured",
     });
@@ -136,9 +151,12 @@ describe("fetchUsage", () => {
         url: String(input),
       });
       const sql = (JSON.parse(String(init?.body)) as { sql: string }).sql;
-      const data = sql.includes("GROUP BY model")
-        ? [{ family: "claude", name: "claude-sonnet-4-5", provider: "anthropic", requests: 1, tokens: 100 }]
-        : [{ bucket: 0, cachedTokens: 70, harness: "claude-code", requests: 1, sessions: 1, teamId: "t1", tokens: 100 }];
+      let data: unknown[] = [{ bucket: 0, cachedTokens: 70, harness: "claude-code", requests: 1, sessions: 1, teamId: "t1", tokens: 100 }];
+      if (sql.includes("GROUP BY model")) {
+        data = [{ family: "claude", name: "claude-sonnet-4-5", provider: "anthropic", requests: 1, tokens: 100 }];
+      } else if (sql.includes("GROUP BY userId\n")) {
+        data = [{ tokens: 100, userId: "u1" }];
+      }
       return Response.json({
         data,
         meta: [],
@@ -152,8 +170,9 @@ describe("fetchUsage", () => {
     expect(result.models).toEqual([
       { family: "claude", name: "claude-sonnet-4-5", provider: "anthropic", requests: 1, tokens: 100 },
     ]);
-    // One aggregate per table read: usage per team/harness/bucket and models.
-    expect(calls).toHaveLength(2);
+    expect(result.people).toEqual([{ tokens: 100, userId: "u1" }]);
+    // One aggregate per table read: usage per team/harness/bucket, models and people.
+    expect(calls).toHaveLength(3);
     expect(calls[0]?.url).toContain("https://rawtree.test/v1/query");
     expect(calls[0]?.url).toContain("database=hackspain");
     expect(calls[0]?.auth).toBe("Bearer rt_read_write");
@@ -171,6 +190,7 @@ describe("fetchUsage", () => {
       )) as unknown as typeof fetch;
     expect(await fetchUsage(window, missing)).toEqual({
       models: [],
+      people: [],
       rows: [],
       status: "empty",
     });

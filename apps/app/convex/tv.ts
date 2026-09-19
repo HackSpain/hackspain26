@@ -269,11 +269,12 @@ export const listFeed = query({
   returns: v.array(tvFeedPostReturn),
   handler: async (ctx, args) => {
     const source = args.source ?? "participants";
+    // One kind is read from further back: a burst of commits must not empty the posts view.
     const rows = await ctx.db
       .query("posts")
       .withIndex("by_created")
       .order("desc")
-      .take(40);
+      .take(source === "all" ? 40 : 200);
     const filtered = rows.filter((row) => {
       if (source === "participants") return row.kind === "post";
       if (source === "github") return row.kind === "github";

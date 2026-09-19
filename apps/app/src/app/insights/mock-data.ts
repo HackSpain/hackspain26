@@ -102,6 +102,8 @@ export interface Team {
   primary: HarnessId;
   secondary: HarnessId;
   color: string;
+  /** Team logo, when the owner uploaded one. */
+  logoUrl?: string;
 }
 
 // Insights telemetry is not connected yet. Never substitute fictional teams.
