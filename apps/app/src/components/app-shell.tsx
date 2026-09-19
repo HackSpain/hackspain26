@@ -50,11 +50,13 @@ function AccountMenu({
   name,
   avatarUrl,
   userType,
+  isAdmin,
 }: {
   pathname: string;
   name?: string;
   avatarUrl?: string;
   userType?: string;
+  isAdmin: boolean;
 }) {
   const { signOut } = useAuthActions();
   const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
@@ -89,6 +91,19 @@ function AccountMenu({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
+        ) : null}
+        {isAdmin ? (
+          <DropdownMenuItem asChild className="sm:hidden">
+            <Link
+              href="/admin"
+              className={cn(
+                "font-bungee uppercase",
+                pathname.startsWith("/admin") && "bg-hs-gold text-hs-ink",
+              )}
+            >
+              Admin panel
+            </Link>
+          </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild>
           <Link
@@ -188,7 +203,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         accountMenu={
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <Button asChild variant="outline" className={cn("text-xs", pathname.startsWith("/admin") && "bg-hs-gold")}>
+              <Button asChild variant="outline" className={cn("hidden text-xs sm:inline-flex", pathname.startsWith("/admin") && "bg-hs-gold")}>
                 <Link href="/admin" aria-current={pathname === "/admin" ? "page" : undefined}>Admin panel</Link>
               </Button>
             )}
@@ -197,6 +212,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               name={displayName ?? undefined}
               avatarUrl={me?.avatarUrl}
               userType={me?.userType?.label}
+              isAdmin={isAdmin}
             />
           </div>
         }
