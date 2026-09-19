@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { INSIGHTS_LAYOUT, PANEL_V2_LAYOUT } from "../../convex/lib/tvLayouts";
+import { INSIGHTS_LAYOUT, MENTORS_LAYOUT, PANEL_V2_LAYOUT } from "../../convex/lib/tvLayouts";
 import { layoutTvBox, tvFontSizeClass, tvFontSizePixels, tvFontSizeStyle } from "./tv";
 
 test("custom pixels scale from the same 1920px canvas in preview and TV", () => {
@@ -38,6 +38,15 @@ test("panelv2 layout fits the canvas and keeps live CLI widgets", () => {
   assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "feed" && widget.feedSource === "all"), true);
   assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "sponsorTicker" && widget.text === "logos"), true);
   for (const widget of PANEL_V2_LAYOUT) {
+    const { x, y, w, h } = widget;
+    assert.deepEqual(layoutTvBox(widget), { x, y, w, h });
+  }
+});
+
+test("mentors screen fits the canvas and includes the mentors widget", () => {
+  assert.equal(MENTORS_LAYOUT.length, 3);
+  assert.ok(MENTORS_LAYOUT.some((widget) => widget.kind === "mentors"));
+  for (const widget of MENTORS_LAYOUT) {
     const { x, y, w, h } = widget;
     assert.deepEqual(layoutTvBox(widget), { x, y, w, h });
   }

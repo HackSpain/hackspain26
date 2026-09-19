@@ -24,6 +24,7 @@ import {
   LiveModelsBox,
   LiveTokensBox,
 } from "./live-boxes";
+import { MentorsBox } from "./mentor-boxes";
 import { SponsorGridBox, SponsorTickerBox } from "./sponsor-boxes";
 
 function BannerWidget({
@@ -338,5 +339,7 @@ export function TvWidgetView({
           logosOnly={widget.text === "logos"}
         />
       );
+    case "mentors":
+      return <MentorsBox />;
   }
 }

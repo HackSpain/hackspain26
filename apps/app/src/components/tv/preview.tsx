@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { TV_PALETTE, tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from '@/lib/tv';
 import type { TvFontWeight, TvWidget } from '@/lib/tv';
 import { cn } from '@/lib/utils';
+import { MentorsPreview } from "./mentor-boxes";
 import { SponsorTickerBox } from './sponsor-boxes';
 
 function BannerPreview({
@@ -363,6 +364,9 @@ export const TvWidgetPreview = memo(function TvWidgetPreview({
           speed={widget.tickerSpeed}
         />
       );
+    }
+    case "mentors": {
+      return <MentorsPreview />;
     }
   }
 });

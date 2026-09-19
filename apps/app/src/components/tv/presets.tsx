@@ -14,6 +14,7 @@ import type { FeedPost } from "./feed-box";
 import { MarketScreen } from "./market";
 import { TeamsScreen } from "./teams";
 import { useClock, useTick } from "./motion";
+import { MentorsScreen } from "./mentor-boxes";
 import { SponsorsScreen } from "./sponsors-screen";
 import { TvStage } from "./stage";
 
@@ -72,6 +73,7 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
   if (config.preset === "panelv2") { return <PanelV2Screen demo={demo} />; }
   if (config.preset === "equipos") { return <TeamsScreen demo={demo} />; }
   if (config.preset === "patrocinadores") { return <SponsorsScreen />; }
+  if (config.preset === "mentores") { return <MentorsScreen />; }
   return (
     <main className="flex h-dvh w-full flex-col gap-[4vmin] overflow-hidden bg-hs-ink p-[4vmin] text-hs-paper">
       <header className="flex shrink-0 items-center justify-between gap-6">

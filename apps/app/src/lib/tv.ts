@@ -261,6 +261,12 @@ export const TV_PALETTE: readonly {
     hint: "Marquesina",
     group: "sponsors",
   },
+  {
+    kind: "mentors",
+    label: "Mentores",
+    hint: "Quiénes están en sala",
+    group: "tv",
+  },
 ];
 
 export const TICKER_DURATION: Record<TvTickerSpeed, string> = {
