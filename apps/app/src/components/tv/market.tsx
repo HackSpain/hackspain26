@@ -16,6 +16,7 @@ import {
 import type { MarketPost, MarketSeries, MarketSlide, MarketTeam } from "@/lib/tv-market";
 import { cn } from "@/lib/utils";
 import { useClock, usePageVisible, useTick } from "./motion";
+import { MilestoneBroadcast } from "./milestone-broadcast";
 
 const SLIDE_MS = 12_000;
 const FEED_MS = 4500;
@@ -375,7 +376,7 @@ function MarketStage({ data, posts, demo }: { data: LiveInsightData; posts: Mark
   const teams = useMemo(() => marketTeams(data.samples, data.teams), [data.samples, data.teams]);
   const bucket = currentBucket(data.samples);
   return (
-    <main className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
+    <main className="relative h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
       <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] px-[var(--line)] pt-[var(--line)] pb-[calc(var(--u)*1.2)]">
         <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1fr)_calc(var(--u)*7)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
           <Diagonal bg="bg-hs-paper" tri="bg-hs-orange" corner="tl" className="portrait:hidden" />
@@ -395,12 +396,15 @@ function MarketStage({ data, posts, demo }: { data: LiveInsightData; posts: Mark
           <Diagonal bg="bg-hs-teal" tri="bg-hs-orange" corner="br" className="portrait:hidden" />
         </header>
         <TeamTape teams={teams} />
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <div className="flex min-h-0 flex-col gap-[var(--line)]">
-            <Kpis series={series} />
-            <Board data={data} series={series} teams={teams} />
+        <div className="relative min-h-0 flex-1">
+          <div className="grid h-full min-h-0 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="flex min-h-0 flex-col gap-[var(--line)]">
+              <Kpis series={series} />
+              <Board data={data} series={series} teams={teams} />
+            </div>
+            <Feed posts={posts} />
           </div>
-          <Feed posts={posts} />
+          <MilestoneBroadcast data={data} replayInitial={demo} />
         </div>
         <SponsorStrip />
       </div>
