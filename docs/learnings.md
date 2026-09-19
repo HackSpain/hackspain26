@@ -165,6 +165,18 @@ configuration failing without overwriting the user's file.
 
 **Verification.** State the timezone, exact interval, source, pagination/retention limits, and last occurrence. The Convex CLI sample available during this investigation covered only roughly 2,000 recent completions around 21:18–21:20 and contained no function errors; it did not establish that Convex was error-free since 17:00. No recurrence in a short sample is not proof of resolution. Recheck comparable traffic after a mitigation and report remaining uncertainty.
 
+**Follow-up, 2026-09-19.** Better Stack recorded the same refresh transport failure
+with `@convex-dev/auth` 0.0.95. Its `verifyCode` exhausts two short network retries
+and throws; Convex 1.45.0's scheduled `refetchToken` does not catch that rejection
+or schedule recovery. The dashboard now wraps the public auth token-fetcher hook,
+keeping a forced refresh pending across recognized browser network errors and
+retrying after 15 seconds or an online event. Concurrent calls share the attempt;
+logout/unmount cancels recovery. SDK token storage and cross-tab locking are
+unchanged. Report the first transport failure, preserve null-token responses and
+non-network errors, and never describe this as a repair of the underlying network
+or edge rejection. Tests cover recovery, cancellation, concurrent calls, and
+preservation of SDK outcomes. Production recovery still needs verification.
+
 ## 2026-09-18 — Unexpected API failures need server diagnostics
 
 **Evidence.** `/api/cli/rpc` returned 21 HTTP 500s against 8,687 HTTP 200s in the investigated period. Its catch block converted exceptions to responses without logging the failing function, so historical logs could not identify the root cause.
