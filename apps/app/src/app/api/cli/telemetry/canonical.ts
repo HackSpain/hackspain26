@@ -11,6 +11,32 @@ export const TELEMETRY_SCHEMA = "hackspain.telemetry.v2" as const;
 /** Still accepted from binaries up to 0.4.x and upgraded on ingestion. */
 export const TELEMETRY_SCHEMA_V1 = "hackspain.telemetry.v1" as const;
 
+/** Keep legacy event ids, and correlate Claude's transcript and native OTLP ids. */
+export function telemetryDedupKeys(event: {
+  eventId: string;
+  harness: string;
+  type: string;
+  sessionId: string;
+  identity: { userId: string };
+  native?: { requestId?: string };
+}): string[] {
+  const keys = [JSON.stringify([event.identity.userId, "event", event.eventId])];
+  if (event.harness === "claude-code" && event.type === "usage" && event.native?.requestId) {
+    keys.push(JSON.stringify([event.identity.userId, "claude-request", event.sessionId, event.native.requestId]));
+  }
+  return keys;
+}
+
+/** Remember both aliases even when one is already known. */
+export function rememberTelemetry(seen: Set<string>, event: Parameters<typeof telemetryDedupKeys>[0]): boolean {
+  const keys = telemetryDedupKeys(event);
+  const duplicate = keys.some((key) => seen.has(key));
+  for (const key of keys) {
+    seen.add(key);
+  }
+  return duplicate;
+}
+
 export const MODEL_FAMILIES = [
   "claude",
   "gpt",

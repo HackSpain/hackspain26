@@ -1,18 +1,31 @@
 import type { Command } from "commander";
-import { recordCursorHook } from "../watcher/collectors/cursor";
+import {
+  readCursorWindow,
+  recordCursorHook,
+} from "../watcher/collectors/cursor";
 
 const MAX_HOOK_BYTES = 8 * 1024 * 1024;
 
 async function readHookInput(): Promise<unknown> {
   const chunks: Buffer[] = [];
   let bytes = 0;
-  for await (const chunk of process.stdin) {
-    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    bytes += buffer.length;
-    if (bytes > MAX_HOOK_BYTES) {
-      return null;
+  // Bun's native stream also reads redirected regular-file stdin on Linux.
+  const reader = Bun.stdin.stream().getReader();
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      bytes += value.byteLength;
+      if (bytes > MAX_HOOK_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(Buffer.from(value));
     }
-    chunks.push(buffer);
+  } finally {
+    reader.releaseLock();
   }
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
@@ -26,10 +39,17 @@ export function registerCursorHook(program: Command): void {
   program
     .command("_cursor-hook", { hidden: true })
     .allowUnknownOption(false)
-    .action(async () => {
+    .option("--event-log <path>", "recorder destination")
+    .option("--window-file <path>", "collection window")
+    .action(async (flags: { eventLog?: string; windowFile?: string }) => {
       const input = await readHookInput();
       if (input !== null) {
-        recordCursorHook(input);
+        recordCursorHook(
+          input,
+          flags.eventLog,
+          Date.now(),
+          readCursorWindow(flags.windowFile)
+        );
       }
     });
 }

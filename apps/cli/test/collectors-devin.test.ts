@@ -250,20 +250,115 @@ describe("devin", () => {
     expect(logs[0]).toContain("devin: cannot read");
   });
 
-  test("database path follows XDG_DATA_HOME and discovery needs the file", async () => {
-    const saved = process.env.XDG_DATA_HOME;
+  test("database discovery follows the override and needs the file", async () => {
+    const saved = process.env.HACKSPAIN_DEVIN_DB;
     try {
-      process.env.XDG_DATA_HOME = dir;
+      process.env.HACKSPAIN_DEVIN_DB = join(dir, "devin", "cli", "sessions.db");
       expect(devinDbPath()).toBe(join(dir, "devin", "cli", "sessions.db"));
       expect(await devinCollector.discover()).toEqual([]);
       mkdirSync(join(dir, "devin", "cli"), { recursive: true });
       makeDb(devinDbPath(), []);
       expect(await devinCollector.discover()).toEqual([devinDbPath()]);
     } finally {
-      delete process.env.XDG_DATA_HOME;
+      delete process.env.HACKSPAIN_DEVIN_DB;
       if (saved !== undefined) {
-        process.env.XDG_DATA_HOME = saved;
+        process.env.HACKSPAIN_DEVIN_DB = saved;
       }
     }
   });
+});
+
+test("Devin resolves Windows, Linux and macOS paths without host-specific joins", () => {
+  expect(
+    devinDbPath(
+      "win32",
+      {
+        APPDATA: "C:\\Users\\sam\\AppData\\Roaming",
+        XDG_DATA_HOME: "/ignored",
+      },
+      "C:\\Users\\sam"
+    )
+  ).toBe("C:\\Users\\sam\\AppData\\Roaming\\devin\\cli\\sessions.db");
+  expect(devinDbPath("win32", {}, "C:\\Users\\sam")).toBe(
+    "C:\\Users\\sam\\AppData\\Roaming\\devin\\cli\\sessions.db"
+  );
+  expect(
+    devinDbPath("linux", { XDG_DATA_HOME: "/custom/data" }, "/home/sam")
+  ).toBe("/custom/data/devin/cli/sessions.db");
+  expect(devinDbPath("darwin", {}, "/Users/sam")).toBe(
+    "/Users/sam/.local/share/devin/cli/sessions.db"
+  );
+  expect(
+    devinDbPath(
+      "linux",
+      { HACKSPAIN_DEVIN_DB: "/mounted/sessions.db" },
+      "/home/sam"
+    )
+  ).toBe("/mounted/sessions.db");
+});
+
+test("Devin reads new WAL rows even when database and WAL mtimes are unchanged", async () => {
+  const path = join(dir, "sessions.db");
+  makeDb(path, [[SESSION.id, AT, assistant("m1", { input_tokens: 1 })]]);
+  const previousTime = new Date(AT * 1000);
+  utimesSync(path, previousTime, previousTime);
+  const cursors = memoryCursorStore();
+  await drain(collectDevin([path], ctx({ cursors })));
+  const writer = new Database(path);
+  try {
+    writer.run("PRAGMA journal_mode=WAL");
+    writer.run(
+      "INSERT INTO message_nodes (session_id, node_id, created_at, chat_message) VALUES (?, ?, ?, ?)",
+      [SESSION.id, 10, AT + 1, assistant("wal", { input_tokens: 10 })]
+    );
+    utimesSync(path, previousTime, previousTime);
+    utimesSync(`${path}-wal`, previousTime, previousTime);
+    const events = await drain(collectDevin([path], ctx({ cursors })));
+    expect(events.map((event) => event.eventId)).toEqual([
+      "devin:fine-tarn:wal",
+    ]);
+  } finally {
+    writer.close();
+  }
+});
+
+test("Devin retries disappearing databases, pages large histories and resets row cursors", async () => {
+  const path = join(dir, "sessions.db");
+  const logs: string[] = [];
+  const context = ctx({ log: (message) => logs.push(message) });
+  expect(await drain(collectDevin([path], context))).toEqual([]);
+  expect(context.cursors.get(path)).toBeUndefined();
+  makeDb(
+    path,
+    Array.from({ length: 601 }, (_, i) => [
+      SESSION.id,
+      AT + i,
+      assistant(`m${i}`, { input_tokens: 1 }),
+    ])
+  );
+  expect(await drain(collectDevin([path], context))).toHaveLength(602);
+  const db = new Database(path);
+  db.run("DELETE FROM message_nodes");
+  db.run(
+    "INSERT INTO message_nodes (row_id, session_id, node_id, created_at, chat_message) VALUES (?, ?, ?, ?, ?)",
+    [1, SESSION.id, 1, AT + 700, assistant("reset", { output_tokens: 7 })]
+  );
+  db.close();
+  expect((await drain(collectDevin([path], context))).at(-1)?.eventId).toBe(
+    "devin:fine-tarn:reset"
+  );
+});
+
+test("Devin rejects malformed timestamps and metrics without poisoning later rows", async () => {
+  const path = join(dir, "sessions.db");
+  makeDb(path, [
+    [SESSION.id, 1e100, assistant("bad-time", { input_tokens: 1 })],
+    [SESSION.id, AT, assistant("bad-tokens", { input_tokens: -10 })],
+    [SESSION.id, AT, assistant("good", { input_tokens: 1 })],
+  ]);
+  const events = await drain(collectDevin([path], ctx()));
+  expect(events.map((event) => event.eventId)).toEqual([
+    "devin:fine-tarn:start",
+    "devin:fine-tarn:good",
+  ]);
 });

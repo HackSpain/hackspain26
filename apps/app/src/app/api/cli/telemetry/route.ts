@@ -3,6 +3,7 @@ import { closedMessage } from "@convex/lib/eventWindow";
 import { fetchQuery } from "convex/nextjs";
 import { reportServerEvent } from "@/lib/server-observability";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
+import { rememberTelemetry } from "./canonical";
 import {
   exportTelemetryAsOtlpLogs,
   RawTreeOtlpConfigurationError,
@@ -18,6 +19,7 @@ const MAX_BODY_BYTES = 5 * 1024 * 1024;
 
 type RejectionReason =
   | "duplicate_event_id"
+  | "duplicate_request"
   | "event_too_large"
   | "invalid_event"
   | "invalid_json"
@@ -103,6 +105,7 @@ export async function POST(request: Request) {
   const accepted: NonNullable<ReturnType<typeof parseTelemetryEvent>>[] = [];
   const rejections: Rejection[] = [];
   const seenEventIds = new Set<string>();
+  const seenTelemetry = new Set<string>();
   for (const entry of lines) {
     if (encoder.encode(entry.line).byteLength > TELEMETRY_EVENT_MAX_BYTES) {
       rejections.push(rejection(entry.number, "event_too_large"));
@@ -127,6 +130,10 @@ export async function POST(request: Request) {
         continue;
       }
       seenEventIds.add(event.eventId);
+      if (rememberTelemetry(seenTelemetry, event)) {
+        rejections.push(rejection(entry.number, "duplicate_request", event));
+        continue;
+      }
       accepted.push(event);
     } catch {
       rejections.push(rejection(entry.number, "invalid_json"));

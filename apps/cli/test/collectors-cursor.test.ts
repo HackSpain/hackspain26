@@ -10,9 +10,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   collectCursor,
+  cursorHookCommand,
   installCursorHook,
   normalizeCursorHook,
   recordCursorHook,
+  setCursorCollectionWindow,
 } from "../src/watcher/collectors/cursor";
 import { memoryCursorStore } from "../src/watcher/cursor-store";
 import { stamp } from "../src/watcher/index";
@@ -161,6 +163,7 @@ describe("cursor", () => {
       custom: true,
       hooks: {
         afterAgentResponse: [{ command: "/bin/hackspain _cursor-hook" }],
+        stop: [{ command: "/bin/hackspain _cursor-hook" }],
         afterFileEdit: [{ command: "./format.sh" }],
       },
       version: 1,
@@ -170,4 +173,108 @@ describe("cursor", () => {
     expect(() => installCursorHook(root)).toThrow("invalid JSON");
     expect(readFileSync(path, "utf8")).toBe("not json");
   });
+});
+
+test("replaces obsolete recorder commands and preserves unrelated hook options", () => {
+  const path = join(dir, "hooks.json");
+  const custom = { command: "./after.sh", timeout: 10 };
+  writeFileSync(
+    path,
+    JSON.stringify({
+      version: 1,
+      hooks: {
+        afterAgentResponse: [
+          custom,
+          { command: "'/old/hackspain' '_cursor-hook'" },
+        ],
+        stop: [{ command: "./stop.sh", loop_limit: 2 }],
+      },
+    })
+  );
+  const command =
+    "'/new path/hackspain' '_cursor-hook' '--event-log' '/state/log'";
+  expect(installCursorHook(dir, command)).toBe("installed");
+  expect(installCursorHook(dir, command)).toBe("present");
+  const config = JSON.parse(readFileSync(path, "utf8"));
+  expect(config.hooks.afterAgentResponse).toEqual([custom, { command }]);
+  expect(config.hooks.stop).toEqual([
+    { command: "./stop.sh", loop_limit: 2 },
+    { command },
+  ]);
+});
+
+test("does not partially rewrite config when the fallback hook is invalid", () => {
+  const path = join(dir, "hooks.json");
+  const original = JSON.stringify({ hooks: { stop: {} } });
+  writeFileSync(path, original);
+  expect(() => installCursorHook(dir)).toThrow("stop must be an array");
+  expect(readFileSync(path, "utf8")).toBe(original);
+});
+
+test("hook command pins storage even when the GUI has a different environment", async () => {
+  const eventLog = join(dir, "state with spaces", "events.jsonl");
+  const windowFile = join(dir, "state with spaces", "window.json");
+  setCursorCollectionWindow(
+    { since: 0, until: Date.now() + 60_000 },
+    windowFile
+  );
+  const command = cursorHookCommand();
+  expect(command).toContain("--event-log");
+  expect(command).toContain("--window-file");
+  const child = Bun.spawn(
+    [
+      process.execPath,
+      join(import.meta.dir, "../src/index.ts"),
+      "_cursor-hook",
+      "--event-log",
+      eventLog,
+      "--window-file",
+      windowFile,
+    ],
+    {
+      env: {
+        ...process.env,
+        XDG_STATE_HOME: join(dir, "different-gui-state"),
+        LOCALAPPDATA: join(dir, "different-gui-state"),
+        HACKSPAIN_NO_AUTO_UPDATE: "1",
+      },
+      stdin: new Blob([
+        JSON.stringify(
+          hook({
+            text: "must not persist",
+            workspace_roots: ["C:\\Users\\someone\\proyecto"],
+          })
+        ),
+      ]),
+      stdout: "pipe",
+      stderr: "pipe",
+    }
+  );
+  expect(await child.exited).toBe(0);
+  expect(await new Response(child.stdout).text()).toBe("");
+  const saved = readFileSync(eventLog, "utf8");
+  expect(saved).not.toContain("must not persist");
+  const events = await drain(collectCursor([eventLog], ctx()));
+  expect(events.at(-1)?.project?.name).toBe("proyecto");
+  expect(validateEvent(stamp(events.at(-1) as RawEvent, IDENTITY))).toEqual([]);
+});
+
+test("Windows hook commands quote paths literally for Cursor's PowerShell runner", () => {
+  const previous = process.env.HACKSPAIN_CURSOR_EVENT_LOG;
+  try {
+    process.env.HACKSPAIN_CURSOR_EVENT_LOG = join(
+      dir,
+      "Sam's $projects",
+      "events.jsonl"
+    );
+    const command = cursorHookCommand("win32");
+    expect(command).toContain("Sam''s $projects");
+    expect(command).toContain("'_cursor-hook'");
+    expect(command).not.toContain('"');
+  } finally {
+    delete process.env.HACKSPAIN_CURSOR_EVENT_LOG;
+    if (previous !== undefined) {
+      process.env.HACKSPAIN_CURSOR_EVENT_LOG = previous;
+    }
+  }
 });

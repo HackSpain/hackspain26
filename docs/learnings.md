@@ -2,6 +2,62 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — Native telemetry and transcripts have different event identities
+
+**Evidence and consequence.** [Claude Code's native API event](https://code.claude.com/docs/en/monitoring-usage#api-request-event)
+identifies a request by `request_id`; the transcript collector uses `message.id` as its event id
+and already retains transcript `requestId` in `native.requestId`. Enabling both inputs without
+correlation counts one API response twice. The documented event sequence resets per process,
+so it cannot replace request identity across restarts. Native logs also contain account/resource
+attributes that do not belong in HackSpain telemetry.
+
+**Correction and verification.** Keep existing event ids and schema v2. Apply the same additional
+user/session/request alias in the scanner, local replay, stats and ingestion. Insights first
+collapse retries by user/event, then correlate Claude request ids and prefer the native record.
+Allowlist usage before writing the receiver queue, and enforce the event window before its
+acknowledgement. Tests cover both arrival orders, participant isolation, native HTTP reception,
+restart, transcript fallback and preservation of existing exporter settings. No request id means
+transcript fallback, not a timestamp or sequence heuristic. Cursor's documented native export is
+Enterprise/server-side to public HTTPS; it cannot be wired to a participant's loopback listener.
+
+A review reproduced a crash/retry regression when all spool records were treated as delivered:
+spool writes can succeed before an upload has even been staged. Rebuild delivery aliases only
+from successfully checkpointed recent ids; keep the board's local deduplication separate. Test
+restart with the actual spool and a failed sink, not an empty injected history. When adding a
+new Insights aggregate, use the same request correlation for people, models and team totals.
+
+## 2026-09-19 — Watcher discovery and checkpoints can fail independently
+
+**Evidence and consequence.** Discovery and hook-window writes ran outside collector error
+boundaries, and setup ran only at startup. A discovery exception could end the entire watcher;
+a tool installed later could remain unprepared. Cursor hook commands also inherited the GUI's
+state-directory environment instead of the watcher's, so custom XDG state could split the window
+and event log. The inspected Cursor extension-host runtime executes Windows hooks through
+PowerShell (and supplies its call operator for quoted executables); use literal single-quoted
+arguments with doubled apostrophes, not expandable double quotes or Unix backslash escapes.
+Devin discovery used a Unix-only data path even though
+[Cognition documents](https://docs.devin.ai/cli/troubleshooting) its
+Windows data directory under `%APPDATA%\devin\cli`.
+
+The scanner queued an entire catch-up before flushing into buffers capped at 5,000 events;
+excess events were removed before either sink wrote them. Shutdown saved cursors even after a
+failed flush. Tests reproduce this with over 5,000 events and with a failing sink across restarts.
+
+**Correction and verification.** Retry isolated preparation/discovery each scan, pin Cursor's
+recorder paths in its command, and use Devin's platform data root with an explicit path override.
+Read Devin by bounded row-id pages instead of trusting mtime equality; validate each usage row,
+observe live WAL writes, and reset watermarks on replacement or a lower maximum row id. Flush
+before filling a batch; defer scanning on failure without committing unread source positions.
+Persist shutdown cursors only after successful delivery. Render the last diagnostic rather than
+keeping errors in invisible screen state. Keep focused tests for these cases; simulated path
+resolution alone is not verification on a native Windows machine.
+
+A Linux ARM64 container running Bun 1.3.11 also reproduced a hook exiting successfully without
+reading redirected file input through `process.stdin`; the native `Bun.stdin.stream()` read both
+file-backed input and a pipe. macOS with Bun 1.4.0 did not reproduce that input failure.
+The original participant reports did not include enough detail to establish that these were
+their only causes.
+
 ## 2026-09-19 — TV presence does not prove configuration delivery
 
 **Evidence and consequence.** Named screens sent HTTP heartbeats but ignored their
@@ -43,8 +99,8 @@ messages but no token usage. Cursor's current local runtime passes `conversation
 `afterAgentResponse` user hook. Treating the transcript as a usage source would either report
 fabricated estimates or leave Cursor invisible.
 
-**Prevention and verification.** Install one additive user hook from `hackspain watch`, preserve
-all existing Cursor hooks, and allowlist only usage metadata into HackSpain's private local state;
+**Prevention and verification.** Install additive `afterAgentResponse` and `stop` hooks from `hackspain watch`, preserve
+unrelated Cursor hooks and replace obsolete HackSpain commands, and allowlist only usage metadata into HackSpain's private local state;
 never retain the hook's response text or user email. Cursor input includes cache reads and writes,
 so subtract both before canonicalization. Deduplicate with `(conversation_id, generation_id)` and
 accept that sessions before installation and cloud agents cannot be backfilled. Focused tests must

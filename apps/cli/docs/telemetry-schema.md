@@ -23,7 +23,9 @@ Before an HTTP request, the CLI atomically saves the exact batch in a per-user p
 It removes that file only after a successful response, and retries it on the next flush or process
 start. Native OTLP ingestion does not promise insert deduplication, so a retry can create another
 physical row. Every downstream query treats (`hackspain.user.id`, `event.id`) as the permanent
-logical key.
+logical key. Claude usage additionally correlates `(userId, sessionId, native.requestId)`
+when present: native OTLP and old transcripts use different event ids for the same API response.
+Keep both rules, including for historical v1/v2 rows; session starts retain their existing ids.
 
 The dashboard receipt accounts for every input line as accepted or rejected. Rejections include a
 bounded event id, line number, and reason; the CLI records them in
@@ -55,9 +57,10 @@ buckets on `occurredAt`.
 
 | Harness | Source | Session id | `nativeId` | input | output | cacheRead | cacheWrite | model |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| claude-code | `~/.claude/projects/<slug>/<session>.jsonl`, lines with `type: "assistant"` | `sessionId` | `message.id` (several lines per response repeat it: dedupe) | `usage.input_tokens` | `usage.output_tokens` | `usage.cache_read_input_tokens` | `usage.cache_creation_input_tokens` | `message.model` (skip `<synthetic>`) |
+| claude-code (native OTLP) | authenticated loopback OTLP/HTTP JSON, `claude_code.api_request` | `session.id` | `request:<request_id>`; correlated with transcript `requestId` | `input_tokens` | `output_tokens` | `cache_read_tokens` | `cache_creation_tokens` | `model` |
+| claude-code (transcript fallback) | `~/.claude/projects/<slug>/<session>.jsonl`, lines with `type: "assistant"` | `sessionId` | `message.id` (several lines per response repeat it: dedupe) | `usage.input_tokens` | `usage.output_tokens` | `usage.cache_read_input_tokens` | `usage.cache_creation_input_tokens` | `message.model` (skip `<synthetic>`) |
 | codex | `~/.codex/sessions/**/rollout-*.jsonl`, `event_msg` with `payload.type: "token_count"` | `session_meta.payload.session_id` | line index | `last_token_usage.input_tokens − cached_input_tokens` | `output_tokens` | `cached_input_tokens` | `cache_write_input_tokens` | `turn_context.payload.model` |
-| cursor | HackSpain's user-level `afterAgentResponse` hook in `~/.cursor/hooks.json`, allowlisted into the local state log | `conversation_id` | `generation_id` | `input_tokens − cache_read_tokens − cache_write_tokens` | `output_tokens` | `cache_read_tokens` | `cache_write_tokens` | `model`; common hook input also supplies `cursor_version` and `workspace_roots` |
+| cursor | HackSpain's user-level `afterAgentResponse` / `stop` hooks in `~/.cursor/hooks.json`, allowlisted into the local state log | `conversation_id` | `generation_id` | `input_tokens − cache_read_tokens − cache_write_tokens` | `output_tokens` | `cache_read_tokens` | `cache_write_tokens` | `model`; common hook input also supplies `cursor_version` and `workspace_roots` |
 | opencode | `~/.local/share/opencode/opencode.db`, table `message`, assistant rows with `time.completed` | `session_id` | message `id` | `tokens.input` | `tokens.output` | `tokens.cache.read` | `tokens.cache.write` | `modelID` + `providerID` |
 | cline | VS Code globalStorage `saoudrizwan.claude-dev/tasks/<task>/ui_messages.json`, `say: "api_req_started"` | task id | entry `ts` | `tokensIn` | `tokensOut` | `cacheReads` | `cacheWrites` | `task_metadata.json` `model_usage` |
 | copilot | `~/.copilot/session-state/<session>/events.jsonl`, cumulative `session.shutdown.data.modelMetrics` from Copilot CLI | `session.start.data.sessionId`, else the directory name | shutdown `id` + sorted model index | increase in `usage.inputTokens` − increases in both cache counters | increase in `usage.outputTokens` (already includes reasoning) | increase in `usage.cacheReadTokens` | increase in `usage.cacheWriteTokens` | each key in `modelMetrics`; `usage.reasoningTokens` → `reasoning`; `session.start.data.copilotVersion` → `harnessVersion` |
@@ -67,7 +70,7 @@ buckets on `occurredAt`.
 | pi | `~/.pi/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoning` → `reasoning`; `usage.cost.total` → `native.costUsd` |
 | omp | `~/.omp/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoningTokens` → `reasoning`; `usage.cost.total` → `native.costUsd` |
 | antigravity | `~/.gemini/antigravity-cli/conversations/<uuid>.db` (Antigravity CLI, `agy`), table `steps`, rows whose protobuf `metadata` carries a usage message (field 9); `gen_metadata` names the model codes and the sibling `conversation_summaries.db` gives the workspace | the file name's uuid | step `idx` | usage field 2 (already net of cache reads) | usage field 3 (already includes thoughts) | usage field 5 | 0 (implicit caching) | usage field 1 → `gen_metadata` name; usage field 10 (thoughts) → `reasoning` |
-| devin | `~/.local/share/devin/cli/sessions.db` (Devin CLI; `XDG_DATA_HOME` overrides), table `message_nodes`, rows whose `chat_message` JSON is an assistant message with `metadata.metrics` (the same message sits in two chains: dedupe) | `session_id` | `message_id` | `metrics.input_tokens` (already net of cache reads) | `metrics.output_tokens` | `metrics.cache_read_tokens` | `metrics.cache_creation_tokens` | `sessions.model` + `sessions.backend_type` (the session's current model; the message does not name one) |
+| devin | `~/.local/share/devin/cli/sessions.db` (Devin CLI; Windows: `%APPDATA%\devin\cli\sessions.db`; Unix: `XDG_DATA_HOME` overrides; `HACKSPAIN_DEVIN_DB` selects a custom file), table `message_nodes`, rows whose `chat_message` JSON is an assistant message with `metadata.metrics` (the same message sits in two chains: dedupe) | `session_id` | `message_id` | `metrics.input_tokens` (already net of cache reads) | `metrics.output_tokens` | `metrics.cache_read_tokens` | `metrics.cache_creation_tokens` | `sessions.model` + `sessions.backend_type` (the session's current model; the message does not name one) |
 
 Reasoning tokens go to `tokens.reasoning` when the harness reports them (Claude thinking,
 Codex `reasoning_output_tokens`, Copilot `reasoningTokens`, OpenCode `tokens.reasoning`, Gemini CLI and Qwen Code thought
@@ -111,7 +114,8 @@ Only persisted assistant usage is collected, not compaction summaries or estimat
   checked against a local install. Claude Code, OpenCode, Antigravity and Devin are checked against
   real logs.
 - Cursor's own transcripts omit usage. Its collector starts with the first `hackspain watch`,
-  which installs one user hook without replacing existing hooks. The hook allowlists usage
+  which installs `afterAgentResponse` and `stop` recorders, preserving unrelated hooks and
+  replacing obsolete HackSpain commands. Both deduplicate by generation id. Each hook allowlists usage
   metadata into HackSpain's private local state and discards response text, email and tool data.
   It covers local IDE and CLI sessions that run user hooks, not earlier sessions or cloud agents.
 - Copilot CLI persists usage only at `session.shutdown`, as cumulative totals per model. The
@@ -160,7 +164,37 @@ There is one log record per event: `timeUnixNano` is `occurredAt`, `observedTime
 | `project.*` | `hackspain.project.dir_hash` / `name` / `git_branch` / `repo` |
 
 Native OTLP has no insert deduplication guarantee, so queries on the logs table dedupe on
-(`hackspain.user.id`, `event.id`).
+(`hackspain.user.id`, `event.id`), then correlate Claude rows by user, session and nonempty
+`hackspain.native.request_id`. When both sources reached storage, prefer the native API record;
+never merge different participants or requests without a request id. The ingestion receipt may
+reject a second representation in one batch as `duplicate_request`. Legacy ids and schema v2
+remain unchanged.
+
+## Native input
+
+Continuous watch configures Claude Code's supported `http/json` logs exporter, preserving existing
+exporter settings and opt-outs. The local receiver accepts only authenticated `POST /v1/logs`,
+limits bodies to 1 MiB and binds to `127.0.0.1`. It is not a generic protobuf/gRPC collector.
+Resource `service.name` must be `claude-code` or `claude-code-desktop`; only `event.name=api_request`
+records with valid counts, timestamp, session and request id survive the allowlist. Resource
+attributes, log bodies and all other event types are discarded before disk or upload. Tokens keep
+the same canonical semantics as transcript usage; `cost_usd` is optional native cost.
+
+The receiver enforces the current collection window on `event.timestamp` (OTLP `timeUnixNano`
+when absent), fsyncs sanitized events before acknowledging, and returns 503 on write failure or
+pause. `<state-dir>/claude-otel.jsonl` is consumed before transcripts through the existing
+scan/batch/spool pipeline. A fully consumed queue is atomically replaced only after successful
+sink delivery; interrupted writes are repaired before the exporter retries. User ids in this local
+queue come from the authenticated watcher, never from the producer's attributes. Read/restart
+failures retain transcript fallback. Spool records only restore delivery aliases when their ids
+were checkpointed after a successful flush: a local write alone does not prove upload. Board
+replay independently deduplicates all local records. Older events can be resent after the bounded
+recent-id history expires; permanent cross-device/old-client deduplication remains the dashboard's
+responsibility.
+
+Cursor Enterprise export requires a public endpoint and organization-to-participant identity
+mapping, so it is not connected to this loopback receiver. Cursor hooks and Devin SQLite remain
+supported input adapters.
 
 ## Privacy
 

@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { rememberTelemetry } from "../../../app/src/app/api/cli/telemetry/canonical";
 import { contextFor } from "../lib/context";
 import { compactNumber, formatWhen, uiFor } from "../lib/output";
 import { c } from "../lib/style";
@@ -52,7 +53,11 @@ export function summarize(events: Iterable<TelemetryEvent>): {
   const byFamily = new Map<string, Totals>();
   let first: string | undefined;
   let last: string | undefined;
+  const seen = new Set<string>();
   for (const event of events) {
+    if (rememberTelemetry(seen, event)) {
+      continue;
+    }
     add(all, event);
     const h = byHarness.get(event.harness) ?? empty();
     add(h, event);

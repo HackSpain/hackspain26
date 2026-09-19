@@ -266,3 +266,20 @@ describe("primitives", () => {
     expect(state.harnesses[0]?.cached).toBe(6 * 70);
   });
 });
+
+test("watcher diagnostics stay visible and cannot inject terminal controls", () => {
+  const state = sampleState();
+  state.log.push("devin: cannot read database\u001b[2J\nwill retry");
+  for (const size of [
+    { columns: 120, rows: 40 },
+    { columns: 60, rows: 20 },
+  ]) {
+    const lines = frame(state, size, { now: NOW });
+    expect(lines).toHaveLength(size.rows);
+    expect(stripAnsi(lines.at(-2) ?? "")).toContain(
+      "Last diagnostic: devin: cannot read"
+    );
+    expect(lines.at(-2)).not.toContain("\u001b[2J");
+    expect(stripAnsi(lines.at(-1) ?? "")).toContain("q quit");
+  }
+});

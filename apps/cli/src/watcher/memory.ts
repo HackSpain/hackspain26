@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { rememberTelemetry } from "../../../app/src/app/api/cli/telemetry/canonical";
 import { readJsonFile, stateDir, writeFileAtomic } from "../lib/config";
 import type { TelemetryEvent } from "./schema";
 import type { WatchState } from "./state";
@@ -130,7 +131,11 @@ export function replaySpool(
   events: Iterable<TelemetryEvent>
 ): number {
   let count = 0;
+  const seen = new Set<string>();
   for (const event of events) {
+    if (rememberTelemetry(seen, event)) {
+      continue;
+    }
     recordEvent(state, event);
     count++;
   }

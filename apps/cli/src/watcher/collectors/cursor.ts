@@ -15,6 +15,8 @@ import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
 export const CURSOR = "cursor" as const;
 const SCRIPT_EXTENSION = /\.[cm]?[jt]s$/;
+const RECORDER_COMMAND = /(?:^|\s)['"]?_cursor-hook['"]?(?:\s|$)/;
+const USAGE_HOOKS = ["afterAgentResponse", "stop"] as const;
 let cursorHookReady = false;
 
 type CursorHookRecord = {
@@ -65,7 +67,7 @@ export function cursorWindowPath(): string {
   return join(stateDir(), "cursor-window.json");
 }
 
-function readCursorWindow(
+export function readCursorWindow(
   path = cursorWindowPath()
 ): CursorCollectionWindow | null {
   const value = readJsonFile<{ window?: unknown }>(path)?.window;
@@ -86,26 +88,44 @@ export function setCursorCollectionWindow(
   window: CursorCollectionWindow | null,
   path = cursorWindowPath()
 ): void {
-  writeFileAtomic(path, `${JSON.stringify({ window })}\n`, 0o600);
+  const content = `${JSON.stringify({ window })}\n`;
+  try {
+    if (readFileSync(path, "utf8") === content) {
+      return;
+    }
+  } catch {
+    // First run, or a damaged file to repair.
+  }
+  writeFileAtomic(path, content, 0o600);
 }
 
-function quoteCommandArg(value: string): string {
-  if (process.platform === "win32") {
-    return `"${value.replaceAll('"', '\\"')}"`;
+function quoteCommandArg(value: string, platform: NodeJS.Platform): string {
+  if (platform === "win32") {
+    // Cursor executes Windows hooks with PowerShell and adds the call
+    // operator for a quoted executable. Single quotes prevent $ expansion.
+    return `'${value.replaceAll("'", "''")}'`;
   }
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 /** Absolute in releases so GUI-launched Cursor does not depend on shell PATH. */
-export function cursorHookCommand(): string {
+export function cursorHookCommand(platform = process.platform): string {
   const entry = process.argv[1];
   const developmentEntry =
     entry && SCRIPT_EXTENSION.test(entry) && existsSync(entry)
       ? resolve(entry)
       : undefined;
-  return [process.execPath, developmentEntry, "_cursor-hook"]
+  return [
+    process.execPath,
+    developmentEntry,
+    "_cursor-hook",
+    "--event-log",
+    resolve(cursorEventPath()),
+    "--window-file",
+    resolve(cursorWindowPath()),
+  ]
     .filter((part): part is string => Boolean(part))
-    .map(quoteCommandArg)
+    .map((part) => quoteCommandArg(part, platform))
     .join(" ");
 }
 
@@ -150,6 +170,15 @@ export function recordCursorHook(
         )
       : [],
   };
+  if (
+    record.input_tokens +
+      record.output_tokens +
+      record.cache_read_tokens +
+      record.cache_write_tokens ===
+    0
+  ) {
+    return false;
+  }
   ensureDir(dirname(path), 0o700);
   appendFileSync(path, `${JSON.stringify(record)}\n`, {
     encoding: "utf8",
@@ -282,27 +311,42 @@ export function installCursorHook(
     throw new Error(`cannot update ${path}: hooks must be an object`);
   }
   const hooks = (config.hooks ?? {}) as Record<string, unknown>;
-  const current = hooks.afterAgentResponse;
-  if (current !== undefined && !Array.isArray(current)) {
-    throw new Error(
-      `cannot update ${path}: afterAgentResponse must be an array`
-    );
+  let changed = false;
+  const nextHooks = { ...hooks };
+  for (const name of USAGE_HOOKS) {
+    const current = hooks[name];
+    if (current !== undefined && !Array.isArray(current)) {
+      throw new Error(`cannot update ${path}: ${name} must be an array`);
+    }
+    const entries = (current ?? []) as unknown[];
+    const isRecorder = (entry: unknown): boolean => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+        return false;
+      }
+      const candidate = (entry as { command?: unknown }).command;
+      return typeof candidate === "string" && RECORDER_COMMAND.test(candidate);
+    };
+    const owned = entries.filter(isRecorder);
+    if (
+      owned.length === 1 &&
+      (owned[0] as { command: string }).command === command
+    ) {
+      continue;
+    }
+    // Replace obsolete HackSpain commands after a move/update. Keep all
+    // unrelated hooks, including their options and ordering.
+    nextHooks[name] = [
+      ...entries.filter((entry) => !isRecorder(entry)),
+      { command },
+    ];
+    changed = true;
   }
-  const entries = (current ?? []) as unknown[];
-  if (
-    entries.some(
-      (entry) =>
-        typeof entry === "object" &&
-        entry !== null &&
-        !Array.isArray(entry) &&
-        (entry as { command?: unknown }).command === command
-    )
-  ) {
+  if (!changed) {
     return "present";
   }
   const next: HooksConfig = {
     ...config,
-    hooks: { ...hooks, afterAgentResponse: [...entries, { command }] },
+    hooks: nextHooks,
     version: config.version ?? 1,
   };
   writeFileAtomic(path, `${JSON.stringify(next, null, 2)}\n`, 0o600);
@@ -311,17 +355,23 @@ export function installCursorHook(
 
 export const cursorCollector: Collector = {
   collect: (ctx) => collectCursor([cursorEventPath()], ctx),
-  discover: () =>
-    Promise.resolve(
+  discover: () => {
+    if (existsSync(cursorEventPath())) {
+      return Promise.resolve([cursorEventPath()]);
+    }
+    return Promise.resolve(
       cursorHookReady && existsSync(cursorHome()) ? [resolve(cursorHome())] : []
-    ),
+    );
+  },
   id: CURSOR,
   prepare: (log) => {
     try {
       const result = installCursorHook();
       cursorHookReady = result !== "absent";
       if (result === "installed") {
-        log("cursor: installed the usage recorder in ~/.cursor/hooks.json");
+        log(
+          "cursor: installed the usage recorder in ~/.cursor/hooks.json (afterAgentResponse + stop)"
+        );
       }
     } catch (error) {
       cursorHookReady = false;

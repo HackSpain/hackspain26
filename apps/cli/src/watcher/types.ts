@@ -36,7 +36,7 @@ export type CollectorContext = {
 
 export type Collector = {
   id: HarnessId;
-  /** One-time setup needed before discovery, such as installing a local hook. */
+  /** Idempotent setup retried before discovery, such as installing a local hook. */
   prepare?(log: (message: string) => void): Promise<void> | void;
   /** Update integrations that must enforce the same collection window. */
   setWindow?(window: { since: number; until: number } | null): void;
