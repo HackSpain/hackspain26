@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { ImageIcon } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import type { TvFeedMode, TvFeedSource } from "@/lib/tv";
@@ -12,11 +12,11 @@ import {
   gsap,
   settle,
   SplitText,
-  TV_EASE_MOVE,
   TV_EASE_OUT,
   TV_EASE_POP,
   TV_REDUCED_FADE,
   useGSAP,
+  useHistoryScroll,
   useStreamShift,
 } from "./gsap";
 import { usePageVisible, usePrefersReducedMotion, useTick } from "./motion";
@@ -149,47 +149,11 @@ function FeedStream({
   now: number;
   source: TvFeedSource;
 }) {
-  const reduced = usePrefersReducedMotion();
   const listRef = useRef<HTMLOListElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
-  const cursor = useRef(0);
   const ids = useMemo(() => posts.map((post) => post._id), [posts]);
-  const idsKey = ids.join("|");
-  const scrollTick = useTick(HISTORY_STEP_MS);
-
-  // New posts pull the window back to the top; the stream shift takes over from there.
-  useLayoutEffect(() => {
-    cursor.current = 0;
-    if (scroller.current) {gsap.set(scroller.current, { y: 0 });}
-  }, [idsKey]);
-
-  // Between arrivals the list walks down through older posts, then wraps.
-  useEffect(() => {
-    const list = listRef.current;
-    const box = viewport.current;
-    const el = scroller.current;
-    if (scrollTick === 0 || reduced || !list || !box || !el) {return;}
-    const rows = [...list.children].filter(
-      (node): node is HTMLElement => node instanceof HTMLElement,
-    );
-    const maxScroll = list.offsetHeight - box.clientHeight;
-    if (maxScroll <= 0) {return;}
-    const current = rows[cursor.current];
-    const atEnd = current !== undefined && current.offsetTop >= maxScroll;
-    const next = atEnd || cursor.current + 1 >= rows.length ? 0 : cursor.current + 1;
-    cursor.current = next;
-    const target = next === 0 ? 0 : Math.min(rows[next]?.offsetTop ?? 0, maxScroll);
-    const tween = gsap.to(el, {
-      y: -target,
-      duration: next === 0 ? 1.1 : 0.85,
-      ease: TV_EASE_MOVE,
-      overwrite: "auto",
-    });
-    return () => {
-      settle(tween);
-    };
-  }, [scrollTick, reduced]);
+  useHistoryScroll({ list: listRef, scroller, viewport }, ids.join("|"), useTick(HISTORY_STEP_MS));
   const onEnter = useCallback((rows: HTMLElement[]) => {
     flashGold(rows, 1.8);
     for (const row of rows) {
