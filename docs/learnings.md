@@ -2,6 +2,22 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — TV presence does not prove configuration delivery
+
+**Evidence and consequence.** Named screens sent HTTP heartbeats but ignored their
+configuration responses, making command delivery depend entirely on WebSocket.
+In a local browser with the Convex WebSocket unavailable, a controlled successful
+heartbeat response rendered its notice only after restoring HTTP delivery. A later
+response with a lower revision did not replace it. This verifies the fallback;
+the reported Safari tablet failure has not been reproduced on the affected device.
+
+**Prevention and verification.** Apply heartbeat configurations through the same
+reload/version handling as subscriptions. Discard HTTP responses overtaken by a
+subscription and never roll back either configuration or reload versions, including
+after WebSocket reconnects. HTTP connectivity covers configuration and commands;
+individual live widgets still need their own subscriptions. Verify the affected
+tablet after deployment before claiming the Safari incident is resolved.
+
 ## 2026-09-19 — Copilot CLI usage is cumulative and shutdown-only
 
 **Evidence and consequence.** Copilot CLI's released session schema stores per-model token totals
