@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Panel } from "./panel";
 import {
   ConsumptionChart,
@@ -63,14 +64,20 @@ function SummaryMetric({
 }
 
 const STACK_COLORS = ["#1e3958", "#35858a", "#d96b2a", "#8b6b9f", "#a67516", "#677558"];
+const STACK_PAGE_SIZE = 8;
 
 export function LiveTechnologyStacks() {
   const histogram = useQuery(api.stack.histogram);
   const [category, setCategory] = useState("all");
+  const [page, setPage] = useState(0);
   const rows = (histogram?.rows ?? []).filter(
     (row) => category === "all" || row.category === category
   );
   const total = histogram?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(rows.length / STACK_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageStart = currentPage * STACK_PAGE_SIZE;
+  const visibleRows = rows.slice(pageStart, pageStart + STACK_PAGE_SIZE);
   return (
     <Panel
       title="Stacks más usados"
@@ -88,7 +95,13 @@ export function LiveTechnologyStacks() {
       ) : (
         <>
           <div className="mb-4">
-            <Select value={category} onValueChange={setCategory}>
+            <Select
+              value={category}
+              onValueChange={(value) => {
+                setCategory(value);
+                setPage(0);
+              }}
+            >
               <SelectTrigger
                 aria-label="Categoría de tecnologías"
                 className="min-h-10 border text-xs sm:w-32"
@@ -104,12 +117,12 @@ export function LiveTechnologyStacks() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-4">
-            {rows.map((row, index) => (
-              <div key={row.name}>
+          <div className="grid content-start gap-x-6 gap-y-4 sm:min-h-60 sm:grid-cols-2">
+            {visibleRows.map((row, index) => (
+              <div key={row.name} className="min-w-0">
                 <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-                  <span className="font-semibold">{row.name}</span>
-                  <span className="text-hs-brown tabular-nums">
+                  <span className="min-w-0 break-words font-semibold">{row.name}</span>
+                  <span className="shrink-0 text-hs-brown tabular-nums">
                     {row.count} {row.count === 1 ? "equipo" : "equipos"} ·{" "}
                     {percent(row.count, total)}
                   </span>
@@ -119,7 +132,7 @@ export function LiveTechnologyStacks() {
                     className="h-full rounded-full"
                     style={{
                       backgroundColor:
-                        STACK_COLORS[index % STACK_COLORS.length],
+                        STACK_COLORS[(pageStart + index) % STACK_COLORS.length],
                       width: `${(row.count / Math.max(total, 1)) * 100}%`,
                     }}
                   />
@@ -127,6 +140,37 @@ export function LiveTechnologyStacks() {
               </div>
             ))}
           </div>
+          {rows.length === 0 ? (
+            <p className="text-sm text-hs-brown">
+              Aún no hay tecnologías en esta categoría.
+            </p>
+          ) : (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-hs-ink/15 pt-3">
+              <p aria-live="polite" className="text-xs text-hs-brown tabular-nums">
+                {pageStart + 1}–{pageStart + visibleRows.length} de {rows.length} tecnologías
+              </p>
+              {pageCount > 1 ? (
+                <nav aria-label="Páginas de tecnologías" className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 0}
+                    onClick={() => setPage(currentPage - 1)}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === pageCount - 1}
+                    onClick={() => setPage(currentPage + 1)}
+                  >
+                    Siguiente
+                  </Button>
+                </nav>
+              ) : null}
+            </div>
+          )}
         </>
       )}
       <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
