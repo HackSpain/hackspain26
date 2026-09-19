@@ -23,7 +23,7 @@ const RANKING_ROWS = 7;
 const FEED_ROWS = 6;
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-function Spark({ values, className }: { values: number[]; className?: string }) {
+export function Spark({ values, className }: { values: number[]; className?: string }) {
   const max = Math.max(...values, 1);
   const points = values.length > 1
     ? values.map((value, index) => `${(index / (values.length - 1)) * 100},${28 - (value / max) * 26}`).join(" ")
@@ -40,7 +40,7 @@ function Figure({ value, children }: { value: number; children: ReactNode }) {
   return <span key={value} className="hsx-flash hsx-num">{children}</span>;
 }
 
-function Move({ move }: { move: number }) {
+export function Move({ move }: { move: number }) {
   if (move === 0) { return <span className="hsx-num opacity-35">=</span>; }
   return (
     <span className={cn("hsx-num", move > 0 ? "text-[var(--hsx-up)]" : "text-[var(--hsx-down)]")}>
@@ -49,7 +49,7 @@ function Move({ move }: { move: number }) {
   );
 }
 
-function Clock({ startsAt, endsAt }: { startsAt?: number; endsAt?: number }) {
+export function Clock({ startsAt, endsAt }: { startsAt?: number; endsAt?: number }) {
   const now = useClock();
   const time = now?.getTime();
   let label = "En marcha";
@@ -98,7 +98,7 @@ function Marquee({ seconds, children }: { seconds: number; children: ReactNode }
   );
 }
 
-function TeamTape({ teams }: { teams: MarketTeam[] }) {
+export function TeamTape({ teams }: { teams: MarketTeam[] }) {
   return (
     <div className="grid h-[5.6%] shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-[var(--line)]">
       <p className="hsx-title hsx-sm flex items-center bg-hs-gold px-[calc(var(--u)*1.4)] text-hs-ink">Equipos</p>
@@ -159,7 +159,7 @@ function Kpis({ series }: { series: MarketSeries }) {
   );
 }
 
-function Empty({ children }: { children: ReactNode }) {
+export function Empty({ children }: { children: ReactNode }) {
   return <p className="hsx-label flex h-full items-center justify-center text-center">{children}</p>;
 }
 
@@ -304,7 +304,7 @@ function Board({ data, series, teams }: { data: LiveInsightData; series: MarketS
   );
 }
 
-function ago(now: number, then: number): string {
+export function ago(now: number, then: number): string {
   const minutes = Math.max(0, Math.round((now - then) / 60_000));
   if (minutes < 1) { return "ahora"; }
   if (minutes < 60) { return `${minutes} min`; }
@@ -348,7 +348,7 @@ function Feed({ posts }: { posts: MarketPost[] | undefined }) {
   );
 }
 
-function SponsorStrip() {
+export function SponsorStrip() {
   const sponsors = resolveTvSponsors();
   return (
     <div className="grid h-[9%] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-[var(--line)]">
@@ -370,6 +370,28 @@ function SponsorStrip() {
   );
 }
 
+export function StageHeader({ data, bucket, demo }: { data: LiveInsightData; bucket: number; demo: boolean }) {
+  return (
+    <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1fr)_calc(var(--u)*7)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
+      <Diagonal bg="bg-hs-paper" tri="bg-hs-orange" corner="tl" className="portrait:hidden" />
+      <div className="flex items-center justify-center bg-hs-paper px-[calc(var(--u)*1.4)]">
+        <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-[74%] w-auto" />
+      </div>
+      <p className="hsx-title hsx-lg flex items-center justify-center gap-[calc(var(--u)*0.7)] bg-hs-red text-hs-paper">
+        <span className="tv-pulse size-[calc(var(--u)*0.9)] rounded-full bg-hs-paper" />{demo ? "Demo" : "En directo"}
+      </p>
+      <div className="flex flex-col justify-center gap-[calc(var(--u)*0.55)] bg-hs-paper px-[calc(var(--u)*1.6)] leading-none portrait:col-span-4 portrait:row-start-2">
+        <p className="hsx-label flex justify-between"><span>Tramo del hackathon</span><span className="hsx-num font-bold text-hs-ink">{bucket + 1} / {MARKET_BUCKETS}</span></p>
+        <div className="flex gap-[calc(var(--line)*0.6)]" aria-hidden>
+          {Array.from({ length: MARKET_BUCKETS }, (_, index) => <span key={index} className={cn("h-[calc(var(--u)*0.9)] flex-1 border-[length:calc(var(--line)*0.5)] border-hs-ink", index < bucket ? "bg-hs-teal" : index === bucket ? "tv-pulse bg-hs-gold" : "bg-hs-sand")} />)}
+        </div>
+      </div>
+      <Clock startsAt={data.startsAt} endsAt={data.endsAt} />
+      <Diagonal bg="bg-hs-teal" tri="bg-hs-orange" corner="br" className="portrait:hidden" />
+    </header>
+  );
+}
+
 function MarketStage({ data, posts, demo }: { data: LiveInsightData; posts: MarketPost[] | undefined; demo: boolean }) {
   const series = useMemo(() => marketSeries(data.samples), [data.samples]);
   const teams = useMemo(() => marketTeams(data.samples, data.teams), [data.samples, data.teams]);
@@ -377,23 +399,7 @@ function MarketStage({ data, posts, demo }: { data: LiveInsightData; posts: Mark
   return (
     <main className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
       <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] px-[var(--line)] pt-[var(--line)] pb-[calc(var(--u)*1.2)]">
-        <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1fr)_calc(var(--u)*7)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
-          <Diagonal bg="bg-hs-paper" tri="bg-hs-orange" corner="tl" className="portrait:hidden" />
-          <div className="flex items-center justify-center bg-hs-paper px-[calc(var(--u)*1.4)]">
-            <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-[74%] w-auto" />
-          </div>
-          <p className="hsx-title hsx-lg flex items-center justify-center gap-[calc(var(--u)*0.7)] bg-hs-red text-hs-paper">
-            <span className="tv-pulse size-[calc(var(--u)*0.9)] rounded-full bg-hs-paper" />{demo ? "Demo" : "En directo"}
-          </p>
-          <div className="flex flex-col justify-center gap-[calc(var(--u)*0.55)] bg-hs-paper px-[calc(var(--u)*1.6)] leading-none portrait:col-span-4 portrait:row-start-2">
-            <p className="hsx-label flex justify-between"><span>Tramo del hackathon</span><span className="hsx-num font-bold text-hs-ink">{bucket + 1} / {MARKET_BUCKETS}</span></p>
-            <div className="flex gap-[calc(var(--line)*0.6)]" aria-hidden>
-              {Array.from({ length: MARKET_BUCKETS }, (_, index) => <span key={index} className={cn("h-[calc(var(--u)*0.9)] flex-1 border-[length:calc(var(--line)*0.5)] border-hs-ink", index < bucket ? "bg-hs-teal" : index === bucket ? "tv-pulse bg-hs-gold" : "bg-hs-sand")} />)}
-            </div>
-          </div>
-          <Clock startsAt={data.startsAt} endsAt={data.endsAt} />
-          <Diagonal bg="bg-hs-teal" tri="bg-hs-orange" corner="br" className="portrait:hidden" />
-        </header>
+        <StageHeader data={data} bucket={bucket} demo={demo} />
         <TeamTape teams={teams} />
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div className="flex min-h-0 flex-col gap-[var(--line)]">

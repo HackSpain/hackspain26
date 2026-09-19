@@ -211,6 +211,54 @@ export function useRankRows(
 }
 
 /**
+ * Walks a newest-first list down through its older rows one step per tick,
+ * wrapping back to the top; a change in `idsKey` (new arrivals) resets it.
+ */
+export function useHistoryScroll(
+  refs: {
+    viewport: RefObject<HTMLElement | null>;
+    scroller: RefObject<HTMLElement | null>;
+    list: RefObject<HTMLElement | null>;
+  },
+  idsKey: string,
+  tick: number,
+) {
+  const reduced = usePrefersReducedMotion();
+  const cursor = useRef(0);
+
+  useLayoutEffect(() => {
+    cursor.current = 0;
+    if (refs.scroller.current) {gsap.set(refs.scroller.current, { y: 0 });}
+  }, [idsKey, refs.scroller]);
+
+  useEffect(() => {
+    const list = refs.list.current;
+    const box = refs.viewport.current;
+    const el = refs.scroller.current;
+    if (tick === 0 || reduced || !list || !box || !el) {return;}
+    const rows = [...list.children].filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    const maxScroll = list.offsetHeight - box.clientHeight;
+    if (maxScroll <= 0) {return;}
+    const current = rows[cursor.current];
+    const atEnd = current !== undefined && current.offsetTop >= maxScroll;
+    const next = atEnd || cursor.current + 1 >= rows.length ? 0 : cursor.current + 1;
+    cursor.current = next;
+    const target = next === 0 ? 0 : Math.min(rows[next]?.offsetTop ?? 0, maxScroll);
+    const tween = gsap.to(el, {
+      y: -target,
+      duration: next === 0 ? 1.1 : 0.85,
+      ease: TV_EASE_MOVE,
+      overwrite: "auto",
+    });
+    return () => {
+      settle(tween);
+    };
+  }, [tick, reduced, refs.list, refs.scroller, refs.viewport]);
+}
+
+/**
  * Newest-first streams: when rows appear at the top, the list starts offset by
  * their height and slides back, so existing rows visibly make room.
  */

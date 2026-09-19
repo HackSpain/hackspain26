@@ -5,17 +5,11 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { ScreenConfig } from "@convex/lib/tvScreens";
 import { ArrivalDemo, ArrivalStage, LiveArrivals } from "@/components/arrivals/screen";
-import { tvPresetWidgets } from "@convex/lib/tvLayouts";
-import { useEffect, useMemo, useState } from "react";
-import { setLiveInsightsOverride } from "@/app/insights/use-live-insights";
-import { demoFeed, demoInsights } from "@/lib/tv-market";
-import { FeedDemoContext } from "./feed-box";
-import type { FeedPost } from "./feed-box";
 import { MarketScreen } from "./market";
+import { PanelV2Screen } from "./panel-v2";
 import { TeamsScreen } from "./teams";
-import { useClock, useTick } from "./motion";
+import { useClock } from "./motion";
 import { SponsorsScreen } from "./sponsors-screen";
-import { TvStage } from "./stage";
 
 function Activity() {
   const posts = useQuery(api.tv.listFeed, { source: "all" });
@@ -31,36 +25,6 @@ function Activity() {
       {posts?.length === 0 ? <p className="self-center text-[4vmin] text-hs-paper/60">La actividad aparecerá aquí.</p> : null}
       {!posts ? <p className="self-center text-[4vmin] text-hs-paper/60">Cargando actividad…</p> : null}
     </div>
-  );
-}
-
-function PanelV2Screen({ demo }: { demo: boolean }) {
-  const [startedAt] = useState(() => Date.now());
-  const step = useTick(4000);
-  useEffect(() => {
-    if (!demo) { return; }
-    setLiveInsightsOverride(demoInsights(step, startedAt));
-    return () => setLiveInsightsOverride(null);
-  }, [demo, step, startedAt]);
-  const posts = useMemo<FeedPost[] | null>(
-    () =>
-      demo
-        ? demoFeed(startedAt).map((post, index) => ({
-            ...post,
-            hasImage: false,
-            ...(post.kind === "github"
-              ? { repo: post.teamName.toLowerCase().replaceAll(" ", "-"), sha: ((index + 1) * 2_654_435_761).toString(16).slice(0, 7) }
-              : {}),
-          }))
-        : null,
-    [demo, startedAt],
-  );
-  return (
-    <FeedDemoContext value={posts}>
-      <div className="h-dvh w-full bg-hs-ink">
-        <TvStage widgets={tvPresetWidgets("panelv2")} fill enter />
-      </div>
-    </FeedDemoContext>
   );
 }
 
