@@ -4,6 +4,21 @@ import type { widgetReturn } from "../tv";
 type LayoutWidget = Omit<Infer<typeof widgetReturn>, "_id">;
 
 // Percentages on Leo's editable canvas, with gutters and a permanent demo label.
+export const MENTORS_LAYOUT = [
+  {
+    kind: "banner",
+    x: 2,
+    y: 1,
+    w: 78,
+    h: 10,
+    z: 1,
+    text: "Mentores ahora",
+    fontSize: 1.5,
+  },
+  { kind: "clock", x: 82, y: 1, w: 16, h: 10, z: 1, text: "", fontSize: 1.5 },
+  { kind: "mentors", x: 2, y: 13, w: 96, h: 85, z: 1, text: "" },
+] satisfies Omit<Infer<typeof widgetReturn>, "_id">[];
+
 export const INSIGHTS_LAYOUT = [
   {
     kind: "banner",
@@ -65,6 +80,7 @@ export const PANEL_V2_LAYOUT = [
 export const TV_LAYOUT_PRESETS = {
   insights: INSIGHTS_LAYOUT,
   panelv2: PANEL_V2_LAYOUT,
+  mentors: MENTORS_LAYOUT,
 } as const;
 
 export type TvLayoutPreset = keyof typeof TV_LAYOUT_PRESETS;

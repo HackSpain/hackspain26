@@ -4,6 +4,7 @@ import type { Infer } from "convex/values";
 export const screenPresetValidator = v.union(
   v.literal("entradas"), v.literal("avisos"), v.literal("actividad"),
   v.literal("patrocinadores"),   v.literal("espera"), v.literal("panel"), v.literal("panelv2"), v.literal("equipos"),
+  v.literal("mentores"),
 );
 export type ScreenPreset = Infer<typeof screenPresetValidator>;
 export const SCREEN_PRESETS: { value: ScreenPreset; label: string; description: string }[] = [
@@ -15,6 +16,7 @@ export const SCREEN_PRESETS: { value: ScreenPreset; label: string; description: 
   { value: "panel", label: "Panel", description: "Todo el hackathon en una pantalla: métricas, equipos, feed y patrocinadores" },
   { value: "panelv2", label: "Panel v2", description: "Tokens, agentes, commits y feed con animación en vivo" },
   { value: "equipos", label: "Equipos", description: "Mapa en vivo de la formación de equipos" },
+  { value: "mentores", label: "Mentores", description: "Quiénes están ahora en sala" },
 ];
 export const SCREEN_OFFLINE_MS = 45_000;
 export const SCREEN_HEARTBEAT_MS = 15_000;

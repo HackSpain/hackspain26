@@ -441,10 +441,22 @@ export function TvEditor() {
     }, "No se ha podido guardar el estado");
   }
 
-  async function applyLoad(id?: Id<"tvLayouts">) {
-    const named = id ? layouts?.find((layout) => layout._id === id)?.name ?? null : "Insights · Panorama";
+  async function applyLoad(
+    id?: Id<"tvLayouts">,
+    preset?: "insights" | "panelv2" | "mentors",
+  ) {
+    const named = id
+      ? (layouts?.find((layout) => layout._id === id)?.name ?? null)
+      : preset === "mentors"
+        ? "Mentores en sala"
+        : preset === "panelv2"
+          ? "Panel v2"
+          : "Insights · Panorama";
     await run(async () => {
-      const loaded = await loadLayout({ layoutId: id });
+      const loaded = await loadLayout({
+        layoutId: id,
+        preset: id ? undefined : (preset ?? "insights"),
+      });
       setSavedPrint(fingerprint(loaded));
       setCurrentLayoutId(id ?? null);
       setCurrentName(named);
@@ -517,6 +529,14 @@ export function TvEditor() {
           <Plus strokeWidth={2.5} aria-hidden />
           Añadir caja
         </Button>
+        <Button variant="outline" disabled={pending || !widgets} onClick={() => setConfirm({
+          title: "¿Cargar la pantalla de mentores?",
+          description: "Guardaremos una copia del lienzo actual en tus estados. Se cargará Mentores en sala; los estados guardados y la emisión en vivo no cambian. Guarda y pon en vivo el resultado cuando esté listo.",
+          action: () => {
+            setPending(true);
+            void applyLoad(undefined, "mentors").finally(() => setPending(false));
+          },
+        })}>Pantalla de mentores</Button>
         <Button variant="outline" disabled={pending || !widgets} onClick={() => setConfirm({
           title: "¿Restaurar el layout por defecto?",
           description: "Guardaremos una copia del lienzo actual en tus estados. Se restaurará Insights · Panorama; los estados guardados y la emisión en vivo no cambian. Guarda y pon en vivo el resultado cuando esté listo.",

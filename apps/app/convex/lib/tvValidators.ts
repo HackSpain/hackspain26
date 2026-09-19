@@ -19,7 +19,8 @@ export const tvWidgetKindValidator = v.union(
   v.literal("liveLeaderboard"),
   v.literal("feed"),
   v.literal("sponsorGrid"),
-  v.literal("sponsorTicker")
+  v.literal("sponsorTicker"),
+  v.literal("mentors")
 );
 
 export const tvSponsorValidator = v.object({

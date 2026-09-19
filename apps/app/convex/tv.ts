@@ -7,7 +7,7 @@ import { getSignupForUser } from "./lib/auth";
 import { isDirectoryComplete } from "./lib/directory";
 import { externalThumbnail } from "./lib/photo";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
-import { INSIGHTS_LAYOUT, PANEL_V2_LAYOUT } from "./lib/tvLayouts";
+import { INSIGHTS_LAYOUT, MENTORS_LAYOUT, PANEL_V2_LAYOUT } from "./lib/tvLayouts";
 import { clampTv, layoutTvBox as layoutBox } from "./lib/tvLayout";
 import {
   tvFeedModeValidator,
@@ -145,6 +145,7 @@ const KIND_DEFAULTS: Record<
   feed: { x: 52, y: 16, w: 42, h: 72, text: "" },
   sponsorGrid: { x: 8, y: 28, w: 84, h: 40, text: "" },
   sponsorTicker: { x: 0, y: 86, w: 100, h: 14, text: "" },
+  mentors: { x: 2, y: 14, w: 96, h: 84, text: "" },
 };
 
 function toPublicWidget(row: Doc<"tvWidgets">) {
@@ -704,12 +705,18 @@ export const adminSaveLayout = adminMutation({
 export const adminLoadLayout = adminMutation({
   args: {
     layoutId: v.optional(v.id("tvLayouts")),
-    preset: v.optional(v.union(v.literal("insights"), v.literal("panelv2"))),
+    preset: v.optional(
+      v.union(v.literal("insights"), v.literal("panelv2"), v.literal("mentors")),
+    ),
   },
   returns: v.array(widgetReturn),
   handler: async (ctx, args) => {
     const presetWidgets =
-      args.preset === "panelv2" ? PANEL_V2_LAYOUT : INSIGHTS_LAYOUT;
+      args.preset === "mentors"
+        ? MENTORS_LAYOUT
+        : args.preset === "panelv2"
+          ? PANEL_V2_LAYOUT
+          : INSIGHTS_LAYOUT;
     const layout: { widgets: Omit<Infer<typeof widgetReturn>, "_id">[] } | null =
       args.layoutId ? await ctx.db.get(args.layoutId) : { widgets: presetWidgets };
     if (!layout) throw new Error("Estado no encontrado");
