@@ -289,6 +289,49 @@ export const listFeed = query({
 });
 
 /**
+ * The meme screen: the latest posts flagged as memes, newest first. Public
+ * like the rest of the venue screens, so the picture is a storage URL rather
+ * than the app's session-bound file route. Reads the meme index only, so
+ * ordinary posts and commits do not rerun it.
+ */
+export const listMemes = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.string(),
+      authorName: v.string(),
+      teamName: v.string(),
+      text: v.string(),
+      imageUrl: v.optional(v.string()),
+      createdAt: v.number(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("posts")
+      .withIndex("by_meme_created", (q) => q.eq("meme", true))
+      .order("desc")
+      .take(12);
+    return await Promise.all(
+      rows.map(async (row) => {
+        const [post, imageUrl] = await Promise.all([
+          toTvFeedPost(ctx, row),
+          row.imageId ? ctx.storage.getUrl(row.imageId) : null,
+        ]);
+        return {
+          _id: post._id,
+          authorName: post.authorName,
+          teamName: post.teamName,
+          text: post.text,
+          imageUrl: imageUrl ?? undefined,
+          createdAt: post.createdAt,
+        };
+      }),
+    );
+  },
+});
+
+/**
  * The team-formation screen: who is here and which team each person is in,
  * and nothing else from their card. Public like the rest of the venue
  * screens, so photos are storage URLs rather than the app's session-bound
