@@ -20,6 +20,7 @@ import { antigravityCollector } from "./collectors/antigravity";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
+import { cursorCollector } from "./collectors/cursor";
 import { devinCollector } from "./collectors/devin";
 import { geminiCliCollector } from "./collectors/gemini-cli";
 import { kiloCodeCollector } from "./collectors/kilo-code";
@@ -58,6 +59,7 @@ import { collectionWindow, inWindow, windowPhase } from "./window";
 export const COLLECTORS: Collector[] = [
   claudeCodeCollector,
   codexCollector,
+  cursorCollector,
   geminiCliCollector,
   qwenCodeCollector,
   openCodeCollector,
@@ -377,6 +379,9 @@ export async function runWatch(
   const ctx: CollectorContext = { cursors, log, since: 0 };
   const applyWindow = (next: CollectionWindow | null): void => {
     window = next;
+    for (const collector of collectors) {
+      collector.setWindow?.(next);
+    }
     if (state) {
       state.window = next;
     }
@@ -400,6 +405,7 @@ export async function runWatch(
 
   const discovered: string[] = [];
   for (const c of collectors) {
+    await c.prepare?.(log);
     if ((await c.discover()).length > 0) {
       discovered.push(c.id);
     }

@@ -2,6 +2,22 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — Cursor usage is available at hook time, not in transcripts
+
+**Evidence and consequence.** Current Cursor agent transcripts under `~/.cursor/projects` retain
+messages but no token usage. Cursor's current local runtime passes `conversation_id`,
+`generation_id`, model, version, workspace roots, and input/output/cache counters to the
+`afterAgentResponse` user hook. Treating the transcript as a usage source would either report
+fabricated estimates or leave Cursor invisible.
+
+**Prevention and verification.** Install one additive user hook from `hackspain watch`, preserve
+all existing Cursor hooks, and allowlist only usage metadata into HackSpain's private local state;
+never retain the hook's response text or user email. Cursor input includes cache reads and writes,
+so subtract both before canonicalization. Deduplicate with `(conversation_id, generation_id)` and
+accept that sessions before installation and cloud agents cannot be backfilled. Focused tests must
+cover hook merging, the privacy allowlist, cache normalization, restart deduplication, and invalid
+configuration failing without overwriting the user's file.
+
 ## 2026-09-19 — GitHub Insights reads the feed's canonical event names
 
 **Evidence.** GitHub's API sends `PushEvent` and `PullRequestEvent`, but `githubFeed:pollRepos` deliberately stores the normalized values `push` and `pull_request` in feed posts. Insights compared stored posts with the upstream API names, so production returned zero GitHub activity even when the feed contained events. Teams may link several repositories, so one ETag on the team also cannot represent every poll target.
