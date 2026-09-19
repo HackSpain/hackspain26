@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { EMPTY_REEL, demoMemes, freshMemes, memeAge, memeCaption, reelAdvance, reelArrive } from "./tv-memes";
+import { EMPTY_REEL, demoMemes, freshMemes, memeAge, memeCaption, reactionTotal, reelAdvance, reelArrive, topReactions } from "./tv-memes";
 import type { TvMeme } from "./tv-memes";
 
 const meme = (id: string, createdAt: number): TvMeme => ({ _id: id, authorName: id, createdAt, teamName: "", text: `${id} #meme` });
@@ -57,6 +57,28 @@ test("ages read in minutes, hours and days", () => {
   assert.equal(memeAge(0, 5 * 60_000), "hace 5 min");
   assert.equal(memeAge(0, 3 * 3_600_000), "hace 3 h");
   assert.equal(memeAge(0, 50 * 3_600_000), "hace 2 d");
+});
+
+test("reactions show the most used first and count the ones left out", () => {
+  const reactions = [{ count: 2, emoji: "👀" }, { count: 9, emoji: "😂" }, { count: 0, emoji: "💀" }, { count: 5, emoji: "🔥" }];
+  assert.deepEqual(topReactions({ reactions }, 2), { rest: 2, shown: [{ count: 9, emoji: "😂" }, { count: 5, emoji: "🔥" }] });
+  assert.deepEqual(topReactions({}, 3), { rest: 0, shown: [] });
+  assert.equal(reactionTotal({ reactions }), 16);
+});
+
+test("a reaction does not count as a new meme or move the rotation", () => {
+  const before = [meme("b", 20), meme("a", 10)];
+  const after = [{ ...before[0], reactions: [{ count: 1, emoji: "🔥" }] }, before[1]];
+  const reel = reelArrive(EMPTY_REEL, undefined, before);
+  assert.deepEqual(freshMemes(before, after), []);
+  assert.deepEqual(reelArrive(reel, before, after), reel);
+});
+
+test("demo memes arrive without reactions and gather them step by step", () => {
+  const at = (step: number) => demoMemes(step, 1_000_000, 8000);
+  assert.equal(reactionTotal(at(1)[0]), 0);
+  assert.ok(reactionTotal(at(2)[1]) > 0);
+  assert.ok(reactionTotal(at(3)[2]) > reactionTotal(at(2)[1]));
 });
 
 test("the demo posts one new meme per step and starts over", () => {
