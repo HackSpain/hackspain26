@@ -515,8 +515,9 @@ function MiniMarketStage({ data, posts, demo, series, teams }: {
                   ) : (
                     <ol className="grid min-h-0 flex-1 grid-rows-3">
                       {ranking.map((row, index) => (
-                        <li key={`${showPeople ? "person" : "team"}-${row.id}`} className="grid min-h-0 grid-cols-[1.6em_minmax(0,1fr)_auto] items-center gap-[calc(var(--u)*0.7)] border-b border-hs-ink/15 text-[calc(var(--u)*1.4)] last:border-0">
+                        <li key={`${showPeople ? "person" : "team"}-${row.id}`} className="grid min-h-0 grid-cols-[1.6em_1.8em_minmax(0,1fr)_auto] items-center gap-[calc(var(--u)*0.7)] border-b border-hs-ink/15 text-[calc(var(--u)*1.4)] last:border-0">
                           <span className={cn("hsx-title hsx-num flex aspect-square items-center justify-center", index === 0 ? "bg-hs-gold" : "bg-hs-sand")}>{index + 1}</span>
+                          <Face name={row.name} src={"team" in row ? row.photoUrl : row.logoUrl} logo={!showPeople} className="w-full" />
                           <span className="line-clamp-2 min-w-0 font-bold leading-tight break-words">{row.name}</span>
                           <span className="hsx-num font-bold">{compact(row.tokens)}</span>
                         </li>
