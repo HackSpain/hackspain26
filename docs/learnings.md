@@ -211,6 +211,15 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 
 **Correction and verification.** Keep the response and access wrapper unchanged, but start independent reads together with Promise.all. The change reduces serialized wait time rather than document count. Compare uncached execution time after deployment; do not claim fewer database reads or treat this latency as the cause of unrelated browser disconnects.
 
+**Follow-up, 2026-09-19.** A later production sample still measured 52 uncached
+`teams:list` executions with a 2.22 s median and one execution reading 937 documents.
+Parallel reads alone did not eliminate repeated track reads or signup lookups for
+already-named users. Reuse track promises only within one handler invocation and
+read a signup only when the user's name is nullish. Preserve empty names, deleted
+track handling, owner order, and the authorization wrapper. Regression tests cover
+these outputs and read counts; measure production latency after deployment rather
+than equating fewer reads with a guaranteed duration.
+
 ## 2026-09-18 — Stale agent instructions can reintroduce removed behavior
 
 **Evidence.** The previous `AGENTS.md` simultaneously called Insights mock-only and described live insights, documented a superseded RawTree dual-write path, and said projects could enter multiple tracks despite the current one-track validation. The dashboard README also explicitly forbade the auth bypass needed to correct the observed firewall problem.

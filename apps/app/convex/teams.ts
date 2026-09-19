@@ -290,6 +290,16 @@ export const list = onboardedQuery({
       membershipForUser(ctx, ctx.user._id),
       ctx.db.query("teams").collect(),
     ]);
+    // Tracks are shared by many teams. Reuse each read within this execution.
+    const trackReads = new Map<Id<"tracks">, Promise<Doc<"tracks"> | null>>();
+    const getTrack = (id: Id<"tracks">) => {
+      let read = trackReads.get(id);
+      if (!read) {
+        read = ctx.db.get(id);
+        trackReads.set(id, read);
+      }
+      return read;
+    };
     const result = await Promise.all(
       teams.map(async (team) => {
         const [members, submission] = await Promise.all([
@@ -304,9 +314,7 @@ export const list = onboardedQuery({
         ]);
         const tracks = (
           await Promise.all(
-            (submission?.challengeIds ?? []).map((trackId) =>
-              ctx.db.get(trackId)
-            )
+            (submission?.challengeIds ?? []).map(getTrack)
           )
         )
           .filter((track) => track !== null)
@@ -315,10 +323,11 @@ export const list = onboardedQuery({
           members
             .filter((member) => member.status === "member")
             .map(async (member) => {
-              const [user, signup] = await Promise.all([
-                member.userId ? ctx.db.get(member.userId) : null,
-                member.signupId ? ctx.db.get(member.signupId) : null,
-              ]);
+              const user = member.userId ? await ctx.db.get(member.userId) : null;
+              // Signup is only a name fallback; onboarded users already have one.
+              const signup = (user?.name === undefined || user.name === null) && member.signupId
+                ? await ctx.db.get(member.signupId)
+                : null;
               return {
                 _id: member._id,
                 avatarUrl: user ? avatarUrlFor(user) : undefined,
