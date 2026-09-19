@@ -28,12 +28,13 @@ test("default reset layout fits the canvas and has no team leaderboards", () => 
 });
 
 test("panelv2 layout fits the canvas and keeps live CLI widgets", () => {
-  assert.equal(PANEL_V2_LAYOUT.length, 8);
+  assert.equal(PANEL_V2_LAYOUT.length, 9);
   const kinds = new Set(PANEL_V2_LAYOUT.map((widget) => widget.kind));
-  for (const kind of ["liveTokens", "liveAgents", "liveModels", "liveLeaderboard", "feed", "sponsorTicker"]) {
+  for (const kind of ["liveTokens", "liveAgents", "liveModels", "liveCommitPulse", "liveLeaderboard", "feed", "sponsorTicker"]) {
     assert.ok(kinds.has(kind));
   }
   assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "clock" && widget.text === "event"), true);
+  assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "banner" && widget.text === "logo"), true);
   // Commits ride inside the feed, and the strip is logos only like the v1 panel.
   assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "feed" && widget.feedSource === "all"), true);
   assert.equal(PANEL_V2_LAYOUT.some((widget) => widget.kind === "sponsorTicker" && widget.text === "logos"), true);

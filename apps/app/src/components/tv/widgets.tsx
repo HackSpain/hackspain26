@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useRef } from "react";
 import { useLiveInsights } from "@/app/insights/use-live-insights";
+import { MARKET_BUCKETS } from "@/lib/tv-market";
 import type { TvFontWeight, TvWidget } from "@/lib/tv";
 import { tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from "@/lib/tv";
 import { cn } from "@/lib/utils";
@@ -21,6 +23,7 @@ import {
   LiveAgentsBox,
   LiveCommitsBox,
   LiveLeaderboardBox,
+  LiveCommitPulseBox,
   LiveModelsBox,
   LiveTokensBox,
 } from "./live-boxes";
@@ -81,6 +84,35 @@ function BannerWidget({
       >
         {text}
       </p>
+    </div>
+  );
+}
+
+function LogoCell() {
+  const reduced = usePrefersReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (reduced || !ref.current) {
+        return;
+      }
+      gsap.from(ref.current, {
+        xPercent: -12,
+        opacity: 0,
+        duration: 0.9,
+        ease: TV_EASE_OUT,
+        delay: 0.4,
+      });
+    },
+    { dependencies: [reduced] },
+  );
+
+  return (
+    <div className="flex h-full items-center justify-center bg-hs-paper px-[1.2cqw]">
+      <div ref={ref} className="flex h-full items-center">
+        <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-[64%] w-auto" />
+      </div>
     </div>
   );
 }
@@ -174,12 +206,43 @@ function EventClock() {
       ? "--:--:--"
       : `${padClock(Math.floor(left / 3600))}:${padClock(Math.floor(left / 60) % 60)}:${padClock(left % 60)}`;
 
+  const bucket =
+    time !== undefined && startsAt !== undefined && endsAt !== undefined && endsAt > startsAt
+      ? Math.min(
+          MARKET_BUCKETS - 1,
+          Math.max(0, Math.floor(((time - startsAt) / (endsAt - startsAt)) * MARKET_BUCKETS)),
+        )
+      : 0;
+
   return (
-    <div className="grid h-full grid-cols-[minmax(0,0.9fr)_minmax(0,1.5fr)_minmax(0,1.1fr)] gap-[0.3cqw] bg-hs-ink">
+    <div className="grid h-full grid-cols-[minmax(0,0.8fr)_minmax(0,1.9fr)_minmax(0,1.2fr)_minmax(0,0.9fr)] gap-[0.3cqw] bg-hs-ink">
       <p className="flex items-center justify-center gap-[0.5cqw] bg-hs-red px-[0.6cqw] font-bungee text-[clamp(0.7rem,1.3cqw,1.8rem)] uppercase text-hs-paper">
         <span className="tv-pulse size-[0.7cqw] shrink-0 rounded-full bg-hs-paper" aria-hidden />
         En directo
       </p>
+      <div className="flex flex-col justify-center gap-[0.45cqw] bg-hs-paper px-[0.9cqw] leading-none text-hs-ink">
+        <p className="flex justify-between text-[clamp(0.5rem,0.7cqw,0.95rem)] font-bold tracking-[0.12em] uppercase">
+          <span className="text-hs-ink/60">Tramo del hackathon</span>
+          <span className="tabular-nums">
+            {bucket + 1} / {MARKET_BUCKETS}
+          </span>
+        </p>
+        <div className="flex gap-[0.15cqw]" aria-hidden>
+          {Array.from({ length: MARKET_BUCKETS }, (_, index) => (
+            <span
+              key={index}
+              className={cn(
+                "h-[0.9cqw] flex-1 border-[length:0.1cqw] border-hs-ink",
+                index < bucket
+                  ? "bg-hs-teal"
+                  : index === bucket
+                    ? "tv-pulse bg-hs-gold"
+                    : "bg-hs-sand",
+              )}
+            />
+          ))}
+        </div>
+      </div>
       <div className="flex flex-col items-center justify-center bg-hs-gold px-[0.6cqw] leading-none text-hs-ink">
         <span className="text-[clamp(0.5rem,0.7cqw,0.95rem)] font-bold tracking-[0.12em] uppercase">
           {label}
@@ -265,6 +328,9 @@ export function TvWidgetView({
 }) {
   switch (widget.kind) {
     case "banner":
+      if (widget.text === "logo") {
+        return <LogoCell />;
+      }
       return (
         <BannerWidget
           text={widget.text}
@@ -319,6 +385,8 @@ export function TvWidgetView({
       return <LiveTokensBox />;
     case "liveModels":
       return <LiveModelsBox />;
+    case "liveCommitPulse":
+      return <LiveCommitPulseBox />;
     case "liveLeaderboard":
       return <LiveLeaderboardBox />;
     case "feed":

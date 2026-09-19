@@ -238,6 +238,12 @@ export const TV_PALETTE: readonly {
     group: "live",
   },
   {
+    kind: "liveCommitPulse",
+    label: "Pulso de commits",
+    hint: "Tira discreta con los últimos pushes",
+    group: "live",
+  },
+  {
     kind: "liveLeaderboard",
     label: "Equipos",
     hint: "Clasificación animada",

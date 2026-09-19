@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
 import { INSIGHT_BUCKETS } from "@convex/tvPlayback";
@@ -34,6 +34,7 @@ import {
   useRankRows,
   useStreamShift,
 } from "./gsap";
+import { FeedDemoContext } from "./feed-box";
 import { usePrefersReducedMotion, useTick } from "./motion";
 
 function LiveHeader({
@@ -361,12 +362,12 @@ export function LiveAgentsBox() {
 }
 
 const MODEL_ROWS = 5;
-const OTHER_FAMILY = { color: "#8a7a6a", mark: "AI" };
-const FAMILY_STYLE: Record<string, { color: string; mark: string }> = {
-  claude: { color: "#d96b2a", mark: "CL" },
-  gpt: { color: "#35858a", mark: "GPT" },
-  gemini: { color: "#1e3958", mark: "GEM" },
-  qwen: { color: "#8b6b9f", mark: "QW" },
+const OTHER_FAMILY = { color: "#8a7a6a" };
+const FAMILY_STYLE: Record<string, { color: string }> = {
+  claude: { color: "#d96b2a" },
+  gpt: { color: "#35858a" },
+  gemini: { color: "#1e3958" },
+  qwen: { color: "#8b6b9f" },
   other: OTHER_FAMILY,
 };
 
@@ -440,12 +441,11 @@ function ModelRowView({
       <span ref={flash} data-flash aria-hidden className={FLASH_LAYER_CLASS} />
       <span
         className={cn(
-          "font-bungee flex w-[2.2cqw] shrink-0 items-center justify-center py-[0.25cqw] text-[clamp(0.45rem,0.6cqw,0.85rem)]",
-          rank === 0 ? "text-hs-gold" : "text-hs-paper",
+          "font-bungee w-[1.4cqw] shrink-0 text-[clamp(0.55rem,0.8cqw,1.1rem)] tabular-nums",
+          rank === 0 ? "text-hs-gold" : "text-hs-brown",
         )}
-        style={{ backgroundColor: rank === 0 ? "#2a170f" : style.color }}
       >
-        {style.mark}
+        {rank + 1}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-[0.25cqw]">
         <span className="flex items-baseline justify-between gap-[0.6cqw]">
@@ -1061,7 +1061,7 @@ export function LiveLeaderboardBox() {
 
   const shown = ranked.slice(page * LEADERBOARD_PAGE, (page + 1) * LEADERBOARD_PAGE);
   const order = useMemo(() => shown.map((team) => team.id), [shown]);
-  const register = useRankRows(order, visit.id);
+  const register = useRankRows(order, { epoch: visit.id });
   const rankOf = new Map(order.map((id, index) => [id, index]));
   const stable = shown.toSorted((a, b) => a.id.localeCompare(b.id));
   const offset = page * LEADERBOARD_PAGE;
@@ -1093,6 +1093,180 @@ export function LiveLeaderboardBox() {
           />
         ))}
       </ol>
+    </div>
+  );
+}
+
+const PULSE_SLOTS = 8;
+const REPO_COLORS = [
+  "var(--color-hs-teal)",
+  "var(--color-hs-orange)",
+  "var(--color-hs-red)",
+  "#1e3958",
+  "#8b6b9f",
+  "var(--color-hs-brown)",
+];
+
+function repoColor(repo: string) {
+  let hash = 0;
+  for (const char of repo) {
+    hash = (hash * 31 + char.codePointAt(0)!) >>> 0;
+  }
+  return REPO_COLORS[hash % REPO_COLORS.length] ?? REPO_COLORS[0];
+}
+
+type PulseCommit = { id: string; repo: string; actor: string; sha: string };
+
+/**
+ * Thin git-trunk strip: each push becomes a node that lands on the right and
+ * nudges the older ones left, with a light pulse running along the trunk.
+ */
+export function LiveCommitPulseBox() {
+  const reduced = usePrefersReducedMotion();
+  const demo = useContext(FeedDemoContext);
+  const remote = useQuery(api.tv.listGithubActivity, demo ? "skip" : {});
+  const commits = useMemo<PulseCommit[]>(() => {
+    if (demo) {
+      return demo
+        .filter((post) => post.kind === "github")
+        .map((post) => ({
+          id: post._id,
+          repo: post.repo ?? "repo",
+          actor: post.authorName,
+          sha: post.sha ?? "",
+        }));
+    }
+    return (remote ?? []).map((row) => ({
+      id: row._id,
+      repo: row.repo || "repo",
+      actor: row.actor || "github",
+      sha: row.sha,
+    }));
+  }, [demo, remote]);
+  const visible = useMemo(
+    () => commits.slice(0, PULSE_SLOTS).toReversed(),
+    [commits],
+  );
+  const order = useMemo(() => visible.map((commit) => commit.id), [visible]);
+  const register = useRankRows(order, { axis: "x" });
+  const repos = useMemo(() => new Set(commits.map((commit) => commit.repo)).size, [commits]);
+  const count = useCountUp(commits.length, number);
+  const track = useRef<HTMLDivElement>(null);
+  const pulse = useRef<HTMLSpanElement>(null);
+  const newest = visible.at(-1)?.id;
+  const seen = useRef<string | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    const before = seen.current;
+    seen.current = newest;
+    if (before === undefined || before === newest || reduced || !newest) {return;}
+    const timeline = gsap.timeline();
+    if (pulse.current) {
+      timeline.fromTo(
+        pulse.current,
+        { xPercent: 0, opacity: 0.9 },
+        { xPercent: (PULSE_SLOTS - 1) * 100, opacity: 0, duration: 0.85, ease: "power2.inOut" },
+        0,
+      );
+    }
+    const node = track.current?.querySelector<HTMLElement>(`[data-commit="${newest}"]`);
+    const ring = node?.querySelector<HTMLElement>("[data-ring]");
+    const label = node?.querySelector<HTMLElement>("[data-sha]");
+    if (ring) {
+      timeline.fromTo(
+        ring,
+        { scale: 0.6, opacity: 0.9 },
+        { scale: 3.2, opacity: 0, duration: 0.9, ease: TV_EASE_OUT },
+        0.55,
+      );
+    }
+    if (label?.dataset.sha) {
+      timeline.to(
+        label,
+        { duration: 0.8, scrambleText: { text: label.dataset.sha, chars: "0123456789abcdef", speed: 0.5 } },
+        0.6,
+      );
+    }
+    return () => {
+      settle(timeline);
+    };
+  }, [newest, reduced]);
+
+  return (
+    <div className="flex h-full items-stretch gap-[0.9cqw] bg-hs-paper px-[1cqw] py-[0.6cqw] text-hs-ink">
+      <div className="flex w-[6.5cqw] shrink-0 flex-col justify-center gap-[0.2cqw] border-r border-hs-ink/15 pr-[0.8cqw] leading-none">
+        <p className="font-bungee text-[clamp(0.6rem,0.95cqw,1.3rem)]">Commits</p>
+        <p className="text-[clamp(0.5rem,0.65cqw,0.9rem)] text-hs-brown tabular-nums">
+          <span ref={count}>{number(commits.length)}</span> pushes · {repos} repos
+        </p>
+      </div>
+      <div ref={track} className="relative min-w-0 flex-1">
+        <span className="absolute inset-x-0 top-1/2 h-[0.12cqw] -translate-y-1/2 bg-hs-ink/25" aria-hidden />
+        <span
+          ref={pulse}
+          aria-hidden
+          className="absolute top-1/2 left-0 h-[0.3cqw] -translate-y-1/2 bg-gradient-to-r from-transparent via-hs-gold to-transparent opacity-0"
+          style={{ width: `${100 / PULSE_SLOTS}%` }}
+        />
+        {visible.length === 0 ? (
+          <p className="absolute inset-0 flex items-center text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
+            {remote === undefined && !demo ? "Cargando pushes…" : "Sin commits todavía."}
+          </p>
+        ) : null}
+        <ol
+          className="absolute inset-y-0 right-0"
+          style={{ width: `${(100 * visible.length) / PULSE_SLOTS}%` }}
+        >
+          {visible.map((commit, slot) => {
+            const latest = slot === visible.length - 1;
+            const color = repoColor(commit.repo);
+            return (
+              <li
+                key={commit.id}
+                ref={register(commit.id)}
+                data-commit={commit.id}
+                className="absolute inset-y-0 left-0"
+                style={{ width: `${100 / Math.max(1, visible.length)}%` }}
+              >
+                <div
+                  className="relative flex h-full flex-col items-center justify-between"
+                  style={{ opacity: latest ? 1 : 0.45 + (0.55 * slot) / Math.max(1, PULSE_SLOTS - 1) }}
+                >
+                  <span
+                    className={cn(
+                      "max-w-full truncate text-[clamp(0.5rem,0.65cqw,0.9rem)] leading-none font-bold",
+                      latest ? "text-hs-ink" : "text-hs-brown",
+                    )}
+                  >
+                    {commit.repo.split("/").pop()}
+                  </span>
+                  <span className="relative flex size-[1cqw] items-center justify-center">
+                    <span
+                      data-ring
+                      aria-hidden
+                      className="absolute inset-0 rounded-full border-[length:0.12cqw] opacity-0"
+                      style={{ borderColor: color }}
+                    />
+                    <span
+                      className={cn(
+                        "block rounded-full border-[length:0.14cqw] border-hs-ink",
+                        latest ? "tv-pulse size-[1cqw] bg-hs-gold" : "size-[0.7cqw]",
+                      )}
+                      style={latest ? undefined : { backgroundColor: color }}
+                    />
+                  </span>
+                  <span
+                    data-sha={commit.sha}
+                    className="font-mono text-[clamp(0.5rem,0.65cqw,0.9rem)] leading-none text-hs-brown tabular-nums"
+                  >
+                    {commit.sha}
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </div>
   );
 }

@@ -141,6 +141,7 @@ const KIND_DEFAULTS: Record<
   liveAgents: { x: 50, y: 16, w: 44, h: 28, text: "" },
   liveTokens: { x: 50, y: 48, w: 44, h: 28, text: "" },
   liveModels: { x: 6, y: 48, w: 40, h: 40, text: "" },
+  liveCommitPulse: { x: 6, y: 12, w: 60, h: 8, text: "" },
   liveLeaderboard: { x: 8, y: 16, w: 50, h: 68, text: "" },
   feed: { x: 52, y: 16, w: 42, h: 72, text: "" },
   sponsorGrid: { x: 8, y: 28, w: 84, h: 40, text: "" },

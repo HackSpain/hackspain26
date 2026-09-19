@@ -115,6 +115,26 @@ function thumb(kind: TvWidgetKind) {
         </Paper>
       );
     }
+    case "liveCommitPulse": {
+      return (
+        <Paper>
+          <p className="font-bungee text-[8px] uppercase">Commits</p>
+          <div className="relative mt-2 h-4">
+            <span className="absolute inset-x-0 top-1/2 h-px bg-hs-ink/30" />
+            {[10, 30, 50, 70, 90].map((left, index) => (
+              <span
+                key={left}
+                className={cn(
+                  "absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full",
+                  index === 4 ? "bg-hs-gold ring-2 ring-hs-ink" : "bg-hs-ink",
+                )}
+                style={{ left: `${left}%` }}
+              />
+            ))}
+          </div>
+        </Paper>
+      );
+    }
     case "liveModels": {
       return (
         <Paper>
