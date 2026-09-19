@@ -86,7 +86,7 @@ terminals, a small mark elsewhere.
 `hackspain watch` is meant to stay open in its own terminal all weekend. It takes over the
 screen with that wordmark on top, a short "Keep this open" note on why it matters, a panel for you and your team, a table of the AI
 harnesses it found (with the real logo beside each name where the terminal draws images, a
-brand glyph elsewhere: ✻ Claude Code, ⬡ Codex, ✦ Gemini CLI, ❋ Qwen Code, ▍ Cursor, ◆ OpenCode, ⬢ Kilo Code, ▣ Cline, ◉ Copilot, π Pi, π Oh My Pi, ◠ Antigravity, ◈ Devin;
+brand glyph elsewhere: ✻ Claude Code, ⬡ Codex, ✦ Gemini CLI, ❋ Qwen Code, ▍ Cursor, ◆ OpenCode, ⬢ Kilo Code, ▣ Cline, ◉ Copilot, π Pi, π Oh My Pi, ◠ Antigravity, ◈ Devin, ✕ Grok;
 status, requests, tokens, cached, last request; "Tokens" is input + output, while prompt-cache
 reads and writes sit in their own column because a long session re-reads hundreds of thousands
 of cached tokens per turn), organiser announcements as they
@@ -97,7 +97,7 @@ next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--jso
 `--plain` use the line-by-line mode instead.
 
 Every 30 s it reads the local session logs of the
-AI coding harnesses it finds (Claude Code, Codex, Cursor, GitHub Copilot CLI, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin), normalises them into one
+AI coding harnesses it finds (Claude Code, Codex, Cursor, GitHub Copilot CLI, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin, Grok), normalises them into one
 schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
 (`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
 `/api/cli/telemetry` with your session. The server authenticates and validates batches, then

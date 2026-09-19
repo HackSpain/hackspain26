@@ -78,6 +78,12 @@ export const HARNESSES = [
     mark: "Dv",
     name: "Devin",
   },
+  {
+    color: "#bebebe",
+    id: "grok",
+    mark: "Gk",
+    name: "Grok",
+  },
 ] as const;
 
 export const TRACKS: string[] = [];

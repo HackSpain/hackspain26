@@ -42,6 +42,7 @@ export const HARNESSES = [
   "omp",
   "antigravity",
   "devin",
+  "grok",
 ] as const;
 export type HarnessId = (typeof HARNESSES)[number];
 
