@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
 import type { MutationCtx } from "./_generated/server";
-import { arrivals, staffScan, staffStatus, staffUndoCheckIn } from "./passes";
+import {
+  arrivals,
+  checkInParticipantRecord,
+  staffScan,
+  staffStatus,
+  staffUndoCheckIn,
+} from "./passes";
 import { dropCheckInMetadata } from "./migrations";
 import { reconcileArrivals } from "../src/lib/arrival-queue";
 
@@ -49,6 +55,11 @@ function reception(t: TestContext) {
         const row = rows.get(id);
         assert.ok(row);
         Object.assign(row, fields);
+      },
+      async insert(table: string, fields: Record<string, unknown>) {
+        const id = `${table}${rows.size}`;
+        rows.set(id, { ...fields, _id: id, table });
+        return id;
       },
       async replace(id: string, fields: Record<string, unknown>) {
         const row = rows.get(id);
@@ -139,4 +150,37 @@ test("reception accepts codes before and after the event without an opening time
   settings.phase = "ended";
   assert.equal((await staffScan._handler(ctx, { value: "CD8M" })).status, "checked_in");
   assert.equal((await staffStatus._handler(ctx, {})).checkedIn, 2);
+});
+
+test("admin ficha check-in marks the existing pass and can run twice", async (t) => {
+  const { ctx, rows } = reception(t);
+  const result = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
+  assert.equal(result.status, "checked_in");
+  assert.equal(rows.get("pass0")?.checkedInAt, result.checkedInAt);
+  const again = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
+  assert.equal(again.status, "already_checked_in");
+  assert.equal(again.checkedInAt, result.checkedInAt);
+});
+
+test("admin ficha check-in issues a pass when the person has none", async (t) => {
+  const { ctx, rows } = reception(t);
+  rows.delete("pass0");
+  const result = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
+  assert.equal(result.status, "checked_in");
+  const created = [...rows.values()].find(
+    (row) => row.table === "eventPasses" && row.signupId === "signup0",
+  );
+  assert.ok(created);
+  assert.equal(created.checkedInAt, result.checkedInAt);
+  assert.equal(created.status, "active");
+});
+
+test("admin ficha check-in can recover a cancelled attendee", async (t) => {
+  const { ctx, rows } = reception(t);
+  const user = rows.get("user0");
+  assert.ok(user);
+  user.attendanceStatus = "cancelled";
+  const result = await checkInParticipantRecord(ctx, { userId: "user0" as never });
+  assert.equal(result.status, "checked_in");
+  assert.equal(rows.get("user0")?.attendanceStatus, "attending");
 });
