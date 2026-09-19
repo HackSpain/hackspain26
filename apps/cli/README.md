@@ -97,7 +97,7 @@ next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--jso
 `--plain` use the line-by-line mode instead.
 
 Every 30 s it reads the local session logs of the
-AI coding harnesses it finds (Claude Code, Codex, Cursor, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin), normalises them into one
+AI coding harnesses it finds (Claude Code, Codex, Cursor, GitHub Copilot CLI, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin), normalises them into one
 schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
 (`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
 `/api/cli/telemetry` with your session. The server authenticates and validates batches, then
@@ -132,6 +132,13 @@ generation ids, token counters, timestamp, and workspace needed for the same nor
 Prompt and response text, tool data, email, and full paths are never written to the telemetry
 spool or uploaded. The hook keeps recording locally while the watcher is closed, so the next run
 catches up; Cursor activity before the hook was installed cannot be recovered.
+
+GitHub Copilot support covers Copilot CLI sessions. Copilot writes cumulative per-model usage to
+`~/.copilot/session-state/<session>/events.jsonl` when a session shuts down; the watcher reports
+only the increase from each later shutdown when a session is resumed. Close the Copilot session
+cleanly before the hackathon ends so its final usage is persisted. Copilot Chat inside an editor,
+cloud coding-agent sessions, crashed processes, and CLI sessions that never write a shutdown
+record cannot be reconstructed from these local files.
 
 The watcher remembers. `~/.local/state/hackspain/watch-memory.json` keeps the first start, the
 last scan and the latest organiser announcements, and the local spool keeps every usage event, so
