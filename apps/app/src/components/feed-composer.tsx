@@ -8,11 +8,12 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Id } from "@convex/_generated/dataModel";
 import { api } from "@convex/_generated/api";
+import type { Mention } from "@convex/lib/feedSocial";
 import { hasMemeTag } from "@convex/lib/feedTabs";
 import type { FeedPost } from "@/components/feed-timeline";
 import { errorMessage } from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionTextarea } from "@/components/mention-textarea";
 import { uploadToConvex } from "@/lib/upload";
 
 const MAX_TEXT = 500;
@@ -23,6 +24,7 @@ type Me = FunctionReturnType<typeof api.users.me>;
 type PostArgs = {
   clientId?: string;
   imageId?: Id<"_storage">;
+  mentions?: Mention[];
   text: string;
 };
 
@@ -55,6 +57,7 @@ function optimisticPost(
       github: undefined,
       imagePath: preview,
       kind: "post",
+      mentions: args.mentions,
       mine: true,
       pending: true,
       project: undefined,
@@ -85,6 +88,7 @@ export function FeedComposer() {
   const post = useMutation(api.feed.post);
   const generateUploadUrl = useMutation(api.feed.generateUploadUrl);
   const [text, setText] = useState("");
+  const [mentions, setMentions] = useState<Mention[]>([]);
   const [file, setFile] = useState<File | null>(null);
   // Only the image upload is slow enough to deserve visible progress. The
   // mutation itself resolves in ~100 ms and is already shown optimistically in
@@ -111,6 +115,7 @@ export function FeedComposer() {
     }
     inFlight.current = true;
     const draft = text;
+    const tagged = mentions;
     const attached = file;
     const clientId = crypto.randomUUID();
     let preview: string | undefined;
@@ -127,6 +132,7 @@ export function FeedComposer() {
         setUploading(false);
       }
       setText("");
+      setMentions([]);
       setFile(null);
       if (fileInput.current) {
         fileInput.current.value = "";
@@ -137,10 +143,12 @@ export function FeedComposer() {
       await post.withOptimisticUpdate(optimisticPost(me, preview))({
         clientId,
         imageId,
+        mentions: tagged,
         text: draft,
       });
     } catch (error) {
       setText(draft);
+      setMentions(tagged);
       setFile(attached);
       toast.error(errorMessage(error, "No se pudo publicar"));
     } finally {
@@ -155,10 +163,15 @@ export function FeedComposer() {
 
   return (
     <div className="min-w-0 border-[3px] border-hs-ink bg-hs-paper motion-safe:transition-[border-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] focus-within:border-hs-navy">
-      <Textarea
+      <MentionTextarea
         value={text}
-        onChange={(event) => setText(event.target.value.slice(0, MAX_TEXT))}
-        placeholder="¿En qué estáis? Un avance, una foto del equipo, una demo que funciona…"
+        mentions={mentions}
+        maxLength={MAX_TEXT}
+        onChange={(next, tagged) => {
+          setText(next);
+          setMentions(tagged);
+        }}
+        placeholder="¿En qué estáis? Un avance, una foto del equipo, una demo que funciona… Menciona a alguien con @"
         rows={3}
         aria-label="Nueva publicación"
         className="min-h-24 resize-y border-0 focus-visible:border-transparent"

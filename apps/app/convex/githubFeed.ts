@@ -14,6 +14,7 @@ import {
 } from "./lib/github";
 import { urlOf } from "./lib/urls";
 import { teamRepoList } from "./stack";
+import { removePostSocial } from "./feedSocial";
 
 /**
  * Pulls public GitHub activity for every team repo into the feed.
@@ -145,6 +146,7 @@ export const purgeRepo = internalMutation({
     let removed = 0;
     for (const post of posts) {
       if (post.github?.repo === args.repo) {
+        await removePostSocial(ctx, post._id);
         await ctx.db.delete(post._id);
         removed++;
       }

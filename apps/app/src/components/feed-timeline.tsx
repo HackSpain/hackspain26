@@ -7,8 +7,11 @@ import type { KeyboardEvent } from "react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
 import type { FeedTab } from "@convex/lib/feedTabs";
+import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
+import { MentionText } from "@/components/mention-textarea";
 import { LoadingText } from "@/components/page";
+import { PostSocial } from "@/components/post-social";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -86,7 +89,7 @@ function postKey(post: FeedPost): string {
   return post.clientId ?? post._id;
 }
 
-function PostCard({ post, fresh }: { post: FeedPost; fresh: boolean }) {
+function PostCard({ post, fresh, meId }: { post: FeedPost; fresh: boolean; meId: Id<"users"> | undefined }) {
   const isGithub = post.kind === "github";
   const who = isGithub
     ? (post.teamName ?? post.github?.repo ?? "GitHub")
@@ -146,9 +149,12 @@ function PostCard({ post, fresh }: { post: FeedPost; fresh: boolean }) {
           </div>
         </div>
         {post.text ? (
-          <p className="text-pretty whitespace-pre-wrap break-words text-sm leading-relaxed">
-            {post.text}
-          </p>
+          <MentionText
+            text={post.text}
+            mentions={post.mentions}
+            meId={meId}
+            className="text-pretty whitespace-pre-wrap break-words text-sm leading-relaxed"
+          />
         ) : null}
         {post.imagePath ? (
           <a href={post.imagePath} target="_blank" rel="noreferrer">
@@ -171,6 +177,8 @@ function PostCard({ post, fresh }: { post: FeedPost; fresh: boolean }) {
             Ver en GitHub
           </a>
         ) : null}
+        {/* An optimistic row has no server id yet, so nothing to react to. */}
+        {post.pending ? null : <PostSocial postId={post._id} meId={meId} />}
       </CardContent>
     </Card>
     </div>
@@ -277,6 +285,7 @@ export function FeedTimeline({
   className?: string;
 }) {
   const posts = useQuery(api.feed.list, { limit, tab });
+  const meId = useQuery(api.users.me)?._id;
   // Keys present when the list first loaded never animate in; only posts that
   // arrive afterwards (yours, someone else's, GitHub) get the enter transition.
   // The set is frozen on purpose: a later post keeps `hs-enter` for its whole
@@ -304,6 +313,7 @@ export function FeedTimeline({
             key={key}
             post={post}
             fresh={initial !== null && !initial.has(key)}
+            meId={meId}
           />
         );
       })}
