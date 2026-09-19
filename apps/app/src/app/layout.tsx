@@ -24,6 +24,8 @@ export const metadata: Metadata = {
   title: "HackSpain",
   description: "Panel de participantes y organización de HackSpain 2026.",
   robots: { index: false, follow: false },
+  // Google Translate currently recurses in its injected script during navigation.
+  other: { google: "notranslate" },
   icons: {
     icon: [{ url: "/icon.png", type: "image/png" }],
     apple: [{ url: "/apple-icon.png", type: "image/png" }],
@@ -39,6 +41,7 @@ export default async function RootLayout({
     <ConvexAuthNextjsServerProvider>
       <html
         lang="es"
+        translate="no"
         data-scroll-behavior="smooth"
         className={`${dmSans.variable} ${bungee.variable} h-full antialiased`}
       >
