@@ -19,16 +19,23 @@ export async function membershipForUser(
     .first();
 }
 
+export async function findTeamSubmission(
+  ctx: QueryCtx | MutationCtx,
+  teamId: Id<"teams">
+): Promise<Doc<"submissions"> | null> {
+  return await ctx.db
+    .query("submissions")
+    .withIndex("by_team", (q) => q.eq("teamId", teamId))
+    .first();
+}
+
 export async function findOwnedSubmission(
   ctx: QueryCtx | MutationCtx,
   userId: Id<"users">
 ): Promise<Doc<"submissions"> | null> {
   const membership = await membershipForUser(ctx, userId);
   if (membership) {
-    const byTeam = await ctx.db
-      .query("submissions")
-      .withIndex("by_team", (q) => q.eq("teamId", membership.teamId))
-      .first();
+    const byTeam = await findTeamSubmission(ctx, membership.teamId);
     if (byTeam) {
       return byTeam;
     }

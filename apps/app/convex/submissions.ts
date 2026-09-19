@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { action, internalMutation } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
-import { requireOnboarded } from "./lib/auth";
+import { isAdmin, requireOnboarded } from "./lib/auth";
 import {
   adminQuery,
   onboardedMutation,
@@ -25,6 +25,7 @@ import {
 } from "./lib/submission";
 import {
   findOwnedSubmission,
+  findTeamSubmission,
   membershipForUser,
   teamLogoUrlFor,
 } from "./lib/team";
@@ -325,6 +326,7 @@ const commitArgs = {
   name: v.string(),
   perkIds: v.array(v.id("perks")),
   repoUrl: v.string(),
+  teamId: v.optional(v.id("teams")),
   videoUrl: v.string(),
 };
 
@@ -332,11 +334,31 @@ export const commitTrack = internalMutation({
   args: commitArgs,
   handler: async (ctx, args) => {
     const user = await requireOnboarded(ctx);
-    if (!(await submissionsAreOpen(ctx))) {
-      throw new Error("El envío de proyectos aún no está abierto");
+    let existing;
+    let teamId: Id<"teams"> | undefined;
+    let submittedBy: Id<"users">;
+
+    if (args.teamId) {
+      if (!isAdmin(user)) {
+        throw new Error("Se necesita acceso de admin");
+      }
+      const team = await ctx.db.get(args.teamId);
+      if (!team) {
+        throw new Error("Equipo no encontrado");
+      }
+      existing = await findTeamSubmission(ctx, args.teamId);
+      teamId = args.teamId;
+      submittedBy = existing?.submittedBy ?? team.ownerId;
+    } else {
+      if (!(await submissionsAreOpen(ctx))) {
+        throw new Error("El envío de proyectos aún no está abierto");
+      }
+      existing = await findOwnedSubmission(ctx, user._id);
+      const membership = await membershipForUser(ctx, user._id);
+      teamId = membership?.teamId ?? existing?.teamId;
+      submittedBy = existing?.submittedBy ?? user._id;
     }
 
-    const existing = await findOwnedSubmission(ctx, user._id);
     const [challengeId] = await resolveChallengeIds(
       ctx,
       [args.challengeId],
@@ -359,7 +381,6 @@ export const commitTrack = internalMutation({
       throw new Error("Este reto ya está enviado");
     }
 
-    const membership = await membershipForUser(ctx, user._id);
     const now = Date.now();
     const firstSubmit = !existing || existing.status !== "submitted";
     const trackVideos = [
@@ -379,8 +400,8 @@ export const commitTrack = internalMutation({
       perkIds: perkIds.length > 0 ? perkIds : (existing?.perkIds ?? []),
       status: "submitted" as const,
       submittedAt: existing?.submittedAt ?? now,
-      submittedBy: existing?.submittedBy ?? user._id,
-      teamId: membership?.teamId ?? existing?.teamId,
+      submittedBy,
+      teamId,
       trackVideos,
       updatedAt: now,
       urls: projectUrls(args.repoUrl, args.demoUrl, firstVideo),
@@ -402,8 +423,8 @@ export const commitTrack = internalMutation({
       force: true,
       repoUrls: [args.repoUrl],
       submissionId,
-      teamId: membership?.teamId,
-      userId: user._id,
+      teamId,
+      userId: submittedBy,
     });
     return submissionId;
   },
@@ -427,6 +448,7 @@ async function submitTrack(
     name: string;
     perkIds?: Id<"perks">[];
     repoUrl: string;
+    teamId?: Id<"teams">;
     videoUrl: string;
   }
 ): Promise<Id<"submissions">> {
@@ -462,6 +484,7 @@ async function submitTrack(
     name: name.value,
     perkIds: args.perkIds ?? [],
     repoUrl: publicRepo.url,
+    teamId: args.teamId,
     videoUrl: video.value,
   });
 }
@@ -470,6 +493,36 @@ export const submit = action({
   args: submitArgs,
   handler: submitTrack,
   returns: v.id("submissions"),
+});
+
+export const adminSubmit = action({
+  args: { ...submitArgs, teamId: v.id("teams") },
+  handler: submitTrack,
+  returns: v.id("submissions"),
+});
+
+export const adminForTeam = adminQuery({
+  args: { teamId: v.id("teams") },
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      return null;
+    }
+    const submission = await findTeamSubmission(ctx, args.teamId);
+    return {
+      name: team.name,
+      repoUrl: team.repoUrl ?? "",
+      submission: submission ? await hydrateSubmission(ctx, submission) : null,
+    };
+  },
+  returns: v.union(
+    v.object({
+      name: v.string(),
+      repoUrl: v.string(),
+      submission: v.union(submissionReturn, v.null()),
+    }),
+    v.null()
+  ),
 });
 
 export const verifyRepo = action({
