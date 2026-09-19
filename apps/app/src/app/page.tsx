@@ -3,10 +3,16 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { FeedTab } from "@convex/lib/feedTabs";
 import { DeliveryBriefing } from "@/components/delivery-briefing";
 import { EventClosedNotice, isEventOpen } from "@/components/event-closed-banner";
 import { FeedComposer } from "@/components/feed-composer";
-import { FeedTimeline } from "@/components/feed-timeline";
+import {
+  FEED_PANEL_ID,
+  FeedTabs,
+  FeedTimeline,
+  feedTabId,
+} from "@/components/feed-timeline";
 import { LoadingText, Page } from "@/components/page";
 import { SectionTiles } from "@/components/section-tiles";
 import { isSubmitFeatured } from "@/lib/event";
@@ -27,6 +33,7 @@ function useNow(intervalMs = 30_000) {
 export default function HomePage() {
   const me = useQuery(api.users.me);
   const now = useNow();
+  const [tab, setTab] = useState<FeedTab>("posts");
   const eligible = Boolean(
     me && (me.role === "admin" || (me.accepted && me.onboardingComplete))
   );
@@ -69,7 +76,16 @@ export default function HomePage() {
         <section aria-label="Feed" className="min-w-0 space-y-4 lg:order-1">
           {canPost ? <FeedComposer /> : null}
           {canPost ? (
-            <FeedTimeline />
+            <>
+              <FeedTabs value={tab} onChange={setTab} />
+              <div
+                role="tabpanel"
+                id={FEED_PANEL_ID}
+                aria-labelledby={feedTabId(tab)}
+              >
+                <FeedTimeline key={tab} tab={tab} />
+              </div>
+            </>
           ) : eventOpen ? (
             <p className="text-sm font-medium text-hs-brown">
               El feed se abre cuando completes tus datos.

@@ -193,6 +193,13 @@ const PROJECTS: {
   { name: "Sin nombre aún", description: "", tracks: [], stack: [], status: "draft" },
 ];
 
+const MEME_TEXTS = [
+  "Yo a las 4am explicándole al pato de goma por qué falla el deploy #meme",
+  "\"Funciona en mi máquina\": pues enviamos tu máquina al jurado #meme",
+  "Git blame dice que fui yo. Git blame miente. #meme",
+  "Cuando el mentor pregunta por los tests #memes",
+];
+
 const POST_TEXTS = [
   "Primer commit hecho. Ahora sí, a construir 🚀",
   "Acabamos de conseguir que el agente llame al ERP sin romper nada. Pequeña victoria.",
@@ -967,7 +974,9 @@ async function runSeed(
         createdAt,
         kind: "post",
         teamId: team.id,
-        text: pick(POST_TEXTS),
+        ...(chance(0.15)
+          ? { meme: true, text: pick(MEME_TEXTS) }
+          : { text: pick(POST_TEXTS) }),
       });
     }
     count("posts");

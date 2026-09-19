@@ -181,9 +181,13 @@ export default defineSchema({
     externalId: v.optional(v.string()),
     /** Client nonce so an optimistic row and its server row share one React key. */
     clientId: v.optional(v.string()),
+    /** Set when the text carries #meme, so the feed's meme tab reads an index. */
+    meme: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_created", ["createdAt"])
+    .index("by_kind_created", ["kind", "createdAt"])
+    .index("by_meme_created", ["meme", "createdAt"])
     .index("by_external", ["externalId"])
     .index("by_image", ["imageId"])
     .index("by_team", ["teamId"]),
