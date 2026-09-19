@@ -26,6 +26,7 @@ import { scheduleStackScan, teamRepoList } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { removePostSocial } from "./feedSocial";
 
 // No 0/O/1/I so codes survive being read aloud or handwritten.
 const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -885,6 +886,7 @@ export const dissolve = onboardedMutation({
       .collect();
     for (const post of posts) {
       if (post.kind === "github") {
+        await removePostSocial(ctx, post._id);
         await ctx.db.delete(post._id);
       } else {
         await ctx.db.patch(post._id, { teamId: undefined });

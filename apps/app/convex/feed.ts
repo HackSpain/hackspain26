@@ -6,6 +6,8 @@ import {
   onboardedQuery,
 } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
+import { checkedMentions, removePostSocial } from "./feedSocial";
+import { mentionValidator } from "./lib/feedSocial";
 import { feedTabValidator, hasMemeTag } from "./lib/feedTabs";
 import { imagePathFor } from "./lib/files";
 import { membershipForUser, teamLogoUrlFor } from "./lib/team";
@@ -44,6 +46,8 @@ export const postReturn = v.object({
   /** Same-origin path (/api/files/<id>) served by the dashboard; never a storage URL. */
   imagePath: v.optional(v.string()),
   kind: v.union(v.literal("post"), v.literal("github")),
+  /** People tagged in the text as `@name`; absent when there are none. */
+  mentions: v.optional(v.array(mentionValidator)),
   mine: v.boolean(),
   /** The team's project, when it has one: name plus the challenges it entered. */
   project: v.optional(
@@ -123,6 +127,7 @@ async function hydrate(
     github: post.github,
     imagePath: post.imageId ? imagePathFor(post.imageId) : undefined,
     kind: post.kind,
+    mentions: post.mentions,
     mine: post.authorId === viewerId,
     project: team ? await projectForTeam(ctx, team._id) : undefined,
     teamLogoUrl: teamLogoUrlFor(team),
@@ -183,6 +188,8 @@ export const post = onboardedMutation({
     /** Optional nonce from the dashboard composer (≤ 64 chars); stored verbatim. */
     clientId: v.optional(v.string()),
     imageId: v.optional(v.id("_storage")),
+    /** People picked from the `@` list; ones the text no longer names are dropped. */
+    mentions: v.optional(v.array(mentionValidator)),
     text: v.string(),
   },
   handler: async (ctx, args) => {
@@ -214,6 +221,7 @@ export const post = onboardedMutation({
       imageId: args.imageId,
       clientId: args.clientId,
       meme: hasMemeTag(text) || undefined,
+      mentions: await checkedMentions(ctx, text, args.mentions),
       createdAt: Date.now(),
     });
   },
@@ -284,6 +292,7 @@ export const remove = onboardedMutation({
     if (row.imageId) {
       await ctx.storage.delete(row.imageId);
     }
+    await removePostSocial(ctx, row._id);
     await ctx.db.delete(row._id);
     return null;
   },

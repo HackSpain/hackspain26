@@ -3,6 +3,7 @@ import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { urlEntryValidator } from "./lib/urls";
 import { directoryValidator } from "./lib/directory";
+import { mentionValidator } from "./lib/feedSocial";
 import { sectionsValidator } from "./lib/userTypes";
 import { screenPresetValidator } from "./lib/tvScreens";
 import { tvWidgetFields, tvWidgetValidator } from "./lib/tvValidators";
@@ -183,6 +184,8 @@ export default defineSchema({
     clientId: v.optional(v.string()),
     /** Set when the text carries #meme, so the feed's meme tab reads an index. */
     meme: v.optional(v.boolean()),
+    /** People tagged in the text as `@name`. */
+    mentions: v.optional(v.array(mentionValidator)),
     createdAt: v.number(),
   })
     .index("by_created", ["createdAt"])
@@ -191,6 +194,28 @@ export default defineSchema({
     .index("by_external", ["externalId"])
     .index("by_image", ["imageId"])
     .index("by_team", ["teamId"]),
+
+  /**
+   * Reactions and the comment count of one post, in one small row of their own:
+   * reacting patches this, never the post, so it does not rerun the feed or the
+   * venue screens, and each card subscribes to a single document.
+   */
+  postSocial: defineTable({
+    postId: v.id("posts"),
+    /** In the order each emoji first appeared, like Slack. */
+    reactions: v.array(
+      v.object({ emoji: v.string(), userIds: v.array(v.id("users")) })
+    ),
+    commentCount: v.number(),
+  }).index("by_post", ["postId"]),
+
+  postComments: defineTable({
+    postId: v.id("posts"),
+    authorId: v.id("users"),
+    text: v.string(),
+    mentions: v.optional(v.array(mentionValidator)),
+    createdAt: v.number(),
+  }).index("by_post", ["postId", "createdAt"]),
 
   settings: defineTable({
     key: v.string(),
