@@ -116,22 +116,6 @@ export type MarketPost = {
   createdAt: number;
 };
 
-/**
- * The feed shows `size` rows and recycles: every step pushes the list down one
- * place and brings the oldest post back in at the top, so all of them get air.
- * `entered` is the step a row came in on, which keeps its key stable while it
- * travels down.
- */
-export function feedWindow<T extends { _id: string }>(posts: T[], step: number, size: number): { post: T; entered: number }[] {
-  const count = Math.min(size, posts.length);
-  const rows: { post: T; entered: number }[] = [];
-  for (let index = 0; index < count; index += 1) {
-    const post = posts[(((index - step) % posts.length) + posts.length) % posts.length];
-    if (post) { rows.push({ entered: step - index, post }); }
-  }
-  return rows;
-}
-
 /** What the board cycles through: every ranking page gets a turn, the charts in between. */
 export type MarketSlide =
   | { kind: "pulso" } | { kind: "herramientas" } | { kind: "stacks" }

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Sample, Team } from "@/app/insights/mock-data";
-import { demoInsights, feedWindow, marketSeries, marketSlides, marketTeams, marketTotals } from "./tv-market";
+import { demoInsights, marketSeries, marketSlides, marketTeams, marketTotals } from "./tv-market";
 
 const team = (id: string, name: string): Team => ({
   color: "#000", description: "", id, members: 3, name, primary: "claude-code", project: "", secondary: "cursor", track: "",
@@ -40,15 +40,6 @@ test("every ranking page gets a turn, with the charts in between", () => {
   const slides = marketSlides(30, 7);
   assert.deepEqual(slides.filter((slide) => slide.kind === "ranking").map((slide) => slide.page), [0, 1, 2, 3, 4]);
   assert.equal(slides.length, 8);
-});
-
-test("the feed starts newest first and recycles with stable keys", () => {
-  const posts = ["p0", "p1", "p2", "p3"].map((_id) => ({ _id }));
-  const key = (rows: ReturnType<typeof feedWindow<{ _id: string }>>) => rows.map((row) => `${row.post._id}:${row.entered}`);
-  assert.deepEqual(key(feedWindow(posts, 0, 3)), ["p0:0", "p1:-1", "p2:-2"]);
-  assert.deepEqual(key(feedWindow(posts, 1, 3)), ["p3:1", "p0:0", "p1:-1"]);
-  assert.deepEqual(feedWindow(posts.slice(0, 2), 5, 3).length, 2);
-  assert.deepEqual(feedWindow([], 5, 3), []);
 });
 
 test("the demo is the same on every screen and only the bucket in progress moves", () => {
