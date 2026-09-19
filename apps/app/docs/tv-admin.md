@@ -25,8 +25,11 @@ para no borrar composiciones guardadas, pero `/tv` utiliza vistas predefinidas.
 - Cada navegador comunica presencia mediante `POST /api/tv` cada 15 segundos y al
   recibir una configuración, con timeout de ocho segundos. A los 45 segundos sin
   señal aparece desconectado. La vista conserva su último contenido al perder conexión;
-  Convex reanuda la suscripción al reconectar. La respuesta HTTP no aplica órdenes
-  en los clientes nuevos, evitando que una respuesta antigua sobrescriba la suscripción.
+  Convex reanuda la suscripción al reconectar. La respuesta HTTP también entrega la
+  configuración si el WebSocket no conecta. Se descarta si llegó una actualización
+  de la suscripción durante la petición o si sus versiones son anteriores a las ya
+  aplicadas. Una conexión HTTP operativa también cuenta como conectada en la pantalla;
+  los datos en vivo de cada vista siguen dependiendo de sus propias suscripciones.
 - El endpoint y la respuesta del heartbeat se mantienen para clientes anteriores:
   despliega backend y frontend, y pulsa recargar en el admin. El cliente antiguo
   recoge la orden por polling y carga la versión con suscripciones sin tocar el PC.
