@@ -13,6 +13,7 @@ import {
   parseProjectName,
   parseYoutubeWatchUrl,
 } from "@convex/lib/submission";
+import { DeliveryBriefing } from "@/components/delivery-briefing";
 import { VideoFrame } from "@/components/judging/video-frame";
 import {
   errorMessage,
@@ -124,8 +125,9 @@ function SubmitReady({
   return (
     <Page
       title="Submit"
-      description="Un vídeo de 3 minutos, el repo público y, si puedes, el producto en marcha."
+      description="Gran Premio a las 11: vídeo de 3 minutos, repo y, si aplica, una demo. Los tracks se presentan en persona."
     >
+      <DeliveryBriefing />
       {!submissionsOpen ? (
         <Alert>
           <AlertDescription>
@@ -340,8 +342,8 @@ function SubmitForm({
             <Badge>{track.note}</Badge>
           </CardTitle>
           <CardDescription>
-            Tres minutos en YouTube: qué habéis hecho, por qué, por qué este
-            reto y esta idea, y una demo del producto.
+            Vídeo de 3 minutos para los jueces de San Francisco: contad el
+            proyecto a fondo (creatividad, problem solving y craftsmanship).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -362,7 +364,7 @@ function SubmitForm({
           <Field
             label="Vídeo de YouTube"
             htmlFor="video-url"
-            hint="Obligatorio. Enlace de youtube.com o youtu.be, unos 3 minutos."
+            hint="Obligatorio. YouTube, 3 minutos. Creatividad, problem solving y craftsmanship."
           >
             <Input
               id="video-url"
@@ -412,7 +414,7 @@ function SubmitForm({
           <Field
             label="Producto usable"
             htmlFor="demo-url"
-            hint="Opcional, muy recomendado. Un enlace donde se pueda probar, no solo el repo."
+            hint="Si aplica, una demo que se pueda probar. Muy recomendado."
           >
             <Input
               id="demo-url"

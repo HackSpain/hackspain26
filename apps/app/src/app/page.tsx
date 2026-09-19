@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { DeliveryBriefing } from "@/components/delivery-briefing";
 import { EventClosedNotice, isEventOpen } from "@/components/event-closed-banner";
 import { FeedComposer } from "@/components/feed-composer";
 import { FeedTimeline } from "@/components/feed-timeline";
@@ -53,6 +54,7 @@ export default function HomePage() {
       }
       description="Lo que está pasando en la hackathon: avances, fotos y los pushes de cada equipo. También desde la CLI con hackspain feed y hackspain post."
     >
+      {eventOpen ? <DeliveryBriefing /> : null}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start">
         {/* Pinned to the viewport on lg. The launcher may be taller than a short
             window: cap it and let it scroll internally so every tile stays
