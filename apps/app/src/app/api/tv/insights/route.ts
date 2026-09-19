@@ -1,11 +1,13 @@
 import { api } from "@convex/_generated/api";
-import { INSIGHT_BUCKETS } from "@convex/tvPlayback";
+import { INSIGHT_BUCKETS, INSIGHT_PEOPLE } from "@convex/tvPlayback";
 import { RawTreeError } from "@rawtree/sdk";
 import { ConvexHttpClient } from "convex/browser";
 import { NextResponse } from "next/server";
 import { reportServerEvent } from "@/lib/server-observability";
+import { mergePeople, pickPeople } from "./people";
+import type { PersonRow } from "./people";
 import { fetchUsage } from "./usage";
-import type { ModelRow, UsageRow } from "./usage";
+import type { ModelRow, PersonUsageRow, UsageResult, UsageRow } from "./usage";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,7 @@ export type TvInsights = {
   usage: "ok" | "empty" | "unconfigured" | "unavailable" | "unscheduled";
   window: { startsAt?: number; endsAt?: number };
   buckets: number;
-  teams: { id: string; name: string; project: string; members: number }[];
+  teams: { id: string; name: string; project: string; members: number; logoUrl?: string }[];
   samples: UsageRow[];
   /** Tokens per normalised model name over the window; empty unless `usage` is "ok". */
   models: ModelRow[];
@@ -24,6 +26,11 @@ export type TvInsights = {
     pushes: number;
     pullRequests: number;
   }[];
+  /**
+   * The individual ranking: the top few people by tokens and by GitHub
+   * activity, by display name. Nobody else's numbers leave the server.
+   */
+  people: PersonRow[];
   /** Technologies per project, read from the repos (or typed by the team). */
   stacks: {
     auto: number;
@@ -43,10 +50,16 @@ async function load(): Promise<TvInsights> {
   if (!url) {
     throw new Error("Convex is not configured");
   }
-  const base = await new ConvexHttpClient(url).query(
-    api.tvPlayback.insightsBase,
-    {}
-  );
+  const convex = new ConvexHttpClient(url);
+  const base = await convex.query(api.tvPlayback.insightsBase, {});
+  const people = async (usage: PersonUsageRow[]): Promise<PersonRow[]> => {
+    const picked = pickPeople(usage, base.actors, INSIGHT_PEOPLE);
+    if (picked.userIds.length + picked.logins.length === 0) {
+      return [];
+    }
+    const resolved = await convex.query(api.tvPlayback.insightsPeople, picked);
+    return mergePeople(usage, base.actors, resolved, picked, base.teams);
+  };
   const { startsAt, endsAt } = base.window;
   const shared = {
     activity: base.activity,
@@ -57,15 +70,15 @@ async function load(): Promise<TvInsights> {
     window: base.window,
   };
   if (startsAt === undefined || endsAt === undefined || endsAt <= startsAt) {
-    return { ...shared, models: [], samples: [], usage: "unscheduled" };
+    return { ...shared, models: [], people: [], samples: [], usage: "unscheduled" };
   }
+  let usage: UsageResult | null = null;
   try {
-    const usage = await fetchUsage({
+    usage = await fetchUsage({
       buckets: INSIGHT_BUCKETS,
       endsAt,
       startsAt,
     });
-    return { ...shared, models: usage.models, samples: usage.rows, usage: usage.status };
   } catch (error) {
     await reportServerEvent("error", "RawTree TV insights query failed", {
       kind: error instanceof Error ? error.name : "unknown",
@@ -74,15 +87,22 @@ async function load(): Promise<TvInsights> {
         ? { code: error.error, hint: error.hint, status: error.status }
         : {}),
     });
-    // The rest of the TV keeps working; usage boxes fall back to "Sin datos".
-    return { ...shared, models: [], samples: [], usage: "unavailable" };
   }
+  // Without RawTree the rest of the TV keeps working: usage boxes fall back to
+  // "Sin datos" and the individual ranking keeps its GitHub half, from Convex.
+  return {
+    ...shared,
+    models: usage?.models ?? [],
+    people: await people(usage?.people ?? []),
+    samples: usage?.rows ?? [],
+    usage: usage?.status ?? "unavailable",
+  };
 }
 
 /**
  * Public like /api/tv: the screens run without a session. Returns only what
  * they already show, aggregated per team, harness and bucket of the
- * hackathon window. Nothing per person.
+ * hackathon window. Per person, only the few names on the individual ranking.
  */
 export async function GET() {
   try {
