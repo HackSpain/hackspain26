@@ -106,8 +106,8 @@ export function githubRepoSlug(remote: string): string | undefined {
 
 /**
  * The checked-out branch of the repository `cwd` is in, read from
- * `.git/HEAD` (no git binary). Only Claude Code, Codex and Qwen Code log a
- * branch, so this fills it for the rest and every harness reports one. It
+ * `.git/HEAD` (no git binary). Claude Code, Codex, Copilot CLI and Qwen Code
+ * log a branch, so this fills it for the rest and every harness reports one. It
  * is the branch when the watcher reads the log, which for a catch-up can
  * differ from the one at the time; a harness's own value always wins.
  */

@@ -2,6 +2,23 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — Copilot CLI usage is cumulative and shutdown-only
+
+**Evidence and consequence.** Copilot CLI's released session schema stores per-model token totals
+in `session.shutdown.data.modelMetrics` under
+`~/.copilot/session-state/<session>/events.jsonl`. The runtime normalizes `inputTokens` as the
+total including cache reads and writes, while the session log records another cumulative shutdown
+when a session is resumed. Counting every shutdown as an independent request would double-count
+the earlier portion; treating `inputTokens` as uncached would double-count cache tokens. There is
+no equivalent stable local usage record for editor Copilot Chat or cloud coding-agent sessions.
+
+**Prevention and verification.** Persist the last per-model totals in the file cursor, emit only
+non-negative growth, and subtract both cache counters from canonical input. Use the shutdown id
+plus sorted model index for stable event ids. Attribute usage to the shutdown timestamp and state
+the limitation: a crash, a session left open past the event, or a CLI transition that omits the
+shutdown cannot be reconstructed. Fixtures must cover cache normalization, resumed-session
+deltas, restart cursors, and the session-directory fallback.
+
 ## 2026-09-19 — Cursor usage is available at hook time, not in transcripts
 
 **Evidence and consequence.** Current Cursor agent transcripts under `~/.cursor/projects` retain

@@ -20,6 +20,7 @@ import { antigravityCollector } from "./collectors/antigravity";
 import { claudeCodeCollector } from "./collectors/claude-code";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
+import { copilotCollector } from "./collectors/copilot";
 import { cursorCollector } from "./collectors/cursor";
 import { devinCollector } from "./collectors/devin";
 import { geminiCliCollector } from "./collectors/gemini-cli";
@@ -65,6 +66,7 @@ export const COLLECTORS: Collector[] = [
   openCodeCollector,
   kiloCodeCollector,
   clineCollector,
+  copilotCollector,
   piCollector,
   ompCollector,
   antigravityCollector,
