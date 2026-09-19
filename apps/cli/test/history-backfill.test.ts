@@ -138,17 +138,19 @@ test.each([
     tokens: { input: 1, output: 2 },
     time: { completed: START },
   });
-  for (let i = 0; i < 601; i++) {
-    insert.run(`msg-${String(i).padStart(4, "0")}`, data);
-  }
-  insert.run(
-    "malformed",
-    JSON.stringify({
-      role: "assistant",
-      tokens: {},
-      time: { completed: "invalid" },
-    })
-  );
+  db.transaction(() => {
+    for (let i = 0; i < 601; i++) {
+      insert.run(`msg-${String(i).padStart(4, "0")}`, data);
+    }
+    insert.run(
+      "malformed",
+      JSON.stringify({
+        role: "assistant",
+        tokens: {},
+        time: { completed: "invalid" },
+      })
+    );
+  })();
   const collector: Collector = {
     id: harness,
     discover: async () => [path],
