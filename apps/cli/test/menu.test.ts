@@ -189,6 +189,7 @@ describe("buildMainMenu", () => {
       "Create a team",
       "Track",
       "Project",
+      "Submit the project",
       "Feed",
       "Profile",
       "Perks",
@@ -220,23 +221,30 @@ describe("buildMainMenu", () => {
     expect(withoutProject.preview).toEqual([["track", "list"]]);
   });
 
-  test("draft project: track picker has no submit; project opens the dashboard", () => {
+  test("draft project: track picker has no submit; submit opens the dashboard", () => {
     expect(values(submenuOf(buildMainMenu(READY_OWNER), "tracks"))).toEqual([
       "track-register",
       "track-unregister",
     ]);
     expect(values(submenuOf(buildMainMenu(READY_OWNER), "project"))).toEqual([
-      "submit-open",
+      "submit",
       "project-list",
     ]);
+    const submit = itemOf(buildMainMenu(READY_OWNER), "submit");
+    expect(submit.label).toBe("Submit the project");
+    expect(submit.argv).toEqual(["open", "submit"]);
   });
 
-  test("submitted project: track is view-only, project listing stays", () => {
+  test("submitted project: track is view-only, submit still opens the dashboard", () => {
     const track = itemOf(buildMainMenu(READY_SUBMITTED), "tracks");
     expect(track.submenu).toBeUndefined();
     expect(
       values(submenuOf(buildMainMenu(READY_SUBMITTED), "project"))
-    ).toEqual(["project-list"]);
+    ).toEqual(["submit", "project-list"]);
+    expect(itemOf(buildMainMenu(READY_SUBMITTED), "submit").argv).toEqual([
+      "open",
+      "submit",
+    ]);
   });
 
   test("top level stays tight: no static hint on perks or feed", () => {

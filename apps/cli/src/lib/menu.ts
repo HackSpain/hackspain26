@@ -175,24 +175,27 @@ function buildTrackMenu(status: MenuStatus): MenuItem[] {
   return items;
 }
 
+function submitProjectItem(submitted: boolean): MenuItem {
+  return {
+    value: "submit",
+    label: "Submit the project",
+    hint: submitted
+      ? "opens the dashboard"
+      : "video, repo and product — opens the dashboard",
+    argv: ["open", "submit"],
+  };
+}
+
 function buildProjectMenu(status: MenuStatus): MenuItem[] {
-  const project = status.project ?? null;
-  const submitted = Boolean(project?.submitted);
-  const items: MenuItem[] = [];
-  if (!submitted) {
-    items.push({
-      value: "submit-open",
-      label: "Submit the project",
-      hint: "on the dashboard — video, repo, product",
-      argv: ["open", "submit"],
-    });
-  }
-  items.push({
-    value: "project-list",
-    label: "Everyone's projects",
-    argv: ["project", "list"],
-  });
-  return items;
+  const submitted = Boolean(status.project?.submitted);
+  return [
+    submitProjectItem(submitted),
+    {
+      value: "project-list",
+      label: "Everyone's projects",
+      argv: ["project", "list"],
+    },
+  ];
 }
 
 function buildProfileMenu(): MenuItem[] {
@@ -336,6 +339,7 @@ function buildReadyMenu(status: MenuStatus): MenuItem[] {
       preview: status.project ? [["project", "show"]] : undefined,
       submenu: buildProjectMenu(status),
     },
+    submitProjectItem(Boolean(status.project?.submitted)),
     {
       value: "feed",
       label: "Feed",
