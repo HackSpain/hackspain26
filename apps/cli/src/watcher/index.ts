@@ -34,6 +34,7 @@ import { openCodeCollector } from "./collectors/opencode";
 import { ompCollector, piCollector } from "./collectors/pi";
 import { qwenCodeCollector } from "./collectors/qwen-code";
 import { openCursorStore } from "./cursor-store";
+import { historyCollectors } from "./history";
 import type { MemoryStore } from "./memory";
 import {
   openMemory,
@@ -79,9 +80,11 @@ export const COLLECTORS: Collector[] = [
 ];
 
 export type WatchOptions = {
+  /** Recover the whole collection window on connect, including locally-only spooled events. */
+  backfill?: boolean;
   once: boolean;
   intervalMs: number;
-  /** The hackathon as scheduled when the watcher started; null when there is none. */
+  /** The telemetry window when the watcher started; null without a schedule. */
   window: CollectionWindow | null;
   toast: boolean;
   /** Where batches are uploaded; undefined disables the upload sink. */
@@ -253,13 +256,15 @@ export type ScanResult = {
   skipped: number;
   byHarness: Record<string, number>;
   deferred?: boolean;
+  failed?: boolean;
 };
 
 /** Retry setup/discovery each scan: tools may start or be repaired after us. */
 export async function discoverCollectors(
   collectors: Collector[],
   window: CollectionWindow | null,
-  log: (message: string) => void
+  log: (message: string) => void,
+  onFailure?: () => void
 ): Promise<Collector[]> {
   const found: Collector[] = [];
   for (const collector of collectors) {
@@ -270,6 +275,7 @@ export async function discoverCollectors(
         found.push(collector);
       }
     } catch (error) {
+      onFailure?.();
       log(
         `${collector.id}: setup/discovery failed; will retry: ${String(error)}`
       );
@@ -332,6 +338,7 @@ export async function scanOnce(
           (result.byHarness[collector.id] ?? 0) + 1;
       }
     } catch (error) {
+      result.failed = true;
       ctx.log(`${collector.id}: collector failed: ${String(error)}`);
     }
   }
@@ -375,11 +382,17 @@ export async function runWatch(
       collector.id === "claude-code" ? nativeClaude.collector : collector
     );
   const memory = deps.memory ?? openMemory();
-  const cursors = openCursorStore();
-  const recent = loadRecentIds();
+  const cursors = openCursorStore(undefined, options.backfill);
+  const recent = options.backfill ? new Set<string>() : loadRecentIds();
   // A supplied history may be a one-shot generator; aliases and board replay
-  // both need it. The production spool remains streamed from disk.
-  const history = deps.history ? [...deps.history] : undefined;
+  // both need it during a historical catch-up.
+  const storedHistory =
+    deps.history ?? (options.backfill ? readSpool() : undefined);
+  const history = storedHistory ? [...storedHistory] : undefined;
+  const historical = options.backfill
+    ? historyCollectors(history ?? [], me._id)
+    : [];
+  let backfilling = Boolean(options.backfill);
   const recorded = new Set<string>();
   // A local spool write is not proof of delivery: a crash can happen before
   // the upload has even been staged. Only extend successfully saved recent
@@ -395,7 +408,28 @@ export async function runWatch(
       }
     }
   }
-  const sinks: Sink[] = [spoolSink(), ...(deps.extraSinks ?? [])];
+  // Replaying history must not append another copy to the local spool.
+  // This set tracks local persistence only, never successful remote delivery.
+  const persisted = new Set(recorded);
+  const localSpool = spoolSink();
+  const sinks: Sink[] = [
+    {
+      ...localSpool,
+      async write(events) {
+        const fresh = events.filter(
+          (event) =>
+            !telemetryDedupKeys(event).some((key) => persisted.has(key))
+        );
+        if (fresh.length > 0) {
+          await localSpool.write(fresh);
+          for (const event of fresh) {
+            rememberTelemetry(persisted, event);
+          }
+        }
+      },
+    },
+    ...(deps.extraSinks ?? []),
+  ];
   if (options.uploadUrl) {
     sinks.push(
       httpSink(options.uploadUrl, () => session.token(), fetch, {
@@ -645,8 +679,17 @@ export async function runWatch(
   // server: before and after it they only answer "closed", so they are not
   // asked. Organisers are never closed out, and neither is anybody while no
   // hackathon is scheduled.
+  let eventSchedule = me.event;
   const inEvent = (): boolean => {
-    const phase = windowPhase(window, Date.now());
+    let accessWindow = window;
+    if (eventSchedule) {
+      accessWindow =
+        eventSchedule.startsAt === undefined ||
+        eventSchedule.endsAt === undefined
+          ? null
+          : { since: eventSchedule.startsAt, until: eventSchedule.endsAt };
+    }
+    const phase = windowPhase(accessWindow, Date.now());
     return me.role === "admin" || phase === "during" || phase === "unscheduled";
   };
   let wasInEvent = inEvent();
@@ -660,6 +703,7 @@ export async function runWatch(
       try {
         const latest = await fetchMe(session);
         if (latest) {
+          eventSchedule = latest.event;
           const next = collectionWindow(latest);
           if (next?.since !== window?.since || next?.until !== window?.until) {
             applyWindow(next);
@@ -708,7 +752,10 @@ export async function runWatch(
     if (state) {
       state.scanning = true;
     }
-    const available = await discoverCollectors(collectors, window, log);
+    let discoveryFailed = false;
+    const available = await discoverCollectors(collectors, window, log, () => {
+      discoveryFailed = true;
+    });
     if (state) {
       const found = new Set(available.map((collector) => collector.id));
       for (const harness of state.harnesses) {
@@ -717,11 +764,21 @@ export async function runWatch(
     }
     // Without a scheduled hackathon there is no window to read for.
     const scanned: ScanResult = window
-      ? await scanOnce(available, ctx, recording, identity(), recent)
+      ? await scanOnce(
+          backfilling ? [...historical, ...available] : available,
+          ctx,
+          recording,
+          identity(),
+          recent
+        )
       : { byHarness: {}, events: 0, skipped: 0 };
     await reportObservedRepos();
     const ok = await batcher.flush();
-    tickComplete = ok && !scanned.deferred;
+    tickComplete =
+      ok && !scanned.deferred && !scanned.failed && !discoveryFailed;
+    if (window && tickComplete) {
+      backfilling = false;
+    }
     if (ok) {
       try {
         nativeClaude.checkpoint(cursors);

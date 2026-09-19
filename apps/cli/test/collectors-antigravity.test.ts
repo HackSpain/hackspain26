@@ -417,7 +417,7 @@ describe("antigravity", () => {
     });
   });
 
-  test("collect: --since drops older steps but the cursor still moves past them", async () => {
+  test("collect: event time filters old-mtime history and advances its cursor", async () => {
     const conversations = join(dir, "conversations");
     mkdirSync(conversations);
     const main = join(conversations, `${CONVERSATION}.db`);
@@ -437,7 +437,7 @@ describe("antigravity", () => {
       ],
       [generation(FLASH, "gemini-3.8-flash")]
     );
-    const written = new Date("2026-09-19T10:30:00Z");
+    const written = new Date("2026-09-17T00:00:00Z");
     utimesSync(main, written, written);
     const cursors = memoryCursorStore();
     const since = Date.parse("2026-09-19T10:15:00Z");

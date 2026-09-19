@@ -124,7 +124,9 @@ describe("occurredInWindow", () => {
   };
 
   test("only the hackathon, on the harness's time, end exclusive", () => {
-    expect(occurredInWindow("2026-09-18T16:44:59.999Z", window)).toBe(false);
+    expect(occurredInWindow("2026-09-18T14:59:59.999Z", window)).toBe(false);
+    expect(occurredInWindow("2026-09-18T15:00:00.000Z", window)).toBe(true);
+    expect(occurredInWindow("2026-09-18T16:44:59.999Z", window)).toBe(true);
     expect(occurredInWindow("2026-09-18T16:45:00.000Z", window)).toBe(true);
     expect(occurredInWindow("2026-09-20T15:59:59.999Z", window)).toBe(true);
     expect(occurredInWindow("2026-09-20T16:00:00.000Z", window)).toBe(false);

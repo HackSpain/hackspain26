@@ -215,9 +215,6 @@ export async function* collectCopilot(
   for (const root of roots) {
     const recent = eventFiles(root)
       .map((path) => ({ mtimeMs: statSync(path).mtimeMs, path }))
-      .filter(
-        ({ path, mtimeMs }) => mtimeMs >= ctx.since || ctx.cursors.get(path)
-      )
       .toSorted((a, b) => b.mtimeMs - a.mtimeMs);
     for (const { path } of recent) {
       let result: ReturnType<typeof tailJsonl>;

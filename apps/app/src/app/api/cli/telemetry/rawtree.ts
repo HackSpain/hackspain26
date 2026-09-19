@@ -1,4 +1,5 @@
 import type { CanonicalModel, TokenCounts } from "./canonical";
+import { telemetryWindow } from "./window";
 import {
   canonicalModel,
   TELEMETRY_SCHEMA,
@@ -217,12 +218,12 @@ export function occurredInWindow(
   occurredAt: string,
   window: { startsAt?: number; endsAt?: number }
 ): boolean {
-  const { startsAt, endsAt } = window;
-  if (startsAt === undefined || endsAt === undefined) {
+  const collection = telemetryWindow(window);
+  if (!collection) {
     return false;
   }
   const at = Date.parse(occurredAt);
-  return at >= startsAt && at < endsAt;
+  return at >= collection.startsAt && at < collection.endsAt;
 }
 
 export function parseTelemetryEvent(

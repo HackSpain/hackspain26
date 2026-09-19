@@ -97,17 +97,17 @@ function listTranscripts(root: string): string[] {
     return [];
   }
   const files: string[] = [];
-  for (const dir of readdirSync(projects, { withFileTypes: true })) {
-    if (!dir.isDirectory()) {
-      continue;
-    }
-    const full = join(projects, dir.name);
-    for (const entry of readdirSync(full)) {
-      if (entry.endsWith(".jsonl")) {
-        files.push(join(full, entry));
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(path);
+      } else if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+        files.push(path);
       }
     }
-  }
+  };
+  walk(projects);
   return files;
 }
 
@@ -124,10 +124,6 @@ export async function* collectClaudeCode(
   for (const root of roots) {
     const files = listTranscripts(root)
       .map((path) => ({ mtimeMs: statSync(path).mtimeMs, path }))
-      .filter(
-        ({ mtimeMs }) =>
-          mtimeMs >= ctx.since || ctx.cursors.get(root) !== undefined
-      )
       .toSorted((a, b) => b.mtimeMs - a.mtimeMs);
     for (const { path } of files) {
       let result: ReturnType<typeof tailJsonl>;

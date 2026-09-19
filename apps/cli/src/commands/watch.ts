@@ -82,6 +82,7 @@ export function registerWatch(program: Command): void {
         Boolean(process.stdout.isTTY);
 
       const options = {
+        backfill: true,
         intervalMs,
         once: Boolean(flags.once),
         toast: flags.toast,

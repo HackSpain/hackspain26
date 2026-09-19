@@ -167,7 +167,7 @@ describe("frame", () => {
       );
 
     const before = render({ since: NOW + hour, until: NOW + 49 * hour });
-    expect(before[1]).toContain("Not recording yet: the hackathon starts");
+    expect(before[1]).toContain("Not recording yet: telemetry starts");
     expect(before.at(-1)).toContain("not recording");
 
     const after = render({ since: NOW - 49 * hour, until: NOW - hour });

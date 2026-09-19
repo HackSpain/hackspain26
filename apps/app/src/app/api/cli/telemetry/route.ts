@@ -1,5 +1,4 @@
 import { api } from "@convex/_generated/api";
-import { closedMessage } from "@convex/lib/eventWindow";
 import { fetchQuery } from "convex/nextjs";
 import { reportServerEvent } from "@/lib/server-observability";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
@@ -14,6 +13,8 @@ import {
   TELEMETRY_BATCH_MAX,
   TELEMETRY_EVENT_MAX_BYTES,
 } from "./rawtree";
+
+import { telemetryWindow } from "./window";
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 
@@ -73,12 +74,13 @@ export async function POST(request: Request) {
     if (!me) {
       return fail("No has iniciado sesión", 401);
     }
-    if (me.event.phase === "before") {
+    const window = telemetryWindow(me.event);
+    if (window && Date.now() < window.startsAt) {
       // Nothing can have happened inside the window yet, organisers
       // included. After it the watcher may still deliver what happened
       // inside and was never sent; the per-event check below keeps
       // everything else out.
-      return fail(closedMessage(me.event.phase, me.event), 403);
+      return fail("Telemetry collection has not started yet", 403);
     }
     teamId = await fetchQuery(api.teams.mineId, {}, { token });
   } catch (error) {
