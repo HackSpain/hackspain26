@@ -58,6 +58,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  assessmentsCsv,
+  downloadCsv,
+  exportFileName,
+  judgesCsv,
+  rankingCsv,
+} from "@/lib/judging-export";
 import { urlOf } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 
@@ -606,11 +613,42 @@ function CompletionCard({ overview }: { overview: Overview }) {
   );
 }
 
+function ExportButton({
+  label,
+  disabled,
+  onExport,
+}: {
+  label: string;
+  disabled?: boolean;
+  onExport: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={disabled}
+      onClick={onExport}
+    >
+      {label}
+    </Button>
+  );
+}
+
 function JudgesCard({ judges }: { judges: JudgeRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Jueces</CardTitle>
+        <CardTitle className="flex flex-wrap items-center justify-between gap-2">
+          Jueces
+          <ExportButton
+            label="Exportar CSV"
+            disabled={judges.length === 0}
+            onExport={() =>
+              downloadCsv(exportFileName("jueces"), judgesCsv(judges))
+            }
+          />
+        </CardTitle>
         <CardDescription>
           Una generosidad positiva significa que el juez tiende a puntuar
           alto, y negativa que tiende a puntuar bajo. Se recalcula con cada
@@ -683,6 +721,7 @@ function ProjectsCard({
   onOpen: (id: Id<"submissions">, from: HTMLElement | null) => void;
 }) {
   const flagged = overview.projects.filter((project) => project.flagged).length;
+  const empty = overview.projects.length === 0;
   return (
     <Card>
       <CardHeader>
@@ -693,6 +732,30 @@ function ProjectsCard({
               {flagged} para revisar
             </Badge>
           ) : null}
+          <span className="ml-auto flex flex-wrap gap-2">
+            <ExportButton
+              label="Clasificación CSV"
+              disabled={empty}
+              onExport={() =>
+                downloadCsv(
+                  exportFileName("clasificacion"),
+                  rankingCsv(overview.projects, {
+                    final: overview.completion.complete,
+                  })
+                )
+              }
+            />
+            <ExportButton
+              label="Evaluaciones CSV"
+              disabled={empty}
+              onExport={() =>
+                downloadCsv(
+                  exportFileName("evaluaciones"),
+                  assessmentsCsv(overview.projects)
+                )
+              }
+            />
+          </span>
         </CardTitle>
         <CardDescription>
           Orden por media calibrada (nota bruta menos generosidad del juez).
