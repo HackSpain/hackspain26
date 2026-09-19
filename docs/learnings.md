@@ -2,6 +2,21 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — Telemetry uploads need the session's forced-refresh path
+
+**Evidence and consequence.** The RPC client renewed a rejected bearer, but the telemetry
+sink only called `session.token()` without forwarding `force`. A server-rejected token that
+still looked fresh locally could therefore be reused on every batch retry. Vercel recorded
+23 telemetry 401s between 12:26 and 12:59 Europe/Madrid; the logs do not establish which
+clients or token failures caused them.
+
+**Correction and verification.** Pass the existing token provider through to the sink and,
+on an authenticated 401, force refresh once under its existing credential lock before
+resending the same batch. Keep the durable batch if refresh or the retry fails. Focused
+tests cover recovery, repeated rejection, missing/failed refresh and other status codes;
+the auth-store tests retain concurrent refresh serialization. This fixes the recovery
+path, not the cause of every historical 401, and requires a CLI release to reach participants.
+
 ## 2026-09-19 — Historical telemetry needs source replay, not just saved cursors
 
 **Evidence and consequence.** Login did not collect history; file modification filters,

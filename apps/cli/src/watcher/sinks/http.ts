@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
+import type { TokenProvider } from "../../lib/api";
 import {
   ensureDir,
   readJsonFile,
@@ -90,7 +91,7 @@ function sameUpload(left: PendingUpload, right: PendingUpload): boolean {
  */
 export function httpSink(
   url: string,
-  token: () => Promise<string | null>,
+  token: TokenProvider,
   fetchImpl: typeof fetch = fetch,
   options: HttpSinkOptions = {}
 ): Sink {
@@ -146,17 +147,26 @@ export function httpSink(
   };
 
   const send = async (upload: PendingUpload): Promise<void> => {
-    const bearer = await token();
-    const response = await fetchImpl(upload.url, {
-      body: `${upload.events.map((event) => JSON.stringify(event)).join("\n")}\n`,
-      headers: {
-        "content-type": "application/x-ndjson",
-        "user-agent": `hackspain-cli/${VERSION}`,
-        ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
-      },
-      method: "POST",
-      signal: AbortSignal.timeout(15_000),
-    });
+    const attempt = (bearer: string | null) =>
+      fetchImpl(upload.url, {
+        body: `${upload.events.map((event) => JSON.stringify(event)).join("\n")}\n`,
+        headers: {
+          "content-type": "application/x-ndjson",
+          "user-agent": `hackspain-cli/${VERSION}`,
+          ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
+        },
+        method: "POST",
+        signal: AbortSignal.timeout(15_000),
+      });
+    let bearer = await token();
+    let response = await attempt(bearer);
+    if (response.status === 401 && bearer) {
+      await response.body?.cancel();
+      bearer = await token(true);
+      if (bearer) {
+        response = await attempt(bearer);
+      }
+    }
     if (!response.ok) {
       throw new CliError(
         `Telemetry endpoint answered ${response.status} ${response.statusText}`,
