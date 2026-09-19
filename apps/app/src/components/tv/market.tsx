@@ -11,14 +11,13 @@ import { useLiveInsights } from "@/app/insights/use-live-insights";
 import type { LiveInsightData } from "@/app/insights/use-live-insights";
 import { resolveTvSponsors } from "@/lib/tv";
 import {
-  MARKET_BUCKETS, currentBucket, demoFeed, demoInsights, feedWindow, marketSeries, marketSlides, marketTeams, marketTotals,
+  MARKET_BUCKETS, currentBucket, demoFeed, demoInsights, marketSeries, marketSlides, marketTeams, marketTotals,
 } from "@/lib/tv-market";
 import type { MarketPost, MarketSeries, MarketSlide, MarketTeam } from "@/lib/tv-market";
 import { cn } from "@/lib/utils";
 import { useClock, usePageVisible, useTick } from "./motion";
 
 const SLIDE_MS = 12_000;
-const FEED_MS = 4500;
 const RANKING_ROWS = 7;
 const FEED_ROWS = 6;
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -315,13 +314,8 @@ function ago(now: number, then: number): string {
 
 function Feed({ posts }: { posts: MarketPost[] | undefined }) {
   const reduced = useReducedMotion();
-  const tick = useTick(FEED_MS);
   const minute = useClock();
-  // A new post resets the rotation, so it lands at the top instead of waiting for its turn.
-  const newest = posts?.[0]?._id;
-  const [anchor, setAnchor] = useState({ newest, tick });
-  if (anchor.newest !== newest) { setAnchor({ newest, tick }); }
-  const rows = feedWindow(posts ?? [], tick - anchor.tick, FEED_ROWS);
+  const rows = posts?.slice(0, FEED_ROWS) ?? [];
   return (
     <section className="flex min-h-0 flex-col gap-[var(--line)]">
       <header className="flex shrink-0 items-center justify-between bg-hs-red px-[calc(var(--u)*1.3)] py-[calc(var(--u)*0.9)] text-hs-paper">
@@ -331,8 +325,8 @@ function Feed({ posts }: { posts: MarketPost[] | undefined }) {
       {rows.length === 0 ? <div className="min-h-0 flex-1 bg-hs-paper text-hs-ink"><Empty>{posts ? "La actividad aparecerá aquí" : "Cargando actividad"}</Empty></div> : (
         <ol className="grid min-h-0 flex-1 gap-[var(--line)] overflow-hidden" style={{ gridTemplateRows: `repeat(${FEED_ROWS}, minmax(0, 1fr))` }}>
           <AnimatePresence initial={false} mode="popLayout">
-            {rows.map(({ post, entered }) => (
-              <motion.li key={`${post._id}:${entered}`} layout={!reduced} initial={{ opacity: 0, y: reduced ? 0 : -24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            {rows.map((post) => (
+              <motion.li key={post._id} layout={!reduced} initial={{ opacity: 0, y: reduced ? 0 : -24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.45, ease: EASE }} className="flex min-h-0 flex-col justify-center gap-[calc(var(--u)*0.35)] bg-hs-paper px-[calc(var(--u)*1.3)] text-hs-ink">
                 <p className="hsx-sm flex items-center gap-[calc(var(--u)*0.6)]">
                   <span className={cn("hsx-num hsx-xs px-[calc(var(--u)*0.45)] py-[calc(var(--u)*0.1)] font-bold text-hs-paper", post.kind === "github" ? "bg-hs-navy" : "bg-hs-orange")}>{post.kind === "github" ? "GIT" : "POST"}</span>
