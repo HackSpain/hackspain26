@@ -164,6 +164,17 @@ configuration failing without overwriting the user's file.
 
 **Prevention and verification.** When catching and normalizing an exception at an API boundary, retain safe diagnostics for unexpected server failures. Use [reportServerEvent](../apps/app/src/lib/server-observability.ts), which flushes before a Vercel function can freeze. Review error messages as well as structured fields for secrets; never log whole requests, bodies, cookies, OTPs, or tokens. Preserve client error envelopes and expected validation outcomes. Confirm the next failure identifies the operation and cause. Instrumentation makes a failure diagnosable; it does not repair the underlying 500. Post-deploy recurrence/root-cause verification remained outstanding at the end of this investigation.
 
+**2026-09-19 delivery follow-up.** The connected Better Stack source had no records later
+than 2026-09-18 19:34:45 UTC during the audit; its remote ingestion failure cause remains
+unknown. Inspection of `@logtail/next@0.4.0` showed that `flush()` resolves on non-2xx
+responses and catches network failures internally, so the reporter's catch did not reliably
+retain the original diagnostic. The server reporter now checks HTTP acceptance directly,
+aborts delivery after three seconds and falls back to the runtime log with the original
+severity/message/fields and a safe delivery category. Tests cover HTTP rejection, network
+failure, a stalled request, configuration and severity filtering. Never log the delivery
+exception, response body, endpoint or source token. This preserves diagnostics in Vercel;
+it does not establish that Better Stack ingestion has recovered.
+
 The same rule applies to the authenticated image proxy. A burst of 154 upstream 502 responses could not be separated into network failure, upstream status, or missing response body. Log those categories and thumbnail conversion failures without recording storage URLs, ids, credentials, or request data. This instrumentation makes the next occurrence diagnosable; it is not evidence that the upstream failure has been repaired.
 
 ## 2026-09-18 — Classify expected auth failures and extension noise precisely
