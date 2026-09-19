@@ -13,6 +13,7 @@ type Row = Record<string, unknown> & { _id: string; table: string };
 function venue() {
   let serial = 0;
   let admin = true;
+  const connectionReads: string[] = [];
   const rows = new Map<string, Row>([["operator", { _id: "operator", table: "users", role: "admin" }]]);
   const ctx = {
     auth: { getUserIdentity: async () => admin ? { subject: "operator" } : null },
@@ -20,12 +21,27 @@ function venue() {
       query(table: string) {
         let matches = [...rows.values()].filter((row) => row.table === table);
         const result = {
-          withIndex(_name: string, filter: (q: { eq: (key: string, value: unknown) => void }) => void) {
-            filter({ eq(key, value) { matches = matches.filter((row) => row[key] === value); } });
+          withIndex(_name: string, filter: (q: { eq: (key: string, value: unknown) => unknown; lt: (key: string, value: number) => unknown }) => void) {
+            const range = {
+              eq(key: string, value: unknown) { matches = matches.filter((row) => row[key] === value); return range; },
+              lt(key: string, value: number) { matches = matches.filter((row) => Number(row[key]) < value); return range; },
+            };
+            filter(range);
             return result;
           },
-          unique: async () => matches[0] ?? null,
-          collect: async () => matches,
+          unique: async () => {
+            if (table === "tvScreenConnections") { connectionReads.push(...matches.slice(0, 1).map((row) => row._id)); }
+            return matches[0] ?? null;
+          },
+          collect: async () => {
+            if (table === "tvScreenConnections") { connectionReads.push(...matches.map((row) => row._id)); }
+            return matches;
+          },
+          take: async (limit: number) => {
+            const selected = matches.slice(0, limit);
+            if (table === "tvScreenConnections") { connectionReads.push(...selected.map((row) => row._id)); }
+            return selected;
+          },
         };
         return result;
       },
@@ -43,7 +59,7 @@ function venue() {
     key, clientId, initialPreset: "entradas", width: 2560, height: 1080,
     url: `https://hackspain.app/tv?screen=${key}&token=private`, receivedRevision, receivedReloadVersion,
   });
-  return { ctx, ping, anonymous: () => { admin = false; } };
+  return { ctx, ping, connectionReads, anonymous: () => { admin = false; } };
 }
 
 test("screens register by URL and retain separate commands and reload versions", async () => {
@@ -130,4 +146,28 @@ test("public screen subscription returns only its configuration and follows admi
   });
   // Old clients still receive reload commands in their heartbeat response.
   assert.equal((await ping("entrada")).reloadVersion, 1);
+});
+
+
+test("heartbeats clean expired connections without reading live peers", async () => {
+  const { ctx, ping, connectionReads } = venue();
+  await ping("entrada", "first-1234567890");
+  await ping("entrada", "second-1234567890");
+  await ping("entrada", "expired-1234567890");
+  await ping("hall", "other-1234567890");
+  const connections = await ctx.db.query("tvScreenConnections").collect();
+  const own = connections.find((row) => row.clientId === "first-1234567890")!;
+  const peer = connections.find((row) => row.clientId === "second-1234567890")!;
+  const expired = connections.find((row) => row.clientId === "expired-1234567890")!;
+  const other = connections.find((row) => row.clientId === "other-1234567890")!;
+  await ctx.db.patch(expired._id, { lastSeenAt: Date.now() - 86_401_000 });
+  await ctx.db.patch(other._id, { lastSeenAt: Date.now() - 86_401_000 });
+  connectionReads.length = 0;
+
+  await ping("entrada", "first-1234567890");
+
+  assert.deepEqual(connectionReads, [own._id, expired._id]);
+  assert.equal(await ctx.db.get(expired._id), null);
+  assert.ok(await ctx.db.get(peer._id));
+  assert.ok(await ctx.db.get(other._id));
 });

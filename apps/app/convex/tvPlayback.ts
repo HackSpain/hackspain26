@@ -107,10 +107,13 @@ export const heartbeat = mutation({
     };
     if (connection) { await ctx.db.patch(connection._id, fields); }
     else { await ctx.db.insert("tvScreenConnections", fields); }
-    // Each named screen keeps recent connections, including duplicate open tabs.
-    const old = await ctx.db.query("tvScreenConnections").withIndex("by_screen", (q) => q.eq("screenId", screen._id)).collect();
+    // Read only expired connections: reading live peers makes their heartbeats conflict.
+    const old = await ctx.db.query("tvScreenConnections")
+      .withIndex("by_screen_last_seen", (q) =>
+        q.eq("screenId", screen._id).lt("lastSeenAt", Date.now() - 86_400_000)
+      ).take(100);
     for (const row of old) {
-      if (row.lastSeenAt < Date.now() - 86_400_000) { await ctx.db.delete(row._id); }
+      await ctx.db.delete(row._id);
     }
     return screenConfig(screen);
   },
