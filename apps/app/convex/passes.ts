@@ -110,33 +110,43 @@ export const mine = onboardedQuery({
   returns: v.union(passReturn, v.null()),
 });
 
-async function checkIn(ctx: MutationCtx, value: string) {
-  const code = value.trim().toUpperCase();
-  if (!/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}$/.test(code)) {
-    throw new Error("Introduce un código válido de cuatro caracteres");
+export async function findEventPass(
+  ctx: QueryCtx | MutationCtx,
+  signup: Doc<"signups"> | null,
+  user: Doc<"users"> | null,
+) {
+  if (signup) {
+    const bySignup = await ctx.db
+      .query("eventPasses")
+      .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
+      .unique();
+    if (bySignup) {
+      return bySignup;
+    }
   }
-  const pass = await ctx.db
+  if (!user) {
+    return null;
+  }
+  return await ctx.db
     .query("eventPasses")
-    .withIndex("by_code", (q) => q.eq("code", code))
+    .withIndex("by_user", (q) => q.eq("userId", user._id))
     .unique();
-  if (!pass) {
-    throw new Error("Acreditación desconocida");
-  }
+}
+
+async function completeCheckIn(
+  ctx: MutationCtx,
+  pass: Doc<"eventPasses">,
+  user: Doc<"users"> | null,
+  resolvedSignup: Doc<"signups"> | null,
+  options: { allowCancelled?: boolean } = {},
+) {
   if (pass.status !== "active") {
     throw new Error("Esta acreditación está revocada");
   }
-  const signup = pass.signupId ? await ctx.db.get(pass.signupId) : null;
-  let user: Doc<"users"> | null = null;
-  if (pass.userId) {
-    user = await ctx.db.get(pass.userId);
-  } else if (signup) {
-    user = await findUserByEmail(ctx, signup.email);
-  }
-  const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
   if (!signupIsAccepted(resolvedSignup)) {
     throw new Error("Este participante ya no está aceptado");
   }
-  if (user && user.attendanceStatus !== "attending") {
+  if (user && user.attendanceStatus !== "attending" && !options.allowCancelled) {
     throw new Error("Este participante ha cancelado su asistencia");
   }
   const name = user?.name ?? resolvedSignup?.fullName ?? "Hacker";
@@ -157,6 +167,9 @@ async function checkIn(ctx: MutationCtx, value: string) {
     userId: pass.userId ?? user?._id,
     updatedAt: checkedInAt,
   });
+  if (user && user.attendanceStatus !== "attending") {
+    await ctx.db.patch(user._id, { attendanceStatus: "attending" });
+  }
   return {
     checkedInAt,
     email,
@@ -166,9 +179,79 @@ async function checkIn(ctx: MutationCtx, value: string) {
   };
 }
 
+async function checkIn(ctx: MutationCtx, value: string) {
+  const code = value.trim().toUpperCase();
+  if (!/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}$/.test(code)) {
+    throw new Error("Introduce un código válido de cuatro caracteres");
+  }
+  const pass = await ctx.db
+    .query("eventPasses")
+    .withIndex("by_code", (q) => q.eq("code", code))
+    .unique();
+  if (!pass) {
+    throw new Error("Acreditación desconocida");
+  }
+  const signup = pass.signupId ? await ctx.db.get(pass.signupId) : null;
+  let user: Doc<"users"> | null = null;
+  if (pass.userId) {
+    user = await ctx.db.get(pass.userId);
+  } else if (signup) {
+    user = await findUserByEmail(ctx, signup.email);
+  }
+  const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
+  return await completeCheckIn(ctx, pass, user, resolvedSignup);
+}
+
+export async function checkInParticipantRecord(
+  ctx: MutationCtx,
+  args: { signupId?: Id<"signups">; userId?: Id<"users"> },
+) {
+  const signup = args.signupId ? await ctx.db.get(args.signupId) : null;
+  let user = args.userId ? await ctx.db.get(args.userId) : null;
+  if (!user && signup) {
+    user = await findUserByEmail(ctx, signup.email);
+  }
+  const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
+  if (!resolvedSignup) {
+    throw new Error("No hay solicitud para hacer el check-in");
+  }
+  if (!signupIsAccepted(resolvedSignup)) {
+    throw new Error("Este participante no está aceptado");
+  }
+  let pass = await findEventPass(ctx, resolvedSignup, user);
+  if (pass?.status === "revoked") {
+    throw new Error("Esta acreditación está revocada");
+  }
+  if (!pass) {
+    const now = Date.now();
+    const passId = await ctx.db.insert("eventPasses", {
+      code: await uniqueCode(ctx),
+      createdAt: now,
+      signupId: resolvedSignup._id,
+      status: "active",
+      updatedAt: now,
+      userId: user?._id,
+    });
+    pass = await ctx.db.get(passId);
+    if (!pass) {
+      throw new Error("No se ha podido crear la acreditación");
+    }
+  }
+  return await completeCheckIn(ctx, pass, user, resolvedSignup, { allowCancelled: true });
+}
+
 export const scan = adminMutation({
   args: { value: v.string() },
   handler: async (ctx, args) => await checkIn(ctx, args.value),
+  returns: scanReturn,
+});
+
+export const checkInParticipant = adminMutation({
+  args: {
+    signupId: v.optional(v.id("signups")),
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => await checkInParticipantRecord(ctx, args),
   returns: scanReturn,
 });
 

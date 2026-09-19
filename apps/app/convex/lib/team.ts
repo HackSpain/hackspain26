@@ -19,6 +19,16 @@ export async function membershipForUser(
     .first();
 }
 
+export async function membershipForSignup(
+  ctx: QueryCtx | MutationCtx,
+  signupId: Id<"signups">
+): Promise<Doc<"teamMembers"> | null> {
+  return await ctx.db
+    .query("teamMembers")
+    .withIndex("by_signup", (q) => q.eq("signupId", signupId))
+    .first();
+}
+
 export async function findTeamSubmission(
   ctx: QueryCtx | MutationCtx,
   teamId: Id<"teams">
