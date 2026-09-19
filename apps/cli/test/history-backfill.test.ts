@@ -12,7 +12,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { TELEMETRY_STARTS_AT } from "../../app/src/app/api/cli/telemetry/window";
 import type { Session } from "../src/lib/api";
 import { EXIT } from "../src/lib/errors";
 import type { Me } from "../src/lib/me";
@@ -34,7 +33,7 @@ import { HARNESSES } from "../src/watcher/schema";
 import { readSpool, spoolSink } from "../src/watcher/sinks/spool";
 import type { Collector, CollectorContext } from "../src/watcher/types";
 
-const START = TELEMETRY_STARTS_AT;
+const START = Date.parse("2026-09-18T16:45:00Z");
 const END = Date.parse("2026-09-20T16:00:00Z");
 const AT = new Date(START + 1000).toISOString();
 const IDENTITY = { userId: "user", clientVersion: "test" };

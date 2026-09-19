@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { readConfig } from "../lib/config";
 import { CliError, EXIT } from "../lib/errors";
 import type { Me } from "../lib/me";
+import { formatEventDate } from "../lib/me";
 import { acquireWatchLock, runWatch } from "./index";
 import { collectionWindow } from "./window";
 
@@ -33,7 +34,7 @@ export async function syncTelemetry(
       ? await session.client.query(api.teams.mine, {})
       : null;
     log(
-      "Recovering available AI usage since Friday 18 September, 17:00 Madrid…"
+      `Recovering available AI usage since the event started: ${formatEventDate(window.since)}…`
     );
     log(
       "Cursor usage before installing its hooks needs an external usage export; transcripts do not contain tokens."

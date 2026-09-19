@@ -102,7 +102,7 @@ export function registerTelemetry(program: Command): void {
   telemetry
     .command("sync")
     .description(
-      "Upload all available AI usage since Friday 17:00 Madrid, then exit"
+      "Upload all available AI usage since the event started, then exit"
     )
     .action(async (_opts: unknown, command: Command) => {
       const ctx = contextFor(command);

@@ -1,26 +1,28 @@
 import { expect, test } from "bun:test";
-import { TELEMETRY_STARTS_AT, telemetryWindow } from "./window";
+import { telemetryWindow } from "./window";
 
-test("telemetry starts at 17:00 Madrid regardless of the official opening", () => {
+test("telemetry follows the configured event opening, including schedule changes", () => {
   const endsAt = Date.parse("2026-09-20T16:00:00Z");
   for (const startsAt of [
-    TELEMETRY_STARTS_AT - 3_600_000,
+    Date.parse("2026-09-18T15:00:00Z"),
     Date.parse("2026-09-18T16:45:00Z"),
+    Date.parse("2026-09-19T09:00:00Z"),
   ]) {
-    expect(telemetryWindow({ startsAt, endsAt })).toEqual({
-      startsAt: Date.parse("2026-09-18T15:00:00Z"),
-      endsAt,
-    });
+    expect(telemetryWindow({ startsAt, endsAt })).toEqual({ startsAt, endsAt });
   }
 });
 
-test("a missing schedule or invalid end never enables collection", () => {
+test("a missing or invalid schedule never enables collection", () => {
   for (const event of [
     {},
     { startsAt: 1 },
-    { endsAt: Infinity },
+    { endsAt: 2 },
+    { startsAt: Number.NaN, endsAt: 2 },
+    { startsAt: Infinity, endsAt: 2 },
     { startsAt: 1, endsAt: Number.NaN },
-    { startsAt: 1, endsAt: TELEMETRY_STARTS_AT },
+    { startsAt: 1, endsAt: Infinity },
+    { startsAt: 1, endsAt: 1 },
+    { startsAt: 2, endsAt: 1 },
   ]) {
     expect(telemetryWindow(event)).toBeNull();
   }

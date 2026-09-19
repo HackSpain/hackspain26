@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { TELEMETRY_STARTS_AT } from "../../app/src/app/api/cli/telemetry/window";
 import { memoryCursorStore } from "../src/watcher/cursor-store";
 import { outputWithReasoning } from "../src/watcher/schema";
 import {
@@ -20,14 +19,11 @@ const scheduled = {
 };
 
 describe("collectionWindow", () => {
-  test("Friday at 17:00 Madrid, independently of the scheduled event opening", () => {
+  test("uses the configured event start and end", () => {
     expect(collectionWindow({ event: scheduled })).toEqual({
-      since: TELEMETRY_STARTS_AT,
+      since: START,
       until: END,
     });
-    expect(new Date(TELEMETRY_STARTS_AT).toISOString()).toBe(
-      "2026-09-18T15:00:00.000Z"
-    );
   });
 
   test("no schedule, no window: nothing is recorded", () => {

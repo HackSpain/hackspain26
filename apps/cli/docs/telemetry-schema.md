@@ -126,11 +126,10 @@ Only persisted assistant usage is collected, not compaction summaries or estimat
 
 ## Collection window
 
-The shared `telemetry/window.ts` policy starts collection on **18 September 2026 at 17:00
-Europe/Madrid (15:00 UTC)**, independently of `users.me.event.startsAt`, and ends at the
-scheduled `endsAt`. It applies to `occurredAt` as `[start, end)` for every account, including
-organisers. No scheduled event means no recording. Official event access gates keep their own
-schedule. Ingestion, CLI collection and Insights use the same telemetry window.
+The shared `telemetry/window.ts` policy follows `users.me.event.startsAt` and `endsAt`.
+It applies to `occurredAt` as `[start, end)` for every account, including organisers.
+No scheduled event means no recording. Ingestion, CLI collection and Insights use the same
+configured event window; there is no fixed collection date or time.
 
 - Login for onboarded accounts, watcher startup and `hackspain telemetry sync` perform a historical
   catch-up. They reset source cursors and delivery deduplication for that pass, replay the current
@@ -143,7 +142,7 @@ schedule. Ingestion, CLI collection and Insights use the same telemetry window.
   batches and do not checkpoint unread source positions. The watcher refreshes the schedule every
   five minutes; a missing schedule records nothing, and late delivery remains allowed after the end.
 - The server rejects events outside the window with `outside_event_window`, including from older
-  binaries. Older CLIs must update to discover the newly included 17:00–18:45 records.
+  binaries.
 - Cursor usage before hook installation and usage a harness never persisted cannot be reconstructed.
   Recovery does not estimate missing tokens or collect prompt/response text.
 

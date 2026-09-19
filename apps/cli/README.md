@@ -116,8 +116,7 @@ laptop all weekend: one wakeup per second, the screen repaints only the rows tha
 one network round trip per scan, and after ten minutes without new usage the scan slows to once a
 minute until activity resumes. No prompt text or full
 paths ever leave the machine; only token counts, model, session ids, and a hash of the project
-directory. Collection starts **Friday 18 September 2026 at 17:00 Europe/Madrid (15:00 UTC)**,
-independently of the official event opening, and ends at the scheduled event end. This applies
+directory. Collection starts and ends at the times configured for the event. This applies
 to everybody (organiser accounts included): usage from before that start or after the end
 is never recorded or sent, and usage from inside it is picked up even if the watcher was opened
 late or not at all until the end. Every event keeps the time the harness recorded, not the time
@@ -125,7 +124,7 @@ the watcher read it. The watcher runs outside the window too: opened early it wa
 recording on its own, opened after the end it delivers what is left, and while no hackathon is
 scheduled it records nothing. In all three cases an orange "Not recording" line under the header
 and in the status bar says so. The window is checked again every five minutes, so a schedule set
-or its end moved while the watcher is open is picked up.
+or moved while the watcher is open is picked up.
 
 Signing in with an onboarded account automatically uploads available history; every watcher
 startup also rereads the collection window. `hackspain telemetry sync` runs the same finite

@@ -8,8 +8,7 @@ import type { Me } from "../lib/me";
 export type CollectionWindow = { since: number; until: number };
 
 /**
- * Collection starts Friday at 17:00 Madrid, independently of event access,
- * and ends when the organisers scheduled the hackathon to end. It is for
+ * Collection follows the start and end configured for the event. It is for
  * everyone: a watcher first opened on Sunday still reports Saturday's usage,
  * and nothing from before the start or after the end is reported by anybody,
  * organisers included. No schedule means no window, so nothing is recorded

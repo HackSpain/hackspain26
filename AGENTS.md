@@ -18,4 +18,4 @@ pnpm monorepo: `apps/web` is the Astro landing on Neon/Drizzle; `apps/app` is th
 - Preserve the CLI refresh-token lock: concurrent reuse of rotating tokens can invalidate sessions. Auth handoffs use `hs-code` / `hs-token`; a query parameter named `code` is consumed by Convex Auth middleware.
 - CLI `--json` is a machine-readable contract: exactly one JSON object on stdout, no prompts, other output on stderr.
 - Telemetry changes must preserve the [schema contract](apps/cli/docs/telemetry-schema.md), shared canonicalization, old-client/spool compatibility, and corresponding ingestion/query changes. Consumers permanently deduplicate by `(identity.userId, eventId)`; transport retry protection is insufficient.
-- Telemetry excludes prompts, responses, code, full paths, credentials, and harness account IDs. The telemetry collection window (separate from event access timing) uses `occurredAt`, including for admins; no schedule means no recording.
+- Telemetry excludes prompts, responses, code, full paths, credentials, and harness account IDs. The scheduled collection window uses `occurredAt`, including for admins; no schedule means no recording.
