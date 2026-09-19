@@ -370,7 +370,7 @@ function SubmitForm({
           <Field
             label="Repo de GitHub"
             htmlFor="repo-url"
-            hint="Obligatorio y público. Los jueces tienen que poder abrirlo."
+            hint="Obligatorio y público. Los jueces tienen que poder abrirlo. Incluid un README.md con instrucciones de cómo usarlo."
           >
             <Input
               id="repo-url"

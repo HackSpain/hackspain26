@@ -24,7 +24,9 @@ export function DeliveryBriefing() {
               puedan juzgar creatividad, problem solving y craftsmanship.
             </li>
             <li>Si aplica, una demo que se pueda probar.</li>
-            <li>El repo.</li>
+            <li>
+              El repo, con instrucciones en el README.md de cómo usarlo.
+            </li>
           </ul>
         </section>
         <section className="space-y-2">
