@@ -36,7 +36,7 @@ const ADMIN_NAV = [
   { href: "/admin/evento", label: "Evento" },
   { href: "/admin/notifications", label: "Avisos" },
   { href: "/admin/tv", label: "TV" },
-  { href: "/judging", label: "Jueces" },
+  { href: "/admin/judging", label: "Jurado" },
 ] as const;
 
 function adminNavActive(pathname: string, href: string) {
