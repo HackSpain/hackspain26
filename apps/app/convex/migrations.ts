@@ -432,3 +432,21 @@ export const backfillMemeTag = internalMutation({
     return flagged;
   },
 });
+
+/** Moves posts in or out of the #meme tab by hand, for memes nobody tagged. */
+export const setMemeFlag = internalMutation({
+  args: { meme: v.boolean(), postIds: v.array(v.id("posts")) },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    let changed = 0;
+    for (const postId of args.postIds) {
+      const post = await ctx.db.get(postId);
+      if (!post || post.kind !== "post" || Boolean(post.meme) === args.meme) {
+        continue;
+      }
+      await ctx.db.patch(post._id, { meme: args.meme || undefined });
+      changed += 1;
+    }
+    return changed;
+  },
+});

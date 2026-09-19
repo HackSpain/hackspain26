@@ -9,6 +9,11 @@ describe("hasMemeTag", () => {
     expect(hasMemeTag("(#meme)")).toBe(true);
   });
 
+  test("counts compound tags that end in meme", () => {
+    expect(hasMemeTag("#RevenueCatMeme")).toBe(true);
+    expect(hasMemeTag("va por vosotros #hackspain_memes")).toBe(true);
+  });
+
   test("ignores lookalikes", () => {
     expect(hasMemeTag("un meme sin etiqueta")).toBe(false);
     expect(hasMemeTag("#memento")).toBe(false);
