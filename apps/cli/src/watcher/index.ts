@@ -163,21 +163,20 @@ export function stackRefreshDue(input: {
   );
 }
 
-function sleepOrWake(state: WatchState | undefined, ms: number): Promise<void> {
+function sleepOrWake(
+  state: Pick<WatchState, "wake">,
+  ms: number
+): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
-      if (state) {
-        state.wake = undefined;
-      }
+      state.wake = undefined;
       resolve();
     }, ms);
-    if (state) {
-      state.wake = () => {
-        clearTimeout(timer);
-        state.wake = undefined;
-        resolve();
-      };
-    }
+    state.wake = () => {
+      clearTimeout(timer);
+      state.wake = undefined;
+      resolve();
+    };
   });
 }
 
@@ -363,6 +362,7 @@ export async function runWatch(
 ): Promise<number> {
   const { session, me, say } = deps;
   const { state } = deps;
+  const wakeState: Pick<WatchState, "wake"> = state ?? {};
   const log = (message: string) => {
     deps.log(message);
     if (state) {
@@ -384,6 +384,16 @@ export async function runWatch(
   const memory = deps.memory ?? openMemory();
   const cursors = openCursorStore(undefined, options.backfill);
   const recent = options.backfill ? new Set<string>() : loadRecentIds();
+  let savedRecentSize = options.backfill ? -1 : recent.size;
+  const saveProgress = () => {
+    cursors.save();
+    // This set only grows during a run. Backfill must replace prior ids even
+    // when empty; ordinary idle scans need no serialization.
+    if (recent.size !== savedRecentSize) {
+      saveRecentIds(recent);
+      savedRecentSize = recent.size;
+    }
+  };
   // A supplied history may be a one-shot generator; aliases and board replay
   // both need it during a historical catch-up.
   const storedHistory =
@@ -590,22 +600,25 @@ export async function runWatch(
    * Thumbnails for loaded posts that do not have one yet, a few per call.
    * Only when the terminal can draw them; failures turn into links.
    */
+  let feedImagesPending = false;
   const loadFeedImages = async (): Promise<void> => {
+    feedImagesPending = false;
     if (!state?.imageProtocol) {
       return;
     }
     const width = WATCH_IMAGE_BOUNDS.maxColumns * PIXELS_PER_COLUMN;
     let budget = FEED_IMAGES_PER_TURN;
     for (const post of state.feed) {
-      if (budget === 0) {
-        return;
-      }
       if (
         !post.imagePath ||
         state.feedImages.has(post._id) ||
         state.feedImageFailed.has(post._id)
       ) {
         continue;
+      }
+      if (budget === 0) {
+        feedImagesPending = true;
+        return;
       }
       budget--;
       const png = await fetchImage(session, post.imagePath, width);
@@ -671,6 +684,7 @@ export async function runWatch(
   let stopping = false;
   const stop = () => {
     stopping = true;
+    wakeState.wake?.();
   };
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
@@ -785,8 +799,7 @@ export async function runWatch(
       } catch {
         log("claude-code: OTLP queue cleanup deferred; events remain on disk");
       }
-      cursors.save();
-      saveRecentIds(recent);
+      saveProgress();
     }
     // The next run catches up from here.
     memory.data.lastActiveAt = Date.now();
@@ -861,8 +874,27 @@ export async function runWatch(
           state.nextScanAt = nextScan;
         }
       }
-      // One wakeup per second at most; a key press wakes it immediately.
-      await sleepOrWake(state, state?.paused ? 5000 : 1000);
+      if (stopping || state?.stopRequested) {
+        break;
+      }
+      // Sleep until there is work. The screen owns its clock; keys and
+      // signals wake this loop immediately, including in line mode.
+      const nextWork = Math.min(
+        nextUpdateCheck,
+        state?.paused ? Number.POSITIVE_INFINITY : nextScan,
+        inEvent() && feedImagesPending
+          ? Date.now() + 1000
+          : Number.POSITIVE_INFINITY
+      );
+      await sleepOrWake(
+        wakeState,
+        inEvent() && state?.feedNeedOlder
+          ? 0
+          : Math.max(0, nextWork - Date.now())
+      );
+      if (stopping || state?.stopRequested) {
+        break;
+      }
       // Scrolling past the loaded posts asks for an older page; pictures
       // for anything loaded trickle in a few per turn.
       if (inEvent()) {
@@ -872,8 +904,7 @@ export async function runWatch(
     }
     say("Stopping, flushing…");
     if (await batcher.flush()) {
-      cursors.save();
-      saveRecentIds(recent);
+      saveProgress();
     } else {
       log(
         "Pending telemetry remains; the next run will retry from the last saved cursors."
