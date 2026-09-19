@@ -97,6 +97,8 @@ export type WatchDeps = {
   memory?: MemoryStore;
   /** Usage events recorded by earlier runs, replayed onto the board; defaults to the spool. */
   history?: Iterable<TelemetryEvent>;
+  /** Installs a pending CLI update; true asks the watcher to exit cleanly for restart. */
+  checkForUpdate?: () => Promise<boolean>;
 };
 
 const RECENT_IDS_CAP = 5000;
@@ -112,6 +114,7 @@ export const STACK_REFRESH_MS = 30 * 60 * 1000;
 /** After this long without a usage event, scans slow down to save battery. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000;
 export const IDLE_INTERVAL_MS = 60 * 1000;
+const UPDATE_RECHECK_MS = 5 * 60 * 1000;
 
 /**
  * Scan cadence: the configured interval while there is activity, at most
@@ -688,11 +691,18 @@ export async function runWatch(
       await pollFeed();
     }
     let nextScan = Date.now() + interval();
+    let nextUpdateCheck = Date.now() + UPDATE_RECHECK_MS;
     if (state) {
       state.nextScanAt = nextScan;
     }
     while (!(stopping || state?.stopRequested)) {
       const now = Date.now();
+      if (now >= nextUpdateCheck) {
+        nextUpdateCheck = now + UPDATE_RECHECK_MS;
+        if (await deps.checkForUpdate?.()) {
+          return EXIT.OK;
+        }
+      }
       if (now >= nextScan) {
         if (state?.paused) {
           nextScan = Date.now() + 1000;

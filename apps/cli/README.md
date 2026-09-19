@@ -15,6 +15,12 @@ Windows: download `hackspain-windows-x64.exe` from the
 [releases page](https://github.com/HackSpain/hackspain26/releases) and rename it `hackspain.exe`.
 Binaries are self-contained; nothing else to install.
 
+Release binaries also check for a newer version in interactive sessions, at most once every six
+hours. A running watcher keeps checking, so it can update and restart itself without another
+command. When a release exists, the CLI downloads it, verifies `SHA256SUMS`, replaces itself
+atomically and restarts the command. Source checkouts, `--json`, non-interactive commands,
+help/version and the update command skip the check. Set `HACKSPAIN_NO_AUTO_UPDATE=1` to opt out.
+
 ```
 hackspain                       # where you stand, then a navigable menu (interactive terminals only)
 hackspain auth login            # sign in via the browser (approve on the dashboard's /cli-auth page),
