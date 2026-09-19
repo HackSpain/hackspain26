@@ -1,12 +1,12 @@
 import type { Database } from "bun:sqlite";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { posix, win32 } from "node:path";
 import { projectRef } from "../project";
 import type { RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
-import { lastWriteMs, openReadOnly } from "./sqlite";
+import { openReadOnly } from "./sqlite";
 
 export const DEVIN = "devin" as const;
 
@@ -69,6 +69,17 @@ export function normalizeDevin(
   if (input + output + cacheRead + cacheWrite === 0) {
     return null;
   }
+  const occurred = new Date(row.created_at * 1000);
+  if (
+    !Number.isFinite(occurred.getTime()) ||
+    typeof message.message_id !== "string" ||
+    ![input, output, cacheRead, cacheWrite].every(
+      (value) =>
+        typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    )
+  ) {
+    return null;
+  }
   const model = session?.model || "unknown";
   return {
     eventId: eventId(DEVIN, row.session_id, message.message_id),
@@ -78,7 +89,7 @@ export function normalizeDevin(
       provider: session?.backend_type || undefined,
       raw: model,
     },
-    occurredAt: new Date(row.created_at * 1000).toISOString(),
+    occurredAt: occurred.toISOString(),
     project: projectRef(session?.working_directory || undefined),
     sessionId: row.session_id,
     tokens: { cacheRead, cacheWrite, input, output },
@@ -86,83 +97,115 @@ export function normalizeDevin(
   };
 }
 
-export function devinDbPath(): string {
-  const data =
-    process.env.XDG_DATA_HOME?.trim() || join(homedir(), ".local", "share");
-  return join(data, "devin", "cli", "sessions.db");
+export function devinDbPath(
+  platform = process.platform,
+  env = process.env,
+  home = homedir()
+): string {
+  const override = env.HACKSPAIN_DEVIN_DB?.trim();
+  if (override) {
+    return override;
+  }
+  if (platform === "win32") {
+    return win32.join(
+      env.APPDATA?.trim() || win32.join(home, "AppData", "Roaming"),
+      "devin",
+      "cli",
+      "sessions.db"
+    );
+  }
+  const data = env.XDG_DATA_HOME?.trim() || posix.join(home, ".local", "share");
+  return posix.join(data, "devin", "cli", "sessions.db");
 }
+
+const PAGE = 250;
 
 export async function* collectDevin(
   dbPaths: string[],
   ctx: CollectorContext
 ): AsyncIterable<RawEvent> {
   for (const path of dbPaths) {
-    const mtimeMs = lastWriteMs(path);
     const previous = ctx.cursors.get(path);
-    if (
-      (previous && previous.mtimeMs === mtimeMs) ||
-      (!previous && mtimeMs < ctx.since)
-    ) {
-      continue;
-    }
     let mark = typeof previous?.mark === "number" ? previous.mark : 0;
     const announced = new Set(previous?.seenSessions);
     let db: Database | undefined;
-    let sessions: Map<string, SessionRow>;
-    let rows: MessageRow[];
     try {
+      const stat = statSync(path);
       db = openReadOnly(path);
-      sessions = new Map(
+      // Query the database, not filesystem timestamps: WAL checkpoints and
+      // coarse mtimes can hide new rows. A replaced/reset DB starts over.
+      const maximum =
         db
-          .query<SessionRow, []>(
-            "SELECT id, working_directory, backend_type, model FROM sessions"
+          .query<{ id: number | null }, []>(
+            "SELECT MAX(row_id) AS id FROM message_nodes"
           )
-          .all()
-          .map((session) => [session.id, session])
+          .get()?.id ?? 0;
+      if (
+        (previous?.inode !== undefined && previous.inode !== stat.ino) ||
+        maximum < mark
+      ) {
+        mark = 0;
+        announced.clear();
+      }
+      const sessionQuery = db.query<SessionRow, [string]>(
+        "SELECT id, working_directory, backend_type, model FROM sessions WHERE id = ?1"
       );
-      rows = db
-        .query<MessageRow, [number]>(
-          "SELECT row_id, session_id, created_at, chat_message FROM message_nodes WHERE row_id > ?1 ORDER BY row_id ASC"
-        )
-        .all(mark);
+      const query = db.query<MessageRow, [number, number, number]>(
+        "SELECT row_id, session_id, created_at, chat_message FROM message_nodes WHERE row_id > ?1 AND row_id <= ?2 ORDER BY row_id ASC LIMIT ?3"
+      );
+      const sessions = new Map<string, SessionRow | undefined>();
+      const emitted = new Set<string>();
+      for (;;) {
+        const rows = query.all(mark, maximum, PAGE);
+        for (const row of rows) {
+          mark = row.row_id;
+          if (!sessions.has(row.session_id)) {
+            sessions.set(
+              row.session_id,
+              sessionQuery.get(row.session_id) ?? undefined
+            );
+          }
+          const event = normalizeDevin(row, sessions.get(row.session_id));
+          if (
+            !event ||
+            emitted.has(event.eventId) ||
+            Date.parse(event.occurredAt) < ctx.since
+          ) {
+            continue;
+          }
+          emitted.add(event.eventId);
+          if (!announced.has(event.sessionId)) {
+            announced.add(event.sessionId);
+            yield {
+              eventId: eventId(DEVIN, event.sessionId, "start"),
+              harness: DEVIN,
+              occurredAt: event.occurredAt,
+              project: event.project,
+              sessionId: event.sessionId,
+              type: "session.start",
+            };
+          }
+          yield event;
+        }
+        if (rows.length < PAGE) {
+          break;
+        }
+        await new Promise<void>((resolve) => {
+          setImmediate(resolve);
+        });
+      }
+      ctx.cursors.set(path, {
+        inode: stat.ino,
+        mark,
+        mtimeMs: stat.mtimeMs,
+        offset: 0,
+        seenSessions: [...announced],
+      });
     } catch (error) {
       ctx.log(`devin: cannot read ${path}: ${String(error)}`);
-      continue;
     } finally {
       db?.close();
     }
-    const emitted = new Set<string>();
-    for (const row of rows) {
-      mark = Math.max(mark, row.row_id);
-      const event = normalizeDevin(row, sessions.get(row.session_id));
-      if (
-        !event ||
-        emitted.has(event.eventId) ||
-        Date.parse(event.occurredAt) < ctx.since
-      ) {
-        continue;
-      }
-      emitted.add(event.eventId);
-      if (!announced.has(event.sessionId)) {
-        announced.add(event.sessionId);
-        yield {
-          eventId: eventId(DEVIN, event.sessionId, "start"),
-          harness: DEVIN,
-          occurredAt: event.occurredAt,
-          project: event.project,
-          sessionId: event.sessionId,
-          type: "session.start",
-        };
-      }
-      yield event;
-    }
-    ctx.cursors.set(path, {
-      mark,
-      mtimeMs,
-      offset: 0,
-      seenSessions: [...announced],
-    });
-    await Promise.resolve();
   }
 }
 

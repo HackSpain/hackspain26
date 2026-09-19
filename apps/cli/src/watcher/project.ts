@@ -171,7 +171,7 @@ export function projectRef(
     .update(normalized)
     .digest("hex")
     .slice(0, 16);
-  const name = basename(normalized) || "root";
+  const name = basename(normalized.replaceAll("\\", "/")) || "root";
   const branch = gitBranch ?? currentGitBranch(normalized);
   const repo = currentGitRepo(normalized);
   return {

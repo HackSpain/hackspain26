@@ -5,7 +5,7 @@ import type { FeedItem } from "../lib/feed-format";
 import { postLines } from "../lib/feed-format";
 import { formatEventDate } from "../lib/me";
 import { compactNumber, formatAgo, renderTable } from "../lib/output";
-import { BRAND, c, colorEnabled, width } from "../lib/style";
+import { BRAND, c, colorEnabled, terminalText, width } from "../lib/style";
 import { imageCells } from "../lib/term-images";
 import { box, fit, kvLines, pad, SPINNER, wrap } from "../lib/tui";
 import type { ImageSlot } from "./images";
@@ -613,7 +613,19 @@ export function frameWithSlots(
     ...head.lines,
     ...(notice ? [rgb(ORANGE, `■ ${notice}`)] : []),
   ];
-  const available = h - lines.length - 1;
+  const diagnostic = state.log.at(-1);
+  const footer = [
+    ...(diagnostic
+      ? [
+          c.dim(
+            `Last diagnostic: ${terminalText(diagnostic).replaceAll("\n", " ")}`
+          ),
+        ]
+      : []),
+    status,
+  ];
+  const bodyHeight = Math.max(0, h - footer.length);
+  const available = bodyHeight - lines.length;
   const slots: ImageSlot[] = head.slot ? [head.slot] : [];
   /** Body slots of a box whose top border sits on screen row `top`. */
   const place = (top: number, bodySlots: BodySlot[]) => {
@@ -696,14 +708,14 @@ export function frameWithSlots(
     }
   }
 
-  const body = lines.slice(0, Math.max(0, h - 1));
-  while (body.length < h - 1) {
+  const body = lines.slice(0, bodyHeight);
+  while (body.length < bodyHeight) {
     body.push("");
   }
   return {
-    lines: [...body, status].map((l) => fit(l, w)),
-    // Only pictures that fit fully above the status line.
-    slots: slots.filter((slot) => slot.row + slot.rows <= h - 1),
+    lines: [...body, ...footer].slice(-h).map((l) => fit(l, w)),
+    // Only pictures that fit fully above the diagnostics and status.
+    slots: slots.filter((slot) => slot.row + slot.rows <= bodyHeight),
   };
 }
 

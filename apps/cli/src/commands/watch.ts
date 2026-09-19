@@ -187,9 +187,7 @@ export function registerWatch(program: Command): void {
         }
       };
       const log = (message: string) => {
-        if (flags.verbose || ctx.json) {
-          process.stderr.write(`${message}\n`);
-        }
+        process.stderr.write(`${message}\n`);
       };
       const announce = (subject: string, body: string, at: number) => {
         if (ctx.json) {

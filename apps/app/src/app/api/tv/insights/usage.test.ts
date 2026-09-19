@@ -31,6 +31,11 @@ describe("usageSql", () => {
   test("dedupes on the permanent key and buckets on the harness's time", () => {
     const sql = usageSql("hackspain_otel_logs", window);
     expect(sql).toContain("GROUP BY userId, id");
+    expect(sql).toContain("GROUP BY userId, requestKey");
+    expect(sql).toContain("['claude-request', sessionId, requestId]");
+    expect(sql).toContain("['event', id]");
+    expect(sql).toContain("hackspain.native.request_id");
+    expect(sql).toContain("tuple(id = concat('claude-code:', sessionId, ':request:', requestId), at)");
     expect(sql).toContain("toString(`hackspain.user.id`) AS userId");
     expect(sql).toContain("toString(timeUnixNano)");
     expect(sql).toContain("toString(`hackspain.usage.total_tokens`)");
@@ -51,6 +56,7 @@ describe("modelsSql", () => {
   test("dedupes on the permanent key and groups by the normalised model name", () => {
     const sql = modelsSql("hackspain_otel_logs", window);
     expect(sql).toContain("GROUP BY userId, id");
+    expect(sql).toContain("GROUP BY userId, requestKey");
     expect(sql).toContain("any(toString(`gen_ai.request.model`)) AS model");
     expect(sql).toContain("any(toString(`hackspain.model.family`)) AS family");
     expect(sql).toContain("any(toString(`gen_ai.provider.name`)) AS provider");

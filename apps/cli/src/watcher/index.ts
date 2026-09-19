@@ -1,5 +1,9 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  rememberTelemetry,
+  telemetryDedupKeys,
+} from "../../../app/src/app/api/cli/telemetry/canonical";
 import type { Session } from "../lib/api";
 import { api, fetchImage } from "../lib/api";
 import {
@@ -15,9 +19,10 @@ import { fetchMe } from "../lib/me";
 import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
-import { createBatcher } from "./batcher";
+import { BATCH_MAX, createBatcher } from "./batcher";
 import { antigravityCollector } from "./collectors/antigravity";
 import { claudeCodeCollector } from "./collectors/claude-code";
+import { createClaudeOtelCollector } from "./collectors/claude-otel";
 import { clineCollector } from "./collectors/cline";
 import { codexCollector } from "./collectors/codex";
 import { copilotCollector } from "./collectors/copilot";
@@ -247,7 +252,31 @@ export type ScanResult = {
   events: number;
   skipped: number;
   byHarness: Record<string, number>;
+  deferred?: boolean;
 };
+
+/** Retry setup/discovery each scan: tools may start or be repaired after us. */
+export async function discoverCollectors(
+  collectors: Collector[],
+  window: CollectionWindow | null,
+  log: (message: string) => void
+): Promise<Collector[]> {
+  const found: Collector[] = [];
+  for (const collector of collectors) {
+    try {
+      collector.setWindow?.(window);
+      await collector.prepare?.(log);
+      if ((await collector.discover()).length > 0) {
+        found.push(collector);
+      }
+    } catch (error) {
+      log(
+        `${collector.id}: setup/discovery failed; will retry: ${String(error)}`
+      );
+    }
+  }
+  return found;
+}
 
 export async function scanOnce(
   collectors: Collector[],
@@ -258,13 +287,18 @@ export async function scanOnce(
 ): Promise<ScanResult> {
   const result: ScanResult = { byHarness: {}, events: 0, skipped: 0 };
   for (const collector of collectors) {
-    const roots = await collector.discover();
-    if (roots.length === 0) {
-      continue;
-    }
     try {
+      const roots = await collector.discover();
+      if (roots.length === 0) {
+        continue;
+      }
       for await (const raw of collector.collect(ctx)) {
-        if (recent.has(raw.eventId)) {
+        const event = stamp(raw, identity);
+        if (
+          recent.has(raw.eventId) ||
+          telemetryDedupKeys(event).some((key) => recent.has(key))
+        ) {
+          rememberTelemetry(recent, event);
           result.skipped++;
           continue;
         }
@@ -274,7 +308,6 @@ export async function scanOnce(
           result.skipped++;
           continue;
         }
-        const event = stamp(raw, identity);
         const problems = validateEvent(event);
         if (problems.length > 0) {
           ctx.log(
@@ -283,8 +316,17 @@ export async function scanOnce(
           result.skipped++;
           continue;
         }
-        recent.add(event.eventId);
+        // Apply backpressure before a large catch-up can overflow the queues.
+        // Returning closes the generator without committing its unread cursor.
+        if (batcher.size() >= BATCH_MAX && !(await batcher.flush())) {
+          ctx.log(
+            "scan deferred until queued telemetry can be written; source cursors retained"
+          );
+          result.deferred = true;
+          return result;
+        }
         batcher.push(event);
+        rememberTelemetry(recent, event);
         result.events++;
         result.byHarness[collector.id] =
           (result.byHarness[collector.id] ?? 0) + 1;
@@ -320,10 +362,31 @@ export async function runWatch(
       recordLog(state, message);
     }
   };
-  const collectors = deps.collectors ?? COLLECTORS;
+  let { window } = options;
+  const nativeClaude = createClaudeOtelCollector({
+    userId: me._id,
+    listen: !options.once,
+    window: () => window,
+    paused: () => Boolean(state?.paused),
+  });
+  const collectors =
+    deps.collectors ??
+    COLLECTORS.map((collector) =>
+      collector.id === "claude-code" ? nativeClaude.collector : collector
+    );
   const memory = deps.memory ?? openMemory();
   const cursors = openCursorStore();
   const recent = loadRecentIds();
+  // A supplied history may be a one-shot generator; aliases and board replay
+  // both need it. The production spool remains streamed from disk.
+  const history = deps.history ? [...deps.history] : undefined;
+  // The bounded recent ring alone cannot correlate delayed native logs with
+  // old transcript events. Rebuild aliases from the durable spool on restart.
+  for (const event of history ?? readSpool()) {
+    if (validateEvent(event).length === 0 && event.identity.userId === me._id) {
+      rememberTelemetry(recent, event);
+    }
+  }
   const sinks: Sink[] = [spoolSink(), ...(deps.extraSinks ?? [])];
   if (options.uploadUrl) {
     sinks.push(
@@ -377,13 +440,9 @@ export async function runWatch(
   };
   // Nobody records outside the hackathon window, and without a window
   // nothing is recorded at all; `ctx` is only ever scanned with one set.
-  let { window } = options;
   const ctx: CollectorContext = { cursors, log, since: 0 };
   const applyWindow = (next: CollectionWindow | null): void => {
     window = next;
-    for (const collector of collectors) {
-      collector.setWindow?.(next);
-    }
     if (state) {
       state.window = next;
     }
@@ -397,21 +456,22 @@ export async function runWatch(
     // again. What this machine already reported is in the spool, so it is
     // not sent twice.
     if (cursors.coverFrom(next.since)) {
-      for (const event of deps.history ?? readSpool()) {
-        recent.add(event.eventId);
+      for (const event of history ?? readSpool()) {
+        if (
+          validateEvent(event).length === 0 &&
+          event.identity.userId === me._id
+        ) {
+          rememberTelemetry(recent, event);
+        }
       }
       log("reading harness logs again to cover the whole hackathon window");
     }
   };
   applyWindow(window);
 
-  const discovered: string[] = [];
-  for (const c of collectors) {
-    await c.prepare?.(log);
-    if ((await c.discover()).length > 0) {
-      discovered.push(c.id);
-    }
-  }
+  const discovered = (await discoverCollectors(collectors, window, log)).map(
+    (collector) => collector.id
+  );
   if (state) {
     state.harnesses = collectors.map((c) => ({
       cached: 0,
@@ -423,7 +483,7 @@ export async function runWatch(
     // The board remembers: everything this machine reported since the first
     // run comes back from the local spool, and the last announcements too.
     state.trackedSince = memory.data.firstStartedAt;
-    const replayed = replaySpool(state, deps.history ?? readSpool());
+    const replayed = replaySpool(state, history ?? readSpool());
     if (replayed > 0) {
       log(`replayed ${replayed} events from the local spool`);
     }
@@ -592,6 +652,7 @@ export async function runWatch(
   let wasInEvent = inEvent();
   let windowCheckedAt = Date.now();
 
+  let tickComplete = false;
   const tick = async (): Promise<ScanResult> => {
     // Organisers may schedule or move the hackathon while this is open.
     if (Date.now() - windowCheckedAt > TEAM_REFRESH_MS) {
@@ -647,13 +708,26 @@ export async function runWatch(
     if (state) {
       state.scanning = true;
     }
+    const available = await discoverCollectors(collectors, window, log);
+    if (state) {
+      const found = new Set(available.map((collector) => collector.id));
+      for (const harness of state.harnesses) {
+        harness.found = found.has(harness.id);
+      }
+    }
     // Without a scheduled hackathon there is no window to read for.
     const scanned: ScanResult = window
-      ? await scanOnce(collectors, ctx, recording, identity(), recent)
+      ? await scanOnce(available, ctx, recording, identity(), recent)
       : { byHarness: {}, events: 0, skipped: 0 };
     await reportObservedRepos();
     const ok = await batcher.flush();
+    tickComplete = ok && !scanned.deferred;
     if (ok) {
+      try {
+        nativeClaude.checkpoint(cursors);
+      } catch {
+        log("claude-code: OTLP queue cleanup deferred; events remain on disk");
+      }
       cursors.save();
       saveRecentIds(recent);
     }
@@ -683,7 +757,7 @@ export async function runWatch(
   try {
     await tick();
     if (options.once) {
-      return EXIT.OK;
+      return tickComplete ? EXIT.OK : EXIT.NETWORK;
     }
     const startedAt = Date.now();
     let lastEventAt: number | undefined = state?.lastEventAt;
@@ -740,11 +814,17 @@ export async function runWatch(
       }
     }
     say("Stopping, flushing…");
-    await batcher.flush();
-    cursors.save();
-    saveRecentIds(recent);
+    if (await batcher.flush()) {
+      cursors.save();
+      saveRecentIds(recent);
+    } else {
+      log(
+        "Pending telemetry remains; the next run will retry from the last saved cursors."
+      );
+    }
     return EXIT.INTERRUPTED;
   } finally {
+    await nativeClaude.stop();
     process.off("SIGINT", stop);
     process.off("SIGTERM", stop);
   }

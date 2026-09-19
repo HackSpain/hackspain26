@@ -101,10 +101,10 @@ AI coding harnesses it finds (Claude Code, Codex, Cursor, GitHub Copilot CLI, Ge
 schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
 (`~/.local/state/hackspain/telemetry/`), and uploads the same NDJSON to the dashboard's
 `/api/cli/telemetry` with your session. The server authenticates and validates batches, then
-stores accepted events through the RawTree TypeScript SDK without exposing its key to the CLI.
+stores accepted events through RawTree's OTLP logs endpoint without exposing its key to the CLI.
 The exact remote batch is saved locally before upload and retried after network failures or a
-restart. RawTree receives a stable deduplication token, so retrying an acknowledged-but-lost
-request does not count it twice. Server rejections are reported and recorded locally instead of
+restart. Dashboard queries permanently deduplicate participant/event ids and correlate Claude
+request ids across native telemetry and transcripts. Server rejections are reported and recorded locally instead of
 being silently discarded.
 `--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
 in `~/.config/hackspain/config.json` point the upload elsewhere.
@@ -125,13 +125,49 @@ scheduled it records nothing. In all three cases an orange "Not recording" line 
 and in the status bar says so. The window is checked again every five minutes, so a schedule set
 or moved while the watcher is open is picked up.
 
-For Cursor, the first `hackspain watch` adds one user-level `afterAgentResponse` entry to
-`~/.cursor/hooks.json`, preserving every hook already there. Cursor invokes the installed
+For Claude Code, continuous `hackspain watch` starts an authenticated OTLP/HTTP JSON receiver
+on `127.0.0.1` and adds a logs-only exporter to `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`).
+Restart Claude Code after the first setup. The port and local token persist in
+`<state-dir>/claude-otel.json`; neither is a dashboard credential. Native API usage is read first
+on each scan; transcripts remain enabled for older versions, exporter delays and watcher downtime.
+Existing telemetry settings, explicit opt-outs and header helpers are preserved; conflicting
+configuration falls back to transcripts with a diagnostic. Managed Claude settings can override
+user settings. `--once` reads any queued native events without installing or starting a receiver.
+The local receiver discards prompts, responses, account details, paths and unrelated events before
+writing its durable queue. Pausing the watcher also pauses native reception. Without a scheduled
+window, or for events outside it, nothing is retained. Only API events with a `request_id` are used;
+without one, the transcript remains the source. Native events do not supply project metadata.
+
+Cursor's [native OpenTelemetry export](https://cursor.com/docs/enterprise/opentelemetry-export)
+is an Enterprise administrator feature delivered from Cursor's servers to public HTTPS endpoints.
+It cannot send to this laptop receiver; Cursor continues using hooks. Devin continues using its
+local database. Native collection is currently implemented for Claude Code only.
+
+For Cursor, `hackspain watch` installs user-level `afterAgentResponse` and `stop` recorders in
+`~/.cursor/hooks.json`, preserving unrelated hooks and replacing obsolete HackSpain commands.
+Both hooks share the same event id, so one turn counts once. The command pins the absolute
+recorder and window paths so a GUI-launched Cursor uses the same state as the watcher. Cursor invokes the installed
 HackSpain binary after each response; it retains only the model, version, conversation and
 generation ids, token counters, timestamp, and workspace needed for the same normalized event.
 Prompt and response text, tool data, email, and full paths are never written to the telemetry
 spool or uploaded. The hook keeps recording locally while the watcher is closed, so the next run
-catches up; Cursor activity before the hook was installed cannot be recovered.
+catches up; Cursor activity before the hook was installed cannot be recovered. A hook payload
+without token counters cannot be reconstructed or estimated. Hooks disabled by Cursor or a
+version that emits neither supported usage hook will still need attention in Cursor's Hooks output.
+
+Devin support reads the **local Devin CLI** database: `%APPDATA%\devin\cli\sessions.db`
+on native Windows, and `$XDG_DATA_HOME/devin/cli/sessions.db` (default
+`~/.local/share/devin/cli/sessions.db`) on Linux and macOS. Set `HACKSPAIN_DEVIN_DB` to an
+explicit database path for a custom installation. Cloud Devin sessions do not live on the laptop.
+Run the watcher in the same OS/user environment as the agent; Windows and WSL have different
+home directories and installations.
+
+Setup and discovery retry each scan, so tools started later and repaired hook configurations are
+picked up without restarting the watcher. The last diagnostic is shown above the status bar;
+`hackspain watch --plain --once` prints full diagnostics to stderr. Large catch-ups flush in
+batches and pause when a sink cannot accept more, retaining source cursors for a later retry.
+Telemetry requests time out after 15 seconds. A failed final flush leaves disk cursors at the
+last successful checkpoint, and `--once` exits nonzero when delivery is still pending.
 
 GitHub Copilot support covers Copilot CLI sessions. Copilot writes cumulative per-model usage to
 `~/.copilot/session-state/<session>/events.jsonl` when a session shuts down; the watcher reports

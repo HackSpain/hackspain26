@@ -10,8 +10,14 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { summarize } from "../src/commands/telemetry";
-import { BATCH_MAX, createBatcher } from "../src/watcher/batcher";
-import { formatNotification, scanOnce, stamp } from "../src/watcher/index";
+import { BATCH_MAX, BUFFER_CAP, createBatcher } from "../src/watcher/batcher";
+import { memoryCursorStore } from "../src/watcher/cursor-store";
+import {
+  discoverCollectors,
+  formatNotification,
+  scanOnce,
+  stamp,
+} from "../src/watcher/index";
 import {
   platformToaster,
   toastLinux,
@@ -412,4 +418,121 @@ describe("fixtures stay redacted", () => {
       expect(text).not.toMatch(/\/Users\//);
     }
   });
+});
+
+test("discovery/setup failures are isolated and repaired integrations are retried", async () => {
+  let failing = true;
+  const logs: string[] = [];
+  const healthy: Collector = {
+    id: "claude-code",
+    discover: async () => ["/ready"],
+    async *collect() {
+      yield validEvent;
+    },
+  };
+  const broken: Collector = {
+    ...healthy,
+    id: "devin",
+    discover: async () => {
+      if (failing) {
+        throw new Error("EACCES");
+      }
+      return ["/repaired"];
+    },
+  };
+  const hook: Collector = {
+    ...healthy,
+    id: "cursor",
+    setWindow: () => {
+      if (failing) {
+        throw new Error("read-only state");
+      }
+    },
+  };
+  const collectors = [broken, hook, healthy];
+  expect(
+    (await discoverCollectors(collectors, null, (m) => logs.push(m))).map(
+      (c) => c.id
+    )
+  ).toEqual(["claude-code"]);
+  const batcher = createBatcher([], () => {});
+  const context = {
+    cursors: memoryCursorStore(),
+    log: (m: string) => logs.push(m),
+    since: 0,
+  };
+  expect(
+    (
+      await scanOnce(
+        [broken, healthy],
+        context,
+        batcher,
+        IDENTITY_FOR_SCAN,
+        new Set()
+      )
+    ).events
+  ).toBe(1);
+  failing = false;
+  expect(
+    (await discoverCollectors(collectors, null, (m) => logs.push(m))).map(
+      (c) => c.id
+    )
+  ).toEqual(["devin", "cursor", "claude-code"]);
+  expect(logs.some((m) => m.includes("EACCES"))).toBe(true);
+});
+
+const IDENTITY_FOR_SCAN = { userId: "u", clientVersion: "test" };
+
+test("large catch-up flushes batches before the buffer cap and resumes after a failed sink", async () => {
+  let fail = true;
+  let now = 0;
+  const written: string[] = [];
+  const batcher = createBatcher(
+    [
+      {
+        name: "recoverable",
+        write: async (events) => {
+          if (fail) {
+            throw new Error("offline");
+          }
+          written.push(...events.map((e) => e.eventId));
+        },
+      },
+    ],
+    () => {},
+    () => now
+  );
+  const count = BUFFER_CAP + 25;
+  let completed = false;
+  const collector: Collector = {
+    id: "claude-code",
+    discover: async () => ["/logs"],
+    async *collect() {
+      for (let i = 0; i < count; i++) {
+        yield event(i);
+      }
+      completed = true;
+    },
+  };
+  const context = { cursors: memoryCursorStore(), log: () => {}, since: 0 };
+  const recent = new Set<string>();
+  const first = await scanOnce(
+    [collector],
+    context,
+    batcher,
+    IDENTITY_FOR_SCAN,
+    recent
+  );
+  expect(first.deferred).toBe(true);
+  expect(completed).toBe(false);
+  expect(recent.size).toBe(BATCH_MAX);
+  expect(batcher.dropped()).toBe(0);
+  fail = false;
+  now = 60_000;
+  await scanOnce([collector], context, batcher, IDENTITY_FOR_SCAN, recent);
+  expect(await batcher.flush()).toBe(true);
+  expect(completed).toBe(true);
+  expect(written).toHaveLength(count);
+  expect(new Set(written).size).toBe(count);
+  expect(batcher.dropped()).toBe(0);
 });

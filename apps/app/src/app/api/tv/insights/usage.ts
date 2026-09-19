@@ -38,6 +38,46 @@ const MODEL_ROWS = 12;
 /** Everybody at the hackathon fits; the route keeps only who the screen shows. */
 const PEOPLE_ROWS = 2000;
 
+/** First collapse transport retries, then correlate Claude OTLP and transcript requests.
+ * All fields come from the same row; prefer native usage when both sources exist.
+ */
+function deduplicatedEvents(table: string): string {
+  return `WITH deliveries AS (
+  SELECT
+    toString(\`hackspain.user.id\`) AS userId,
+    toString(\`event.id\`) AS id,
+    any(toString(\`hackspain.team.id\`)) AS teamId,
+    any(toString(\`hackspain.harness\`)) AS harness,
+    any(toString(\`gen_ai.conversation.id\`)) AS sessionId,
+    any(ifNull(toString(\`hackspain.native.request_id\`), '')) AS requestId,
+    any(toString(\`gen_ai.request.model\`)) AS model,
+    any(toString(\`hackspain.model.family\`)) AS family,
+    any(toString(\`gen_ai.provider.name\`)) AS provider,
+    any(intDiv(toInt64OrZero(toString(timeUnixNano)), 1000000000)) AS at,
+    any(toInt64OrZero(toString(\`hackspain.usage.total_tokens\`))) AS total,
+    any(toInt64OrZero(toString(\`hackspain.usage.cache_read_tokens\`)) + toInt64OrZero(toString(\`hackspain.usage.cache_write_tokens\`))) AS cached
+  FROM ${table}
+  WHERE toString(eventName) = 'hackspain.usage'
+  GROUP BY userId, id
+),
+requests AS (
+  SELECT userId,
+    if(harness = 'claude-code' AND requestId != '',
+      ['claude-request', sessionId, requestId], ['event', id]) AS requestKey,
+    argMax(tuple(teamId, harness, sessionId, model, family, provider, at, total, cached),
+      tuple(id = concat('claude-code:', sessionId, ':request:', requestId), at)) AS chosen
+  FROM deliveries
+  GROUP BY userId, requestKey
+),
+events AS (
+  SELECT userId,
+    chosen.1 AS teamId, chosen.2 AS harness, chosen.3 AS sessionId,
+    chosen.4 AS model, chosen.5 AS family, chosen.6 AS provider,
+    chosen.7 AS at, chosen.8 AS total, chosen.9 AS cached
+  FROM requests
+)`;
+}
+
 /**
  * Same dedupe as `usageSql`, then tokens and requests per normalised model
  * name. A model served by several providers keeps one row.
@@ -49,19 +89,7 @@ export function modelsSql(table: string, window: UsageWindow): string {
   const start = Math.floor(window.startsAt / 1000);
   const end = Math.floor(window.endsAt / 1000);
   return `
-WITH events AS (
-  SELECT
-    toString(\`hackspain.user.id\`) AS userId,
-    toString(\`event.id\`) AS id,
-    any(toString(\`gen_ai.request.model\`)) AS model,
-    any(toString(\`hackspain.model.family\`)) AS family,
-    any(toString(\`gen_ai.provider.name\`)) AS provider,
-    any(intDiv(toInt64OrZero(toString(timeUnixNano)), 1000000000)) AS at,
-    any(toInt64OrZero(toString(\`hackspain.usage.total_tokens\`))) AS total
-  FROM ${table}
-  WHERE toString(eventName) = 'hackspain.usage'
-  GROUP BY userId, id
-)
+${deduplicatedEvents(table)}
 SELECT
   model AS name,
   any(family) AS family,
@@ -144,8 +172,8 @@ export function parseModelRows(data: unknown[]): ModelRow[] {
  * apps/cli/docs/telemetry-schema.md). RawTree's `otlp-logs` transform flattens
  * resource and record attributes into top-level dotted columns.
  *
- * - `events` keeps one row per (`hackspain.user.id`, `event.id`), because a
- *   retried OTLP batch can be stored more than once.
+ * - `deliveries` deduplicates (`hackspain.user.id`, `event.id`); `requests`
+ *   also correlates Claude request ids across OTLP and legacy transcript rows.
  * - Buckets use `timeUnixNano`, which the exporter sets from `occurredAt`.
  * - `hackspain.usage.total_tokens` is input + output + both cache fields.
  */
@@ -157,20 +185,7 @@ export function usageSql(table: string, window: UsageWindow): string {
   const end = Math.floor(window.endsAt / 1000);
   const bucketSeconds = Math.max(1, Math.floor((end - start) / window.buckets));
   return `
-WITH events AS (
-  SELECT
-    toString(\`hackspain.user.id\`) AS userId,
-    toString(\`event.id\`) AS id,
-    any(toString(\`hackspain.team.id\`)) AS teamId,
-    any(toString(\`hackspain.harness\`)) AS harness,
-    any(toString(\`gen_ai.conversation.id\`)) AS sessionId,
-    any(intDiv(toInt64OrZero(toString(timeUnixNano)), 1000000000)) AS at,
-    any(toInt64OrZero(toString(\`hackspain.usage.total_tokens\`))) AS total,
-    any(toInt64OrZero(toString(\`hackspain.usage.cache_read_tokens\`)) + toInt64OrZero(toString(\`hackspain.usage.cache_write_tokens\`))) AS cached
-  FROM ${table}
-  WHERE toString(eventName) = 'hackspain.usage'
-  GROUP BY userId, id
-),
+${deduplicatedEvents(table)},
 bucketed AS (
   SELECT *, least(intDiv(at - ${start}, ${bucketSeconds}), ${window.buckets - 1}) AS bucket
   FROM events
