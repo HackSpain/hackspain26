@@ -69,7 +69,7 @@ buckets on `occurredAt`.
 | qwen-code | `~/.qwen/projects/<slug>/chats/<session>.jsonl` (`QWEN_HOME` overrides), records with `type: "assistant"` and `usageMetadata` | `sessionId` | record `uuid` | `promptTokenCount − cachedContentTokenCount` | `candidatesTokenCount`, plus `thoughtsTokenCount` when the total counts it apart | `cachedContentTokenCount` | 0 | `model`; `thoughtsTokenCount` → `reasoning`; `version` → `harnessVersion` |
 | pi | `~/.pi/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoning` → `reasoning`; `usage.cost.total` → `native.costUsd` |
 | omp | `~/.omp/agent/sessions/<project>/*.jsonl` (nested sessions included), `type: "message"` with `message.role: "assistant"` | header `id` | entry `id` | `usage.input` (already uncached) | `usage.output` (already includes reasoning) | `usage.cacheRead` | `usage.cacheWrite` | `message.model` + `provider`; `usage.reasoningTokens` → `reasoning`; `usage.cost.total` → `native.costUsd` |
-| antigravity | `~/.gemini/antigravity-cli/conversations/<uuid>.db` (Antigravity CLI, `agy`), table `steps`, rows whose protobuf `metadata` carries a usage message (field 9); `gen_metadata` names the model codes and the sibling `conversation_summaries.db` gives the workspace | the file name's uuid | step `idx` | usage field 2 (already net of cache reads) | usage field 3 (already includes thoughts) | usage field 5 | 0 (implicit caching) | usage field 1 → `gen_metadata` name; usage field 10 (thoughts) → `reasoning` |
+| antigravity | `~/.gemini/{antigravity-cli,antigravity,antigravity-ide}/conversations/<uuid>.db` (CLI, desktop and IDE installations with the supported SQLite schema), table `steps`, rows whose protobuf `metadata` carries a usage message (field 9); `gen_metadata` names the model codes and the optional sibling `conversation_summaries.db` gives the workspace | the file name's uuid, shared across installation roots | step `idx` | usage field 2 (already net of cache reads) | usage field 3 (already includes thoughts) | usage field 5 | 0 (implicit caching) | usage field 1 → `gen_metadata` name; CLI only: usage field 10 (thoughts) → `reasoning` |
 | devin | `~/.local/share/devin/cli/sessions.db` (Devin CLI; Windows: `%APPDATA%\devin\cli\sessions.db`; Unix: `XDG_DATA_HOME` overrides; `HACKSPAIN_DEVIN_DB` selects a custom file), table `message_nodes`, rows whose `chat_message` JSON is an assistant message with `metadata.metrics` (the same message sits in two chains: dedupe) | `session_id` | `message_id` | `metrics.input_tokens` (already net of cache reads) | `metrics.output_tokens` | `metrics.cache_read_tokens` | `metrics.cache_creation_tokens` | `sessions.model` + `sessions.backend_type` (the session's current model; the message does not name one) |
 
 Reasoning tokens go to `tokens.reasoning` when the harness reports them (Claude thinking,
@@ -108,11 +108,17 @@ Only persisted assistant usage is collected, not compaction summaries or estimat
 - Antigravity's step schema is undocumented: the field numbers come from decoding real
   conversations (output = candidates + thoughts on every one of 7.7k steps checked). A step whose
   model code no conversation names is reported as `unknown`.
+- Antigravity desktop/IDE discovery uses the same SQLite usage layout, supported by the
+  [community schema audit](https://github.com/mjacobs/agy-reader/blob/main/COMPATIBILITY.md).
+  This integration has synthetic database coverage, not a local IDE validation. The IDE's
+  reasoning subfield is unverified and omitted; output totals still include reasoning.
+  Missing summaries leave project attribution unset. Legacy `.pb` stores are not supported.
+  Copies of a conversation retain the same event ids across roots for downstream deduplication.
 - Cline reports no reasoning count, and its `tokensIn` follows whatever the provider adapter did
   with cached tokens; there is no total in the record to check it against.
 - Codex, Copilot CLI, Gemini CLI, Qwen Code, Kilo Code, Pi and Oh My Pi collectors are written from documented formats, not
   checked against a local install. Claude Code, OpenCode, Antigravity and Devin are checked against
-  real logs.
+  real logs (Antigravity CLI only).
 - Cursor's own transcripts omit usage. Its collector starts with the first `hackspain watch`,
   which installs `afterAgentResponse` and `stop` recorders, preserving unrelated hooks and
   replacing obsolete HackSpain commands. Both deduplicate by generation id. Each hook allowlists usage
