@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { registerAuth } from "../commands/auth";
+import { registerCursorHook } from "../commands/cursor-hook";
 import { registerFeed } from "../commands/feed";
 import { registerHome } from "../commands/home";
 import { registerMilestone } from "../commands/milestone";
@@ -46,6 +47,7 @@ export function buildProgram(): Command {
     .showSuggestionAfterError();
 
   registerHome(program, buildProgram);
+  registerCursorHook(program);
   registerAuth(program);
   registerOpen(program);
   registerProfile(program);
