@@ -116,3 +116,18 @@ export function parseProjectName(raw: string): ParseResult {
   }
   return { ok: true, value: name };
 }
+
+export const MAX_NOTES_LENGTH = 2000;
+
+export function parseOptionalNotes(
+  raw: string | undefined
+): ParseResult | { ok: true; value: undefined } {
+  const value = raw?.replaceAll("\r\n", "\n").trim() ?? "";
+  if (!value) {
+    return { ok: true, value: undefined };
+  }
+  if (value.length > MAX_NOTES_LENGTH) {
+    return { ok: false, message: `Máximo ${MAX_NOTES_LENGTH} caracteres.` };
+  }
+  return { ok: true, value };
+}

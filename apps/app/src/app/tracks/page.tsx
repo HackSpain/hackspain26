@@ -8,6 +8,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
 import { DeliveryBriefing } from "@/components/delivery-briefing";
+import { LinkedText } from "@/components/linked-text";
 import { TrackBriefLink } from "@/components/markdown";
 import { LoadingText, MetaLink, MetaRow, Page } from "@/components/page";
 import { ProjectCliDialog } from "@/components/project-cli-dialog";
@@ -249,10 +250,12 @@ function MyProject({
       </CardHeader>
       <CardContent className="space-y-5">
         {mine.description ? (
-          <p className="text-sm whitespace-pre-wrap">{mine.description}</p>
+          <p className="text-sm whitespace-pre-wrap">
+            <LinkedText text={mine.description} />
+          </p>
         ) : (
           <p className="text-sm text-hs-brown">
-            Sin descripción todavía. El vídeo de Submit cubre qué habéis
+            Sin notas todavía. El vídeo de Submit cubre qué habéis
             hecho y por qué.
           </p>
         )}

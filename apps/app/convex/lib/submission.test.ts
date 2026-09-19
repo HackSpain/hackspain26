@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   parseGithubRepoUrl,
+  parseOptionalNotes,
   parseOptionalProductUrl,
   parseProjectName,
   parseYoutubeWatchUrl,
@@ -67,5 +68,19 @@ describe("parseProjectName", () => {
   test("trims and enforces length", () => {
     expect(parseProjectName("  ok  ")).toEqual({ ok: true, value: "ok" });
     expect(parseProjectName("x").ok).toBe(false);
+  });
+});
+
+describe("parseOptionalNotes", () => {
+  test("keeps newlines and allows empty", () => {
+    expect(parseOptionalNotes("")).toEqual({ ok: true, value: undefined });
+    expect(parseOptionalNotes("linea 1\nhttps://hackspain.com")).toEqual({
+      ok: true,
+      value: "linea 1\nhttps://hackspain.com",
+    });
+  });
+
+  test("rejects overlong notes", () => {
+    expect(parseOptionalNotes("x".repeat(2001)).ok).toBe(false);
   });
 });
