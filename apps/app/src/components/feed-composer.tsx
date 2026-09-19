@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Id } from "@convex/_generated/dataModel";
 import { api } from "@convex/_generated/api";
+import { hasMemeTag } from "@convex/lib/feedTabs";
 import type { FeedPost } from "@/components/feed-timeline";
 import { errorMessage } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,13 @@ function optimisticPost(
       api.feed.list,
     )) {
       if (!value || queryArgs.before !== undefined) {
+        continue;
+      }
+      // Tabs only take the rows the server would give them.
+      if (
+        queryArgs.tab === "github" ||
+        (queryArgs.tab === "meme" && !hasMemeTag(args.text))
+      ) {
         continue;
       }
       localStore.setQuery(api.feed.list, queryArgs, [optimistic, ...value]);

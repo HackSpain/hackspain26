@@ -6,6 +6,7 @@ import {
   onboardedQuery,
 } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
+import { feedTabValidator, hasMemeTag } from "./lib/feedTabs";
 import { imagePathFor } from "./lib/files";
 import { membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { avatarUrlFor } from "./users";
@@ -130,27 +131,42 @@ async function hydrate(
   };
 }
 
-/** Newest first. `before` pages backwards; `after` fetches only newer posts (watcher). */
+/**
+ * Newest first. `before` pages backwards; `after` fetches only newer posts
+ * (watcher). Without `tab` it is the whole feed, which is what the CLI reads.
+ */
 export const list = onboardedQuery({
   args: {
     after: v.optional(v.number()),
     before: v.optional(v.number()),
     limit: v.optional(v.number()),
+    tab: v.optional(feedTabValidator),
   },
   handler: async (ctx, args) => {
     const limit = Math.min(MAX_LIMIT, Math.max(1, args.limit ?? DEFAULT_LIMIT));
-    const { after, before } = args;
+    const { tab } = args;
+    const after = args.after ?? 0;
+    const before = args.before ?? Number.MAX_SAFE_INTEGER;
     let indexed;
-    if (after !== undefined) {
+    if (tab === "meme") {
       indexed = ctx.db
         .query("posts")
-        .withIndex("by_created", (q) => q.gt("createdAt", after));
-    } else if (before !== undefined) {
+        .withIndex("by_meme_created", (q) =>
+          q.eq("meme", true).gt("createdAt", after).lt("createdAt", before)
+        );
+    } else if (tab) {
+      const kind = tab === "github" ? "github" : "post";
       indexed = ctx.db
         .query("posts")
-        .withIndex("by_created", (q) => q.lt("createdAt", before));
+        .withIndex("by_kind_created", (q) =>
+          q.eq("kind", kind).gt("createdAt", after).lt("createdAt", before)
+        );
     } else {
-      indexed = ctx.db.query("posts").withIndex("by_created");
+      indexed = ctx.db
+        .query("posts")
+        .withIndex("by_created", (q) =>
+          q.gt("createdAt", after).lt("createdAt", before)
+        );
     }
     const rows = await indexed.order("desc").take(limit);
     const out = [];
@@ -197,6 +213,7 @@ export const post = onboardedMutation({
       text,
       imageId: args.imageId,
       clientId: args.clientId,
+      meme: hasMemeTag(text) || undefined,
       createdAt: Date.now(),
     });
   },

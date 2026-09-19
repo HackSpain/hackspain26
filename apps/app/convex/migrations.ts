@@ -12,6 +12,7 @@ import {
   normalizeTwitter,
 } from "./lib/normalize";
 import { formatDietaryRestrictions } from "./lib/dietary";
+import { hasMemeTag } from "./lib/feedTabs";
 import { urlOf, urlsFromRecord } from "./lib/urls";
 import type { Id } from "./_generated/dataModel";
 
@@ -409,5 +410,25 @@ export const dropCheckInMetadata = internalMutation({
       cleared += 1;
     }
     return cleared;
+  },
+});
+
+/** Flags posts written before the feed had a #meme tab. Safe to run again. */
+export const backfillMemeTag = internalMutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    let flagged = 0;
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_kind_created", (q) => q.eq("kind", "post"))
+      .collect();
+    for (const post of posts) {
+      if (!post.meme && hasMemeTag(post.text)) {
+        await ctx.db.patch(post._id, { meme: true });
+        flagged += 1;
+      }
+    }
+    return flagged;
   },
 });

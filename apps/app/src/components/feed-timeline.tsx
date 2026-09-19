@@ -2,9 +2,11 @@
 
 import { useQuery } from "convex/react";
 import { GitBranch } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@convex/_generated/api";
+import type { FeedTab } from "@convex/lib/feedTabs";
 import { Avatar } from "@/components/avatar";
 import { LoadingText } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
@@ -175,18 +177,106 @@ function PostCard({ post, fresh }: { post: FeedPost; fresh: boolean }) {
   );
 }
 
-export const FEED_EMPTY_COPY = "Todavía no hay nada. Sé el primero en publicar.";
+const FEED_TABS: { empty: string; label: string; value: FeedTab }[] = [
+  {
+    empty: "Todavía no hay nada. Sé el primero en publicar.",
+    label: "Posts",
+    value: "posts",
+  },
+  {
+    empty: "Todavía no hay actividad. Los pushes aparecen cuando un equipo vincula su repo.",
+    label: "GitHub",
+    value: "github",
+  },
+  {
+    empty: "Todavía no hay memes. Publica con #meme y saldrá aquí.",
+    label: "#meme",
+    value: "meme",
+  },
+];
 
+export function feedTabId(tab: FeedTab): string {
+  return `feed-tab-${tab}`;
+}
+
+export const FEED_PANEL_ID = "feed-panel";
+
+/** Same look as the judging view toggle; arrow keys move between tabs. */
+export function FeedTabs({
+  value,
+  onChange,
+}: {
+  value: FeedTab;
+  onChange: (value: FeedTab) => void;
+}) {
+  const list = useRef<HTMLDivElement | null>(null);
+
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const index = FEED_TABS.findIndex((tab) => tab.value === value);
+    let next;
+    if (event.key === "ArrowRight") {
+      next = FEED_TABS[(index + 1) % FEED_TABS.length];
+    } else if (event.key === "ArrowLeft") {
+      next = FEED_TABS[(index - 1 + FEED_TABS.length) % FEED_TABS.length];
+    } else if (event.key === "Home") {
+      next = FEED_TABS[0];
+    } else if (event.key === "End") {
+      next = FEED_TABS.at(-1);
+    }
+    if (!next) {return;}
+    event.preventDefault();
+    onChange(next.value);
+    list.current
+      ?.querySelector<HTMLButtonElement>(`#${feedTabId(next.value)}`)
+      ?.focus();
+  }
+
+  return (
+    <div
+      ref={list}
+      role="tablist"
+      aria-label="Filtrar el feed"
+      onKeyDown={onKeyDown}
+      className="box-border grid h-11 grid-cols-3 border-[3px] border-hs-ink [&>:not(:last-child)]:border-r-[3px] [&>:not(:last-child)]:border-hs-ink"
+    >
+      {FEED_TABS.map((tab) => {
+        const selected = tab.value === value;
+        return (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            id={feedTabId(tab.value)}
+            aria-selected={selected}
+            aria-controls={FEED_PANEL_ID}
+            tabIndex={selected ? 0 : -1}
+            className={cn(
+              "h-full min-w-0 truncate px-3 font-bungee text-xs uppercase outline-none focus-visible:border-[3px] focus-visible:border-hs-navy",
+              selected
+                ? "bg-hs-gold text-hs-ink"
+                : "bg-hs-paper text-hs-brown [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand",
+            )}
+            onClick={() => onChange(tab.value)}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Mount with `key={tab}` so the enter-animation baseline resets per tab. */
 export function FeedTimeline({
+  tab,
   limit = 50,
   className,
-  empty = "default",
 }: {
+  tab: FeedTab;
   limit?: number;
   className?: string;
-  empty?: "default" | "none";
 }) {
-  const posts = useQuery(api.feed.list, { limit });
+  const posts = useQuery(api.feed.list, { limit, tab });
   // Keys present when the list first loaded never animate in; only posts that
   // arrive afterwards (yours, someone else's, GitHub) get the enter transition.
   // The set is frozen on purpose: a later post keeps `hs-enter` for its whole
@@ -198,10 +288,9 @@ export function FeedTimeline({
 
   if (posts === undefined) {return <LoadingText />;}
   if (posts.length === 0) {
-    if (empty === "none") {return null;}
     return (
       <p className="text-pretty text-sm font-medium text-hs-brown">
-        {FEED_EMPTY_COPY}
+        {FEED_TABS.find((entry) => entry.value === tab)?.empty}
       </p>
     );
   }
