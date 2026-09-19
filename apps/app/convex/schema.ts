@@ -25,7 +25,8 @@ export default defineSchema({
     screenId: v.id("tvScreens"), clientId: v.string(), url: v.string(),
     width: v.number(), height: v.number(), lastSeenAt: v.number(),
     receivedRevision: v.number(), receivedReloadVersion: v.number(),
-  }).index("by_client", ["clientId"]).index("by_screen", ["screenId"]),
+  }).index("by_client", ["clientId"]).index("by_screen", ["screenId"])
+    .index("by_screen_last_seen", ["screenId", "lastSeenAt"]),
   ...authTables,
   ambassadorApplications: defineTable({
     email: v.string(),

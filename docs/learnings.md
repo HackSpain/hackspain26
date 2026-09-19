@@ -228,3 +228,18 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 **Evidence.** The previous `AGENTS.md` simultaneously called Insights mock-only and described live insights, documented a superseded RawTree dual-write path, and said projects could enter multiple tracks despite the current one-track validation. The dashboard README also explicitly forbade the auth bypass needed to correct the observed firewall problem.
 
 **Correction and prevention.** Keep agent instructions focused on coding invariants and pointers. Read the current implementation when documentation conflicts, then fix the relevant documentation with the task. Current telemetry ingestion exports OTLP logs, and insights read those logs with permanent event deduplication; do not revive the old custom-table write or add a second source of truth. `challengeIds` remains an array but its name/type does not imply multiple tracks are allowed. Put dated evidence and operational lessons here instead of appending implementation histories or “this branch” status to `AGENTS.md`.
+
+## 2026-09-19 — TV heartbeat cleanup must exclude live peers from its read set
+
+**Evidence and consequence.** Production Convex Insights reported 80 retried
+`tvPlayback:heartbeat` operations against `tvScreenConnections` in its 72-hour
+window. Every heartbeat patched its own connection and then collected all peers
+for the screen, so another device's presence update invalidated that read set.
+The sample did not show permanent OCC failures.
+
+**Correction and verification.** Use the `screenId,lastSeenAt` index to read only
+connections older than 24 hours, deleting at most 100 per heartbeat. Excess old
+connections are removed by later heartbeats. A regression test records the read
+set and verifies that live peers and other screens are not read or deleted.
+Check production conflict counts after deployment; this does not claim to fix
+unrelated TV transport or rendering failures.
