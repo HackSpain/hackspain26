@@ -24,6 +24,7 @@ import { MilestoneBroadcast } from "./milestone-broadcast";
 
 const SLIDE_MS = 12_000;
 const SIDE_MS = 10_000;
+const MINI_SLIDE_MS = 5000;
 const RANKING_ROWS = 7;
 const FEED_ROWS = 6;
 const PEOPLE_ROWS = 8;
@@ -465,10 +466,103 @@ function SponsorStrip() {
   );
 }
 
-function MarketStage({ data, feed, demo }: { data: LiveInsightData; feed: MarketFeed; demo: boolean }) {
+function MiniMarketStage({ data, posts, demo, series, teams }: {
+  data: LiveInsightData; posts: MarketPost[] | undefined; demo: boolean; series: MarketSeries; teams: MarketTeam[];
+}) {
+  const [slide, setSlide] = useState(0);
+  const visible = usePageVisible();
+  const reduced = useReducedMotion();
+  const showPeople = slide % 2 === 1;
+  const ranking = showPeople ? marketPeople(data.people, "tokens", 3) : teams.slice(0, 3);
+  const totals = marketTotals(series);
+  const post = posts?.[0];
+  const loading = data.status === "loading";
+  const tokensAvailable = data.status === "ok" || data.status === "empty";
+  const cards = [
+    { label: "Tokens procesados", shown: tokensAvailable ? compact(totals.tokens) : "—", tone: "bg-hs-gold" },
+    { label: "Pushes a GitHub", shown: loading ? "—" : compact(totals.pushes), tone: "bg-hs-teal text-hs-paper" },
+  ];
+  return (
+    <main className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo · Panel mini">
+      <div className="hsx hsx-mini flex h-full flex-col gap-[var(--line)] p-[var(--line)]">
+        <header className="grid h-[16%] shrink-0 grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)] gap-[var(--line)] portrait:h-[20%] portrait:grid-cols-2 portrait:grid-rows-2">
+          <div className="flex min-w-0 items-center justify-between gap-[var(--u)] bg-hs-paper px-[var(--u)] portrait:col-span-2">
+            <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-auto max-h-[65%] w-[75%] min-w-0 object-contain portrait:w-auto" />
+            <span className="hsx-sm shrink-0 font-bold text-hs-red">{demo ? "Demo" : <span title="En directo" aria-label="En directo">●</span>}</span>
+          </div>
+          <Clock startsAt={data.startsAt} endsAt={data.endsAt} />
+        </header>
+
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,0.8fr)_minmax(0,1.5fr)]">
+          <section aria-label="Cifras del hackathon" className="grid min-h-0 grid-rows-2 gap-[var(--line)] portrait:grid-cols-2 portrait:grid-rows-1">
+            {cards.map((card) => (
+              <div key={card.label} className={cn("flex min-h-0 min-w-0 flex-col justify-center gap-[calc(var(--u)*0.6)] px-[calc(var(--u)*1.2)]", card.tone)}>
+                <h2 className="hsx-md font-sans font-bold leading-tight">{card.label}</h2>
+                <p className="hsx-title hsx-2xl hsx-num">{card.shown}</p>
+                {card.label === "Tokens procesados" && !tokensAvailable ? <p className="hsx-sm">{loading ? "Cargando…" : "Datos no disponibles"}</p> : null}
+              </div>
+            ))}
+          </section>
+
+          <section className="flex min-h-0 flex-col bg-hs-paper px-[calc(var(--u)*1.2)] py-[var(--u)]">
+            <div className="relative min-h-0 flex-1 overflow-hidden">
+              <AnimatePresence initial={false}>
+                <motion.div key={showPeople ? "people" : "teams"} className="absolute inset-0 flex flex-col"
+                  initial={{ opacity: 0, transform: reduced ? "none" : "translateY(8px)" }}
+                  animate={{ opacity: 1, transform: reduced ? "none" : "translateY(0px)" }}
+                  exit={{ opacity: 0, transform: reduced ? "none" : "translateY(-6px)" }}
+                  transition={{ duration: 0.2, ease: EASE }}>
+                  <header className="flex shrink-0 items-baseline justify-between gap-[var(--u)] border-b-[length:var(--line)] border-hs-ink pb-[calc(var(--u)*0.6)]">
+                    <h2 className="hsx-title hsx-lg">{showPeople ? "Top personas" : "Top equipos"}</h2>
+                    <p className="hsx-sm font-semibold">Tokens</p>
+                  </header>
+                  {loading || !tokensAvailable || ranking.length === 0 ? (
+                    <p className="hsx-md flex flex-1 items-center justify-center text-center text-balance text-hs-brown">{loading ? "Cargando clasificación…" : !tokensAvailable ? "Clasificación no disponible" : showPeople ? "Las personas aparecerán al registrar consumo" : "Los equipos aparecerán aquí"}</p>
+                  ) : (
+                    <ol className="grid min-h-0 flex-1 grid-rows-3">
+                      {ranking.map((row, index) => (
+                        <li key={`${showPeople ? "person" : "team"}-${row.id}`} className="grid min-h-0 grid-cols-[1.6em_minmax(0,1fr)_auto] items-center gap-[calc(var(--u)*0.7)] border-b border-hs-ink/15 text-[calc(var(--u)*1.4)] last:border-0">
+                          <span className={cn("hsx-title hsx-num flex aspect-square items-center justify-center", index === 0 ? "bg-hs-gold" : "bg-hs-sand")}>{index + 1}</span>
+                          <span className="line-clamp-2 min-w-0 font-bold leading-tight break-words">{row.name}</span>
+                          <span className="hsx-num font-bold">{compact(row.tokens)}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            <div aria-hidden className="mt-[calc(var(--u)*0.5)] h-[calc(var(--u)*0.25)] shrink-0 overflow-hidden bg-hs-ink/15">
+              <span key={slide} className="hsx-mini-progress block h-full origin-left bg-hs-gold"
+                style={{ animationDuration: `${MINI_SLIDE_MS}ms`, animationPlayState: visible ? "running" : "paused" }}
+                onAnimationEnd={() => setSlide((value) => value + 1)} />
+            </div>
+            <p className="sr-only">Alterna entre equipos y personas cada 5 segundos.</p>
+          </section>
+        </div>
+
+        <section aria-label="Última actividad" className="flex h-[24%] shrink-0 flex-col justify-center gap-[calc(var(--u)*0.5)] overflow-hidden bg-hs-navy px-[calc(var(--u)*1.2)] py-[calc(var(--u)*0.6)] text-hs-paper">
+          <div className="hsx-sm flex items-baseline gap-[var(--u)]">
+            <h2 className="shrink-0 font-bold text-hs-gold">Última hora</h2>
+            {post ? <p className="truncate">{post.teamName || post.authorName}</p> : null}
+          </div>
+          <p className="line-clamp-2 text-[calc(var(--u)*1.5)] leading-snug break-words">{post?.text || (posts ? "La actividad aparecerá aquí" : "Cargando actividad…")}</p>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function MarketStage({ data, feed, demo, mini }: { data: LiveInsightData; feed: MarketFeed; demo: boolean; mini: boolean }) {
   const series = useMemo(() => marketSeries(data.samples), [data.samples]);
   const teams = useMemo(() => marketTeams(data.samples, data.teams), [data.samples, data.teams]);
   const bucket = currentBucket(data.samples);
+  if (mini) {
+    const posts = feed.posts === undefined && feed.commits === undefined
+      ? undefined
+      : [...(feed.posts ?? []), ...(feed.commits ?? [])].toSorted((a, b) => b.createdAt - a.createdAt);
+    return <MiniMarketStage data={data} posts={posts} demo={demo} series={series} teams={teams} />;
+  }
   return (
     <main className="relative h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
       <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] px-[var(--line)] pt-[var(--line)] pb-[calc(var(--u)*1.2)]">
@@ -505,15 +599,15 @@ function MarketStage({ data, feed, demo }: { data: LiveInsightData; feed: Market
   );
 }
 
-function LiveMarket() {
+function LiveMarket({ mini }: { mini: boolean }) {
   const data = useLiveInsights();
   const posts = useQuery(api.tv.listFeed, { source: "participants" });
   const commits = useQuery(api.tv.listFeed, { source: "github" });
   const feed = useMemo(() => ({ commits, posts }), [commits, posts]);
-  return <MarketStage data={data} feed={feed} demo={false} />;
+  return <MarketStage data={data} feed={feed} demo={false} mini={mini} />;
 }
 
-function DemoMarket() {
+function DemoMarket({ mini }: { mini: boolean }) {
   const [startedAt] = useState(() => Date.now());
   const step = useTick(4000);
   const data = useMemo(() => demoInsights(step, startedAt), [step, startedAt]);
@@ -521,9 +615,9 @@ function DemoMarket() {
     const all = demoFeed(startedAt);
     return { commits: all.filter((post) => post.kind === "github"), posts: all.filter((post) => post.kind === "post") };
   }, [startedAt]);
-  return <MarketStage data={data} feed={feed} demo />;
+  return <MarketStage data={data} feed={feed} demo mini={mini} />;
 }
 
-export function MarketScreen({ demo = false }: { demo?: boolean }) {
-  return demo ? <DemoMarket /> : <LiveMarket />;
+export function MarketScreen({ demo = false, mini = false }: { demo?: boolean; mini?: boolean }) {
+  return demo ? <DemoMarket mini={mini} /> : <LiveMarket mini={mini} />;
 }

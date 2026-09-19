@@ -69,6 +69,7 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
   if (config.preset === "entradas") { return demo ? <ArrivalDemo /> : <LiveArrivals />; }
   if (config.preset === "espera") { return <ArrivalStage person={null} waiting />; }
   if (config.preset === "panel") { return <MarketScreen demo={demo} />; }
+  if (config.preset === "panel-mini") { return <MarketScreen demo={demo} mini />; }
   if (config.preset === "panelv2") { return <PanelV2Screen demo={demo} />; }
   if (config.preset === "equipos") { return <TeamsScreen demo={demo} />; }
   if (config.preset === "patrocinadores") { return <SponsorsScreen />; }

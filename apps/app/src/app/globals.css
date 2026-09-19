@@ -275,6 +275,16 @@
   line-height: 1;
 }
 
+/* Panel mini trades density for larger type on smaller venue screens. */
+.hsx-mini {
+  --u: min(2cqw, 3.6cqh);
+}
+@media (orientation: portrait) {
+  .hsx-mini {
+    --u: min(3cqw, 2cqh);
+  }
+}
+
 /* /tv?view=equipos: the participants map, read from across a hall. */
 .tv-teams .pg-zone-label {
   font-size: 14px;
@@ -302,7 +312,14 @@
   animation: hsx-progress linear both;
 }
 
+.hsx-mini-progress {
+  animation: hsx-progress linear both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hsx-mini-progress {
+    animation-timing-function: steps(5, end);
+  }
   .tv-ticker,
   .tv-stream-row,
   .tv-pulse,
