@@ -110,6 +110,14 @@ being silently discarded.
 `--no-upload` keeps everything local; `--sink-url` or `telemetry.url`
 in `~/.config/hackspain/config.json` point the upload elsewhere.
 
+Antigravity collection covers CLI, desktop and IDE installations that store usage in
+`~/.gemini/{antigravity-cli,antigravity,antigravity-ide}/conversations/*.db`.
+No hook setup is needed, and retained usage from the event window can be recovered.
+Copies of the same conversation across installations keep the same event ids and are
+deduplicated. IDE reasoning breakdowns and legacy `.pb` conversation stores are not supported;
+IDE input, output and cache totals use the shared SQLite format. IDE support has synthetic
+database tests but has not yet been validated against a participant's installation.
+
 On the same tick it polls organiser broadcasts and the feed, and shows broadcasts as a desktop
 notification (`notify-send`, macOS Notification Center, Windows toast). It is built to sit on a
 laptop all weekend: one wakeup per second, the screen repaints only the rows that changed, normally

@@ -17,6 +17,15 @@ boundaries, schedule changes, and authenticated HTTP recovery across all harness
 saved cursors. Cursor history predating hooks has no token counters; do not claim it is
 reconstructible.
 
+Antigravity has separate `antigravity-cli`, `antigravity` and `antigravity-ide` roots
+under `~/.gemini`; discovering only the CLI root excluded desktop/IDE users.
+The [community compatibility audit](https://github.com/mjacobs/agy-reader/blob/main/COMPATIBILITY.md)
+reports the shared SQLite schema, and [a reader targeting all three roots](https://github.com/hacklabubu/cli/blob/main/src/scanners/antigravity.ts)
+reads `steps.metadata` usage. Preserve conversation/step event ids across roots so migrated
+copies deduplicate. Tests cover IDE-only discovery, incremental reads and duplicate delivery;
+participant IDE validation remains outstanding. The IDE reasoning field is unverified and
+must stay omitted until checked against real counters; missing summaries leave project unset.
+
 ## 2026-09-19 — Native telemetry and transcripts have different event identities
 
 **Evidence and consequence.** [Claude Code's native API event](https://code.claude.com/docs/en/monitoring-usage#api-request-event)
