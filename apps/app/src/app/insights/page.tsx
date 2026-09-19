@@ -45,7 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { ActivityChart, Sparkline, TeamScatter, UsageDonut } from "./charts";
+import { ActivityChart, Sparkline, UsageDonut } from "./charts";
 import {
   bucketTotals,
   compact,
@@ -877,16 +877,10 @@ export function InsightsView() {
                   </div>
                 )}
               </Panel>
-              <Panel
-                title="Tokens vs. pushes"
-                eyebrow="Consumo y contribuciones por equipo"
-              >
-                <TeamScatter teams={teams} onSelect={openTeam} />
-              </Panel>
+              <LiveTechnologyStacks />
             </div>
             <div className="min-w-0 space-y-5">
               <HarnessUsage rows={tools} onExplore={exploreHarness} />
-              <LiveTechnologyStacks />
             </div>
           </div>
         </Tabs.Content>

@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,8 +12,8 @@ import { lastWriteMs, openReadOnly } from "./sqlite";
 export const ANTIGRAVITY = "antigravity" as const;
 
 /**
- * The Antigravity CLI (`agy`) keeps one SQLite database per conversation under
- * `~/.gemini/antigravity-cli/conversations/<uuid>.db`, with each step's
+ * Antigravity CLI, desktop and IDE keep SQLite conversation databases under
+ * `~/.gemini/{antigravity-cli,antigravity,antigravity-ide}/conversations`, with each step's
  * `metadata` as an undocumented protobuf. Model steps carry usage in field 9
  * (model code, input net of cache reads, output including thoughts, cache
  * reads, thought count), `gen_metadata` names the model codes and the sibling
@@ -139,6 +139,7 @@ export function normalizeAntigravityStep(
     sessionId: string;
     models: Map<number, string>;
     cwd?: string;
+    includeReasoning?: boolean;
   }
 ): RawEvent | null {
   if (!row.metadata) {
@@ -165,7 +166,10 @@ export function normalizeAntigravityStep(
     const code = integer(usage, USAGE_MODEL);
     const model =
       (code === null ? undefined : context.models.get(code)) ?? "unknown";
-    const thoughts = integer(usage, USAGE_THOUGHTS);
+    const thoughts =
+      context.includeReasoning === false
+        ? null
+        : integer(usage, USAGE_THOUGHTS);
     return {
       eventId: eventId(ANTIGRAVITY, context.sessionId, row.idx),
       harness: ANTIGRAVITY,
@@ -189,8 +193,10 @@ export function normalizeAntigravityStep(
   }
 }
 
-export function antigravityConversationsDir(): string {
-  return join(homedir(), ".gemini", "antigravity-cli", "conversations");
+export function antigravityConversationsDirs(home = homedir()): string[] {
+  return ["antigravity-cli", "antigravity", "antigravity-ide"]
+    .map((name) => join(home, ".gemini", name, "conversations"))
+    .filter((path) => statSync(path, { throwIfNoEntry: false })?.isDirectory());
 }
 
 export function workspaces(
@@ -241,14 +247,24 @@ export async function* collectAntigravity(
   ctx: CollectorContext
 ): AsyncIterable<RawEvent> {
   for (const dir of dirs) {
+    // The IDE reasoning field is not verified; retain CLI semantics only.
+    const includeReasoning = !["antigravity", "antigravity-ide"].includes(
+      basename(dirname(dir))
+    );
     const cwds = workspaces(
       join(dirname(dir), "conversation_summaries.db"),
       ctx.log
     );
-    const paths = readdirSync(dir)
-      .filter((name) => name.endsWith(".db"))
-      .toSorted()
-      .map((name) => join(dir, name));
+    let paths: string[];
+    try {
+      paths = readdirSync(dir)
+        .filter((name) => name.endsWith(".db"))
+        .toSorted()
+        .map((name) => join(dir, name));
+    } catch (error) {
+      ctx.log(`antigravity: cannot read ${dir}: ${String(error)}`);
+      continue;
+    }
     for (const path of paths) {
       const mtimeMs = lastWriteMs(path);
       const previous = ctx.cursors.get(path);
@@ -277,7 +293,12 @@ export async function* collectAntigravity(
       } finally {
         db?.close();
       }
-      const context = { cwd: cwds.get(sessionId), models, sessionId };
+      const context = {
+        cwd: cwds.get(sessionId),
+        includeReasoning,
+        models,
+        sessionId,
+      };
       for (const row of steps) {
         mark = Math.max(mark, row.idx);
         const event = normalizeAntigravityStep(row, context);
@@ -309,12 +330,7 @@ export async function* collectAntigravity(
 }
 
 export const antigravityCollector: Collector = {
-  collect: (ctx) => collectAntigravity([antigravityConversationsDir()], ctx),
-  discover: () =>
-    Promise.resolve(
-      existsSync(antigravityConversationsDir())
-        ? [antigravityConversationsDir()]
-        : []
-    ),
+  collect: (ctx) => collectAntigravity(antigravityConversationsDirs(), ctx),
+  discover: () => Promise.resolve(antigravityConversationsDirs()),
   id: ANTIGRAVITY,
 };

@@ -17,6 +17,15 @@ boundaries, schedule changes, and authenticated HTTP recovery across all harness
 saved cursors. Cursor history predating hooks has no token counters; do not claim it is
 reconstructible.
 
+Antigravity has separate `antigravity-cli`, `antigravity` and `antigravity-ide` roots
+under `~/.gemini`; discovering only the CLI root excluded desktop/IDE users.
+The [community compatibility audit](https://github.com/mjacobs/agy-reader/blob/main/COMPATIBILITY.md)
+reports the shared SQLite schema, and [a reader targeting all three roots](https://github.com/hacklabubu/cli/blob/main/src/scanners/antigravity.ts)
+reads `steps.metadata` usage. Preserve conversation/step event ids across roots so migrated
+copies deduplicate. Tests cover IDE-only discovery, incremental reads and duplicate delivery;
+participant IDE validation remains outstanding. The IDE reasoning field is unverified and
+must stay omitted until checked against real counters; missing summaries leave project unset.
+
 ## 2026-09-19 — Native telemetry and transcripts have different event identities
 
 **Evidence and consequence.** [Claude Code's native API event](https://code.claude.com/docs/en/monitoring-usage#api-request-event)
@@ -156,6 +165,18 @@ configuration failing without overwriting the user's file.
 
 **Verification.** State the timezone, exact interval, source, pagination/retention limits, and last occurrence. The Convex CLI sample available during this investigation covered only roughly 2,000 recent completions around 21:18–21:20 and contained no function errors; it did not establish that Convex was error-free since 17:00. No recurrence in a short sample is not proof of resolution. Recheck comparable traffic after a mitigation and report remaining uncertainty.
 
+**Follow-up, 2026-09-19.** Better Stack recorded the same refresh transport failure
+with `@convex-dev/auth` 0.0.95. Its `verifyCode` exhausts two short network retries
+and throws; Convex 1.45.0's scheduled `refetchToken` does not catch that rejection
+or schedule recovery. The dashboard now wraps the public auth token-fetcher hook,
+keeping a forced refresh pending across recognized browser network errors and
+retrying after 15 seconds or an online event. Concurrent calls share the attempt;
+logout/unmount cancels recovery. SDK token storage and cross-tab locking are
+unchanged. Report the first transport failure, preserve null-token responses and
+non-network errors, and never describe this as a repair of the underlying network
+or edge rejection. Tests cover recovery, cancellation, concurrent calls, and
+preservation of SDK outcomes. Production recovery still needs verification.
+
 ## 2026-09-18 — Unexpected API failures need server diagnostics
 
 **Evidence.** `/api/cli/rpc` returned 21 HTTP 500s against 8,687 HTTP 200s in the investigated period. Its catch block converted exceptions to responses without logging the failing function, so historical logs could not identify the root cause.
@@ -202,8 +223,32 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 
 **Correction and verification.** Keep the response and access wrapper unchanged, but start independent reads together with Promise.all. The change reduces serialized wait time rather than document count. Compare uncached execution time after deployment; do not claim fewer database reads or treat this latency as the cause of unrelated browser disconnects.
 
+**Follow-up, 2026-09-19.** A later production sample still measured 52 uncached
+`teams:list` executions with a 2.22 s median and one execution reading 937 documents.
+Parallel reads alone did not eliminate repeated track reads or signup lookups for
+already-named users. Reuse track promises only within one handler invocation and
+read a signup only when the user's name is nullish. Preserve empty names, deleted
+track handling, owner order, and the authorization wrapper. Regression tests cover
+these outputs and read counts; measure production latency after deployment rather
+than equating fewer reads with a guaranteed duration.
+
 ## 2026-09-18 — Stale agent instructions can reintroduce removed behavior
 
 **Evidence.** The previous `AGENTS.md` simultaneously called Insights mock-only and described live insights, documented a superseded RawTree dual-write path, and said projects could enter multiple tracks despite the current one-track validation. The dashboard README also explicitly forbade the auth bypass needed to correct the observed firewall problem.
 
 **Correction and prevention.** Keep agent instructions focused on coding invariants and pointers. Read the current implementation when documentation conflicts, then fix the relevant documentation with the task. Current telemetry ingestion exports OTLP logs, and insights read those logs with permanent event deduplication; do not revive the old custom-table write or add a second source of truth. `challengeIds` remains an array but its name/type does not imply multiple tracks are allowed. Put dated evidence and operational lessons here instead of appending implementation histories or “this branch” status to `AGENTS.md`.
+
+## 2026-09-19 — TV heartbeat cleanup must exclude live peers from its read set
+
+**Evidence and consequence.** Production Convex Insights reported 80 retried
+`tvPlayback:heartbeat` operations against `tvScreenConnections` in its 72-hour
+window. Every heartbeat patched its own connection and then collected all peers
+for the screen, so another device's presence update invalidated that read set.
+The sample did not show permanent OCC failures.
+
+**Correction and verification.** Use the `screenId,lastSeenAt` index to read only
+connections older than 24 hours, deleting at most 100 per heartbeat. Excess old
+connections are removed by later heartbeats. A regression test records the read
+set and verifies that live peers and other screens are not read or deleted.
+Check production conflict counts after deployment; this does not claim to fix
+unrelated TV transport or rendering failures.

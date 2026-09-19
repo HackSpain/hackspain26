@@ -6,11 +6,14 @@ import {
   mkdtempSync,
   rmSync,
   utimesSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createBatcher } from "../src/watcher/batcher";
 import {
   antigravityCollector,
+  antigravityConversationsDirs,
   collectAntigravity,
   decodeMessage,
   modelNames,
@@ -18,7 +21,7 @@ import {
   workspaces,
 } from "../src/watcher/collectors/antigravity";
 import { memoryCursorStore } from "../src/watcher/cursor-store";
-import { stamp } from "../src/watcher/index";
+import { scanOnce, stamp } from "../src/watcher/index";
 import type { RawEvent } from "../src/watcher/schema";
 import { validateEvent } from "../src/watcher/schema";
 import type { CollectorContext } from "../src/watcher/types";
@@ -466,13 +469,153 @@ describe("antigravity", () => {
     expect(logs[0]).toContain("antigravity: cannot read");
   });
 
-  test("discover: only when the conversations directory exists", async () => {
+  test("discover: finds CLI, desktop and IDE independently, including later installs", () => {
+    expect(antigravityConversationsDirs(dir)).toEqual([]);
+    const ide = join(dir, ".gemini", "antigravity-ide", "conversations");
+    mkdirSync(ide, { recursive: true });
+    expect(antigravityConversationsDirs(dir)).toEqual([ide]);
+    const cli = join(dir, ".gemini", "antigravity-cli", "conversations");
+    const desktop = join(dir, ".gemini", "antigravity", "conversations");
+    mkdirSync(cli, { recursive: true });
+    mkdirSync(join(dir, ".gemini", "antigravity"), { recursive: true });
+    writeFileSync(desktop, "not a directory");
+    expect(antigravityConversationsDirs(dir)).toEqual([cli, ide]);
+    rmSync(desktop);
+    mkdirSync(desktop);
+    expect(antigravityConversationsDirs(dir)).toEqual([cli, desktop, ide]);
+  });
+
+  test.each([
+    "antigravity",
+    "antigravity-ide",
+  ])("collect: %s usage works without CLI or summaries and resumes", async (name) => {
+    const conversations = join(dir, ".gemini", name, "conversations");
+    mkdirSync(conversations, { recursive: true });
+    const path = join(conversations, `${CONVERSATION}.db`);
+    const usage = stepMetadata(at, {
+      code: FLASH,
+      input: 20,
+      output: 8,
+      cacheRead: 100,
+      thoughts: 3,
+    });
+    makeConversation(path, [usage], [generation(FLASH, "gemini-3.8-flash")]);
+    const context = ctx();
+    const events = await drain(
+      collectAntigravity(antigravityConversationsDirs(dir), context)
+    );
+    expect(events.map((event) => event.type)).toEqual([
+      "session.start",
+      "usage",
+    ]);
+    expectCanonical(events);
+    expect(events[1]?.tokens).toEqual({
+      input: 20,
+      output: 8,
+      cacheRead: 100,
+      cacheWrite: 0,
+    });
+    expect(events[1]?.project).toBeUndefined();
+    expect(
+      await drain(
+        collectAntigravity(antigravityConversationsDirs(dir), context)
+      )
+    ).toEqual([]);
+    appendStep(path, 1, usage);
+    utimesSync(path, new Date(), new Date(at.getTime() + 60_000));
+    const more = await drain(
+      collectAntigravity(antigravityConversationsDirs(dir), context)
+    );
+    expect(more.map((event) => event.eventId)).toEqual([
+      `antigravity:${CONVERSATION}:1`,
+    ]);
+  });
+
+  test("scan: migrated conversations keep the same IDs and are delivered once across roots", async () => {
+    for (const name of ["antigravity-cli", "antigravity", "antigravity-ide"]) {
+      const conversations = join(dir, ".gemini", name, "conversations");
+      mkdirSync(conversations, { recursive: true });
+      makeConversation(
+        join(conversations, `${CONVERSATION}.db`),
+        [
+          stepMetadata(at, {
+            code: FLASH,
+            input: 20,
+            output: 8,
+            cacheRead: 100,
+          }),
+        ],
+        [generation(FLASH, "gemini-3.8-flash")]
+      );
+    }
+    const roots = antigravityConversationsDirs(dir);
+    const delivered: string[] = [];
+    const batcher = createBatcher(
+      [
+        {
+          name: "test",
+          write: async (events) => {
+            delivered.push(...events.map((event) => event.eventId));
+          },
+        },
+      ],
+      () => {}
+    );
+    const collector = {
+      ...antigravityCollector,
+      discover: async () => roots,
+      collect: (context: CollectorContext) =>
+        collectAntigravity(roots, context),
+    };
+    const context = ctx();
+    const result = await scanOnce(
+      [collector],
+      context,
+      batcher,
+      IDENTITY,
+      new Set()
+    );
+    expect(result.events).toBe(2);
+    expect(result.skipped).toBe(4);
+    expect(await batcher.flush()).toBe(true);
+    expect(delivered).toEqual([
+      `antigravity:${CONVERSATION}:start`,
+      `antigravity:${CONVERSATION}:0`,
+    ]);
+    expect(
+      (await scanOnce([collector], context, batcher, IDENTITY, new Set()))
+        .events
+    ).toBe(0);
+  });
+
+  test("collect: a vanished root does not prevent scanning another installation", async () => {
+    const conversations = join(dir, "antigravity-ide", "conversations");
+    mkdirSync(conversations, { recursive: true });
+    makeConversation(
+      join(conversations, `${CONVERSATION}.db`),
+      [stepMetadata(at, { code: FLASH, input: 1, output: 2 })],
+      []
+    );
+    const logs: string[] = [];
+    const events = await drain(
+      collectAntigravity(
+        [join(dir, "missing"), conversations],
+        ctx({ log: (line) => logs.push(line) })
+      )
+    );
+    expect(events).toHaveLength(2);
+    expect(logs).toHaveLength(1);
+  });
+
+  test("discover: only existing installation directories", async () => {
     const roots = await antigravityCollector.discover();
     for (const root of roots) {
       expect(existsSync(root)).toBe(true);
-      expect(root.endsWith(join("antigravity-cli", "conversations"))).toBe(
-        true
-      );
+      expect(
+        ["antigravity-cli", "antigravity", "antigravity-ide"].some((name) =>
+          root.endsWith(join(name, "conversations"))
+        )
+      ).toBe(true);
     }
   });
 });
