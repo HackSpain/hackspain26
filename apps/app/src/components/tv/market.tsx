@@ -106,11 +106,13 @@ function TeamTape({ teams }: { teams: MarketTeam[] }) {
         {teams.length ? (
           <Marquee seconds={Math.max(40, teams.length * 6)}>
             {teams.map((team) => (
-              <span key={team.id} className="hsx-md flex items-baseline gap-[calc(var(--u)*0.7)] px-[calc(var(--u)*1.6)] whitespace-nowrap">
-                <span className="hsx-num opacity-50">{String(team.rank).padStart(2, "0")}</span>
+              <span key={team.id} className="hsx-md flex items-baseline gap-[calc(var(--u)*0.85)] border-r border-hs-paper/15 px-[calc(var(--u)*1.6)] whitespace-nowrap">
+                <span className="flex items-baseline gap-[calc(var(--u)*0.45)]">
+                  <span className="hsx-num opacity-50">{String(team.rank).padStart(2, "0")}</span>
+                  <Move move={team.move} />
+                </span>
                 <span className="font-bold">{team.name}</span>
                 <span className="hsx-num text-hs-gold">{compact(team.tokens)}</span>
-                <Move move={team.move} />
               </span>
             ))}
           </Marquee>
@@ -377,22 +379,21 @@ function MarketStage({ data, posts, demo }: { data: LiveInsightData; posts: Mark
   return (
     <main className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en directo">
       <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] px-[var(--line)] pt-[var(--line)] pb-[calc(var(--u)*1.2)]">
-        <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1fr)_calc(var(--u)*7)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
-          <Diagonal bg="bg-hs-paper" tri="bg-hs-orange" corner="tl" className="portrait:hidden" />
-          <div className="flex items-center justify-center bg-hs-paper px-[calc(var(--u)*1.4)]">
-            <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-[74%] w-auto" />
+        <header className="grid h-[9%] shrink-0 grid-cols-[minmax(0,1.45fr)_minmax(0,2.4fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 items-center justify-between gap-[calc(var(--u)*1.5)] bg-hs-paper px-[calc(var(--u)*1.6)]">
+            <Image src="/logo.svg" alt="HackSpain" width={190} height={63} priority className="h-[62%] w-auto min-w-0" />
+            <p className="hsx-label flex shrink-0 items-center gap-[calc(var(--u)*0.55)] border-l-[length:var(--line)] border-hs-ink/20 pl-[calc(var(--u)*1.2)] text-hs-red">
+              <span className="size-[calc(var(--u)*0.65)] rounded-full bg-current" />{demo ? "Demo" : "En directo"}
+            </p>
           </div>
-          <p className="hsx-title hsx-lg flex items-center justify-center gap-[calc(var(--u)*0.7)] bg-hs-red text-hs-paper">
-            <span className="tv-pulse size-[calc(var(--u)*0.9)] rounded-full bg-hs-paper" />{demo ? "Demo" : "En directo"}
-          </p>
-          <div className="flex flex-col justify-center gap-[calc(var(--u)*0.55)] bg-hs-paper px-[calc(var(--u)*1.6)] leading-none portrait:col-span-4 portrait:row-start-2">
+          <div className="flex flex-col justify-center gap-[calc(var(--u)*0.65)] bg-hs-paper px-[calc(var(--u)*1.8)] leading-none portrait:col-span-3 portrait:row-start-2">
             <p className="hsx-label flex justify-between"><span>Tramo del hackathon</span><span className="hsx-num font-bold text-hs-ink">{bucket + 1} / {MARKET_BUCKETS}</span></p>
-            <div className="flex gap-[calc(var(--line)*0.6)]" aria-hidden>
-              {Array.from({ length: MARKET_BUCKETS }, (_, index) => <span key={index} className={cn("h-[calc(var(--u)*0.9)] flex-1 border-[length:calc(var(--line)*0.5)] border-hs-ink", index < bucket ? "bg-hs-teal" : index === bucket ? "tv-pulse bg-hs-gold" : "bg-hs-sand")} />)}
+            <div className="relative h-[calc(var(--u)*0.85)] overflow-hidden border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand" aria-hidden>
+              <span className="absolute inset-y-0 left-0 bg-hs-teal" style={{ width: `${(bucket / MARKET_BUCKETS) * 100}%` }} />
+              <span className="absolute inset-y-0 bg-hs-gold" style={{ left: `${(bucket / MARKET_BUCKETS) * 100}%`, width: `${100 / MARKET_BUCKETS}%` }} />
             </div>
           </div>
           <Clock startsAt={data.startsAt} endsAt={data.endsAt} />
-          <Diagonal bg="bg-hs-teal" tri="bg-hs-orange" corner="br" className="portrait:hidden" />
         </header>
         <TeamTape teams={teams} />
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)]">
