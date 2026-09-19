@@ -62,6 +62,7 @@ hackspain post "text" [--image photo.jpg]   # ≤500 chars; jpeg/png/webp/gif �
 
 hackspain watch [--interval 30] [--no-toast] [--no-upload] [--no-images] [--once]
 hackspain telemetry stats       # what the watcher recorded on this machine
+hackspain telemetry sync        # upload available history without leaving watch open
 
 hackspain --json <command>      # one JSON object on stdout, prompts disabled
 ```
@@ -115,8 +116,8 @@ laptop all weekend: one wakeup per second, the screen repaints only the rows tha
 one network round trip per scan, and after ten minutes without new usage the scan slows to once a
 minute until activity resumes. No prompt text or full
 paths ever leave the machine; only token counts, model, session ids, and a hash of the project
-directory. The watcher records the hackathon window organisers scheduled, all of it and nothing
-else, for everybody (organiser accounts included): usage from before the start or after the end
+directory. Collection starts and ends at the times configured for the event. This applies
+to everybody (organiser accounts included): usage from before that start or after the end
 is never recorded or sent, and usage from inside it is picked up even if the watcher was opened
 late or not at all until the end. Every event keeps the time the harness recorded, not the time
 the watcher read it. The watcher runs outside the window too: opened early it waits and starts
@@ -124,6 +125,14 @@ recording on its own, opened after the end it delivers what is left, and while n
 scheduled it records nothing. In all three cases an orange "Not recording" line under the header
 and in the status bar says so. The window is checked again every five minutes, so a schedule set
 or moved while the watcher is open is picked up.
+
+Signing in with an onboarded account automatically uploads available history; every watcher
+startup also rereads the collection window. `hackspain telemetry sync` runs the same finite
+catch-up on demand. It replays the current participant’s local spool (including `--no-upload`
+runs) and available harness records, even with old file modification times or previous cursors.
+Replays retain event ids, so retries do not inflate dashboard totals or the local spool. A running
+watcher owns collection; login/sync will not start a competing scan. Recovery depends on records
+the harness actually persisted on this machine: see the Cursor, Copilot and Devin limitations below.
 
 For Claude Code, continuous `hackspain watch` starts an authenticated OTLP/HTTP JSON receiver
 on `127.0.0.1` and adds a logs-only exporter to `~/.claude/settings.json` (or `CLAUDE_CONFIG_DIR`).

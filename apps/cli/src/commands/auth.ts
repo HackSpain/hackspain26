@@ -26,6 +26,7 @@ import type { Ui } from "../lib/output";
 import { firstName, formatWhen, uiFor } from "../lib/output";
 import { pickOne, textOrFlag } from "../lib/prompts";
 import { c, highlight } from "../lib/style";
+import { syncTelemetry } from "../watcher/sync";
 import { completeProfile } from "./profile";
 
 const CODE_PATTERN = /^\d{8}$/;
@@ -79,6 +80,29 @@ async function finishLogin(
   }
   const shownEmail = email || me?.email || "";
   const gate = me ? describeGate(me) : null;
+
+  if (
+    me &&
+    (gate?.state === "ready" ||
+      gate?.state === "admin" ||
+      gate?.state === "closed")
+  ) {
+    try {
+      const result = await syncTelemetry(session, me, (message) =>
+        process.stderr.write(`${message}\n`)
+      );
+      if (result.status === "pending") {
+        process.stderr.write(
+          "Some usage is still pending; run hackspain telemetry sync to retry.\n"
+        );
+      }
+    } catch {
+      // Authentication succeeded even if the history upload is temporarily offline.
+      process.stderr.write(
+        "Signed in; usage recovery could not finish. Run hackspain telemetry sync to retry.\n"
+      );
+    }
+  }
 
   if (ctx.json) {
     ui.result({ email: shownEmail, url, gate });

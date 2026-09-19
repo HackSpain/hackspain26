@@ -1,10 +1,14 @@
 import type { Command } from "commander";
 import { rememberTelemetry } from "../../../app/src/app/api/cli/telemetry/canonical";
+import { openSession } from "../lib/api";
 import { contextFor } from "../lib/context";
+import { EXIT } from "../lib/errors";
+import { requireOnboarded } from "../lib/me";
 import { compactNumber, formatWhen, uiFor } from "../lib/output";
 import { c } from "../lib/style";
 import type { TelemetryEvent } from "../watcher/schema";
 import { readSpool, spoolDir } from "../watcher/sinks/spool";
+import { syncTelemetry } from "../watcher/sync";
 
 type Totals = {
   events: number;
@@ -94,6 +98,36 @@ export function registerTelemetry(program: Command): void {
   const telemetry = program
     .command("telemetry")
     .description("What the watcher has recorded on this machine");
+
+  telemetry
+    .command("sync")
+    .description(
+      "Upload all available AI usage since the event started, then exit"
+    )
+    .action(async (_opts: unknown, command: Command) => {
+      const ctx = contextFor(command);
+      const ui = uiFor(ctx);
+      const session = await openSession(ctx, { requireAuth: true });
+      const me = await requireOnboarded(session, { allowClosed: true });
+      const result = await syncTelemetry(session, me, (message) =>
+        process.stderr.write(`${message}\n`)
+      );
+      ui.result(result);
+      if (result.status === "synced") {
+        ui.success("Available history uploaded.");
+      } else if (result.status === "watcher-running") {
+        ui.info(
+          "The running watcher owns collection. Stop it before requesting a full replay."
+        );
+      } else if (result.status === "unscheduled") {
+        ui.warn("No hackathon is scheduled; nothing was collected.");
+      } else {
+        ui.warn(
+          "Some history is pending. Run hackspain telemetry sync again to retry."
+        );
+        process.exitCode = EXIT.NETWORK;
+      }
+    });
 
   telemetry
     .command("stats")

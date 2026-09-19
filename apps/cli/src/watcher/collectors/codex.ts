@@ -207,9 +207,6 @@ export async function* collectCodex(
     }
     const recent = files
       .map((path) => ({ mtimeMs: statSync(path).mtimeMs, path }))
-      .filter(
-        ({ path, mtimeMs }) => mtimeMs >= ctx.since || ctx.cursors.get(path)
-      )
       .toSorted((a, b) => b.mtimeMs - a.mtimeMs);
     for (const { path } of recent) {
       let result: ReturnType<typeof tailJsonl>;
@@ -257,7 +254,11 @@ export const codexCollector: Collector = {
   collect: (ctx) => collectCodex([codexHome()], ctx),
   discover: () =>
     Promise.resolve(
-      existsSync(join(codexHome(), "sessions")) ? [codexHome()] : []
+      ["sessions", "archived_sessions"].some((dir) =>
+        existsSync(join(codexHome(), dir))
+      )
+        ? [codexHome()]
+        : []
     ),
   id: CODEX,
 };

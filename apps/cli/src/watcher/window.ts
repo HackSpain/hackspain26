@@ -1,3 +1,4 @@
+import { telemetryWindow } from "../../../app/src/app/api/cli/telemetry/window";
 import type { Me } from "../lib/me";
 
 /**
@@ -7,7 +8,7 @@ import type { Me } from "../lib/me";
 export type CollectionWindow = { since: number; until: number };
 
 /**
- * The window is the hackathon as organisers scheduled it, whole and for
+ * Collection follows the start and end configured for the event. It is for
  * everyone: a watcher first opened on Sunday still reports Saturday's usage,
  * and nothing from before the start or after the end is reported by anybody,
  * organisers included. No schedule means no window, so nothing is recorded
@@ -16,11 +17,8 @@ export type CollectionWindow = { since: number; until: number };
 export function collectionWindow(
   me: Pick<Me, "event">
 ): CollectionWindow | null {
-  const { startsAt, endsAt } = me.event;
-  if (startsAt === undefined || endsAt === undefined) {
-    return null;
-  }
-  return { since: startsAt, until: endsAt };
+  const window = telemetryWindow(me.event);
+  return window ? { since: window.startsAt, until: window.endsAt } : null;
 }
 
 export type WindowPhase = "unscheduled" | "before" | "during" | "after";
@@ -68,7 +66,7 @@ export function windowNotice(
     return;
   }
   return phase === "before"
-    ? `Not recording yet: the hackathon starts ${formatDate(window.since)}. Leave this open, it starts on its own.`
+    ? `Not recording yet: telemetry starts ${formatDate(window.since)}. Leave this open, it starts on its own.`
     : `Not recording: the hackathon ended ${formatDate(window.until)}. Only usage from inside it is still delivered.`;
 }
 

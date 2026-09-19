@@ -252,10 +252,7 @@ export async function* collectAntigravity(
     for (const path of paths) {
       const mtimeMs = lastWriteMs(path);
       const previous = ctx.cursors.get(path);
-      if (
-        (previous && previous.mtimeMs === mtimeMs) ||
-        (!previous && mtimeMs < ctx.since)
-      ) {
+      if (previous && previous.mtimeMs === mtimeMs) {
         continue;
       }
       const sessionId = basename(path, ".db");

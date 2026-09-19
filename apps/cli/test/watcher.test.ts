@@ -296,6 +296,7 @@ describe("scanOnce", () => {
       byHarness: { "claude-code": 1, codex: 1 },
       events: 2,
       skipped: 2,
+      failed: true,
     });
     expect(pushed[0]?.identity).toEqual({ clientVersion: "t", userId: "u" });
     expect(pushed[0]?.schema).toBe("hackspain.telemetry.v2");

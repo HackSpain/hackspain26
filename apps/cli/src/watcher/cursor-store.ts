@@ -13,12 +13,15 @@ export function cursorsPath(): string {
   return join(stateDir(), "cursors.json");
 }
 
-export function openCursorStore(path = cursorsPath()): CursorStore {
-  const loaded = readJsonFile<Persisted>(path);
+export function openCursorStore(
+  path = cursorsPath(),
+  replay = false
+): CursorStore {
+  const loaded = replay ? null : readJsonFile<Persisted>(path);
   let files: Record<string, FileCursor> =
     loaded?.version === 1 ? { ...loaded.files } : {};
   let coveredSince = loaded?.version === 1 ? loaded.coveredSince : undefined;
-  let dirty = false;
+  let dirty = replay;
   return {
     coverFrom: (since) => {
       // Stores written before `coveredSince` existed count as not covering.

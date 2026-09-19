@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -178,7 +179,7 @@ describe("copilot", () => {
     });
   });
 
-  test("collects clean shutdowns once and resumes from its file cursor", async () => {
+  test("collects old-mtime shutdown logs once and resumes from its file cursor", async () => {
     const root = join(dir, ".copilot");
     const sessionDir = join(root, "session-state", "session-1");
     mkdirSync(sessionDir, { recursive: true });
@@ -196,7 +197,14 @@ describe("copilot", () => {
       )}\n`
     );
     const cursors = memoryCursorStore();
-    const first = await drain(collectCopilot([root], ctx({ cursors })));
+    const old = new Date("2026-09-17T00:00:00Z");
+    utimesSync(path, old, old);
+    const first = await drain(
+      collectCopilot(
+        [root],
+        ctx({ cursors, since: Date.parse("2026-09-18T15:00:00Z") })
+      )
+    );
     expect(first.map((event) => event.type)).toEqual([
       "session.start",
       "usage",

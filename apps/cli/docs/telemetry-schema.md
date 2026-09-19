@@ -126,22 +126,25 @@ Only persisted assistant usage is collected, not compaction summaries or estimat
 
 ## Collection window
 
-Nobody records outside the hackathon window, and nothing outside it is stored. The window is
-`[startsAt, endsAt)` from `users.me.event`, applied to `occurredAt`, for every account (organisers
-included). No scheduled hackathon means no window and nothing recorded.
+The shared `telemetry/window.ts` policy follows `users.me.event.startsAt` and `endsAt`.
+It applies to `occurredAt` as `[start, end)` for every account, including organisers.
+No scheduled event means no recording. Ingestion, CLI collection and Insights use the same
+configured event window; there is no fixed collection date or time.
 
-- CLI (`watcher/window.ts`): `since` is the start of the hackathon rather than the last run, so
-  the whole window is reported no matter when the watcher was opened. It runs before the start
-  (waiting), after the end (delivering what was never sent) and without a schedule (idle), showing
-  "Not recording" in all three, and re-reads the window every five minutes. The cursor store
-  remembers the earliest `since` it was read with (`coveredSince`); an earlier one (the first
-  windowed run, or organisers moving the start) starts the cursors over, and event ids already in
-  the local spool are skipped so nothing is sent twice.
-- Server (`occurredInWindow` in `telemetry/rawtree.ts`): the route answers 403 before the start
-  and rejects every event outside the window with `outside_event_window`, whatever the binary.
-  The OTLP logs table only receives accepted events.
-
-Moving the window later does not remove rows stored under the old one; clean those in RawTree.
+- Login for onboarded accounts, watcher startup and `hackspain telemetry sync` perform a historical
+  catch-up. They reset source cursors and delivery deduplication for that pass, replay the current
+  participant's spool and scan retained source records. File modification times do not determine
+  event eligibility. Existing event ids and Claude request aliases remain unchanged.
+- Local persistence is not delivery: `--no-upload` records and uploads interrupted by a crash must
+  still be sent. Replaying does not append duplicate local records. Server queries permanently
+  deduplicate user/event ids and correlate native/transcript request aliases.
+- Continuous watching switches to incremental scans after catch-up. Upload failures keep pending
+  batches and do not checkpoint unread source positions. The watcher refreshes the schedule every
+  five minutes; a missing schedule records nothing, and late delivery remains allowed after the end.
+- The server rejects events outside the window with `outside_event_window`, including from older
+  binaries.
+- Cursor usage before hook installation and usage a harness never persisted cannot be reconstructed.
+  Recovery does not estimate missing tokens or collect prompt/response text.
 
 ## OpenTelemetry storage
 
@@ -205,7 +208,7 @@ supported input adapters.
   non-GitHub remotes are discarded.
 - No harness account ids. Identity is the HackSpain user and team.
 - `native` keys are allowlisted in both CLI and server validation; unknown keys are rejected.
-- Only the hackathon window is recorded; nothing from before or after it leaves the machine, and
+- Only the telemetry collection window is recorded; nothing from before or after it leaves the machine, and
   nothing at all while no hackathon is scheduled.
 
 ## Example

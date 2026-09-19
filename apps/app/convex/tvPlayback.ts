@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import type { Infer } from "convex/values";
+import { telemetryWindow } from "../src/app/api/cli/telemetry/window";
 import { api } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
@@ -200,7 +201,8 @@ export function githubActivityKind(
 export const insightsBase = query({
   args: {},
   handler: async (ctx) => {
-    const window = await getEventWindow(ctx);
+    const window: { startsAt?: number; endsAt?: number } =
+      telemetryWindow(await getEventWindow(ctx)) ?? {};
     const teams = await ctx.db.query("teams").collect();
     const rows = await Promise.all(
       teams.map(async (team) => {

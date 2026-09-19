@@ -2,6 +2,21 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-19 — Historical telemetry needs source replay, not just saved cursors
+
+**Evidence and consequence.** Login did not collect history; file modification filters,
+shallow Claude discovery and OpenCode/Kilo timestamp-only pagination could omit retained
+records. A local-only run could also advance cursors before any upload.
+
+**Correction and verification.** Use the configured event start and end consistently across
+CLI collection, ingestion and Insights. On login and watcher startup, replay retained source
+records and the current user's spool with stable ids; never treat spool presence as proof of
+delivery or append another spool copy on replay. Tests cover old mtimes, archived/nested
+sessions, over 500 equal-timestamp database rows, unfinished Cline requests, exact start
+boundaries, schedule changes, and authenticated HTTP recovery across all harness ids after
+saved cursors. Cursor history predating hooks has no token counters; do not claim it is
+reconstructible.
+
 ## 2026-09-19 — Native telemetry and transcripts have different event identities
 
 **Evidence and consequence.** [Claude Code's native API event](https://code.claude.com/docs/en/monitoring-usage#api-request-event)

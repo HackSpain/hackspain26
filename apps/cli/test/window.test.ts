@@ -19,7 +19,7 @@ const scheduled = {
 };
 
 describe("collectionWindow", () => {
-  test("the hackathon, whole, whenever the watcher opens", () => {
+  test("uses the configured event start and end", () => {
     expect(collectionWindow({ event: scheduled })).toEqual({
       since: START,
       until: END,

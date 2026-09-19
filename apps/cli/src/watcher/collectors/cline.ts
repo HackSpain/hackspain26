@@ -48,8 +48,8 @@ export type ClineTask = {
 
 /**
  * Emit usage for every completed api_req_started entry newer than `afterTs`.
- * Stops at the first entry without token counts so an in-flight request is
- * picked up on the next pass instead of being skipped forever.
+ * Keep the watermark before incomplete requests, but still recover later
+ * completed usage. The scanner deduplicates any rows revisited next time.
  */
 export function normalizeCline(
   task: ClineTask,
@@ -57,6 +57,7 @@ export function normalizeCline(
 ): { events: RawEvent[]; mark: number } {
   const events: RawEvent[] = [];
   let mark = afterTs;
+  let incomplete = false;
   if (!Array.isArray(task.messages)) {
     return { events, mark };
   }
@@ -86,7 +87,8 @@ export function normalizeCline(
       continue;
     }
     if (typeof req.tokensIn !== "number" && typeof req.tokensOut !== "number") {
-      break;
+      incomplete = true;
+      continue;
     }
     const model = modelAt(ts);
     const raw = model?.model_id ?? "unknown";
@@ -110,7 +112,9 @@ export function normalizeCline(
       type: "usage",
       ...(typeof req.cost === "number" ? { costUsd: req.cost } : {}),
     });
-    mark = ts;
+    if (!incomplete) {
+      mark = ts;
+    }
   }
   return { events, mark };
 }
@@ -160,9 +164,6 @@ export async function* collectCline(
       if (previous && previous.mtimeMs === stat.mtimeMs) {
         continue;
       }
-      if (!previous && stat.mtimeMs < ctx.since) {
-        continue;
-      }
       let messages: unknown;
       try {
         messages = JSON.parse(readFileSync(file, "utf8"));
@@ -171,7 +172,7 @@ export async function* collectCline(
         continue;
       }
       const afterTs =
-        typeof previous?.mark === "number" ? previous.mark : ctx.since;
+        typeof previous?.mark === "number" ? previous.mark : ctx.since - 1;
       const { events, mark } = normalizeCline(
         {
           messages,

@@ -109,7 +109,10 @@ export async function* collectOpenCode(
 ): AsyncIterable<RawEvent> {
   for (const path of dbPaths) {
     const previous = ctx.cursors.get(path);
-    let since = typeof previous?.mark === "number" ? previous.mark : ctx.since;
+    // Replay the boundary timestamp on the next scan; imported rows and many
+    // messages in one millisecond must not fall between pages/checkpoints.
+    let since = typeof previous?.mark === "number" ? previous.mark : -1;
+    let afterId = "";
     const announced = new Set(previous?.seenSessions);
     let db: Database;
     try {
@@ -119,17 +122,24 @@ export async function* collectOpenCode(
       continue;
     }
     try {
-      const query = db.query<MessageRow, [number, number]>(
-        "SELECT id, session_id, time_updated, data FROM message WHERE time_updated > ?1 ORDER BY time_updated ASC LIMIT ?2"
+      const query = db.query<MessageRow, [number, string, number]>(
+        "SELECT id, session_id, time_updated, data FROM message WHERE time_updated > ?1 OR (time_updated = ?1 AND id > ?2) ORDER BY time_updated ASC, id ASC LIMIT ?3"
       );
       for (;;) {
-        const rows = query.all(since, PAGE);
+        const rows = query.all(since, afterId, PAGE);
         if (rows.length === 0) {
           break;
         }
         for (const row of rows) {
           since = Math.max(since, row.time_updated);
-          const event = normalizeOpenCode(row, harness);
+          afterId = row.id;
+          let event: RawEvent | null;
+          try {
+            event = normalizeOpenCode(row, harness);
+          } catch {
+            ctx.log(`${harness}: skipped malformed historical usage`);
+            continue;
+          }
           if (!event || Date.parse(event.occurredAt) < ctx.since) {
             continue;
           }
@@ -152,6 +162,7 @@ export async function* collectOpenCode(
       }
     } catch (error) {
       ctx.log(`${harness}: query failed on ${path}: ${String(error)}`);
+      continue;
     } finally {
       db.close();
     }
