@@ -10,6 +10,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { JudgingContext } from "@convex/lib/validators";
 import { ScoreSlider } from "@/components/judging/score-slider";
+import { LinkedText } from "@/components/linked-text";
 import { TrackTag } from "@/components/track-tag";
 import { VideoFrame } from "@/components/judging/video-frame";
 import { Button } from "@/components/ui/button";
@@ -1552,9 +1553,11 @@ function ProjectDetails({ item }: { item: SheetItem }) {
         </div>
       ) : null}
       {item.description.trim() ? (
-        <p className="text-sm font-medium text-pretty whitespace-pre-wrap">
-          {item.description}
-        </p>
+        <MetaRow label="Notas">
+          <span className="whitespace-pre-wrap">
+            <LinkedText text={item.description} />
+          </span>
+        </MetaRow>
       ) : null}
       {hasMeta ? (
         <div className="grid gap-3">

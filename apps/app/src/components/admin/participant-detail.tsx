@@ -5,6 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { LinkedText } from "@/components/linked-text";
 import { FormError, MetaLink, MetaRow, SocialMeta, errorMessage } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -469,7 +470,11 @@ export function ParticipantDetail({
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p className="font-bungee text-base">{detail.submission.name || "Sin título"}</p>
-            {detail.submission.description ? <p>{detail.submission.description}</p> : null}
+            {detail.submission.description ? (
+              <p className="whitespace-pre-wrap">
+                <LinkedText text={detail.submission.description} />
+              </p>
+            ) : null}
             <p>
               Retos:{" "}
               {detail.submission.challengeLabels.length > 0

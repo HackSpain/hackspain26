@@ -19,6 +19,7 @@ import {
 } from "./lib/judging";
 import {
   parseGithubRepoUrl,
+  parseOptionalNotes,
   parseOptionalProductUrl,
   parseProjectName,
   parseYoutubeWatchUrl,
@@ -323,6 +324,7 @@ export const saveDraft = onboardedMutation({
 const commitArgs = {
   challengeId: v.id("tracks"),
   demoUrl: v.optional(v.string()),
+  description: v.optional(v.string()),
   name: v.string(),
   perkIds: v.array(v.id("perks")),
   repoUrl: v.string(),
@@ -395,7 +397,7 @@ export const commitTrack = internalMutation({
       urlOf(existing?.urls, "video") ?? already[0]?.videoUrl ?? args.videoUrl;
     const fields = {
       challengeIds,
-      description: existing?.description ?? "",
+      description: args.description ?? existing?.description ?? "",
       name: args.name,
       perkIds: perkIds.length > 0 ? perkIds : (existing?.perkIds ?? []),
       status: "submitted" as const,
@@ -434,6 +436,7 @@ export const commitTrack = internalMutation({
 const submitArgs = {
   challengeId: v.id("tracks"),
   demoUrl: v.optional(v.string()),
+  description: v.optional(v.string()),
   name: v.string(),
   perkIds: v.optional(v.array(v.id("perks"))),
   repoUrl: v.string(),
@@ -445,6 +448,7 @@ async function submitTrack(
   args: {
     challengeId: Id<"tracks">;
     demoUrl?: string;
+    description?: string;
     name: string;
     perkIds?: Id<"perks">[];
     repoUrl: string;
@@ -473,6 +477,10 @@ async function submitTrack(
   if (!demo.ok) {
     throw new Error(demo.message);
   }
+  const notes = parseOptionalNotes(args.description);
+  if (!notes.ok) {
+    throw new Error(notes.message);
+  }
   const publicRepo = await inspectPublicGithubRepo(repo.value);
   if (!publicRepo.ok) {
     throw new Error(publicRepo.message);
@@ -481,6 +489,7 @@ async function submitTrack(
   return await ctx.runMutation(internal.submissions.commitTrack, {
     challengeId: args.challengeId,
     demoUrl: demo.value,
+    description: notes.value,
     name: name.value,
     perkIds: args.perkIds ?? [],
     repoUrl: publicRepo.url,
