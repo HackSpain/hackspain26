@@ -185,6 +185,27 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 
 **Prevention and verification.** Read dependency behavior and peer requirements before patching around SDK errors. Keep domain error codes intact. Filter noise using narrow source/stack evidence, not broad message matches such as “Failed to fetch” or “MetaMask.” Inspect mixed application/extension stacks before expanding a filter: extension presence alone does not prove every failure is harmless. Verify genuine application errors still arrive and retain request sanitization in browser/server/edge hooks.
 
+## 2026-09-19 — Native Google Translate errors can look like application frames
+
+**Evidence.** Nine production RangeErrors at 14:24:05–14:24:53 UTC repeated `Ok`
+and `Qk` at `app:///login:226`, columns 63 and 408. Google Translate's `TE_20260916`
+script, obtained from its official bootstrap, contains exactly those mutually
+calling functions and positions. The remaining frames also match its lines
+187, 190, 197, and 198. Click breadcrumbs included nested `font` elements and
+the user confirmed a normal browser. An `app:///` filename and `in_app: true`
+therefore do not establish that a frame belongs to our bundle.
+
+**Mitigation and limits.** The dashboard declares `google=notranslate` metadata
+and `translate="no"` on the root element to opt out of browser translation while
+this upstream recursion exists. This disables automatic translation of the
+Spanish dashboard; it does not repair Google's script, suppress error reporting,
+or remove a script already injected in an open tab. Reload affected tabs after
+deployment. Verify the affected Chrome navigation flow and restore translation
+once upstream compatibility is confirmed.
+
+Sources: [Chromium translation opt-out](https://www.chromium.org/developers/design-documents/translate/)
+and [the inspected Google script](https://translate.googleapis.com/_/translate_http/_/js/k=translate_http.tr.es.Y-ItbpbR4kc.O/am=BECAAQ/d=1/ed=1/rs=AN8SPfqViirifj5udl3iFImHiKMtRz5d9A/m=el_main).
+
 ## 2026-09-18 — Request sanitization does not cover every URL
 
 **Evidence.** Better Stack contained CLI handoff credentials in Vercel proxy paths and referers, and browser error breadcrumbs retained the same query parameters. The existing sanitizer removed request query strings but did not inspect breadcrumbs. No credential values belong in this file, and the observation does not establish misuse.
@@ -216,25 +237,3 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 **Evidence.** The previous `AGENTS.md` simultaneously called Insights mock-only and described live insights, documented a superseded RawTree dual-write path, and said projects could enter multiple tracks despite the current one-track validation. The dashboard README also explicitly forbade the auth bypass needed to correct the observed firewall problem.
 
 **Correction and prevention.** Keep agent instructions focused on coding invariants and pointers. Read the current implementation when documentation conflicts, then fix the relevant documentation with the task. Current telemetry ingestion exports OTLP logs, and insights read those logs with permanent event deduplication; do not revive the old custom-table write or add a second source of truth. `challengeIds` remains an array but its name/type does not imply multiple tracks are allowed. Put dated evidence and operational lessons here instead of appending implementation histories or “this branch” status to `AGENTS.md`.
-
-
-## 2026-09-19 — Native Google Translate errors can look like application frames
-
-**Evidence.** Nine production RangeErrors at 14:24:05–14:24:53 UTC repeated `Ok`
-and `Qk` at `app:///login:226`, columns 63 and 408. Google Translate's `TE_20260916`
-script, obtained from its official bootstrap, contains exactly those mutually
-calling functions and positions. The remaining frames also match its lines
-187, 190, 197, and 198. Click breadcrumbs included nested `font` elements and
-the user confirmed a normal browser. An `app:///` filename and `in_app: true`
-therefore do not establish that a frame belongs to our bundle.
-
-**Mitigation and limits.** The dashboard declares `google=notranslate` metadata
-and `translate="no"` on the root element to opt out of browser translation while
-this upstream recursion exists. This disables automatic translation of the
-Spanish dashboard; it does not repair Google's script, suppress error reporting,
-or remove a script already injected in an open tab. Reload affected tabs after
-deployment. Verify the affected Chrome navigation flow and restore translation
-once upstream compatibility is confirmed.
-
-Sources: [Chromium translation opt-out](https://www.chromium.org/developers/design-documents/translate/)
-and [the inspected Google script](https://translate.googleapis.com/_/translate_http/_/js/k=translate_http.tr.es.Y-ItbpbR4kc.O/am=BECAAQ/d=1/ed=1/rs=AN8SPfqViirifj5udl3iFImHiKMtRz5d9A/m=el_main).
