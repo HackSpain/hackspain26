@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
+import { DeliveryBriefing } from "@/components/delivery-briefing";
 import { TrackBriefLink } from "@/components/markdown";
 import { LoadingText, MetaLink, MetaRow, Page } from "@/components/page";
 import { ProjectCliDialog } from "@/components/project-cli-dialog";
@@ -357,8 +358,9 @@ export default function TracksPage() {
   return (
     <Page
       title="Retos"
-      description="Un proyecto, un reto. Te apuntas desde la CLI; la entrega es en Submit."
+      description="Un proyecto, un reto. Te apuntas desde la CLI; la entrega del Gran Premio es en Submit a las 11."
     >
+      <DeliveryBriefing />
       {tracks.length === 0 ? (
         <p className="text-hs-brown">Cargando retos…</p>
       ) : (

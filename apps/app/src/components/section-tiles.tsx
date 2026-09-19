@@ -65,8 +65,8 @@ export function SectionTiles({
             href: "/submit",
             label: "Submit",
             hint: featuredSubmit
-              ? "Presenta el proyecto antes de que se acabe el tiempo."
-              : "Vídeo de YouTube, repo público y producto.",
+              ? "Entrega a las 11: vídeo, repo y demo para San Francisco."
+              : "Vídeo de 3 minutos, repo y, si aplica, una demo.",
             icon: Send,
           } satisfies Tile,
         ]

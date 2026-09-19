@@ -979,6 +979,7 @@ export const adminDirectory = adminQuery({
         members: people.toSorted((a, b) => Number(b.isOwner) - Number(a.isOwner)),
         entered,
         name: team.name,
+        submitted: submission?.status === "submitted",
       });
     }
     return {
@@ -1012,6 +1013,7 @@ export const adminDirectory = adminQuery({
           })
         ),
         name: v.string(),
+        submitted: v.boolean(),
       })
     ),
     tracks: v.array(
