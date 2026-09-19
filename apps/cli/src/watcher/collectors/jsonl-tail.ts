@@ -1,4 +1,5 @@
 import { closeSync, openSync, readSync, statSync } from "node:fs";
+import { StringDecoder } from "node:string_decoder";
 import type { CursorStore, FileCursor } from "../types";
 
 const CHUNK = 64 * 1024;
@@ -32,32 +33,54 @@ export function tailJsonl(path: string, cursors: CursorStore): TailResult {
     return { cursor, lines: [] };
   }
 
+  const lines: string[] = [];
+  const buffer = Buffer.alloc(Math.min(CHUNK, stat.size - offset));
+  const decoder = new StringDecoder("utf8");
+  let fragments: string[] = [];
   const fd = openSync(path, "r");
-  const chunks: Buffer[] = [];
   try {
     let remaining = stat.size - offset;
     while (remaining > 0) {
-      const buf = Buffer.alloc(Math.min(CHUNK, remaining));
-      const read = readSync(fd, buf, 0, buf.length, offset);
+      const read = readSync(
+        fd,
+        buffer,
+        0,
+        Math.min(buffer.length, remaining),
+        offset
+      );
       if (read <= 0) {
         break;
       }
-      chunks.push(buf.subarray(0, read));
+      const chunk = buffer.subarray(0, read);
+      const text = decoder.write(chunk);
+      let start = 0;
+      for (
+        let end = text.indexOf("\n");
+        end !== -1;
+        end = text.indexOf("\n", start)
+      ) {
+        const part = text.slice(start, end);
+        const line = fragments.length ? fragments.join("") + part : part;
+        fragments = [];
+        if (line.trim().length > 0) {
+          lines.push(line);
+        }
+        start = end + 1;
+      }
+      if (start < text.length) {
+        fragments.push(text.slice(start));
+      }
+      // Byte offsets must follow the file, including invalid UTF-8 bytes.
+      const lastNewline = chunk.lastIndexOf(10);
+      if (lastNewline !== -1) {
+        cursor.offset = offset + lastNewline + 1;
+      }
       offset += read;
       remaining -= read;
     }
   } finally {
     closeSync(fd);
   }
-  const text = Buffer.concat(chunks).toString("utf8");
-  const lastNewline = text.lastIndexOf("\n");
-  if (lastNewline === -1) {
-    return { cursor, lines: [] };
-  }
-  const complete = text.slice(0, lastNewline);
-  const consumedBytes = Buffer.byteLength(complete, "utf8") + 1;
-  cursor.offset += consumedBytes;
-  const lines = complete.split("\n").filter((line) => line.trim().length > 0);
   return { cursor, lines };
 }
 

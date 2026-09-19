@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -153,6 +154,54 @@ describe("claude-code", () => {
 });
 
 describe("jsonl-tail", () => {
+  test("reads chunk boundaries, Unicode, blank lines and an unfinished tail", () => {
+    const file = join(dir, "chunks.jsonl");
+    const cursors = memoryCursorStore();
+    const first = `${"a".repeat(65_535)}😀`;
+    const second = "é".repeat(70_000);
+    const complete = `${first}\n \r\n${second}\r\n`;
+    writeFileSync(file, `${complete}unfinished😀`);
+    const result = tailJsonl(file, cursors);
+    expect(result.lines).toEqual([first, `${second}\r`]);
+    expect(result.cursor.offset).toBe(Buffer.byteLength(complete));
+    cursors.set(file, result.cursor);
+    expect(tailJsonl(file, cursors).lines).toEqual([]);
+    appendFileSync(file, "done\n");
+    const next = tailJsonl(file, cursors);
+    expect(next.lines).toEqual(["unfinished😀done"]);
+    cursors.set(file, next.cursor);
+    expect(tailJsonl(file, cursors).lines).toEqual([]);
+  });
+
+  test("advances by source bytes even when UTF-8 is malformed", () => {
+    const file = join(dir, "invalid.jsonl");
+    const cursors = memoryCursorStore();
+    writeFileSync(file, Buffer.from([255, 10, 97]));
+    const first = tailJsonl(file, cursors);
+    expect(first.lines).toEqual(["�"]);
+    expect(first.cursor.offset).toBe(2);
+    cursors.set(file, first.cursor);
+    appendFileSync(file, "b\n");
+    const next = tailJsonl(file, cursors);
+    expect(next.lines).toEqual(["ab"]);
+    expect(next.cursor.offset).toBe(5);
+  });
+
+  test("replacing an inode resets session metadata even at the same size", () => {
+    const file = join(dir, "rotated.jsonl");
+    const replacement = join(dir, "replacement.jsonl");
+    const cursors = memoryCursorStore();
+    writeFileSync(file, "old\n");
+    const first = tailJsonl(file, cursors);
+    cursors.set(file, { ...first.cursor, mark: "old", seenSessions: ["old"] });
+    writeFileSync(replacement, "new\n");
+    renameSync(replacement, file);
+    const next = tailJsonl(file, cursors);
+    expect(next.lines).toEqual(["new"]);
+    expect(next.cursor.mark).toBeUndefined();
+    expect(next.cursor.seenSessions).toEqual([]);
+  });
+
   test("leaves a partial trailing line for the next read and survives rotation", () => {
     const file = join(dir, "t.jsonl");
     const cursors = memoryCursorStore();

@@ -45,6 +45,20 @@ export function openCursorStore(
       dirty = false;
     },
     set: (file, cursor) => {
+      const previous = files[file];
+      if (
+        previous &&
+        previous.offset === cursor.offset &&
+        previous.inode === cursor.inode &&
+        previous.mtimeMs === cursor.mtimeMs &&
+        previous.mark === cursor.mark &&
+        previous.seenSessions?.length === cursor.seenSessions?.length &&
+        previous.seenSessions?.every(
+          (session, index) => session === cursor.seenSessions?.[index]
+        ) !== false
+      ) {
+        return;
+      }
       files[file] = cursor;
       dirty = true;
     },
