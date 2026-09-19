@@ -193,13 +193,11 @@ describe("buildMainMenu", () => {
     expect(withoutProject.preview).toEqual([["track", "list"]]);
   });
 
-  test("draft project: can register, unregister, draft and submit", () => {
+  test("draft project: can register, unregister, then browse projects", () => {
     const subValues = values(submenuOf(buildMainMenu(READY_OWNER), "tracks"));
     expect(subValues).toEqual([
       "track-register",
       "track-unregister",
-      "submit-draft",
-      "submit",
       "project-list",
     ]);
   });

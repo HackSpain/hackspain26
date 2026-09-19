@@ -176,7 +176,7 @@ function youBox(state: WatchState, w: number): string[] {
     : c.dim("no team yet · hackspain team create <name>");
   const project = state.project
     ? `${state.project.name || c.dim("(untitled draft)")} ${c.dim(`· ${state.project.status}${state.project.tracks.length ? ` · ${state.project.tracks.join(", ")}` : " · no track yet"}`)}`
-    : c.dim("no project yet · hackspain submit --draft");
+    : c.dim("no project yet · hackspain track register <slug>");
   return box(
     { height: 3, title: state.me.name },
     [

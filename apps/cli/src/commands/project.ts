@@ -61,7 +61,7 @@ export function registerProject(program: Command): void {
       if (!submission) {
         throw new CliError("No project yet, and that is fine this early.", {
           code: "NO_PROJECT",
-          hint: "Start one with `hackspain submit --draft` or `hackspain track register <slug>`.",
+          hint: "Start one with `hackspain track register <slug>`, then submit at app.hackspain.com/submit.",
         });
       }
       renderSubmission(ui, submission);

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { HomeFeed } from "@/components/home-feed";
@@ -10,7 +11,17 @@ import { TeamCliDialog } from "@/components/team-cli-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isSubmitFeatured } from "@/lib/event";
 import { cn, perkName } from "@/lib/utils";
+
+function useNow(intervalMs = 30_000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(tick);
+  }, [intervalMs]);
+  return now;
+}
 
 function HubCard({
   title,
@@ -72,8 +83,13 @@ export default function HomePage() {
   const catalog = useQuery(api.perks.listCatalog, ready ? {} : "skip");
   const project = useQuery(api.submissions.mine, ready ? {} : "skip");
   const trackSettings = useQuery(api.tracks.settings, ready ? {} : "skip");
+  const now = useNow();
+  const submitted = project?.status === "submitted";
+  const featuredSubmit = isSubmitFeatured(now) && !submitted;
 
-  if (!me) return <LoadingText />;
+  if (!me) {
+    return <LoadingText />;
+  }
 
   const cancelled = me.attendanceStatus === "cancelled";
   const claimed = catalog?.filter((row) => row.claim) ?? [];
@@ -103,6 +119,49 @@ export default function HomePage() {
         </section>
 
         <div className="hs-stagger grid min-w-0 max-w-full gap-3 sm:grid-cols-2 lg:h-full lg:min-h-0 lg:auto-rows-[minmax(min-content,1fr)]">
+          {featuredSubmit ? (
+            <Card className="hs-submit-featured flex h-full gap-3 border-hs-red bg-hs-gold py-4 sm:col-span-2">
+              <CardHeader>
+                <p className="font-bungee text-xs uppercase tracking-wide">
+                  Ahora
+                </p>
+                <CardTitle className="text-2xl sm:text-3xl">Submit</CardTitle>
+                <CardDescription className="font-medium text-hs-ink">
+                  Presenta tu proyecto antes de que se acabe el tiempo. Vídeo
+                  de 3 minutos en YouTube y repo público.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="mt-auto">
+                <Button asChild className="w-full sm:w-auto">
+                  <Link href="/submit">Entregar ahora</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <HubCard
+              title="Submit"
+              description={
+                project === undefined
+                  ? "Cargando…"
+                  : submitted
+                    ? "Proyecto enviado"
+                    : trackSettings?.submissionsOpen
+                      ? "Vídeo, repo y producto"
+                      : "Prepara el vídeo y el repo"
+              }
+              headerRow
+            >
+              <p className="text-sm text-hs-brown">
+                {submitted
+                  ? "Ya está dentro."
+                  : "3 minutos en YouTube, repo público, y si puedes un enlace al producto."}
+              </p>
+              <Button asChild variant="teal" className="w-full sm:w-auto">
+                <Link href="/submit">{submitted ? "Ver envío" : "Submit"}</Link>
+              </Button>
+            </HubCard>
+          )}
+
           <HubCard
             title="Asistencia"
             description={
@@ -205,50 +264,23 @@ export default function HomePage() {
 
           <HubCard
             title="Retos"
-            description={
-              project === undefined || trackSettings === undefined
-                ? "Cargando…"
-                : project
-                  ? project.status === "submitted"
-                    ? "Proyecto enviado"
-                    : "Borrador guardado"
-                  : trackSettings.submissionsOpen
-                    ? "El envío está abierto"
-                    : "El envío aún no está abierto"
-            }
+            description="Los challenges de este fin de semana."
             headerRow
           >
-            {project ? (
-              <>
-                <p className="text-sm">{project.name || "Sin nombre"}</p>
-                {project.challenges.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {project.challenges.map((challenge) => (
-                      <Badge key={challenge._id}>{challenge.label}</Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-hs-brown">
-                    Todavía no has elegido retos.
-                  </p>
-                )}
-              </>
-            ) : project === null ? (
+            {project?.submittedTracks.length ? (
+              <div className="flex flex-wrap gap-2">
+                {project.submittedTracks.map((challenge) => (
+                  <Badge key={challenge._id}>{challenge.label}</Badge>
+                ))}
+              </div>
+            ) : (
               <p className="text-sm text-hs-brown">
-                Un proyecto. Entra en tantos retos como quieras.
+                Entra en tantos como quieras. La entrega es en Submit.
               </p>
-            ) : null}
-            {project !== undefined ? (
-              <Button asChild variant="outline" className="w-full sm:w-auto">
-                <Link href="/tracks">
-                  {project?.status === "submitted"
-                    ? "Ver proyecto"
-                    : project
-                      ? "Seguir el proyecto"
-                      : "Empezar proyecto"}
-                </Link>
-              </Button>
-            ) : null}
+            )}
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href="/tracks">Ver retos</Link>
+            </Button>
           </HubCard>
         </div>
       </div>

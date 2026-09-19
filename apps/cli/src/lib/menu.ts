@@ -165,20 +165,6 @@ function buildProjectMenu(status: MenuStatus): MenuItem[] {
         input: { message: "Track slug(s) to leave", split: true },
       });
     }
-    items.push(
-      {
-        value: "submit-draft",
-        label: "Save a draft",
-        hint: "everything stays editable",
-        argv: ["submit", "--draft"],
-      },
-      {
-        value: "submit",
-        label: "Submit the project",
-        hint: "final — asks before locking it in",
-        argv: ["submit"],
-      }
-    );
   }
   items.push({
     value: "project-list",

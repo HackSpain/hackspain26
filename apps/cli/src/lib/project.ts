@@ -1,7 +1,7 @@
 import { CliError } from "./errors";
 import type { Submission, Track } from "./participant";
 
-/** What `submissions.saveDraft` / `submit` take, derived from the current state. */
+/** What `submissions.saveDraft` takes, derived from the current state. */
 export type ProjectArgs = {
   name: string;
   description: string;

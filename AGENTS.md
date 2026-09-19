@@ -30,9 +30,9 @@ Public signup still writes Neon; Convex `signups` come from `pnpm migrate:convex
 | Area | Status |
 | --- | --- |
 | Landing mosaic, signup, attendance, badges | **Live** (Neon). Signups closed 9 Aug. Shortlist and prefill are gone. |
-| Auth, onboarding, profile, GitHub link, feed, perks, tracks, CRM | **Live** (Convex). Submit stays closed until an admin opens the window. |
+| Auth, onboarding, profile, GitHub link, feed, perks, tracks, CRM | **Live** (Convex). Submit is `/submit` (not CLI); stays closed until an admin opens the window. Home features it from Sunday 08:00 Madrid. |
 | Teams | **Live**. This branch makes `/teams` read-only; create/join/transfer are CLI. |
-| CLI (commands + watch) | **Live** against `/api/cli/*`. This branch adds a TTY menu and dashboard login. |
+| CLI (commands + watch) | **Live** against `/api/cli/*`. Submit is dashboard-only. |
 | Venue TV, judging, repo stack tags | **This branch.** `/tv`, `/admin/tv`, `/judging`. |
 | Insights (`/insights`) | **Mock UI only.** |
 
@@ -133,7 +133,8 @@ Profiles store social links as `urls: { kind, url }[]`. `githubUsername` / `twit
 | `/profile` | Edit phone, diet, travel, consent, attendance |
 | `/teams` | Read-only team view; create/join via CLI |
 | `/perks` | Catalog + claim |
-| `/tracks` | Challenges from Convex; one project form, multi-challenge; draft save; submit gated until open |
+| `/tracks` | Challenge catalog. Submit lives on `/submit`. |
+| `/submit` | Project delivery: YouTube video (3 min), public GitHub repo, optional product URL. One track at a time. Featured on home from Sunday 08:00 Madrid. |
 | `/feed` | Shared posts + GitHub activity from team repos |
 | `/insights` | Event analytics UI. Mock data only; do not query Convex here. |
 | `/admin` | CRM |

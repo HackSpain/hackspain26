@@ -20,12 +20,9 @@ import {
   submissionInContext,
   visibleGeneralGroups,
 } from "./lib/judging";
-import { urlsValidator } from "./lib/urls";
-import {
-  judgingContextValidator,
-  roleValidator,
-  type JudgingContext,
-} from "./lib/validators";
+import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
+import { judgingContextValidator, roleValidator } from "./lib/validators";
+import type { JudgingContext } from "./lib/validators";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -186,10 +183,14 @@ async function loadCatalog(ctx: QueryCtx): Promise<Catalog> {
   };
 }
 
-function projectFields(submission: Doc<"submissions">, catalog: Catalog) {
+function projectFields(
+  submission: Doc<"submissions">,
+  catalog: Catalog,
+  trackId?: Id<"tracks">
+) {
   const challenges = [];
-  for (const trackId of submission.challengeIds) {
-    const track = catalog.tracksById.get(trackId);
+  for (const id of submission.challengeIds) {
+    const track = catalog.tracksById.get(id);
     if (track) {
       challenges.push({
         _id: track._id,
@@ -212,6 +213,10 @@ function projectFields(submission: Doc<"submissions">, catalog: Catalog) {
   const team = submission.teamId
     ? catalog.teamsById.get(submission.teamId)
     : undefined;
+  const trackVideo = trackId
+    ? submission.trackVideos?.find((entry) => entry.trackId === trackId)
+        ?.videoUrl
+    : undefined;
   return {
     _id: submission._id,
     challenges,
@@ -224,7 +229,13 @@ function projectFields(submission: Doc<"submissions">, catalog: Catalog) {
     perks,
     teamName: team?.name,
     techStack: submission.techStack ?? [],
-    urls: submission.urls,
+    urls: trackVideo
+      ? buildUrls([
+          { kind: "repo", url: urlOf(submission.urls, "repo") },
+          { kind: "demo", url: urlOf(submission.urls, "demo") },
+          { kind: "video", url: trackVideo },
+        ])
+      : submission.urls,
   };
 }
 
@@ -514,7 +525,11 @@ export const list = judgeQuery({
       const rows = grouped.get(submission._id) ?? [];
       const mine = rows.find((row) => row.judgeId === ctx.user._id);
       items.push({
-        ...projectFields(submission, catalog),
+        ...projectFields(
+          submission,
+          catalog,
+          args.context.kind === "track" ? args.context.trackId : undefined
+        ),
         average: admin ? mean(rows.map((row) => row.score)) : null,
         myScore: mine?.score ?? null,
         scoreCount: admin ? rows.length : null,
@@ -565,7 +580,11 @@ export const ranking = judgeQuery({
       const rows = grouped.get(submission._id) ?? [];
       const mine = rows.find((row) => row.judgeId === ctx.user._id);
       items.push({
-        ...projectFields(submission, catalog),
+        ...projectFields(
+          submission,
+          catalog,
+          args.context.kind === "track" ? args.context.trackId : undefined
+        ),
         average: admin ? mean(rows.map((row) => row.score)) : null,
         canScore: submissionInContext(submission, args.context),
         myScore: mine?.score ?? null,

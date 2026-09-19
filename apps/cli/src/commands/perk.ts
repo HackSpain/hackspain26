@@ -54,8 +54,8 @@ export function registerPerk(program: Command): void {
       ui.next([
         ["app.hackspain.com/perks", "claim a perk from the dashboard"],
         [
-          "hackspain submit --perk <id>",
-          "credit the perks you used in your project",
+          "app.hackspain.com/submit",
+          "credit the perks you used when you submit",
         ],
       ]);
     });

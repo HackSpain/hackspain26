@@ -67,12 +67,7 @@ async function applyPlan(
       : c.dim("Not entering any track right now.")
   );
   if (entered.length > 0) {
-    ui.next([
-      [
-        "hackspain submit --draft",
-        "save the project details whenever you like",
-      ],
-    ]);
+    ui.next([["app.hackspain.com/submit", "submit from the dashboard"]]);
   }
 }
 
@@ -131,10 +126,10 @@ export function registerTrack(program: Command): void {
         ],
         ["hackspain track move <from> <to>", "change your mind"],
         [
-          "hackspain submit",
+          "app.hackspain.com/submit",
           settings.submissionsOpen
-            ? "submissions are open"
-            : "opens later; drafts work already",
+            ? "submissions are open on the dashboard"
+            : "opens later on the dashboard",
         ],
       ]);
     });

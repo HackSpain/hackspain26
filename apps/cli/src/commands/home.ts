@@ -88,7 +88,10 @@ function nextSteps(
       steps.push(["hackspain track list", "pick the tracks you are going for"]);
     }
     if (submission?.status !== "submitted") {
-      steps.push(["hackspain submit --draft", "save your project as you go"]);
+      steps.push([
+        "app.hackspain.com/submit",
+        "submit the video and public repo",
+      ]);
     }
     steps.push(["hackspain watch", "keep this running in a spare terminal"]);
   } else {

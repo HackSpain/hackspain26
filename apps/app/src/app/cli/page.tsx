@@ -58,7 +58,7 @@ export default function CliPage() {
   return (
     <Page
       title="hackspain CLI"
-      description="El cliente de terminal para participantes. Misma cuenta y mismos datos que este dashboard: equipos, retos, entrega, feed y watcher, todo desde tu terminal."
+      description="El cliente de terminal para participantes. Misma cuenta y mismos datos que este dashboard: equipos, retos, feed y watcher. La entrega del proyecto es /submit."
     >
       <div className="hs-stagger space-y-4">
         <CommandCard
@@ -153,7 +153,7 @@ export default function CliPage() {
 
         <CommandCard
           title="Retos y entrega"
-          description="Un proyecto por equipo, tantos retos como quieras. La entrega congela todo; los borradores se pueden guardar antes."
+          description="Apúntate a los retos desde aquí. La entrega final (vídeo de YouTube, repo público y producto) es en el dashboard, /submit."
         >
           <CommandRow command="hackspain track list">
             Retos disponibles.
@@ -163,9 +163,6 @@ export default function CliPage() {
           </CommandRow>
           <CommandRow command="hackspain track move <from> <to>">
             Cámbiate de reto.
-          </CommandRow>
-          <CommandRow command="hackspain submit [--draft]">
-            Formulario interactivo de entrega; flags para scripts.
           </CommandRow>
           <CommandRow command="hackspain project show | list">
             Tu proyecto, o todos los proyectos.
