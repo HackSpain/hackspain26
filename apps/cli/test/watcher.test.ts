@@ -78,6 +78,125 @@ describe("spool sink", () => {
 });
 
 describe("http sink", () => {
+  test("refreshes a rejected bearer once and resends the same pending batch", async () => {
+    const pendingPath = join(dir, "pending.json");
+    const forces: (boolean | undefined)[] = [];
+    const calls: RequestInit[] = [];
+    const sink = httpSink(
+      "https://ingest.example/v1",
+      async (force) => {
+        forces.push(force);
+        return force ? "fresh" : "stale";
+      },
+      (async (_input, init) => {
+        calls.push(init ?? {});
+        expect(existsSync(pendingPath)).toBe(true);
+        if (calls.length === 1) {
+          return new Response("expired", { status: 401 });
+        }
+        return Response.json(
+          {
+            ok: true,
+            value: { accepted: 1, rejected: 0, rejections: [], stored: true },
+          },
+          { status: 202 }
+        );
+      }) as typeof fetch,
+      { pendingPath }
+    );
+
+    await sink.write([event(1)]);
+
+    expect(forces).toEqual([undefined, true]);
+    expect(
+      calls.map((call) => new Headers(call.headers).get("authorization"))
+    ).toEqual(["Bearer stale", "Bearer fresh"]);
+    expect(calls[1]?.body).toBe(calls[0]?.body);
+    expect(existsSync(pendingPath)).toBe(false);
+  });
+
+  test("a second 401 stops retrying and preserves the batch for recovery", async () => {
+    const pendingPath = join(dir, "pending.json");
+    const forces: (boolean | undefined)[] = [];
+    let attempts = 0;
+    const sink = httpSink(
+      "https://ingest.example/v1",
+      async (force) => {
+        forces.push(force);
+        return "rejected";
+      },
+      (async () => {
+        attempts++;
+        return new Response(null, { status: 401 });
+      }) as unknown as typeof fetch,
+      { pendingPath }
+    );
+
+    await expect(sink.write([event(1)])).rejects.toMatchObject({
+      code: "SINK_HTTP",
+    });
+
+    expect(attempts).toBe(2);
+    expect(forces).toEqual([undefined, true]);
+    expect(sink.pending?.()).toBe(1);
+    expect(JSON.parse(readFileSync(pendingPath, "utf8")).events).toEqual([
+      event(1),
+    ]);
+  });
+
+  test("keeps the batch when refresh fails without sending anonymously", async () => {
+    for (const failure of [null, new Error("session expired")]) {
+      const pendingPath = join(dir, failure ? "failed.json" : "missing.json");
+      let attempts = 0;
+      const sink = httpSink(
+        "https://ingest.example/v1",
+        async (force) => {
+          if (!force) {
+            return "stale";
+          }
+          if (failure) {
+            throw failure;
+          }
+          return null;
+        },
+        (async () => {
+          attempts++;
+          return new Response(null, { status: 401 });
+        }) as unknown as typeof fetch,
+        { pendingPath }
+      );
+
+      await expect(sink.write([event(1)])).rejects.toThrow();
+      expect(attempts).toBe(1);
+      expect(sink.pending?.()).toBe(1);
+    }
+  });
+
+  test("does not force refresh for anonymous requests or other HTTP failures", async () => {
+    for (const [status, bearer] of [
+      [401, null],
+      [403, "token"],
+      [503, "token"],
+    ] as const) {
+      const forces: (boolean | undefined)[] = [];
+      const sink = httpSink(
+        "https://ingest.example/v1",
+        async (force) => {
+          forces.push(force);
+          return bearer;
+        },
+        (async () => new Response(null, { status })) as unknown as typeof fetch,
+        { pendingPath: join(dir, `${status}.json`) }
+      );
+
+      await expect(sink.write([event(1)])).rejects.toMatchObject({
+        code: "SINK_HTTP",
+      });
+      expect(forces).toEqual([undefined]);
+      expect(sink.pending?.()).toBe(1);
+    }
+  });
+
   test("posts NDJSON with a bearer token and fails on non-2xx", async () => {
     const calls: { url: string; init: RequestInit }[] = [];
     const fetchImpl = (async (

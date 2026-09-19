@@ -432,7 +432,7 @@ export async function runWatch(
   ];
   if (options.uploadUrl) {
     sinks.push(
-      httpSink(options.uploadUrl, () => session.token(), fetch, {
+      httpSink(options.uploadUrl, session.token, fetch, {
         onRejected: log,
         pendingScope: me._id,
       })
