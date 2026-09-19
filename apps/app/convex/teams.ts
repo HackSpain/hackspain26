@@ -21,7 +21,7 @@ import { canonicalRepoUrl } from "./lib/github";
 import { MAX_TECH_LENGTH, MAX_TECH_STACK } from "./lib/stack";
 import { membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { fail } from "./lib/errors";
-import { MAX_TEAMS_PER_TRACK } from "./tracks";
+import { isTrackCombinationAllowed, MAX_TEAMS_PER_TRACK } from "./tracks";
 import { scheduleStackScan, teamRepoList } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
@@ -1059,6 +1059,20 @@ export const adminSetTrack = adminMutation({
       const challengeIds = args.trackId
         ? [...new Set([...(existing?.challengeIds ?? []), args.trackId])]
         : [];
+      const selectedTracks = await Promise.all(
+        challengeIds.map((trackId) => ctx.db.get(trackId))
+      );
+      if (
+        selectedTracks.some((track) => !track) ||
+        !isTrackCombinationAllowed(
+          selectedTracks.filter((track) => track !== null)
+        )
+      ) {
+        fail(
+          "VALIDATION",
+          "Un equipo puede entrar en un track, o en dos si uno es THEKER."
+        );
+      }
       if (existing) {
         await ctx.db.patch(existing._id, { challengeIds, updatedAt: now });
       } else {

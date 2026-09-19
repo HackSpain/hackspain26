@@ -87,11 +87,11 @@ async function applyPlan(
 export function registerTrack(program: Command): void {
   const track = program
     .command("track")
-    .description("See the tracks and pick the one your project enters");
+    .description("See the tracks and choose where your project enters");
 
   track
     .command("list")
-    .description("Tracks you can enter, marking the one your project is in")
+    .description("Tracks you can enter, marking the ones your project is in")
     .action(async (_opts: unknown, command: Command) => {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
@@ -106,11 +106,11 @@ export function registerTrack(program: Command): void {
           ]),
         "Tracks"
       );
-      const currentId = submission?.challengeIds[0];
+      const currentIds = new Set(submission?.challengeIds);
       ui.result({
         submissionsOpen: settings.submissionsOpen,
         tracks: tracks.map((t) => ({
-          entered: t._id === currentId,
+          entered: currentIds.has(t._id),
           full: t.teamCount >= t.teamLimit,
           label: t.label,
           note: t.note,
@@ -121,8 +121,8 @@ export function registerTrack(program: Command): void {
       });
       ui.table(
         tracks.map((t) => [
-          t._id === currentId ? c.gold("●") : c.dim("○"),
-          t._id === currentId ? highlight(t.slug) : t.slug,
+          currentIds.has(t._id) ? c.gold("●") : c.dim("○"),
+          currentIds.has(t._id) ? highlight(t.slug) : t.slug,
           t.label,
           t.teamCount >= t.teamLimit
             ? c.gold(`${occupancy(t.teamCount, t.teamLimit)} full`)
@@ -132,13 +132,13 @@ export function registerTrack(program: Command): void {
         ["", "Slug", "Track", "Teams", "Note"]
       );
       ui.line(
-        currentId
-          ? `${c.gold("●")} ${c.dim("= you are entering it")}`
+        currentIds.size > 0
+          ? `${c.gold("●")} ${c.dim("= you are entering this track")}`
           : c.dim("You are not entering any track yet.")
       );
       ui.next([
-        ["hackspain track register [slug]", "enter one track"],
-        ["hackspain track unregister", "leave it"],
+        ["hackspain track register [slug]", "enter a track"],
+        ["hackspain track unregister [slug]", "leave a track"],
         [
           "app.hackspain.com/submit",
           settings.submissionsOpen
@@ -150,7 +150,7 @@ export function registerTrack(program: Command): void {
 
   track
     .command("register [slugs...]")
-    .description("Enter one track; extra slugs are ignored")
+    .description("Enter a track; THEKER can be combined with one other")
     .action(async (slugs: string[], _opts: unknown, command: Command) => {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
@@ -187,7 +187,7 @@ export function registerTrack(program: Command): void {
 
   track
     .command("unregister [slugs...]")
-    .description("Leave the track your project is in")
+    .description("Leave one of the tracks your project is in")
     .action(async (slugs: string[], _opts: unknown, command: Command) => {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);

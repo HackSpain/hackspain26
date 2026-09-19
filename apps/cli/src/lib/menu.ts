@@ -456,7 +456,9 @@ export function menuStatusFrom(
     challenges: { label?: string }[];
   } | null
 ): MenuStatus {
-  const track = submission?.challenges[0]?.label ?? null;
+  const track =
+    submission?.challenges.map((challenge) => challenge.label).join(", ") ||
+    null;
   return {
     loggedIn: true,
     gate: gate.state,
@@ -477,7 +479,7 @@ export function menuStatusFrom(
           name: submission.name || null,
           submitted: submission.status === "submitted",
           track,
-          tracks: track ? 1 : 0,
+          tracks: submission.challenges.length,
         }
       : null,
   };

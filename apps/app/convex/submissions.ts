@@ -33,6 +33,7 @@ import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import { submissionStatusValidator } from "./lib/validators";
 import { scheduleStackScan } from "./stack";
 import {
+  isTrackCombinationAllowed,
   MAX_TEAMS_PER_TRACK,
   submissionsAreOpen,
   trackEntryCounts,
@@ -177,26 +178,30 @@ async function resolveChallengeIds(
   existing: Doc<"submissions"> | null
 ): Promise<Id<"tracks">[]> {
   const unique = [...new Set(challengeIds)];
-  if (unique.length > 1) {
-    fail("VALIDATION", "Un equipo solo puede entrar en un track.");
-  }
   // A project keeps the place it already holds; only a new entry needs room.
   const added = unique.filter(
     (trackId) => !existing?.challengeIds.includes(trackId)
   );
   const counts =
     added.length > 0 ? await trackEntryCounts(ctx, existing?._id) : null;
-  for (const trackId of unique) {
-    const track = await ctx.db.get(trackId);
-    if (!track) {
-      throw new Error("Reto no encontrado");
-    }
+  const tracks = await Promise.all(unique.map((trackId) => ctx.db.get(trackId)));
+  if (tracks.some((track) => !track)) {
+    throw new Error("Reto no encontrado");
+  }
+  const resolvedTracks = tracks.filter((track) => track !== null);
+  if (!isTrackCombinationAllowed(resolvedTracks)) {
+    fail(
+      "VALIDATION",
+      "Un equipo puede entrar en un track, o en dos si uno es THEKER."
+    );
+  }
+  for (const track of resolvedTracks) {
     if (requireActive && !track.active) {
       throw new Error(`${track.label} no está abierto`);
     }
     if (
-      added.includes(trackId) &&
-      (counts?.get(trackId) ?? 0) >= MAX_TEAMS_PER_TRACK
+      added.includes(track._id) &&
+      (counts?.get(track._id) ?? 0) >= MAX_TEAMS_PER_TRACK
     ) {
       fail(
         "TRACK_FULL",
@@ -373,7 +378,7 @@ export const commitTrack = internalMutation({
       existing.challengeIds.length > 0 &&
       !existing.challengeIds.includes(challengeId)
     ) {
-      fail("VALIDATION", "Un equipo solo puede entrar en un track.");
+      fail("VALIDATION", "El equipo no está apuntado a este reto.");
     }
     const perkIds = await resolvePerkIds(ctx, args.perkIds);
     const already = existing ? recordedTrackVideos(existing) : [];
