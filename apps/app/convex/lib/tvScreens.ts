@@ -4,9 +4,11 @@ import type { Infer } from "convex/values";
 export const screenPresetValidator = v.union(
   v.literal("entradas"), v.literal("avisos"), v.literal("actividad"),
   v.literal("patrocinadores"),   v.literal("espera"), v.literal("panel"), v.literal("panel-mini"), v.literal("panelv2"), v.literal("equipos"), v.literal("memes"), v.literal("memes-mini"),
+  v.literal("countdown"),
 );
 export type ScreenPreset = Infer<typeof screenPresetValidator>;
 export const SCREEN_PRESETS: { value: ScreenPreset; label: string; description: string }[] = [
+  { value: "countdown", label: "Cuenta atrás", description: "Tiempo restante hasta el 20 de septiembre de 2026 a las 11:00 (Madrid)" },
   { value: "entradas", label: "Entradas", description: "Bienvenida al validar cada código" },
   { value: "avisos", label: "Avisos", description: "Un mensaje grande para esta pantalla" },
   { value: "actividad", label: "Actividad", description: "Feed de participantes y GitHub" },
