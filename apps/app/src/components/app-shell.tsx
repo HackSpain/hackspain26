@@ -21,8 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { contentWidth, fullBleed } from "@/lib/layout";
-import { CLOSING_PATH } from "@/lib/closing";
-import { RECEPTION_PATH } from "@/lib/reception";
+import { isPublicAppPath } from "@/lib/public-paths";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
@@ -36,6 +35,7 @@ const ADMIN_NAV = [
   { href: "/admin/submit", label: "Entregas" },
   { href: "/admin/evento", label: "Evento" },
   { href: "/admin/notifications", label: "Avisos" },
+  { href: "/admin/final", label: "Final" },
   { href: "/admin/tv", label: "TV" },
   { href: "/admin/judging", label: "Jurado" },
 ] as const;
@@ -173,7 +173,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
 
   // Public operational screens bring their own full-screen layout.
-  if (pathname === "/tv" || pathname === RECEPTION_PATH || pathname === CLOSING_PATH) {
+  if (isPublicAppPath(pathname)) {
     return <>{children}</>;
   }
 

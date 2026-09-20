@@ -10,6 +10,7 @@ import { RECEPTION_PATH } from "@/lib/reception";
 // /api/files/* accepts either and does its own redirect, so image links from
 // the CLI work in a browser.
 // / is the unauthenticated splash. /tv is the public venue screen.
+// /final/cancelar is a token-gated cancel page for finalists; no login.
 // /cli-auth is public at the middleware level so ?hs-code= survives a
 // server-side redirect; AuthGate stashes it and routes visitors via /login.
 // /cli-auth/handoff signs the browser in from a CLI session, so it must be
@@ -29,6 +30,7 @@ const isPublicRoute = createRouteMatcher([
   "/betterstack(.*)",
   RECEPTION_PATH,
   CLOSING_PATH,
+  "/final/cancelar",
 ]);
 
 export default convexAuthNextjsMiddleware(
