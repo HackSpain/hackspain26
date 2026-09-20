@@ -60,7 +60,7 @@ export function finalEmailHtml(content: FinalEmailContent): string {
 <title>${FINAL_EMAIL_SUBJECT}</title>
 </head>
 <body style="margin:0;padding:0;background:${PALETTE.ink};">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Has pasado a la final de HackSpain 2026. A las 16:30 en OneCowork Recoletos.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Estás invitado a la final de HackSpain 2026. Ven a ver a los finalistas presentar. A las 16:30 en OneCowork Recoletos.</div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PALETTE.ink}" style="background:${PALETTE.ink};">
     <tr>
@@ -96,7 +96,7 @@ export function finalEmailHtml(content: FinalEmailContent): string {
           <tr>
             <td bgcolor="${PALETTE.paper}" style="background:${PALETTE.paper};border:3px solid ${PALETTE.ink};border-top:0;border-bottom:0;padding:22px 26px 8px;">
               <p style="margin:0;font-family:${SANS};font-size:16px;line-height:1.6;color:${PALETTE.ink};">
-                Has pasado a la final de HackSpain 2026. Te queremos ahí.
+                Estás invitado a la final de HackSpain 2026. Ven a ver a los finalistas presentar.
               </p>
             </td>
           </tr>
@@ -145,7 +145,7 @@ export function finalEmailHtml(content: FinalEmailContent): string {
 export function finalEmailText(content: FinalEmailContent): string {
   return `Hola ${content.firstName},
 
-Has pasado a la final de HackSpain 2026. Te queremos ahí.
+Estás invitado a la final de HackSpain 2026. Ven a ver a los finalistas presentar.
 
 A LAS 16:30
 
