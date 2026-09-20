@@ -8,7 +8,7 @@ export const screenPresetValidator = v.union(
 );
 export type ScreenPreset = Infer<typeof screenPresetValidator>;
 export const SCREEN_PRESETS: { value: ScreenPreset; label: string; description: string }[] = [
-  { value: "countdown", label: "Cuenta atrás", description: "Tiempo restante hasta el 20 de septiembre de 2026 a las 11:00 (Madrid)" },
+  { value: "countdown", label: "Tiempo terminado", description: "Fin del trabajo en los proyectos y ayuda con problemas de envío" },
   { value: "entradas", label: "Entradas", description: "Bienvenida al validar cada código" },
   { value: "avisos", label: "Avisos", description: "Un mensaje grande para esta pantalla" },
   { value: "actividad", label: "Actividad", description: "Feed de participantes y GitHub" },
