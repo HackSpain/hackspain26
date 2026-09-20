@@ -336,7 +336,7 @@ function MyProject({
 export default function TracksPage() {
   const me = useQuery(api.users.me);
   const skipLive =
-    me === undefined ||
+    me == null ||
     !isEventOpen(me.event) ||
     (me.canJudge && !me.sections.includes("tracks"));
   const tracks = useQuery(api.tracks.list);
