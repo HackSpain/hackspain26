@@ -8,6 +8,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
 import { DeliveryBriefing } from "@/components/delivery-briefing";
+import { LinkedText } from "@/components/linked-text";
 import { TrackBriefLink } from "@/components/markdown";
 import { LoadingText, MetaLink, MetaRow, Page } from "@/components/page";
 import { ProjectCliDialog } from "@/components/project-cli-dialog";
@@ -184,8 +185,8 @@ function NoProject({ submissionsOpen }: { submissionsOpen: boolean }) {
       <CardHeader>
         <CardTitle>Todavía no tienes proyecto</CardTitle>
         <CardDescription>
-          Entra en un reto desde la CLI. Un equipo entra en un solo reto. La
-          entrega es en Submit.
+          Entra en un reto desde la CLI. Puedes combinar THEKER con otro reto.
+          La entrega es en Submit.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -249,10 +250,12 @@ function MyProject({
       </CardHeader>
       <CardContent className="space-y-5">
         {mine.description ? (
-          <p className="text-sm whitespace-pre-wrap">{mine.description}</p>
+          <p className="text-sm whitespace-pre-wrap">
+            <LinkedText text={mine.description} />
+          </p>
         ) : (
           <p className="text-sm text-hs-brown">
-            Sin descripción todavía. El vídeo de Submit cubre qué habéis
+            Sin notas todavía. El vídeo de Submit cubre qué habéis
             hecho y por qué.
           </p>
         )}
@@ -358,7 +361,7 @@ export default function TracksPage() {
   return (
     <Page
       title="Retos"
-      description="Un proyecto, un reto. Te apuntas desde la CLI; la entrega del Gran Premio es en Submit a las 11."
+      description="Un proyecto entra en un reto, o en dos si uno es THEKER. Te apuntas desde la CLI; la entrega del Gran Premio es en Submit a las 11."
     >
       <DeliveryBriefing />
       {tracks.length === 0 ? (

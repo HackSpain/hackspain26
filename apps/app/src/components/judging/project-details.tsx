@@ -1,3 +1,4 @@
+import { LinkedText } from "@/components/linked-text";
 import { MetaLink, MetaRow } from "@/components/page";
 import { TrackTag } from "@/components/track-tag";
 import { Badge } from "@/components/ui/badge";
@@ -50,9 +51,11 @@ export function ProjectDetails({ item }: { item: ProjectInfo }) {
         </div>
       ) : null}
       {item.description.trim() ? (
-        <p className="text-sm font-medium text-pretty whitespace-pre-wrap">
-          {item.description}
-        </p>
+        <MetaRow label="Notas">
+          <span className="whitespace-pre-wrap">
+            <LinkedText text={item.description} />
+          </span>
+        </MetaRow>
       ) : null}
       {hasMeta ? (
         <div className="grid gap-3">

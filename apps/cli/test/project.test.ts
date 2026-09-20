@@ -51,33 +51,42 @@ const tracks: Track[] = [
 ];
 
 describe("planTracks", () => {
-  test("register uses only the first slug and replaces the rest", () => {
+  test("register keeps THEKER when adding another track", () => {
     const plan = planTracks([id("t3")], tracks, { add: ["MAISA", "embat"] });
-    expect(plan.next).toEqual([id("t1")]);
+    expect(plan.next).toEqual([id("t1"), id("t3")]);
     expect(plan.added.map((t) => t.slug)).toEqual(["maisa"]);
-    expect(plan.removed.map((t) => t.slug)).toEqual(["theker"]);
+    expect(plan.removed).toEqual([]);
     expect(plan.unknown).toEqual([]);
   });
 
-  test("register of the same track still drops extras already stored", () => {
-    const plan = planTracks([id("t1"), id("t2")], tracks, { add: ["maisa"] });
-    expect(plan.next).toEqual([id("t1")]);
-    expect(plan.added).toEqual([]);
-    expect(plan.removed.map((t) => t.slug)).toEqual(["embat"]);
+  test("register adds THEKER alongside the current track", () => {
+    const plan = planTracks([id("t1")], tracks, { add: ["theker"] });
+    expect(plan.next).toEqual([id("t1"), id("t3")]);
+    expect(plan.added.map((t) => t.slug)).toEqual(["theker"]);
+    expect(plan.removed).toEqual([]);
   });
 
-  test("unregister clears the track", () => {
-    const plan = planTracks([id("t1"), id("t2")], tracks, {
-      remove: ["embat"],
+  test("register replaces a regular track while preserving THEKER", () => {
+    const plan = planTracks([id("t1"), id("t3")], tracks, { add: ["embat"] });
+    expect(plan.next).toEqual([id("t2"), id("t3")]);
+    expect(plan.added.map((t) => t.slug)).toEqual(["embat"]);
+    expect(plan.removed.map((t) => t.slug)).toEqual(["maisa"]);
+  });
+
+  test("unregister removes only the requested track", () => {
+    const plan = planTracks([id("t1"), id("t3")], tracks, {
+      remove: ["theker"],
     });
-    expect(plan.next).toEqual([]);
-    expect(plan.removed.map((t) => t.slug)).toEqual(["embat"]);
+    expect(plan.next).toEqual([id("t1")]);
+    expect(plan.removed.map((t) => t.slug)).toEqual(["theker"]);
   });
 
   test("reports unknown slugs instead of dropping them", () => {
-    const plan = planTracks([], tracks, { add: ["nope", "maisa"] });
+    const plan = planTracks([id("t1"), id("t3")], tracks, {
+      add: ["nope", "maisa"],
+    });
     expect(plan.unknown).toEqual(["nope"]);
-    expect(plan.next).toEqual([]);
+    expect(plan.next).toEqual([id("t1"), id("t3")]);
   });
 });
 

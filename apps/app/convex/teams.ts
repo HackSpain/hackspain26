@@ -19,9 +19,10 @@ import {
 } from "./lib/normalize";
 import { canonicalRepoUrl } from "./lib/github";
 import { MAX_TECH_LENGTH, MAX_TECH_STACK } from "./lib/stack";
+import { findUserByEmail, getSignupForUser } from "./lib/auth";
 import { membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { fail } from "./lib/errors";
-import { MAX_TEAMS_PER_TRACK } from "./tracks";
+import { isTrackCombinationAllowed, MAX_TEAMS_PER_TRACK } from "./tracks";
 import { scheduleStackScan, teamRepoList } from "./stack";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
@@ -1059,6 +1060,20 @@ export const adminSetTrack = adminMutation({
       const challengeIds = args.trackId
         ? [...new Set([...(existing?.challengeIds ?? []), args.trackId])]
         : [];
+      const selectedTracks = await Promise.all(
+        challengeIds.map((trackId) => ctx.db.get(trackId))
+      );
+      if (
+        selectedTracks.some((track) => !track) ||
+        !isTrackCombinationAllowed(
+          selectedTracks.filter((track) => track !== null)
+        )
+      ) {
+        fail(
+          "VALIDATION",
+          "Un equipo puede entrar en un track, o en dos si uno es THEKER."
+        );
+      }
       if (existing) {
         await ctx.db.patch(existing._id, { challengeIds, updatedAt: now });
       } else {
@@ -1109,6 +1124,167 @@ export const adminRemoveTrack = adminMutation({
       }
       await ctx.db.patch(existing._id, { challengeIds, updatedAt: now });
     }
+    return null;
+  },
+  returns: v.null(),
+});
+
+export const adminOptions = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const teams = await ctx.db.query("teams").collect();
+    return teams
+      .map((team) => ({ _id: team._id, name: team.name }))
+      .toSorted((a, b) => a.name.localeCompare(b.name, "es"));
+  },
+  returns: v.array(v.object({ _id: v.id("teams"), name: v.string() })),
+});
+
+async function loadAdminParticipant(
+  ctx: QueryCtx | MutationCtx,
+  args: { signupId?: Id<"signups">; userId?: Id<"users"> }
+) {
+  const signup = args.signupId ? await ctx.db.get(args.signupId) : null;
+  let user = args.userId ? await ctx.db.get(args.userId) : null;
+  if (!user && signup) {
+    user =
+      (await ctx.db
+        .query("users")
+        .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
+        .unique()) ?? (await findUserByEmail(ctx, signup.email));
+  }
+  const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
+  if (!user && !resolvedSignup) {
+    throw new Error("Participante no encontrado");
+  }
+  return { signup: resolvedSignup, user };
+}
+
+async function membershipsForPerson(
+  ctx: QueryCtx | MutationCtx,
+  user: Doc<"users"> | null,
+  signup: Doc<"signups"> | null
+): Promise<Doc<"teamMembers">[]> {
+  const rows: Doc<"teamMembers">[] = [];
+  const seen = new Set<string>();
+  const take = (row: Doc<"teamMembers">) => {
+    if (!seen.has(row._id)) {
+      seen.add(row._id);
+      rows.push(row);
+    }
+  };
+  if (user) {
+    for (const row of await ctx.db
+      .query("teamMembers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect()) {
+      take(row);
+    }
+  }
+  if (signup) {
+    for (const row of await ctx.db
+      .query("teamMembers")
+      .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
+      .collect()) {
+      take(row);
+    }
+  }
+  return rows;
+}
+
+async function dropMemberships(
+  ctx: MutationCtx,
+  memberships: Doc<"teamMembers">[]
+): Promise<void> {
+  for (const membership of memberships) {
+    const team = await ctx.db.get(membership.teamId);
+    if (team && membership.userId && team.ownerId === membership.userId) {
+      const members = await ctx.db
+        .query("teamMembers")
+        .withIndex("by_team", (q) => q.eq("teamId", team._id))
+        .collect();
+      const successor = members.find(
+        (member) =>
+          member._id !== membership._id &&
+          member.status === "member" &&
+          member.userId
+      );
+      if (successor?.userId) {
+        await ctx.db.patch(team._id, {
+          ownerId: successor.userId,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+    await ctx.db.delete(membership._id);
+    if (team) {
+      await ctx.db.patch(team._id, { updatedAt: Date.now() });
+    }
+  }
+}
+
+export const adminAssignMember = adminMutation({
+  args: {
+    signupId: v.optional(v.id("signups")),
+    teamId: v.id("teams"),
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Equipo no encontrado");
+    }
+    const { signup, user } = await loadAdminParticipant(ctx, args);
+    const email = user?.email ?? signup?.email;
+    if (!email) {
+      throw new Error("Este participante no tiene email para asignarlo");
+    }
+    const existing = await membershipsForPerson(ctx, user, signup);
+    if (existing.some((row) => row.teamId === team._id && row.status === "member")) {
+      return null;
+    }
+    await dropMemberships(
+      ctx,
+      existing.filter((row) => row.teamId !== team._id)
+    );
+    const stillOnTeam = existing.find((row) => row.teamId === team._id);
+    if (stillOnTeam) {
+      await ctx.db.patch(stillOnTeam._id, {
+        signupId: stillOnTeam.signupId ?? signup?._id,
+        status: user ? "member" : stillOnTeam.status,
+        userId: stillOnTeam.userId ?? user?._id,
+      });
+      await ctx.db.patch(team._id, { updatedAt: Date.now() });
+      return null;
+    }
+    await ctx.db.insert("teamMembers", {
+      addedBy: ctx.user._id,
+      createdAt: Date.now(),
+      identifier: normalizeEmail(email),
+      identifierType: "email",
+      signupId: signup?._id,
+      status: user ? "member" : "pending",
+      teamId: team._id,
+      userId: user?._id,
+    });
+    await ctx.db.patch(team._id, { updatedAt: Date.now() });
+    return null;
+  },
+  returns: v.null(),
+});
+
+export const adminRemoveMember = adminMutation({
+  args: {
+    signupId: v.optional(v.id("signups")),
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const { signup, user } = await loadAdminParticipant(ctx, args);
+    const existing = await membershipsForPerson(ctx, user, signup);
+    if (existing.length === 0) {
+      throw new Error("Esta persona no está en ningún equipo");
+    }
+    await dropMemberships(ctx, existing);
     return null;
   },
   returns: v.null(),

@@ -8,21 +8,33 @@ import {
   submissionStatusValidator,
 } from "./lib/validators";
 import { countsAsAttending } from "./lib/attendance";
-import { findSignupByEmail, findUserByEmail } from "./lib/auth";
+import { findSignupByEmail, findUserByEmail, getSignupForUser } from "./lib/auth";
 import { parseEmailList } from "./lib/normalize";
 import { urlsFromRecord, urlsValidator } from "./lib/urls";
-import { findOwnedSubmission, membershipForUser } from "./lib/team";
+import {
+  findOwnedSubmission,
+  membershipForSignup,
+  membershipForUser,
+} from "./lib/team";
 import { userTypeSummaryValidator } from "./lib/userTypes";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { UrlEntry } from "./lib/urls";
 import type { Role } from "./lib/validators";
 
-async function teamForUser(
+async function teamForParticipant(
   ctx: QueryCtx,
-  userId: Id<"users">
-): Promise<{ name: string; status: string } | null> {
-  const membership = await membershipForUser(ctx, userId);
+  userId: Id<"users"> | undefined,
+  signupId: Id<"signups"> | undefined
+): Promise<{
+  _id: Id<"teams">;
+  isOwner: boolean;
+  name: string;
+  status: string;
+} | null> {
+  const membership =
+    (userId ? await membershipForUser(ctx, userId) : null) ??
+    (signupId ? await membershipForSignup(ctx, signupId) : null);
   if (!membership) {
     return null;
   }
@@ -30,7 +42,12 @@ async function teamForUser(
   if (!team) {
     return null;
   }
-  return { name: team.name, status: membership.status };
+  return {
+    _id: team._id,
+    isOwner: Boolean(membership.userId && team.ownerId === membership.userId),
+    name: team.name,
+    status: membership.status,
+  };
 }
 
 async function teamsByUserId(ctx: QueryCtx) {
@@ -270,6 +287,20 @@ export const getParticipant = adminQuery({
     if (!signup && !user) {
       return null;
     }
+    const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
+    const pass =
+      (resolvedSignup
+        ? await ctx.db
+            .query("eventPasses")
+            .withIndex("by_signup", (q) => q.eq("signupId", resolvedSignup._id))
+            .unique()
+        : null) ??
+      (user
+        ? await ctx.db
+            .query("eventPasses")
+            .withIndex("by_user", (q) => q.eq("userId", user._id))
+            .unique()
+        : null);
 
     const email = user?.email ?? signup?.email;
     const ambassador = email
@@ -279,9 +310,9 @@ export const getParticipant = adminQuery({
           .unique()
       : null;
 
-    const team = user
-      ? ((await teamForUser(ctx, user._id)) ?? undefined)
-      : undefined;
+    const team =
+      (await teamForParticipant(ctx, user?._id, resolvedSignup?._id)) ??
+      undefined;
     const userType = user?.userTypeId
       ? await ctx.db.get(user.userTypeId)
       : null;
@@ -409,6 +440,13 @@ export const getParticipant = adminQuery({
       team,
       claims,
       submission,
+      pass: pass
+        ? {
+            _id: pass._id,
+            checkedInAt: pass.checkedInAt,
+            status: pass.status,
+          }
+        : undefined,
     };
   },
   returns: v.union(
@@ -450,6 +488,8 @@ export const getParticipant = adminQuery({
       ),
       team: v.optional(
         v.object({
+          _id: v.id("teams"),
+          isOwner: v.boolean(),
           name: v.string(),
           status: v.string(),
         })
@@ -473,6 +513,13 @@ export const getParticipant = adminQuery({
           status: submissionStatusValidator,
           challengeLabels: v.array(v.string()),
           perkLabels: v.array(v.string()),
+        })
+      ),
+      pass: v.optional(
+        v.object({
+          _id: v.id("eventPasses"),
+          checkedInAt: v.optional(v.number()),
+          status: v.union(v.literal("active"), v.literal("revoked")),
         })
       ),
     }),

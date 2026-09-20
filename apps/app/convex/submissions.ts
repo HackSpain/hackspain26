@@ -13,6 +13,7 @@ import { fail } from "./lib/errors";
 import { inspectPublicGithubRepo } from "./lib/github";
 import {
   parseGithubRepoUrl,
+  parseOptionalNotes,
   parseOptionalProductUrl,
   parseProjectName,
   parseYoutubeWatchUrl,
@@ -27,6 +28,7 @@ import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import { submissionStatusValidator } from "./lib/validators";
 import { scheduleStackScan } from "./stack";
 import {
+  isTrackCombinationAllowed,
   MAX_TEAMS_PER_TRACK,
   submissionsAreOpen,
   trackEntryCounts,
@@ -171,26 +173,30 @@ async function resolveChallengeIds(
   existing: Doc<"submissions"> | null
 ): Promise<Id<"tracks">[]> {
   const unique = [...new Set(challengeIds)];
-  if (unique.length > 1) {
-    fail("VALIDATION", "Un equipo solo puede entrar en un track.");
-  }
   // A project keeps the place it already holds; only a new entry needs room.
   const added = unique.filter(
     (trackId) => !existing?.challengeIds.includes(trackId)
   );
   const counts =
     added.length > 0 ? await trackEntryCounts(ctx, existing?._id) : null;
-  for (const trackId of unique) {
-    const track = await ctx.db.get(trackId);
-    if (!track) {
-      throw new Error("Reto no encontrado");
-    }
+  const tracks = await Promise.all(unique.map((trackId) => ctx.db.get(trackId)));
+  if (tracks.some((track) => !track)) {
+    throw new Error("Reto no encontrado");
+  }
+  const resolvedTracks = tracks.filter((track) => track !== null);
+  if (!isTrackCombinationAllowed(resolvedTracks)) {
+    fail(
+      "VALIDATION",
+      "Un equipo puede entrar en un track, o en dos si uno es THEKER."
+    );
+  }
+  for (const track of resolvedTracks) {
     if (requireActive && !track.active) {
       throw new Error(`${track.label} no está abierto`);
     }
     if (
-      added.includes(trackId) &&
-      (counts?.get(trackId) ?? 0) >= MAX_TEAMS_PER_TRACK
+      added.includes(track._id) &&
+      (counts?.get(track._id) ?? 0) >= MAX_TEAMS_PER_TRACK
     ) {
       fail(
         "TRACK_FULL",
@@ -302,6 +308,7 @@ export const saveDraft = onboardedMutation({
 const commitArgs = {
   challengeId: v.id("tracks"),
   demoUrl: v.optional(v.string()),
+  description: v.optional(v.string()),
   name: v.string(),
   perkIds: v.array(v.id("perks")),
   repoUrl: v.string(),
@@ -352,7 +359,7 @@ export const commitTrack = internalMutation({
       existing.challengeIds.length > 0 &&
       !existing.challengeIds.includes(challengeId)
     ) {
-      fail("VALIDATION", "Un equipo solo puede entrar en un track.");
+      fail("VALIDATION", "El equipo no está apuntado a este reto.");
     }
     const perkIds = await resolvePerkIds(ctx, args.perkIds);
     const already = existing ? recordedTrackVideos(existing) : [];
@@ -373,7 +380,7 @@ export const commitTrack = internalMutation({
       urlOf(existing?.urls, "video") ?? already[0]?.videoUrl ?? args.videoUrl;
     const fields = {
       challengeIds,
-      description: existing?.description ?? "",
+      description: args.description ?? existing?.description ?? "",
       name: args.name,
       perkIds: perkIds.length > 0 ? perkIds : (existing?.perkIds ?? []),
       status: "submitted" as const,
@@ -406,6 +413,7 @@ export const commitTrack = internalMutation({
 const submitArgs = {
   challengeId: v.id("tracks"),
   demoUrl: v.optional(v.string()),
+  description: v.optional(v.string()),
   name: v.string(),
   perkIds: v.optional(v.array(v.id("perks"))),
   repoUrl: v.string(),
@@ -417,6 +425,7 @@ async function submitTrack(
   args: {
     challengeId: Id<"tracks">;
     demoUrl?: string;
+    description?: string;
     name: string;
     perkIds?: Id<"perks">[];
     repoUrl: string;
@@ -445,6 +454,10 @@ async function submitTrack(
   if (!demo.ok) {
     throw new Error(demo.message);
   }
+  const notes = parseOptionalNotes(args.description);
+  if (!notes.ok) {
+    throw new Error(notes.message);
+  }
   const publicRepo = await inspectPublicGithubRepo(repo.value);
   if (!publicRepo.ok) {
     throw new Error(publicRepo.message);
@@ -453,6 +466,7 @@ async function submitTrack(
   return await ctx.runMutation(internal.submissions.commitTrack, {
     challengeId: args.challengeId,
     demoUrl: demo.value,
+    description: notes.value,
     name: name.value,
     perkIds: args.perkIds ?? [],
     repoUrl: publicRepo.url,

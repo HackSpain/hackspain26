@@ -9,7 +9,9 @@ import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import {
+  MAX_NOTES_LENGTH,
   parseGithubRepoUrl,
+  parseOptionalNotes,
   parseOptionalProductUrl,
   parseProjectName,
   parseYoutubeWatchUrl,
@@ -27,6 +29,7 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { urlOf } from "@/lib/urls";
 import { cn, perkName } from "@/lib/utils";
 
@@ -51,6 +54,7 @@ export type SubmitCatalog =
 export type SubmitProjectArgs = {
   challengeId: Id<"tracks">;
   demoUrl?: string;
+  description?: string;
   name: string;
   perkIds: Id<"perks">[];
   repoUrl: string;
@@ -275,6 +279,7 @@ function SubmitForm({
     urlOf(mine?.urls, "repo") ?? teamRepo,
   );
   const [demoUrl, setDemoUrl] = useState(urlOf(mine?.urls, "demo") ?? "");
+  const [notes, setNotes] = useState(mine?.description ?? "");
   const [perkIds, setPerkIds] = useState<Id<"perks">[]>(mine?.perkIds ?? []);
   const [repoNote, setRepoNote] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -285,6 +290,7 @@ function SubmitForm({
   const videoParsed = videoUrl.trim() ? parseYoutubeWatchUrl(videoUrl) : null;
   const repoParsed = repoUrl.trim() ? parseGithubRepoUrl(repoUrl) : null;
   const demoParsed = parseOptionalProductUrl(demoUrl);
+  const notesParsed = parseOptionalNotes(notes);
 
   const canSubmit = useMemo(() => {
     if (!submissionsOpen || saving) {
@@ -294,9 +300,10 @@ function SubmitForm({
       parseProjectName(name).ok &&
       parseYoutubeWatchUrl(videoUrl).ok &&
       parseGithubRepoUrl(repoUrl).ok &&
-      demoParsed.ok
+      demoParsed.ok &&
+      notesParsed.ok
     );
-  }, [demoParsed.ok, name, repoUrl, saving, submissionsOpen, videoUrl]);
+  }, [demoParsed.ok, name, notesParsed.ok, repoUrl, saving, submissionsOpen, videoUrl]);
 
   async function onRepoBlur() {
     if (!repoParsed?.ok) {
@@ -416,6 +423,25 @@ function SubmitForm({
             ) : null}
           </Field>
 
+          <Field
+            label="Notas"
+            htmlFor="project-notes"
+            hint="Opcional. Saltos de línea y enlaces https://."
+            meta={`${notes.length}/${MAX_NOTES_LENGTH}`}
+          >
+            <Textarea
+              id="project-notes"
+              value={notes}
+              maxLength={MAX_NOTES_LENGTH}
+              placeholder="Credenciales de demo, instrucciones extra…"
+              onChange={(event) => setNotes(event.target.value)}
+              aria-invalid={!notesParsed.ok}
+            />
+            {!notesParsed.ok ? (
+              <p className="text-sm text-hs-red">{notesParsed.message}</p>
+            ) : null}
+          </Field>
+
           {catalog && catalog.length > 0 ? (
             <div className="space-y-2">
               <p className="font-bungee text-xs">Herramientas de partners</p>
@@ -459,6 +485,7 @@ function SubmitForm({
                 void onSubmit({
                   challengeId: track._id,
                   demoUrl: demoUrl.trim() || undefined,
+                  description: notes.trim() || undefined,
                   name,
                   perkIds,
                   repoUrl,

@@ -5,7 +5,8 @@ import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { MetaLink, MetaRow, SocialMeta } from "@/components/page";
+import { LinkedText } from "@/components/linked-text";
+import { FormError, MetaLink, MetaRow, SocialMeta, errorMessage } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, Frame } from "@/components/ui/card";
@@ -29,6 +30,14 @@ import {
 import { urlDisplay, urlLabel } from "@/lib/urls";
 
 const NO_TYPE = "none";
+
+function formatCheckInAt(at: number) {
+  return new Date(at).toLocaleString("es-ES", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Madrid",
+  });
+}
 
 export type ParticipantRef =
   | { kind: "signup"; id: Id<"signups"> }
@@ -76,8 +85,18 @@ export function ParticipantDetail({
   const setAccepted = useMutation(api.admin.setAccepted);
   const setNotes = useMutation(api.admin.setNotes);
   const setUserType = useMutation(api.admin.setUserType);
+  const checkInParticipant = useMutation(api.passes.checkInParticipant);
+  const undoCheckIn = useMutation(api.passes.undoCheckIn);
+  const assignTeam = useMutation(api.teams.adminAssignMember);
+  const removeTeam = useMutation(api.teams.adminRemoveMember);
   const userTypes = useQuery(api.userTypes.list);
+  const teams = useQuery(api.teams.adminOptions);
   const [notes, setNotesValue] = useState<string | null>(null);
+  const [checkInBusy, setCheckInBusy] = useState(false);
+  const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [teamChoice, setTeamChoice] = useState<Id<"teams"> | undefined>();
+  const [teamBusy, setTeamBusy] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
 
   const noteValue = notes ?? detail.user?.adminNotes ?? "";
   const attendance = displayedAttendance(
@@ -86,7 +105,82 @@ export function ParticipantDetail({
   );
   const signup = detail.signup;
   const user = detail.user;
+  const pass = detail.pass;
+  const team = detail.team;
+  const checkedIn = pass?.checkedInAt !== undefined;
+  const selectedTeamId = teamChoice ?? team?._id;
   const staffRole = roleLabel(user?.role);
+
+  async function markCheckedIn() {
+    if (checkInBusy) {
+      return;
+    }
+    setCheckInBusy(true);
+    setCheckInError(null);
+    try {
+      await checkInParticipant({
+        signupId: signup?._id,
+        userId: user?._id,
+      });
+    } catch (error) {
+      setCheckInError(errorMessage(error, "No se ha podido completar el check-in"));
+    } finally {
+      setCheckInBusy(false);
+    }
+  }
+
+  async function placeOnTeam() {
+    if (teamBusy || !selectedTeamId) {
+      return;
+    }
+    setTeamBusy(true);
+    setTeamError(null);
+    try {
+      await assignTeam({
+        signupId: signup?._id,
+        teamId: selectedTeamId,
+        userId: user?._id,
+      });
+    } catch (error) {
+      setTeamError(errorMessage(error, "No se ha podido asignar al equipo"));
+    } finally {
+      setTeamBusy(false);
+    }
+  }
+
+  async function dropFromTeam() {
+    if (teamBusy || !team) {
+      return;
+    }
+    setTeamBusy(true);
+    setTeamError(null);
+    try {
+      await removeTeam({
+        signupId: signup?._id,
+        userId: user?._id,
+      });
+      setTeamChoice(undefined);
+    } catch (error) {
+      setTeamError(errorMessage(error, "No se ha podido quitar del equipo"));
+    } finally {
+      setTeamBusy(false);
+    }
+  }
+
+  async function clearCheckIn() {
+    if (checkInBusy || !pass) {
+      return;
+    }
+    setCheckInBusy(true);
+    setCheckInError(null);
+    try {
+      await undoCheckIn({ passId: pass._id });
+    } catch (error) {
+      setCheckInError(errorMessage(error, "No se ha podido deshacer el check-in"));
+    } finally {
+      setCheckInBusy(false);
+    }
+  }
 
   return (
     <>
@@ -151,6 +245,46 @@ export function ParticipantDetail({
                 No hay solicitud, no se puede cambiar la aceptación.
               </p>
             )}
+            {signup || user ? (
+              <div className="space-y-2">
+                <p className="font-bungee text-xs uppercase">Check-in</p>
+                {checkedIn && pass?.checkedInAt !== undefined ? (
+                  <Frame className="flex flex-col gap-2 border-hs-teal bg-hs-teal/10 sm:flex-row sm:flex-wrap sm:items-center">
+                    <p className="text-sm font-medium text-pretty">
+                      Dentro ·{" "}
+                      <span className="tabular-nums">{formatCheckInAt(pass.checkedInAt)}</span>
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      disabled={checkInBusy}
+                      aria-busy={checkInBusy}
+                      onClick={() => void clearCheckIn()}
+                    >
+                      Deshacer
+                    </Button>
+                  </Frame>
+                ) : (
+                  <div className="space-y-2">
+                    <Button
+                      variant="teal"
+                      className="w-full sm:w-auto"
+                      disabled={checkInBusy || signup?.accepted === false}
+                      aria-busy={checkInBusy}
+                      onClick={() => void markCheckedIn()}
+                    >
+                      Marcar check-in
+                    </Button>
+                    {signup && !signup.accepted ? (
+                      <p className="text-xs text-pretty text-hs-brown">
+                        Acepta al participante para poder hacer el check-in.
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+                <FormError message={checkInError} />
+              </div>
+            ) : null}
             {user ? (
               <>
                 <div className="space-y-2">
@@ -252,19 +386,76 @@ export function ParticipantDetail({
         <CardHeader>
           <CardTitle>Equipo y perks</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>Equipo: {detail.team?.name ?? "—"}</p>
-          {detail.claims.length === 0 ? (
-            <p>Sin perks reclamados.</p>
-          ) : (
-            detail.claims.map((claim) => (
-              <Frame key={claim._id} className="flex flex-wrap items-center gap-2">
-                <span>{perkName(claim.company, claim.title)}</span>
-                <Badge>{claimStatusLabel(claim.status)}</Badge>
-                {claim.code ? <code className="break-all">{claim.code}</code> : null}
-              </Frame>
-            ))
-          )}
+        <CardContent className="space-y-4 text-sm">
+          <div className="space-y-2">
+            <p className="font-bungee text-xs uppercase">Equipo</p>
+            <p className="flex flex-wrap items-center gap-2 text-pretty font-medium">
+              <span>{team?.name ?? "Sin equipo"}</span>
+              {team?.isOwner ? <Badge>dueño</Badge> : null}
+              {team && team.status !== "member" ? <Badge>invitado</Badge> : null}
+            </p>
+            {signup || user ? (
+              <div className="space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+                  <Select
+                    value={selectedTeamId}
+                    disabled={teams === undefined || teamBusy}
+                    onValueChange={(value) => setTeamChoice(value as Id<"teams">)}
+                  >
+                    <SelectTrigger className="sm:max-w-xs" aria-label="Asignar a un equipo">
+                      <SelectValue placeholder="Elige un equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(teams ?? []).map((option) => (
+                        <SelectItem key={option._id} value={option._id}>
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedTeamId &&
+                  !(selectedTeamId === team?._id && team.status === "member") ? (
+                    <Button
+                      className="w-full sm:w-auto"
+                      disabled={teamBusy}
+                      aria-busy={teamBusy}
+                      onClick={() => void placeOnTeam()}
+                    >
+                      Asignar
+                    </Button>
+                  ) : null}
+                  {team ? (
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      disabled={teamBusy}
+                      aria-busy={teamBusy}
+                      onClick={() => void dropFromTeam()}
+                    >
+                      Quitar
+                    </Button>
+                  ) : null}
+                </div>
+                {teams !== undefined && teams.length === 0 ? (
+                  <p className="text-xs text-pretty text-hs-brown">Aún no hay equipos.</p>
+                ) : null}
+                <FormError message={teamError} />
+              </div>
+            ) : null}
+          </div>
+          <div className="space-y-2 border-t-2 border-hs-ink/15 pt-3">
+            {detail.claims.length === 0 ? (
+              <p>Sin perks reclamados.</p>
+            ) : (
+              detail.claims.map((claim) => (
+                <Frame key={claim._id} className="flex flex-wrap items-center gap-2">
+                  <span>{perkName(claim.company, claim.title)}</span>
+                  <Badge>{claimStatusLabel(claim.status)}</Badge>
+                  {claim.code ? <code className="break-all">{claim.code}</code> : null}
+                </Frame>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
       {detail.submission ? (
@@ -279,7 +470,11 @@ export function ParticipantDetail({
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p className="font-bungee text-base">{detail.submission.name || "Sin título"}</p>
-            {detail.submission.description ? <p>{detail.submission.description}</p> : null}
+            {detail.submission.description ? (
+              <p className="whitespace-pre-wrap">
+                <LinkedText text={detail.submission.description} />
+              </p>
+            ) : null}
             <p>
               Retos:{" "}
               {detail.submission.challengeLabels.length > 0
