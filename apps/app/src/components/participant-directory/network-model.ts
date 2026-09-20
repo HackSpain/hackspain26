@@ -84,7 +84,7 @@ interface LensEntry {
  * centre of a crowd where a wordmark does not. Tracks without one fall back
  * to their wordmark.
  */
-const TRACK_SYMBOLS: Record<string, string> = {
+export const TRACK_SYMBOLS: Record<string, string> = {
 	embat: "/tracks/symbols/embat.svg",
 	happyrobot: "/tracks/symbols/happyrobot.svg",
 	maisa: "/tracks/symbols/maisa.svg",
