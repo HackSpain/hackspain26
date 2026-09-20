@@ -468,16 +468,17 @@ export default function AdminFinalPage() {
   }
 
   async function submitStatus(row: Person, status: "in" | "canceled") {
-    if (!row.finalistId || pending) {
+    const finalistId = row.finalistId;
+    if (!finalistId || pending) {
       return;
     }
-    setPending(row.finalistId);
+    setPending(finalistId);
     setConfirm(null);
     try {
-      await setStatus({ id: row.finalistId, status });
+      await setStatus({ id: finalistId, status });
       setSelected((current) => {
         const next = new Set(current);
-        next.delete(row.finalistId);
+        next.delete(finalistId);
         return next;
       });
       setNotice(null);
