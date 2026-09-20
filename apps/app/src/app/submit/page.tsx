@@ -1,12 +1,30 @@
 "use client";
 
 import { useAction, useQuery } from "convex/react";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
+import {
+  isSubmissionsAccepting,
+  SUBMIT_CLOSES_AT_MS,
+  submissionsClosedMessage,
+} from "@convex/lib/submitWindow";
 import { DeliveryBriefing } from "@/components/delivery-briefing";
 import { LoadingText, Page } from "@/components/page";
 import { SubmitFlow } from "@/components/submit-project";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+function useNow(deadline = SUBMIT_CLOSES_AT_MS) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const wait = deadline - Date.now();
+    if (wait <= 0) {
+      return;
+    }
+    const id = window.setTimeout(() => setNow(Date.now()), wait);
+    return () => window.clearTimeout(id);
+  }, [deadline]);
+  return now;
+}
 
 function SubmitPage() {
   const tracks = useQuery(api.tracks.list);
@@ -15,6 +33,11 @@ function SubmitPage() {
   const catalog = useQuery(api.perks.listCatalog);
   const team = useQuery(api.teams.mine);
   const submit = useAction(api.submissions.submit);
+  const now = useNow();
+  const accepting = isSubmissionsAccepting(
+    settings?.submissionsOpen ?? false,
+    now,
+  );
 
   if (
     tracks === undefined ||
@@ -31,11 +54,12 @@ function SubmitPage() {
       description="Gran Premio a las 11: vídeo de 3 minutos, repo y, si aplica, una demo. Los tracks se presentan en persona."
     >
       <DeliveryBriefing />
-      {!settings.submissionsOpen ? (
+      {!accepting ? (
         <Alert>
           <AlertDescription>
-            El envío aún no está abierto. Puedes preparar los enlaces; el botón
-            se activa cuando lo abramos.
+            {now >= SUBMIT_CLOSES_AT_MS
+              ? submissionsClosedMessage(now)
+              : "El envío aún no está abierto. Puedes preparar los enlaces; el botón se activa cuando lo abramos."}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -43,7 +67,7 @@ function SubmitPage() {
         catalog={catalog}
         mine={mine}
         onSubmit={(args) => submit(args)}
-        submissionsOpen={settings.submissionsOpen}
+        submissionsOpen={accepting}
         teamRepo={team?.repoUrl ?? ""}
         tracks={tracks}
       />

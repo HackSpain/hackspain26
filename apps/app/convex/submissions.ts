@@ -19,6 +19,10 @@ import {
   parseYoutubeWatchUrl,
 } from "./lib/submission";
 import {
+  isSubmissionsAccepting,
+  submissionsClosedMessage,
+} from "./lib/submitWindow";
+import {
   findOwnedSubmission,
   findTeamSubmission,
   membershipForUser,
@@ -336,8 +340,9 @@ export const commitTrack = internalMutation({
       teamId = args.teamId;
       submittedBy = existing?.submittedBy ?? team.ownerId;
     } else {
-      if (!(await submissionsAreOpen(ctx))) {
-        throw new Error("El envío de proyectos aún no está abierto");
+      const now = Date.now();
+      if (!isSubmissionsAccepting(await submissionsAreOpen(ctx), now)) {
+        throw new Error(submissionsClosedMessage(now));
       }
       existing = await findOwnedSubmission(ctx, user._id);
       const membership = await membershipForUser(ctx, user._id);
