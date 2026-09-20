@@ -6,6 +6,7 @@ import { Loader2, Mail, UserPlus, Users } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { formatScore } from "@/components/judging/assessment-form";
 import {
   FormError,
   FormNotice,
@@ -50,10 +51,10 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-type Finalist = FunctionReturnType<typeof api.finalists.list>[number];
+type Person = FunctionReturnType<typeof api.finalists.listPeople>[number];
 type Candidate = FunctionReturnType<typeof api.finalists.searchPeople>[number];
 type TeamRow = FunctionReturnType<typeof api.finalists.listTeams>[number];
-type Filter = "all" | "in" | "canceled";
+type Filter = "all" | "in" | "canceled" | "out";
 
 const ADDED_AT = new Intl.DateTimeFormat("es-ES", {
   day: "numeric",
@@ -90,7 +91,15 @@ function addSummary(result: { added: number; restored: number; skipped: number }
   return parts.join(" · ");
 }
 
-function emailLabel(row: Finalist) {
+function teamScoreLabel(team: Pick<TeamRow, "rank" | "score">) {
+  if (team.score === null) {
+    return "sin nota";
+  }
+  const score = formatScore(team.score);
+  return team.rank === null ? score : `#${team.rank} · ${score}`;
+}
+
+function emailLabel(row: Person) {
   if (row.status === "canceled") {
     return "—";
   }
@@ -191,7 +200,7 @@ function Stat({
 export default function AdminFinalPage() {
   const ids = useId();
   const counts = useQuery(api.finalists.counts);
-  const rows = useQuery(api.finalists.list);
+  const people = useQuery(api.finalists.listPeople);
   const teams = useQuery(api.finalists.listTeams);
   const addPeople = useMutation(api.finalists.addPeople);
   const addTeam = useMutation(api.finalists.addTeam);
@@ -209,8 +218,8 @@ export default function AdminFinalPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<
-    | { already: number; count: number; kind: "send" }
-    | { kind: "cancelPerson"; row: Finalist }
+    | { already: number; ids: Id<"finalists">[]; kind: "send"; name?: string }
+    | { kind: "cancelPerson"; row: Person }
     | null
   >(null);
   const [pending, setPending] = useState<"add" | "team" | "send" | Id<"finalists"> | null>(
@@ -229,18 +238,21 @@ export default function AdminFinalPage() {
 
   const candidateMap = useMemo(() => {
     const map = new Map<string, Candidate>();
+    for (const person of people ?? []) {
+      map.set(personKey(person), person);
+    }
     for (const candidate of candidates ?? []) {
       map.set(personKey(candidate), candidate);
     }
     return map;
-  }, [candidates]);
+  }, [candidates, people]);
 
   const visible = useMemo(() => {
-    if (!rows) {
+    if (!people) {
       return [];
     }
     const needle = listSearch.trim().toLowerCase();
-    return rows.filter((row) => {
+    return people.filter((row) => {
       if (filter !== "all" && row.status !== filter) {
         return false;
       }
@@ -253,27 +265,43 @@ export default function AdminFinalPage() {
         (row.teamName?.toLowerCase().includes(needle) ?? false)
       );
     });
-  }, [filter, listSearch, rows]);
+  }, [filter, listSearch, people]);
+
+  const addableKeys = visible
+    .filter((row) => row.status === "out")
+    .map((row) => personKey(row))
+    .filter(Boolean);
+  const allAddablePicked =
+    addableKeys.length > 0 && addableKeys.every((key) => picked.has(key));
 
   const selectableIds = visible
-    .filter((row) => row.status === "in")
-    .map((row) => row._id);
+    .filter((row) => row.status === "in" && row.finalistId)
+    .map((row) => row.finalistId as Id<"finalists">);
   const allVisibleSelected =
     selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
 
   const allInIds = useMemo(
-    () => (rows ?? []).filter((row) => row.status === "in").map((row) => row._id),
-    [rows],
+    () =>
+      (people ?? [])
+        .filter((row) => row.status === "in" && row.finalistId)
+        .map((row) => row.finalistId as Id<"finalists">),
+    [people],
   );
   const sinceMs = parseLocalDateTime(since);
   const sinceIds = useMemo(() => {
-    if (!rows || sinceMs === null) {
+    if (!people || sinceMs === null) {
       return [];
     }
-    return rows
-      .filter((row) => row.status === "in" && row.addedAt >= sinceMs)
-      .map((row) => row._id);
-  }, [rows, sinceMs]);
+    return people
+      .filter(
+        (row) =>
+          row.status === "in" &&
+          row.finalistId &&
+          row.addedAt !== undefined &&
+          row.addedAt >= sinceMs,
+      )
+      .map((row) => row.finalistId as Id<"finalists">);
+  }, [people, sinceMs]);
 
   function flash(message: string) {
     setFormError(null);
@@ -325,24 +353,40 @@ export default function AdminFinalPage() {
     });
   }
 
+  function toggleAllAddable() {
+    setPicked((current) => {
+      const next = new Set(current);
+      if (allAddablePicked) {
+        for (const key of addableKeys) {
+          next.delete(key);
+        }
+      } else {
+        for (const key of addableKeys) {
+          next.add(key);
+        }
+      }
+      return next;
+    });
+  }
+
   function selectIds(finalistIds: Id<"finalists">[]) {
     setSelected(new Set(finalistIds));
   }
 
   async function submitPeople() {
-    const people = [...picked]
+    const toAdd = [...picked]
       .map((key) => candidateMap.get(key))
       .filter((person): person is Candidate => person !== undefined)
       .map((person) => ({
         signupId: person.signupId,
         userId: person.userId,
       }));
-    if (people.length === 0 || pending) {
+    if (toAdd.length === 0 || pending) {
       return;
     }
     setPending("add");
     try {
-      const result = await addPeople({ people });
+      const result = await addPeople({ people: toAdd });
       flash(addSummary(result));
       setPicked(new Set());
       setSearch("");
@@ -371,18 +415,24 @@ export default function AdminFinalPage() {
   }
 
   async function submitSend() {
-    const idsToSend = [...selected];
-    if (idsToSend.length === 0 || pending) {
+    if (confirm?.kind !== "send" || confirm.ids.length === 0 || pending) {
       return;
     }
-    setPending("send");
+    const idsToSend = confirm.ids;
+    setPending(idsToSend.length === 1 ? (idsToSend[0] ?? "send") : "send");
     setConfirm(null);
     try {
       const count = await sendEmails({ ids: idsToSend });
       flash(
         `En cola para ${count} ${plural(count, "destinatario", "destinatarios")}.`,
       );
-      setSelected(new Set());
+      setSelected((current) => {
+        const next = new Set(current);
+        for (const id of idsToSend) {
+          next.delete(id);
+        }
+        return next;
+      });
     } catch (error) {
       fail(error, "No se ha podido enviar");
     } finally {
@@ -394,23 +444,40 @@ export default function AdminFinalPage() {
     if (selected.size === 0 || pending) {
       return;
     }
+    const selectedIds = [...selected];
     const already =
-      rows?.filter((row) => selected.has(row._id) && row.emailedAt !== undefined)
-        .length ?? 0;
-    setConfirm({ already, count: selected.size, kind: "send" });
+      people?.filter(
+        (row) =>
+          row.finalistId !== undefined &&
+          selected.has(row.finalistId) &&
+          row.emailedAt !== undefined,
+      ).length ?? 0;
+    setConfirm({ already, ids: selectedIds, kind: "send" });
   }
 
-  async function submitStatus(row: Finalist, status: "in" | "canceled") {
-    if (pending) {
+  function requestSendOne(row: Person) {
+    if (!row.finalistId || row.status !== "in" || pending) {
       return;
     }
-    setPending(row._id);
+    setConfirm({
+      already: row.emailedAt === undefined ? 0 : 1,
+      ids: [row.finalistId],
+      kind: "send",
+      name: row.name,
+    });
+  }
+
+  async function submitStatus(row: Person, status: "in" | "canceled") {
+    if (!row.finalistId || pending) {
+      return;
+    }
+    setPending(row.finalistId);
     setConfirm(null);
     try {
-      await setStatus({ id: row._id, status });
+      await setStatus({ id: row.finalistId, status });
       setSelected((current) => {
         const next = new Set(current);
-        next.delete(row._id);
+        next.delete(row.finalistId);
         return next;
       });
       setNotice(null);
@@ -429,9 +496,13 @@ export default function AdminFinalPage() {
   let confirmBody = "";
   if (confirm?.kind === "send") {
     confirmTitle = "Enviar correo";
-    confirmBody = `¿Enviar el correo a ${confirm.count} ${plural(confirm.count, "persona", "personas")}?`;
+    confirmBody = confirm.name
+      ? `¿Enviar el correo a ${confirm.name}?`
+      : `¿Enviar el correo a ${confirm.ids.length} ${plural(confirm.ids.length, "persona", "personas")}?`;
     if (confirm.already > 0) {
-      confirmBody += ` ${confirm.already} ya lo ${plural(confirm.already, "recibió", "recibieron")} y se reenvía.`;
+      confirmBody += confirm.name
+        ? " Ya lo recibió y se reenvía."
+        : ` ${confirm.already} ya lo ${plural(confirm.already, "recibió", "recibieron")} y se reenvía.`;
     }
   } else if (confirm?.kind === "cancelPerson") {
     confirmBody = `¿Marcar a ${confirm.row.name} como cancelado?`;
@@ -448,103 +519,13 @@ export default function AdminFinalPage() {
         <Stat label="sin correo" value={counts?.pendingEmail} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Añadir personas</CardTitle>
-            <CardDescription>
-              Busca por nombre, email o equipo. Quien ya está dentro no sale.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              aria-label="Buscar participantes"
-              autoComplete="off"
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Nombre, email o equipo"
-              value={search}
-            />
-            {searchQuery.trim().length > 0 ? (
-              <SearchHits
-                candidates={candidates}
-                onToggle={togglePick}
-                picked={picked}
-                searchQuery={searchQuery}
-                searching={searching}
-              />
-            ) : null}
-            <Button
-              disabled={picked.size === 0}
-              aria-busy={pending === "add"}
-              onClick={() => void submitPeople()}
-            >
-              {pending === "add" ? (
-                <Loader2 className="animate-spin" aria-hidden />
-              ) : (
-                <UserPlus aria-hidden />
-              )}
-              Añadir {picked.size > 0 ? picked.size : ""}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Añadir un equipo</CardTitle>
-            <CardDescription>
-              Entran todos los miembros. Quien ya está dentro se ignora.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Select value={teamId || undefined} onValueChange={setTeamId}>
-              <SelectTrigger id={`${ids}-team`} aria-label="Equipo">
-                <SelectValue placeholder="Elige un equipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {(teams ?? []).map((team: TeamRow) => (
-                  <SelectItem
-                    key={team._id}
-                    value={team._id}
-                    disabled={team.addable === 0}
-                  >
-                    {team.name} · {team.memberCount}{" "}
-                    {plural(team.memberCount, "persona", "personas")}
-                    {team.alreadyIn > 0 ? ` · ${team.alreadyIn} ya dentro` : ""}
-                    {team.addable === 0 ? " · completo" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedTeam ? (
-              <p className="text-sm text-hs-brown">
-                {selectedTeam.addable}{" "}
-                {plural(selectedTeam.addable, "nueva", "nuevas")} ·{" "}
-                {selectedTeam.alreadyIn} ya dentro
-              </p>
-            ) : null}
-            <Button
-              disabled={!selectedTeam || selectedTeam.addable === 0}
-              aria-busy={pending === "team"}
-              onClick={() => void submitTeam()}
-            >
-              {pending === "team" ? (
-                <Loader2 className="animate-spin" aria-hidden />
-              ) : (
-                <Users aria-hidden />
-              )}
-              Añadir equipo
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
       <FormNotice message={notice} />
       <FormError message={formError} />
 
       <section className="grid gap-3" aria-labelledby={`${ids}-list`}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 id={`${ids}-list`} className="font-bungee text-lg">
-            En la final
+            Toda la gente
           </h2>
           <div className="flex flex-wrap items-center gap-2">
             <Select
@@ -557,6 +538,7 @@ export default function AdminFinalPage() {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="in">Dentro</SelectItem>
+                <SelectItem value="out">Fuera</SelectItem>
                 <SelectItem value="canceled">Cancelados</SelectItem>
               </SelectContent>
             </Select>
@@ -567,6 +549,19 @@ export default function AdminFinalPage() {
               placeholder="Filtrar lista"
               value={listSearch}
             />
+            <Button
+              disabled={picked.size === 0}
+              aria-busy={pending === "add"}
+              onClick={() => void submitPeople()}
+            >
+              {pending === "add" ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <UserPlus aria-hidden />
+              )}
+              Añadir
+              {picked.size > 0 ? ` (${picked.size})` : ""}
+            </Button>
             <Button
               disabled={selected.size === 0}
               aria-busy={pending === "send"}
@@ -630,38 +625,54 @@ export default function AdminFinalPage() {
             </div>
           </div>
 
-          {rows === undefined && (
+          {people === undefined && (
             <div className="border-t-[3px] border-hs-ink bg-hs-paper px-3 py-6">
               <LoadingText />
             </div>
           )}
-          {rows !== undefined && visible.length === 0 && (
+          {people !== undefined && visible.length === 0 && (
             <div className="border-t-[3px] border-hs-ink bg-hs-paper px-4 py-8">
               <p className="font-bungee text-base">
-                {rows.length === 0 ? "Todavía vacío" : "Nadie en este filtro"}
+                {people.length === 0 ? "Todavía vacío" : "Nadie en este filtro"}
               </p>
               <p className="mt-1 text-sm text-hs-brown">
-                {rows.length === 0
-                  ? "Añade personas o un equipo para empezar."
+                {people.length === 0
+                  ? "No hay participantes para mostrar."
                   : "Prueba otro estado o limpia el filtro."}
               </p>
             </div>
           )}
-          {rows !== undefined && visible.length > 0 && (
-            <Table containerClassName="border-0 border-t-[3px]">
+          {people !== undefined && visible.length > 0 && (
+            <Table containerClassName="max-h-[min(36rem,70vh)] border-0 border-t-[3px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
                   <Checkbox
-                    aria-label="Seleccionar a quien está dentro"
-                    checked={allVisibleSelected}
+                    aria-label={
+                      filter === "in"
+                        ? "Seleccionar a quien está dentro"
+                        : "Seleccionar a quien se puede añadir"
+                    }
+                    checked={filter === "in" ? allVisibleSelected : allAddablePicked}
                     className="mt-0"
-                    onCheckedChange={() => toggleAllVisible()}
+                    disabled={
+                      filter === "canceled" ||
+                      (filter === "in"
+                        ? selectableIds.length === 0
+                        : addableKeys.length === 0)
+                    }
+                    onCheckedChange={() => {
+                      if (filter === "in") {
+                        toggleAllVisible();
+                        return;
+                      }
+                      toggleAllAddable();
+                    }}
                   />
                 </TableHead>
                 <TableHead>Persona</TableHead>
                 <TableHead>Equipo</TableHead>
-                <TableHead>A la final</TableHead>
+                <TableHead>Nota</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Correo</TableHead>
                 <TableHead />
@@ -669,19 +680,32 @@ export default function AdminFinalPage() {
             </TableHeader>
             <TableBody>
               {visible.map((row) => {
-                const busy = pending === row._id;
+                const key = personKey(row);
+                const busy = pending === row.finalistId;
+                const checked =
+                  row.status === "in" && row.finalistId
+                    ? selected.has(row.finalistId)
+                    : picked.has(key);
                 return (
                   <TableRow
-                    key={row._id}
-                    data-state={selected.has(row._id) ? "selected" : undefined}
+                    key={key || row.email}
+                    data-state={checked ? "selected" : undefined}
                   >
                     <TableCell>
                       <Checkbox
                         aria-label={`Seleccionar a ${row.name}`}
-                        checked={selected.has(row._id)}
+                        checked={checked}
                         className="mt-0"
-                        disabled={row.status !== "in"}
-                        onCheckedChange={() => toggleSelected(row._id)}
+                        disabled={row.status === "canceled" || !key}
+                        onCheckedChange={() => {
+                          if (row.status === "in" && row.finalistId) {
+                            toggleSelected(row.finalistId);
+                            return;
+                          }
+                          if (key) {
+                            togglePick(key);
+                          }
+                        }}
                       />
                     </TableCell>
                     <TableCell className="whitespace-normal">
@@ -693,8 +717,13 @@ export default function AdminFinalPage() {
                     <TableCell className="whitespace-normal text-hs-brown">
                       {row.teamName ?? "—"}
                     </TableCell>
-                    <TableCell className="text-xs tabular-nums text-hs-brown">
-                      {ADDED_AT.format(row.addedAt)}
+                    <TableCell className="tabular-nums">
+                      <span className="font-medium">{teamScoreLabel(row)}</span>
+                      {row.scores.length > 0 ? (
+                        <span className="mt-0.5 block text-xs text-hs-brown">
+                          {row.scores.map((value) => formatScore(value)).join(" · ")}
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -704,24 +733,41 @@ export default function AdminFinalPage() {
                           row.status === "canceled" && "bg-hs-red text-hs-paper",
                         )}
                       >
-                        {row.status === "in" ? "Dentro" : "Cancelado"}
+                        {row.status === "in"
+                          ? "Dentro"
+                          : row.status === "canceled"
+                            ? "Cancelado"
+                            : "Fuera"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs tabular-nums text-hs-brown">
-                      {emailLabel(row)}
+                      {row.status === "in" && row.addedAt !== undefined
+                        ? `${emailLabel(row)} · ${ADDED_AT.format(row.addedAt)}`
+                        : emailLabel(row)}
                     </TableCell>
                     <TableCell className="text-right">
                       {row.status === "in" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          aria-busy={busy}
-                          className="text-hs-red"
-                          onClick={() => setConfirm({ kind: "cancelPerson", row })}
-                        >
-                          Cancelar
-                        </Button>
-                      ) : (
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            aria-busy={busy}
+                            disabled={!row.email}
+                            onClick={() => requestSendOne(row)}
+                          >
+                            {row.emailedAt ? "Reenviar" : "Enviar"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            aria-busy={busy}
+                            className="text-hs-red"
+                            onClick={() => setConfirm({ kind: "cancelPerson", row })}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      ) : row.status === "canceled" ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -730,7 +776,7 @@ export default function AdminFinalPage() {
                         >
                           Restaurar
                         </Button>
-                      )}
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 );
@@ -740,6 +786,101 @@ export default function AdminFinalPage() {
           )}
         </div>
       </section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Añadir personas</CardTitle>
+            <CardDescription>
+              Busca por nombre, email o equipo. Quien ya está dentro no sale.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Input
+              aria-label="Buscar participantes"
+              autoComplete="off"
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Nombre, email o equipo"
+              value={search}
+            />
+            {searchQuery.trim().length > 0 ? (
+              <SearchHits
+                candidates={candidates}
+                onToggle={togglePick}
+                picked={picked}
+                searchQuery={searchQuery}
+                searching={searching}
+              />
+            ) : null}
+            <Button
+              disabled={picked.size === 0}
+              aria-busy={pending === "add"}
+              onClick={() => void submitPeople()}
+            >
+              {pending === "add" ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <UserPlus aria-hidden />
+              )}
+              Añadir {picked.size > 0 ? picked.size : ""}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Añadir un equipo</CardTitle>
+            <CardDescription>
+              Entran todos los miembros. Quien ya está dentro se ignora.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Select value={teamId || undefined} onValueChange={setTeamId}>
+              <SelectTrigger id={`${ids}-team`} aria-label="Equipo">
+                <SelectValue placeholder="Elige un equipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {(teams ?? []).map((team: TeamRow) => (
+                  <SelectItem
+                    key={team._id}
+                    value={team._id}
+                    disabled={team.addable === 0}
+                  >
+                    {teamScoreLabel(team)} · {team.name} · {team.memberCount}{" "}
+                    {plural(team.memberCount, "persona", "personas")}
+                    {team.alreadyIn > 0 ? ` · ${team.alreadyIn} ya dentro` : ""}
+                    {team.addable === 0 ? " · completo" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedTeam ? (
+              <p className="text-sm text-hs-brown">
+                {teamScoreLabel(selectedTeam)}
+                {selectedTeam.scores.length > 0
+                  ? ` · jueces ${selectedTeam.scores.map((value) => formatScore(value)).join(" · ")}`
+                  : ""}
+                {" · "}
+                {selectedTeam.addable}{" "}
+                {plural(selectedTeam.addable, "nueva", "nuevas")} ·{" "}
+                {selectedTeam.alreadyIn} ya dentro
+              </p>
+            ) : null}
+            <Button
+              disabled={!selectedTeam || selectedTeam.addable === 0}
+              aria-busy={pending === "team"}
+              onClick={() => void submitTeam()}
+            >
+              {pending === "team" ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <Users aria-hidden />
+              )}
+              Añadir equipo
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
       <Dialog
         open={confirm !== null}

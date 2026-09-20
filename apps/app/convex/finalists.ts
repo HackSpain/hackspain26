@@ -18,6 +18,15 @@ import {
   finalEmailText,
   firstNameFrom,
 } from "./lib/finalEmail";
+import {
+  DEFAULT_LAMBDA,
+  JUDGING_ROUND_KEY,
+  JUDGING_SETTINGS_KEY,
+  assessmentScore,
+  estimateGenerosity,
+  rankProjects,
+} from "./lib/judging";
+import type { PairedObservation } from "./lib/judging";
 import { membershipForUser } from "./lib/team";
 import { finalistStatusValidator } from "./lib/validators";
 
@@ -356,13 +365,305 @@ export const searchPeople = adminQuery({
   ),
 });
 
+const personRowValidator = v.object({
+  addedAt: v.optional(v.number()),
+  alreadyIn: v.boolean(),
+  email: v.string(),
+  emailedAt: v.optional(v.number()),
+  finalistId: v.optional(v.id("finalists")),
+  name: v.string(),
+  rank: v.union(v.number(), v.null()),
+  score: v.union(v.number(), v.null()),
+  scores: v.array(v.number()),
+  signupId: v.optional(v.id("signups")),
+  status: v.union(finalistStatusValidator, v.literal("out")),
+  teamName: v.optional(v.string()),
+  userId: v.optional(v.id("users")),
+});
+
+function preferMemberTeam(
+  current: Id<"teams"> | undefined,
+  next: Id<"teams">,
+  currentIsMember: boolean | undefined,
+  nextIsMember: boolean
+) {
+  if (!current || (nextIsMember && !currentIsMember)) {
+    return next;
+  }
+  return current;
+}
+
+export const listPeople = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const [signups, users, finalists, teamMembers, teams, teamScores] =
+      await Promise.all([
+        ctx.db.query("signups").collect(),
+        ctx.db.query("users").collect(),
+        ctx.db.query("finalists").collect(),
+        ctx.db.query("teamMembers").collect(),
+        ctx.db.query("teams").collect(),
+        scoresByTeam(ctx),
+      ]);
+
+    const teamsById = new Map(teams.map((team) => [team._id, team]));
+    const teamByUser = new Map<Id<"users">, Id<"teams">>();
+    const teamBySignup = new Map<Id<"signups">, Id<"teams">>();
+    const memberUser = new Map<Id<"users">, boolean>();
+    const memberSignup = new Map<Id<"signups">, boolean>();
+    for (const member of teamMembers) {
+      const isMember = member.status === "member";
+      if (member.userId) {
+        const next = preferMemberTeam(
+          teamByUser.get(member.userId),
+          member.teamId,
+          memberUser.get(member.userId),
+          isMember
+        );
+        teamByUser.set(member.userId, next);
+        if (next === member.teamId) {
+          memberUser.set(member.userId, isMember);
+        }
+      }
+      if (member.signupId) {
+        const next = preferMemberTeam(
+          teamBySignup.get(member.signupId),
+          member.teamId,
+          memberSignup.get(member.signupId),
+          isMember
+        );
+        teamBySignup.set(member.signupId, next);
+        if (next === member.teamId) {
+          memberSignup.set(member.signupId, isMember);
+        }
+      }
+    }
+
+    const finalistByUser = new Map<Id<"users">, Doc<"finalists">>();
+    const finalistBySignup = new Map<Id<"signups">, Doc<"finalists">>();
+    for (const row of finalists) {
+      if (row.userId) {
+        finalistByUser.set(row.userId, row);
+      }
+      if (row.signupId) {
+        finalistBySignup.set(row.signupId, row);
+      }
+    }
+
+    const usersBySignup = new Map(
+      users
+        .filter((user) => user.signupId !== undefined)
+        .map((user) => [user.signupId as Id<"signups">, user])
+    );
+    const usersByEmail = new Map(
+      users
+        .filter((user) => user.email)
+        .map((user) => [user.email as string, user])
+    );
+
+    const seen = new Set<string>();
+    const people: {
+      addedAt?: number;
+      alreadyIn: boolean;
+      email: string;
+      emailedAt?: number;
+      finalistId?: Id<"finalists">;
+      name: string;
+      rank: number | null;
+      score: number | null;
+      scores: number[];
+      signupId?: Id<"signups">;
+      status: "in" | "canceled" | "out";
+      teamName?: string;
+      userId?: Id<"users">;
+    }[] = [];
+
+    const pushPerson = (input: {
+      email: string;
+      name: string;
+      signupId?: Id<"signups">;
+      userId?: Id<"users">;
+    }) => {
+      const key = input.userId ?? input.signupId ?? input.email;
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      const teamId =
+        (input.userId ? teamByUser.get(input.userId) : undefined) ??
+        (input.signupId ? teamBySignup.get(input.signupId) : undefined);
+      const judging = teamId ? teamScores.get(teamId) : undefined;
+      const finalist =
+        (input.userId ? finalistByUser.get(input.userId) : undefined) ??
+        (input.signupId ? finalistBySignup.get(input.signupId) : undefined);
+      const status = finalist?.status ?? "out";
+      people.push({
+        addedAt: finalist?.addedAt,
+        alreadyIn: status === "in",
+        email: input.email,
+        emailedAt: finalist?.emailedAt,
+        finalistId: finalist?._id,
+        name: input.name,
+        rank: judging?.rank ?? null,
+        score: judging?.score ?? null,
+        scores: judging?.scores ?? [],
+        signupId: input.signupId,
+        status,
+        teamName: teamId ? teamsById.get(teamId)?.name : undefined,
+        userId: input.userId,
+      });
+    };
+
+    for (const signup of signups) {
+      const user =
+        usersBySignup.get(signup._id) ?? usersByEmail.get(signup.email);
+      pushPerson({
+        email: signup.email,
+        name: user?.name ?? signup.fullName,
+        signupId: signup._id,
+        userId: user?._id,
+      });
+    }
+    for (const user of users) {
+      if (!user.email) {
+        continue;
+      }
+      pushPerson({
+        email: user.email,
+        name: user.name ?? user.email,
+        signupId: user.signupId,
+        userId: user._id,
+      });
+    }
+
+    return people.toSorted((a, b) => {
+      if (a.score === null && b.score === null) {
+        return a.name.localeCompare(b.name, "es");
+      }
+      if (a.score === null) {
+        return 1;
+      }
+      if (b.score === null) {
+        return -1;
+      }
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return a.name.localeCompare(b.name, "es");
+    });
+  },
+  returns: v.array(personRowValidator),
+});
+
+async function scoresByTeam(ctx: QueryCtx | MutationCtx) {
+  const [submissions, assessments, round, settings] = await Promise.all([
+    ctx.db
+      .query("submissions")
+      .withIndex("by_status", (q) => q.eq("status", "submitted"))
+      .collect(),
+    ctx.db.query("assessments").collect(),
+    ctx.db
+      .query("judgingRounds")
+      .withIndex("by_key", (q) => q.eq("key", JUDGING_ROUND_KEY))
+      .unique(),
+    ctx.db
+      .query("judgingSettings")
+      .withIndex("by_key", (q) => q.eq("key", JUDGING_SETTINGS_KEY))
+      .unique(),
+  ]);
+
+  const judgeIds = round?.judgeIds ?? [];
+  const judgeSet = new Set(judgeIds);
+  const assessmentsBySubmission = new Map<
+    Id<"submissions">,
+    Doc<"assessments">[]
+  >();
+  for (const row of assessments) {
+    const rows = assessmentsBySubmission.get(row.submissionId) ?? [];
+    rows.push(row);
+    assessmentsBySubmission.set(row.submissionId, rows);
+  }
+
+  const observations: PairedObservation<Id<"users">>[] = [];
+  const scored: {
+    project: Id<"submissions">;
+    assessments: { judge: Id<"users">; score: number }[];
+  }[] = [];
+
+  for (const submission of submissions) {
+    const submitted = [];
+    for (const row of assessmentsBySubmission.get(submission._id) ?? []) {
+      const score = assessmentScore({
+        craftsmanship: row.craftsmanship,
+        creativity: row.creativity,
+        overall: row.overall,
+        problemSolving: row.problemSolving,
+        status: row.status,
+      });
+      if (score === null) {
+        continue;
+      }
+      if (judgeSet.size > 0 && !judgeSet.has(row.judgeId)) {
+        continue;
+      }
+      submitted.push({ judge: row.judgeId, score });
+    }
+    if (submitted.length === 2) {
+      const [a, b] = submitted;
+      if (a && b) {
+        observations.push({
+          judgeA: a.judge,
+          judgeB: b.judge,
+          scoreA: a.score,
+          scoreB: b.score,
+        });
+      }
+    }
+    scored.push({ project: submission._id, assessments: submitted });
+  }
+
+  const generosity = round
+    ? estimateGenerosity(
+        judgeIds,
+        observations,
+        settings?.lambda ?? DEFAULT_LAMBDA,
+      )
+    : new Map<Id<"users">, number>();
+  const ranked = new Map(
+    rankProjects(scored, generosity).map((result) => [result.project, result]),
+  );
+
+  const byTeam = new Map<
+    Id<"teams">,
+    { rank: number | null; score: number | null; scores: number[] }
+  >();
+  for (const submission of submissions) {
+    if (!submission.teamId) {
+      continue;
+    }
+    const result = ranked.get(submission._id);
+    const scores = (result?.assessments ?? []).map((row) => row.score);
+    const score = result?.calibratedMean ?? result?.rawMean ?? null;
+    const current = byTeam.get(submission.teamId);
+    if (!current || (score ?? -1) > (current.score ?? -1)) {
+      byTeam.set(submission.teamId, {
+        rank: result?.rank ?? null,
+        score,
+        scores,
+      });
+    }
+  }
+  return byTeam;
+}
+
 export const listTeams = adminQuery({
   args: {},
   handler: async (ctx) => {
-    const [teams, members, finalists] = await Promise.all([
+    const [teams, members, finalists, teamScores] = await Promise.all([
       ctx.db.query("teams").collect(),
       ctx.db.query("teamMembers").collect(),
       ctx.db.query("finalists").collect(),
+      scoresByTeam(ctx),
     ]);
     const inUserIds = new Set(
       finalists
@@ -402,6 +703,7 @@ export const listTeams = adminQuery({
           addable += 1;
         }
       }
+      const judging = teamScores.get(team._id);
       result.push({
         _id: team._id,
         addable,
@@ -409,9 +711,26 @@ export const listTeams = adminQuery({
         memberCount: teamMembers.filter((member) => member.status === "member")
           .length,
         name: team.name,
+        rank: judging?.rank ?? null,
+        score: judging?.score ?? null,
+        scores: judging?.scores ?? [],
       });
     }
-    return result.toSorted((a, b) => a.name.localeCompare(b.name, "es"));
+    return result.toSorted((a, b) => {
+      if (a.score === null && b.score === null) {
+        return a.name.localeCompare(b.name, "es");
+      }
+      if (a.score === null) {
+        return 1;
+      }
+      if (b.score === null) {
+        return -1;
+      }
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return a.name.localeCompare(b.name, "es");
+    });
   },
   returns: v.array(
     v.object({
@@ -420,6 +739,9 @@ export const listTeams = adminQuery({
       alreadyIn: v.number(),
       memberCount: v.number(),
       name: v.string(),
+      rank: v.union(v.number(), v.null()),
+      score: v.union(v.number(), v.null()),
+      scores: v.array(v.number()),
     })
   ),
 });
