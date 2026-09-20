@@ -265,6 +265,20 @@ export default function AdminFinalPage() {
     });
   }
 
+  function toggleRow(row: Person) {
+    if (row.status === "canceled") {
+      return;
+    }
+    if (row.status === "in" && row.finalistId) {
+      toggleSelected(row.finalistId);
+      return;
+    }
+    const key = personKey(row);
+    if (key) {
+      togglePick(key);
+    }
+  }
+
   function toggleAllVisible() {
     setSelected((current) => {
       const next = new Set(current);
@@ -617,6 +631,12 @@ export default function AdminFinalPage() {
                   <TableRow
                     key={key || row.email}
                     data-state={checked ? "selected" : undefined}
+                    className={
+                      row.status === "canceled" || !key
+                        ? undefined
+                        : "cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60"
+                    }
+                    onClick={() => toggleRow(row)}
                   >
                     <TableCell>
                       <Checkbox
@@ -624,15 +644,8 @@ export default function AdminFinalPage() {
                         checked={checked}
                         className="mt-0"
                         disabled={row.status === "canceled" || !key}
-                        onCheckedChange={() => {
-                          if (row.status === "in" && row.finalistId) {
-                            toggleSelected(row.finalistId);
-                            return;
-                          }
-                          if (key) {
-                            togglePick(key);
-                          }
-                        }}
+                        onClick={(event) => event.stopPropagation()}
+                        onCheckedChange={() => toggleRow(row)}
                       />
                     </TableCell>
                     <TableCell className="whitespace-normal">
@@ -680,7 +693,10 @@ export default function AdminFinalPage() {
                             variant="outline"
                             aria-busy={busy}
                             disabled={!row.email}
-                            onClick={() => requestSendOne(row)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              requestSendOne(row);
+                            }}
                           >
                             {row.emailedAt ? "Reenviar" : "Enviar"}
                           </Button>
@@ -689,7 +705,10 @@ export default function AdminFinalPage() {
                             variant="outline"
                             aria-busy={busy}
                             className="text-hs-red"
-                            onClick={() => setConfirm({ kind: "cancelPerson", row })}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setConfirm({ kind: "cancelPerson", row });
+                            }}
                           >
                             Cancelar
                           </Button>
@@ -699,7 +718,10 @@ export default function AdminFinalPage() {
                           size="sm"
                           variant="outline"
                           aria-busy={busy}
-                          onClick={() => void submitStatus(row, "in")}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void submitStatus(row, "in");
+                          }}
                         >
                           Restaurar
                         </Button>
