@@ -15,7 +15,17 @@ import {
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { isPublicAppPath } from "@/lib/public-paths";
-import { isPathAllowedWhenClosed, sectionForPath } from "@/lib/sections";
+import {
+  hasSponsorCatalog,
+  isAnyJudgingPath,
+  isJudgingPath,
+  isPathAllowedWhenClosed,
+  isSponsorJudgingPath,
+  judgingDashboardHome,
+  JUDGING_PATH,
+  JUDGING_SPONSORS_PATH,
+  sectionForPath,
+} from "@/lib/sections";
 
 function destination(me: {
   role: Role;
@@ -189,34 +199,41 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Hidden sections (CRM user type) bounce home; a judge without a signup
-    // then continues to /judging through the ladder below.
+    // Hidden sections (CRM user type) bounce home; a judge or sponsor without
+    // a signup then continues to their dashboard through the ladder below.
     const section = sectionForPath(pathname);
     if (section && !me.sections.includes(section)) {
       router.replace("/");
       return;
     }
 
-    // Judges by role or by user type may judge without a signup.
-    if (me.canJudge) {
+    const catalogAccess = hasSponsorCatalog(me.sections);
+    const dashboardAccess = me.canJudge || catalogAccess;
+    if (dashboardAccess) {
       if (pathname.startsWith("/admin")) {
         router.replace("/");
         return;
       }
-      // Name, photo and card come before the judging panel; a judge without
-      // a signup skips only the phone step inside the wizard.
       if (!me.profileComplete) {
         if (pathname !== "/onboarding") {
           router.replace("/onboarding");
         }
         return;
       }
-      if (pathname === "/judging" || pathname.startsWith("/judging")) {
+      const home = judgingDashboardHome(me);
+      if (isAnyJudgingPath(pathname)) {
+        if (isJudgingPath(pathname) && !me.canJudge) {
+          router.replace(JUDGING_SPONSORS_PATH);
+          return;
+        }
+        if (isSponsorJudgingPath(pathname) && !catalogAccess) {
+          router.replace(JUDGING_PATH);
+          return;
+        }
         return;
       }
       if (pathname === "/login") {
-        const next = destination(me);
-        router.replace(next ?? "/");
+        router.replace(home);
         return;
       }
       const next = destination(me);
@@ -226,7 +243,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           next === "/unregistered" ||
           next === "/onboarding"
         ) {
-          router.replace("/judging");
+          router.replace(home);
           return;
         }
         router.replace(next);
@@ -236,10 +253,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         !next &&
         (pathname === "/onboarding" ||
           pathname === "/unregistered" ||
-          pathname === "/pending" ||
-          pathname === "/login")
+          pathname === "/pending")
       ) {
-        router.replace("/");
+        router.replace(home);
       }
       return;
     }
@@ -338,6 +354,8 @@ function resolveView({
       return "blank";
     }
     const next = destination(me);
+    const dashboardAccess =
+      me.canJudge || hasSponsorCatalog(me.sections);
     const isRequiredStatusPage =
       pathname === next && (next === "/unregistered" || next === "/pending");
     if (!me.profileComplete && !isRequiredStatusPage) {
@@ -346,22 +364,35 @@ function resolveView({
       }
       // The effect keeps a judge here even without a signup; everyone else
       // still has to be registered and accepted first (ladder below).
-      if (me.canJudge) {
+      if (dashboardAccess) {
         return "page";
       }
     }
-    const judgingAllowed = me.canJudge && pathname.startsWith("/judging");
+    const judgingAllowed =
+      (me.canJudge && isJudgingPath(pathname)) ||
+      (hasSponsorCatalog(me.sections) && isSponsorJudgingPath(pathname));
     if (!judgingAllowed) {
+      if (dashboardAccess && pathname === "/login") {
+        return "blank";
+      }
       if (
-        me.canJudge &&
+        dashboardAccess &&
         next &&
         (next === "/pending" ||
           next === "/unregistered" ||
           next === "/onboarding")
       ) {
-        if (pathname !== "/judging") {
+        if (pathname !== judgingDashboardHome(me)) {
           return "blank";
         }
+      } else if (
+        dashboardAccess &&
+        !next &&
+        (pathname === "/onboarding" ||
+          pathname === "/unregistered" ||
+          pathname === "/pending")
+      ) {
+        return "blank";
       } else if (next && pathname !== next) {
         return "blank";
       }

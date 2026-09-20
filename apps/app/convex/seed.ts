@@ -12,7 +12,12 @@ import {
   UNIVERSITY_OPTIONS,
 } from "./lib/directoryOptions";
 import { JUDGING_SETTINGS_KEY } from "./lib/judging";
-import { PARTICIPANT_SECTIONS, slugify } from "./lib/userTypes";
+import {
+  isSponsorType,
+  PARTICIPANT_SECTIONS,
+  slugify,
+  withSponsorCatalog,
+} from "./lib/userTypes";
 import type { Sections } from "./lib/userTypes";
 import { seedDefaults as seedTracks } from "./tracks";
 
@@ -271,7 +276,7 @@ const USER_TYPES: {
   { label: "Hacker", description: "Participa en la hackathon.", sections: PARTICIPANT_SECTIONS, isDefault: true },
   { label: "Jurado", description: "Puntúa proyectos en el panel del jurado.", sections: ["judging"], isDefault: false },
   { label: "Mentor", description: "Acompaña a los equipos durante el evento.", sections: ["tracks", "participantes", "cli"], isDefault: false },
-  { label: "Sponsor", description: "Partner del evento: retos y perks.", sections: ["tracks", "perks", "participantes"], isDefault: false },
+  { label: "Sponsor", description: "Partner del evento: retos, perks y entregas.", sections: ["tracks", "perks", "participantes", "judgingSponsors"], isDefault: false },
 ];
 
 // ---------- helpers ----------
@@ -327,6 +332,15 @@ async function upsertUserType(
     all.find((row) => row.slug === slug) ??
     all.find((row) => [...row.sections].toSorted().join(",") === wanted);
   if (existing) {
+    if (isSponsorType(existing)) {
+      const next = withSponsorCatalog(existing.sections);
+      if (next.join(",") !== existing.sections.join(",")) {
+        await ctx.db.patch(existing._id, {
+          sections: next,
+          updatedAt: Date.now(),
+        });
+      }
+    }
     return existing._id;
   }
   const now = Date.now();

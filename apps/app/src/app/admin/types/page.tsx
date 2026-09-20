@@ -232,6 +232,9 @@ function TypeCard({
           {type.isDefault ? <Badge variant="gold">Por defecto</Badge> : null}
           <Badge className="tabular-nums">{userCount(type.userCount)}</Badge>
           {type.sections.includes("judging") ? <Badge>Juzga</Badge> : null}
+          {type.sections.includes("judgingSponsors") ? (
+            <Badge>Entregas</Badge>
+          ) : null}
         </CardTitle>
         {type.description ? (
           <CardDescription>{type.description}</CardDescription>

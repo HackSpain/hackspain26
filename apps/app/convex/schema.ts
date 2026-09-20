@@ -14,6 +14,7 @@ import {
   perkInputValidator,
   perkTypeValidator,
   roleValidator,
+  scoreValueValidator,
 } from "./lib/validators";
 
 export default defineSchema({
@@ -467,10 +468,67 @@ export default defineSchema({
 
   judgingSettings: defineTable({
     key: v.string(),
-    generalGroupCount: v.number(),
+    /** Ridge regularisation for judge generosity. Fixed before judging starts. */
+    lambda: v.optional(v.number()),
+    /** Raw-score gap between the two assessments that flags a project. */
+    disagreementThreshold: v.optional(v.number()),
     updatedAt: v.number(),
+    /** Legacy general-group setting. No longer read. */
+    generalGroupCount: v.optional(v.number()),
   }).index("by_key", ["key"]),
 
+  /** One persisted assignment run: the seed and the shuffled orders it used. */
+  judgingRounds: defineTable({
+    key: v.string(),
+    seed: v.string(),
+    judgeIds: v.array(v.id("users")),
+    submissionIds: v.array(v.id("submissions")),
+    swaps: v.number(),
+    generatedBy: v.id("users"),
+    generatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  assessmentAssignments: defineTable({
+    roundId: v.id("judgingRounds"),
+    submissionId: v.id("submissions"),
+    judgeId: v.id("users"),
+    slot: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_round", ["roundId"])
+    .index("by_judge", ["judgeId"])
+    .index("by_submission", ["submissionId"])
+    .index("by_judge_submission", ["judgeId", "submissionId"]),
+
+  assessments: defineTable({
+    submissionId: v.id("submissions"),
+    judgeId: v.id("users"),
+    status: v.union(v.literal("draft"), v.literal("submitted")),
+    craftsmanship: v.optional(scoreValueValidator),
+    problemSolving: v.optional(scoreValueValidator),
+    creativity: v.optional(scoreValueValidator),
+    overall: v.optional(scoreValueValidator),
+    ownCriteriaComment: v.string(),
+    submittedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_judge", ["judgeId"])
+    .index("by_submission", ["submissionId"])
+    .index("by_judge_submission", ["judgeId", "submissionId"])
+    .index("by_status", ["status"]),
+
+  judgingConflicts: defineTable({
+    judgeId: v.id("users"),
+    submissionId: v.id("submissions"),
+    note: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_judge", ["judgeId"])
+    .index("by_judge_submission", ["judgeId", "submissionId"]),
+
+  /** Legacy group judging. Unused; kept so existing rows still validate. */
   judgingScores: defineTable({
     submissionId: v.id("submissions"),
     judgeId: v.id("users"),

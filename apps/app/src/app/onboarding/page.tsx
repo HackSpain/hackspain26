@@ -13,6 +13,7 @@ import { LinksStep } from "@/components/onboarding/links-step";
 import { planSteps, STEP_COPY } from "@/components/onboarding/steps";
 import type { StepId } from "@/components/onboarding/steps";
 import { AuthScreen, LoadingText } from "@/components/page";
+import { judgingDashboardHome } from "@/lib/sections";
 import {
   EASE_OUT,
   reducedStepVariants,
@@ -53,10 +54,15 @@ export default function OnboardingPage() {
 
   const done = steps !== null && index >= steps.length;
   useEffect(() => {
-    if (done) {
-      router.replace("/");
+    if (!done || !me) {
+      return;
     }
-  }, [done, router]);
+    const next =
+      me.canJudge || me.sections.includes("judgingSponsors")
+        ? judgingDashboardHome(me)
+        : "/";
+    router.replace(next);
+  }, [done, me, router]);
 
   const step = steps?.[index];
   if (!me || !steps || !step) {
