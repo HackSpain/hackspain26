@@ -485,6 +485,22 @@ export default defineSchema({
     .index("by_judge_submission", ["judgeId", "submissionId"])
     .index("by_context", ["contextKind", "contextKey"]),
 
+  finalists: defineTable({
+    userId: v.optional(v.id("users")),
+    signupId: v.optional(v.id("signups")),
+    status: v.union(v.literal("in"), v.literal("canceled")),
+    cancelToken: v.string(),
+    addedAt: v.number(),
+    addedBy: v.id("users"),
+    emailedAt: v.optional(v.number()),
+    canceledAt: v.optional(v.number()),
+    canceledBy: v.optional(v.union(v.literal("self"), v.literal("admin"))),
+  })
+    .index("by_user", ["userId"])
+    .index("by_signup", ["signupId"])
+    .index("by_status", ["status"])
+    .index("by_token", ["cancelToken"]),
+
   judgingAssignments: defineTable({
     userId: v.id("users"),
     contextKind: v.optional(v.union(v.literal("general"), v.literal("track"))),

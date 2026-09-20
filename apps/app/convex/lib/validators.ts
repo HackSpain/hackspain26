@@ -47,6 +47,11 @@ export const attendanceValidator = v.union(
   v.literal("undecided")
 );
 
+export const finalistStatusValidator = v.union(
+  v.literal("in"),
+  v.literal("canceled")
+);
+
 /** In-app claim (`email` / `code`) or a partner-site link (`external`). */
 export const perkTypeValidator = v.union(
   v.literal("email"),

@@ -14,7 +14,7 @@ import {
 } from "@/components/login-transition";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { RECEPTION_PATH } from "@/lib/reception";
+import { isPublicAppPath } from "@/lib/public-paths";
 import { isPathAllowedWhenClosed, sectionForPath } from "@/lib/sections";
 
 function destination(me: {
@@ -125,11 +125,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, isLoading, transition]);
 
   useEffect(() => {
-    if (
-      pathname === "/tv" ||
-      pathname === CLI_HANDOFF_PATH ||
-      pathname === RECEPTION_PATH
-    ) {
+    if (isPublicAppPath(pathname) || pathname === CLI_HANDOFF_PATH) {
       return;
     }
     if (isLoading) {
@@ -268,12 +264,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, isLoading, me, pathname, router]);
 
   // These routes render without waiting on auth. The handoff creates its own
-  // session; the TV and reception station are intentionally public.
-  if (
-    pathname === "/tv" ||
-    pathname === CLI_HANDOFF_PATH ||
-    pathname === RECEPTION_PATH
-  ) {
+  // session; TV, reception and the finals cancel page are intentionally public.
+  if (isPublicAppPath(pathname) || pathname === CLI_HANDOFF_PATH) {
     return <>{children}</>;
   }
 
