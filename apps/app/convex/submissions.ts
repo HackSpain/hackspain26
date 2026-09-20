@@ -6,6 +6,7 @@ import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { isAdmin, requireOnboarded } from "./lib/auth";
 import {
   adminQuery,
+  anytimeOnboardedQuery,
   onboardedMutation,
   onboardedQuery,
 } from "./lib/customFunctions";
@@ -229,7 +230,7 @@ function projectUrls(repoUrl?: string, demoUrl?: string, videoUrl?: string) {
   ]);
 }
 
-export const mine = onboardedQuery({
+export const mine = anytimeOnboardedQuery({
   args: {},
   handler: async (ctx) => {
     const submission = await findOwnedSubmission(ctx, ctx.user._id);

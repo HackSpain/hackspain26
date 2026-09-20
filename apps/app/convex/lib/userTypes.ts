@@ -106,6 +106,9 @@ export function effectiveSections(
   if (isSponsorType(type)) {
     return withSponsorCatalog(sections);
   }
+  if (sections.includes("judging")) {
+    return normalizeSections([...sections, "judgingSponsors"]);
+  }
   return sections;
 }
 

@@ -37,14 +37,15 @@ export default function HomePage() {
   const eligible = Boolean(
     me && (me.role === "admin" || (me.accepted && me.onboardingComplete))
   );
-  const project = useQuery(api.submissions.mine, eligible ? {} : "skip");
+  // Missing `event` (older users.me) counts as open, same as unscheduled.
+  const eventOpen = isEventOpen(me?.event);
+  const project = useQuery(
+    api.submissions.mine,
+    eligible && eventOpen ? {} : "skip",
+  );
   if (!me) {
     return <LoadingText />;
   }
-
-  // feed.list throws EVENT_CLOSED outside the window, so never mount it then.
-  // Missing `event` (older users.me) counts as open, same as unscheduled.
-  const eventOpen = isEventOpen(me.event);
   const canPost = eligible && eventOpen;
   const featuredSubmit =
     eventOpen &&
@@ -71,6 +72,7 @@ export default function HomePage() {
           sections={me.sections}
           eventOpen={eventOpen}
           featuredSubmit={featuredSubmit}
+          canJudge={me.canJudge}
           className="lg:sticky lg:top-5 lg:order-2 lg:-m-1 lg:max-h-[calc(100dvh-2.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-1 lg:[scrollbar-width:thin]"
         />
         <section aria-label="Feed" className="min-w-0 space-y-4 lg:order-1">

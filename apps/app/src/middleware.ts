@@ -3,6 +3,7 @@ import {
   createRouteMatcher,
   nextjsMiddlewareRedirect,
 } from "@convex-dev/auth/nextjs/server";
+import { CLOSING_PATH } from "@/lib/closing";
 import { RECEPTION_PATH } from "@/lib/reception";
 
 // /api/cli/* authenticates with a bearer token, not the cookie session.
@@ -25,8 +26,10 @@ const isPublicRoute = createRouteMatcher([
   "/api/tv",
   "/api/tv/insights",
   "/api/reception",
+  "/api/cierre(.*)",
   "/betterstack(.*)",
   RECEPTION_PATH,
+  CLOSING_PATH,
   "/final/cancelar",
 ]);
 

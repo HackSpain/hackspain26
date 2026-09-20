@@ -90,13 +90,29 @@ export async function requireJudgeInEvent(ctx: Ctx): Promise<Doc<"users">> {
   return user;
 }
 
-export async function requireSponsorCatalogInEvent(
+/** Challenge catalog: judges may read it outside the window and without a signup. */
+export async function requireTracksViewer(ctx: Ctx): Promise<Doc<"users">> {
+  const user = await getCurrentUser(ctx);
+  if (await canJudge(ctx, user)) {
+    return user;
+  }
+  return await requireInEvent(ctx);
+}
+
+export async function requireSponsorCatalog(
   ctx: Ctx
 ): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
   if (!(await canBrowseSponsorCatalog(ctx, user))) {
     throw new Error("Se necesita acceso de sponsor");
   }
+  return user;
+}
+
+export async function requireSponsorCatalogInEvent(
+  ctx: Ctx
+): Promise<Doc<"users">> {
+  const user = await requireSponsorCatalog(ctx);
   await requireEventOpen(ctx, user);
   return user;
 }

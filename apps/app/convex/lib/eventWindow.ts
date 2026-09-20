@@ -86,8 +86,9 @@ export function closedMessage(phase: EventPhase, window: EventWindow): string {
 
 /**
  * Throws `EVENT_CLOSED` for participants outside the scheduled window. Admins
- * are never gated. Wired into the onboarded and judge ladders in
- * customFunctions.ts, which is what the CLI's rpc route runs.
+ * are never gated. Wired into the onboarded participant ladder in
+ * customFunctions.ts. Judging uses requireJudge without a window check so
+ * scoring can continue after submit closes.
  */
 export async function requireEventOpen(
   ctx: Ctx,

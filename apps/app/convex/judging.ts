@@ -444,6 +444,21 @@ export const myQueue = judgeQuery({
   }),
 });
 
+export const getDelivery = catalogQuery({
+  args: { submissionId: v.id("submissions") },
+  handler: async (ctx, args) => {
+    const catalog = await loadCatalog(ctx);
+    const submission = catalog.submitted.find(
+      (row) => row._id === args.submissionId
+    );
+    if (!submission) {
+      return null;
+    }
+    return projectFields(submission, catalog);
+  },
+  returns: v.union(v.object(projectMeta), v.null()),
+});
+
 export const trackCatalog = catalogQuery({
   args: { trackSlug: v.optional(v.string()) },
   handler: async (ctx, args) => {
