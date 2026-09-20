@@ -33,17 +33,8 @@ import { urlOf } from "@/lib/urls";
 export const PROJECT_PARAM = "proyecto";
 export const TRACK_PARAM = "reto";
 
-export function deliveryHref(item: {
-  _id: string;
-  challenges: { slug?: string }[];
-}): string {
-  const params = new URLSearchParams();
-  const slug = item.challenges[0]?.slug;
-  if (slug) {
-    params.set(TRACK_PARAM, slug);
-  }
-  params.set(PROJECT_PARAM, item._id);
-  return `${JUDGING_SPONSORS_PATH}?${params}`;
+export function deliveryHref(item: { _id: string }): string {
+  return `${JUDGING_SPONSORS_PATH}/${item._id}`;
 }
 
 export type ProjectRow = ProjectInfo & {

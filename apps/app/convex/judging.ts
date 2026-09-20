@@ -444,11 +444,23 @@ export const myQueue = judgeQuery({
   }),
 });
 
-export const trackCatalog = catalogQuery({
-  args: {
-    submissionId: v.optional(v.id("submissions")),
-    trackSlug: v.optional(v.string()),
+export const getDelivery = catalogQuery({
+  args: { submissionId: v.id("submissions") },
+  handler: async (ctx, args) => {
+    const catalog = await loadCatalog(ctx);
+    const submission = catalog.submitted.find(
+      (row) => row._id === args.submissionId
+    );
+    if (!submission) {
+      return null;
+    }
+    return projectFields(submission, catalog);
   },
+  returns: v.union(v.object(projectMeta), v.null()),
+});
+
+export const trackCatalog = catalogQuery({
+  args: { trackSlug: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const catalog = await loadCatalog(ctx);
     const tracks = [...catalog.tracksById.values()]
@@ -463,22 +475,10 @@ export const trackCatalog = catalogQuery({
       }
     }
     const wanted = args.trackSlug?.trim();
-    let selectedTrack =
-      wanted ? tracks.find((track) => track.slug === wanted) : undefined;
-    if (args.submissionId) {
-      const linked = catalog.submitted.find(
-        (row) => row._id === args.submissionId
-      );
-      const inWanted =
-        selectedTrack !== undefined &&
-        linked?.challengeIds.includes(selectedTrack._id);
-      if (linked && !inWanted) {
-        selectedTrack = tracks.find((track) =>
-          linked.challengeIds.includes(track._id)
-        );
-      }
-    }
-    selectedTrack = selectedTrack ?? tracks[0] ?? null;
+    const selectedTrack =
+      (wanted ? tracks.find((track) => track.slug === wanted) : undefined) ??
+      tracks[0] ??
+      null;
     const selected = selectedTrack?._id ?? null;
     const items = [];
     if (selected) {
