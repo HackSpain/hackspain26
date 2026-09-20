@@ -136,10 +136,8 @@ function renderReady(
             ? {
                 name: submission.name || null,
                 submitted: submission.status === "submitted",
-                tracks: submission.challenges.length > 0 ? 1 : 0,
-                trackLabels: submission.challenges[0]
-                  ? [submission.challenges[0].label]
-                  : [],
+                tracks: submission.challenges.length,
+                trackLabels: submission.challenges.map((track) => track.label),
               }
             : null,
         })

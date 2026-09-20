@@ -59,6 +59,18 @@ const DEFAULT_TRACKS = [
 ] as const;
 
 const RETIRED_SLUGS = ["ml", "non-tech"] as const;
+const THEKER_SLUG = "theker";
+
+/** A project may enter one track, or THEKER together with one other track. */
+export function isTrackCombinationAllowed(
+  tracks: readonly { slug: string }[]
+): boolean {
+  return (
+    tracks.length <= 1 ||
+    (tracks.length === 2 &&
+      tracks.filter((track) => track.slug === THEKER_SLUG).length === 1)
+  );
+}
 
 /** Projects (team or solo, draft or submitted) one track takes. */
 export const MAX_TEAMS_PER_TRACK = 15;

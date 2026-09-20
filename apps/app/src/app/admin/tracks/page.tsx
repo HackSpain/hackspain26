@@ -91,7 +91,7 @@ function TracksAdmin() {
   return (
     <Page
       title="Retos y proyectos"
-      description="Los retos viven en Convex. Un equipo entra en un solo reto."
+      description="Los retos viven en Convex. THEKER se puede combinar con otro reto."
     >
       <Card>
         <CardHeader>

@@ -234,9 +234,9 @@ than equating fewer reads with a guaranteed duration.
 
 ## 2026-09-18 — Stale agent instructions can reintroduce removed behavior
 
-**Evidence.** The previous `AGENTS.md` simultaneously called Insights mock-only and described live insights, documented a superseded RawTree dual-write path, and said projects could enter multiple tracks despite the current one-track validation. The dashboard README also explicitly forbade the auth bypass needed to correct the observed firewall problem.
+**Evidence.** The previous `AGENTS.md` simultaneously called Insights mock-only and described live insights, documented a superseded RawTree dual-write path, and described unrestricted multi-track projects despite the track-combination validation. The dashboard README also explicitly forbade the auth bypass needed to correct the observed firewall problem.
 
-**Correction and prevention.** Keep agent instructions focused on coding invariants and pointers. Read the current implementation when documentation conflicts, then fix the relevant documentation with the task. Current telemetry ingestion exports OTLP logs, and insights read those logs with permanent event deduplication; do not revive the old custom-table write or add a second source of truth. `challengeIds` remains an array but its name/type does not imply multiple tracks are allowed. Put dated evidence and operational lessons here instead of appending implementation histories or “this branch” status to `AGENTS.md`.
+**Correction and prevention.** Keep agent instructions focused on coding invariants and pointers. Read the current implementation when documentation conflicts, then fix the relevant documentation with the task. Current telemetry ingestion exports OTLP logs, and insights read those logs with permanent event deduplication; do not revive the old custom-table write or add a second source of truth. A project may enter one track, or exactly two when one is THEKER; enforce that rule in participant and admin writes rather than inferring policy from the `challengeIds` array type. Put dated evidence and operational lessons here instead of appending implementation histories or “this branch” status to `AGENTS.md`.
 
 ## 2026-09-19 — TV heartbeat cleanup must exclude live peers from its read set
 

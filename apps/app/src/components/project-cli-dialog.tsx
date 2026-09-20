@@ -37,11 +37,11 @@ export function ProjectCliDialog({ children }: { children: ReactNode }) {
           <p className="font-bungee text-xs">2 · Entra en un reto</p>
           <CodeBlock>
             {
-              "hackspain track list              # los retos y en cuál estás\nhackspain track register maisa    # entra; si ya estabas en otro, te cambia\nhackspain track unregister        # sal"
+              "hackspain track list                # los retos y en cuáles estás\nhackspain track register maisa      # entra en un reto\nhackspain track register theker     # THEKER puede sumarse como segundo\nhackspain track unregister theker   # sal de un reto"
             }
           </CodeBlock>
           <p className="text-sm text-hs-brown">
-            Un equipo entra en un solo reto. El slug es el de{" "}
+            Un equipo entra en un reto, o en dos si uno es THEKER. El slug es el de{" "}
             <code className="font-mono text-xs">hackspain track list</code>.
           </p>
         </div>

@@ -56,10 +56,7 @@ function resolveFirst(
   return { track, unknown: track ? [] : [slug] };
 }
 
-/**
- * One track per team. Register takes the first slug and replaces whatever
- * was there; unregister clears it.
- */
+/** Register keeps THEKER alongside one other track and replaces conflicts. */
 export function planTracks(
   current: Submission["challengeIds"],
   tracks: Track[],
@@ -69,28 +66,41 @@ export function planTracks(
   if (ops.add?.length) {
     const { track, unknown } = resolveFirst(ops.add, tracks);
     if (!track) {
-      return { added: [], next: current.slice(0, 1), removed: [], unknown };
+      return { added: [], next: current, removed: [], unknown };
     }
-    const added = current[0] === track._id ? [] : [track];
+    const currentTracks = tracks.filter((candidate) =>
+      current.includes(candidate._id)
+    );
+    const kept =
+      track.slug === "theker"
+        ? currentTracks.find((candidate) => candidate.slug !== "theker")
+        : currentTracks.find((candidate) => candidate.slug === "theker");
+    const nextSet = new Set([track._id, ...(kept ? [kept._id] : [])]);
+    const next = tracks
+      .filter((candidate) => nextSet.has(candidate._id))
+      .map((candidate) => candidate._id);
+    const added = current.includes(track._id) ? [] : [track];
     return {
       added,
-      next: [track._id],
-      removed: held.filter((t) => t._id !== track._id),
+      next,
+      removed: held.filter((candidate) => !nextSet.has(candidate._id)),
       unknown,
     };
   }
   if (ops.remove?.length) {
     const { track, unknown } = resolveFirst(ops.remove, tracks);
     if (!track) {
-      return { added: [], next: current.slice(0, 1), removed: [], unknown };
+      return { added: [], next: current, removed: [], unknown };
     }
     const wasIn = current.includes(track._id);
     return {
       added: [],
-      next: wasIn ? [] : current.slice(0, 1),
+      next: wasIn
+        ? current.filter((trackId) => trackId !== track._id)
+        : current,
       removed: wasIn ? held.filter((t) => t._id === track._id) : [],
       unknown,
     };
   }
-  return { added: [], next: current.slice(0, 1), removed: [], unknown: [] };
+  return { added: [], next: current, removed: [], unknown: [] };
 }
