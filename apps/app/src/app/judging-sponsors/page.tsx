@@ -41,7 +41,12 @@ function SponsorPanel() {
   const trackSlug = searchParams.get(TRACK_PARAM) ?? undefined;
   const live = useQuery(
     api.judging.trackCatalog,
-    allowed ? { trackSlug } : "skip",
+    allowed
+      ? {
+          submissionId: projectId ?? undefined,
+          trackSlug,
+        }
+      : "skip",
   );
   // Keep the last catalog while a new track loads so the select stays mounted.
   const [shown, setShown] = useState(live);

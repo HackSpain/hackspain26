@@ -10,6 +10,7 @@ import {
 import type { ProjectInfo } from "@/components/judging/project-details";
 import { VideoFrame } from "@/components/judging/video-frame";
 import { EmptyState, Page, RecordCard, Skeleton } from "@/components/page";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetBody,
@@ -26,10 +27,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { JUDGING_SPONSORS_PATH } from "@/lib/sections";
 import { urlOf } from "@/lib/urls";
 
 export const PROJECT_PARAM = "proyecto";
 export const TRACK_PARAM = "reto";
+
+export function deliveryHref(item: {
+  _id: string;
+  challenges: { slug?: string }[];
+}): string {
+  const params = new URLSearchParams();
+  const slug = item.challenges[0]?.slug;
+  if (slug) {
+    params.set(TRACK_PARAM, slug);
+  }
+  params.set(PROJECT_PARAM, item._id);
+  return `${JUDGING_SPONSORS_PATH}?${params}`;
+}
 
 export type ProjectRow = ProjectInfo & {
   _id: Id<"submissions">;
@@ -280,6 +295,7 @@ export function ProjectSheet({
           <SheetDescription className="font-medium">
             {item?.teamName ?? "Sin equipo"}
           </SheetDescription>
+          {item ? <CopyDeliveryLink item={item} /> : null}
         </SheetHeader>
         <SheetBody className="space-y-6">
           {item === null ? (
@@ -296,5 +312,26 @@ export function ProjectSheet({
         </SheetBody>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function CopyDeliveryLink({ item }: { item: ProjectRow }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="w-fit"
+      onClick={() => {
+        const url = `${window.location.origin}${deliveryHref(item)}`;
+        void navigator.clipboard.writeText(url).then(() => {
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+    >
+      {copied ? "Enlace copiado" : "Copiar enlace"}
+    </Button>
   );
 }

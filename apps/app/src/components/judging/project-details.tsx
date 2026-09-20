@@ -17,7 +17,7 @@ const DETAIL_URL_ORDER: UrlKind[] = [
 ];
 
 export type ProjectInfo = {
-  challenges: { _id: string; label: string; logoUrl?: string }[];
+  challenges: { _id: string; label: string; logoUrl?: string; slug?: string }[];
   description: string;
   members: string[];
   perks: { _id: string; company: string; title: string }[];
