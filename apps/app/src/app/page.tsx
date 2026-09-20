@@ -37,14 +37,15 @@ export default function HomePage() {
   const eligible = Boolean(
     me && (me.role === "admin" || (me.accepted && me.onboardingComplete))
   );
-  const project = useQuery(api.submissions.mine, eligible ? {} : "skip");
+  // Missing `event` (older users.me) counts as open, same as unscheduled.
+  const eventOpen = isEventOpen(me?.event);
+  const project = useQuery(
+    api.submissions.mine,
+    eligible && eventOpen ? {} : "skip",
+  );
   if (!me) {
     return <LoadingText />;
   }
-
-  // feed.list throws EVENT_CLOSED outside the window, so never mount it then.
-  // Missing `event` (older users.me) counts as open, same as unscheduled.
-  const eventOpen = isEventOpen(me.event);
   const canPost = eligible && eventOpen;
   const featuredSubmit =
     eventOpen &&

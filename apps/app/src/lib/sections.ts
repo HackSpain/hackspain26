@@ -85,20 +85,24 @@ export function sectionForPath(pathname: string): SectionKey | null {
 
 /**
  * Outside the hackathon window (convex/lib/eventWindow.ts) participants keep
- * the profile, directory and perks. Mirrors the server: gated features throw
- * EVENT_CLOSED, so AuthGate bounces those paths home before they mount.
+ * the profile, directory and perks. Judging stays too: scoring happens after
+ * submit closes. Mirrors the server — gated features throw EVENT_CLOSED, so
+ * AuthGate bounces those paths home before they mount.
  */
 const OPEN_WHEN_CLOSED = [
   "/",
   "/profile",
   "/participantes",
   "/perks",
+  "/insights",
   "/tv",
   "/cli-auth",
   "/login",
   "/onboarding",
   "/pending",
   "/unregistered",
+  JUDGING_PATH,
+  JUDGING_SPONSORS_PATH,
 ];
 
 export function isPathAllowedWhenClosed(pathname: string): boolean {
