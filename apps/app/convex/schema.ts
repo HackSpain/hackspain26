@@ -507,7 +507,7 @@ export default defineSchema({
     craftsmanship: v.optional(scoreValueValidator),
     problemSolving: v.optional(scoreValueValidator),
     creativity: v.optional(scoreValueValidator),
-    ownCriteria: v.optional(scoreValueValidator),
+    overall: v.optional(scoreValueValidator),
     ownCriteriaComment: v.string(),
     submittedAt: v.optional(v.number()),
     createdAt: v.number(),

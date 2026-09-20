@@ -30,8 +30,8 @@ export type AssessmentSnapshot = AssessmentDraft & {
 const CRITERION_HINTS: Record<Criterion, string> = {
   craftsmanship: "Calidad del código, la ejecución y el acabado.",
   problemSolving: "Cómo de bien resuelve el problema que plantea.",
-  creativity: "Originalidad del enfoque y de la solución.",
-  ownCriteria: "Lo que tú consideres relevante. Explícalo en el comentario.",
+  creativity: "Calibrada al track. Originalidad del enfoque respecto al reto.",
+  overall: "La impresión global del proyecto.",
 };
 
 export function formatScore(value: number | null | undefined): string {
@@ -127,7 +127,7 @@ export function AssessmentForm({
 
   const complete = completeScores(scores);
   const trimmed = comment.trim();
-  const commentOk = trimmed.length > 0 && trimmed.length <= MAX_COMMENT_LENGTH;
+  const commentOk = trimmed.length <= MAX_COMMENT_LENGTH;
   const canSubmit = complete !== null && commentOk && !saving;
   const submitted = initial?.status === "submitted";
   const preview = complete ? rawScore(complete) : null;
@@ -194,16 +194,13 @@ export function AssessmentForm({
         ))}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="own-criteria-comment">
-          Comentario sobre tu criterio propio
-        </Label>
+        <Label htmlFor="own-criteria-comment">Notas (opcional)</Label>
         <Textarea
           id="own-criteria-comment"
-          required
           maxLength={MAX_COMMENT_LENGTH}
           value={comment}
           disabled={saving}
-          placeholder="Qué has valorado y por qué"
+          placeholder="Lo que quieras dejar por escrito"
           onChange={(event) => {
             setNotice(null);
             setComment(event.target.value);
@@ -240,9 +237,9 @@ export function AssessmentForm({
               : "Enviar evaluación"}
         </Button>
       </div>
-      {complete === null || !commentOk ? (
+      {complete === null ? (
         <p className="text-sm font-medium text-pretty text-hs-brown">
-          Para enviar hacen falta los cuatro criterios y el comentario.
+          Para enviar hacen falta los cuatro criterios (1, 2, 4 o 5).
         </p>
       ) : null}
     </form>

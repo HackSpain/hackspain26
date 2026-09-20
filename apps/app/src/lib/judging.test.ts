@@ -10,20 +10,18 @@ import {
   estimateGenerosity,
   isConnected,
   isFlagged,
-  JUDGE_COUNT,
   judgingComplete,
+  pairingProblems,
   pairProjects,
   prepareDraft,
   prepareSubmission,
-  PROJECT_COUNT,
-  PROJECTS_PER_JUDGE,
   rankProjects,
   rawScore,
   requireAssignedJudge,
   resolveConflicts,
   seededShuffle,
   solveLinearSystem,
-  TOTAL_ASSESSMENTS,
+  totalAssessments,
   validatePairs,
 } from "../../convex/lib/judging";
 import type {
@@ -32,6 +30,9 @@ import type {
   PairedObservation,
 } from "../../convex/lib/judging";
 
+const JUDGE_COUNT = 13;
+const PROJECT_COUNT = 52;
+const PROJECTS_PER_JUDGE = 8;
 const JUDGES = Array.from({ length: JUDGE_COUNT }, (_, i) => `j${i}`);
 
 function judgeGraph(pairs: Pair[]): Set<number>[] {
@@ -70,7 +71,7 @@ describe("assignment", () => {
     for (const count of perJudge.values()) {
       assert.equal(count, PROJECTS_PER_JUDGE);
     }
-    assert.equal(pairs.length * 2, TOTAL_ASSESSMENTS);
+    assert.equal(pairs.length * 2, totalAssessments(PROJECT_COUNT));
   });
 
   test("each judge overlaps eight distinct judges and the network is connected", () => {
@@ -92,10 +93,22 @@ describe("assignment", () => {
     assert.ok(problems.some((problem) => problem.includes("mismo juez")));
   });
 
-  test("the algorithm refuses any other judge or project count", () => {
-    assert.throws(() => pairProjects(12, 52), /13 jueces y 52 proyectos/);
-    assert.throws(() => pairProjects(13, 51), /13 jueces y 52 proyectos/);
-    assert.throws(() => pairProjects(14, 56), /13 jueces y 52 proyectos/);
+  test("the same formula works for other even loads, and refuses impossible counts", () => {
+    const small = pairProjects(5, 10);
+    assert.equal(small.length, 10);
+    assert.deepEqual(validatePairs(small, 5, 10), []);
+    const perJudge = new Map<number, number>();
+    for (const pair of small) {
+      for (const judge of pair.judges) {
+        perJudge.set(judge, (perJudge.get(judge) ?? 0) + 1);
+      }
+    }
+    for (const count of perJudge.values()) {
+      assert.equal(count, 4);
+    }
+    assert.throws(() => pairProjects(1, 10), /al menos 2 jueces/);
+    assert.throws(() => pairProjects(3, 7), /máximo es 6/);
+    assert.deepEqual(pairingProblems(0, 0).length > 0, true);
   });
 
   test("seeded shuffle is a deterministic permutation", () => {
@@ -166,34 +179,35 @@ describe("scores", () => {
 
   test("raw score is the equal-weight mean of the four criteria", () => {
     approx(
-      rawScore({ craftsmanship: 5, creativity: 2, ownCriteria: 1, problemSolving: 4 }),
+      rawScore({ craftsmanship: 5, creativity: 2, overall: 1, problemSolving: 4 }),
       3
     );
     approx(
-      rawScore({ craftsmanship: 5, creativity: 5, ownCriteria: 4, problemSolving: 4 }),
+      rawScore({ craftsmanship: 5, creativity: 5, overall: 4, problemSolving: 4 }),
       4.5
     );
   });
 
-  test("submission requires all four scores and a comment", () => {
-    const scores = { craftsmanship: 5 as const, creativity: 4 as const, ownCriteria: 2 as const, problemSolving: 1 as const };
-    const ok = prepareSubmission({ ownCriteriaComment: "  Buen uso de datos abiertos ", scores });
+  test("submission requires all four scores and rejects 3", () => {
+    const scores = { craftsmanship: 5 as const, creativity: 4 as const, overall: 2 as const, problemSolving: 1 as const };
+    const ok = prepareSubmission({ ownCriteriaComment: "  una nota ", scores });
     assert.equal(ok.status, "submitted");
-    assert.equal(ok.ownCriteriaComment, "Buen uso de datos abiertos");
+    assert.equal(ok.ownCriteriaComment, "una nota");
     assert.throws(
-      () => prepareSubmission({ ownCriteriaComment: "x", scores: { ...scores, creativity: undefined } }),
+      () => prepareSubmission({ ownCriteriaComment: "", scores: { ...scores, creativity: undefined } }),
       /1, 2, 4 o 5/
     );
     assert.throws(
       () =>
         prepareSubmission({
-          ownCriteriaComment: "x",
+          ownCriteriaComment: "",
           scores: { ...scores, creativity: 3 as unknown as 4 },
         }),
       /1, 2, 4 o 5/
     );
-    assert.throws(() => prepareSubmission({ ownCriteriaComment: "   ", scores }), /criterio propio/);
-    assert.equal(completeScores({ ...scores, ownCriteria: undefined }), null);
+    const withoutNote = prepareSubmission({ ownCriteriaComment: "   ", scores });
+    assert.equal(withoutNote.ownCriteriaComment, "");
+    assert.equal(completeScores({ ...scores, overall: undefined }), null);
   });
 
   test("drafts accept gaps but not invalid values or submitted rows", () => {
@@ -222,9 +236,9 @@ describe("scores", () => {
   });
 
   test("drafts and incomplete assessments never produce a score", () => {
-    const full = { craftsmanship: 4 as const, creativity: 4 as const, ownCriteria: 4 as const, problemSolving: 4 as const };
+    const full = { craftsmanship: 4 as const, creativity: 4 as const, overall: 4 as const, problemSolving: 4 as const };
     assert.equal(assessmentScore({ ...full, status: "draft" }), null);
-    assert.equal(assessmentScore({ ...full, ownCriteria: undefined, status: "submitted" }), null);
+    assert.equal(assessmentScore({ ...full, overall: undefined, status: "submitted" }), null);
     approx(assessmentScore({ ...full, status: "submitted" }) ?? Number.NaN, 4);
   });
 });
@@ -402,10 +416,11 @@ describe("ranking", () => {
     assert.equal(rankOf("d"), 4);
   });
 
-  test("rankings stay provisional until all 104 assessments are in", () => {
-    assert.equal(judgingComplete(0), false);
-    assert.equal(judgingComplete(TOTAL_ASSESSMENTS - 1), false);
-    assert.equal(judgingComplete(TOTAL_ASSESSMENTS), true);
+  test("rankings stay provisional until every assigned assessment is in", () => {
+    assert.equal(judgingComplete(0, 10), false);
+    assert.equal(judgingComplete(9, 10), false);
+    assert.equal(judgingComplete(10, 10), true);
+    assert.equal(judgingComplete(0, 0), false);
   });
 
   test("disagreement flag uses a configurable threshold", () => {

@@ -14,7 +14,7 @@ const project: ExportProject = {
       craftsmanship: 5,
       creativity: 4,
       judge: ana,
-      ownCriteria: 4,
+      overall: 4,
       ownCriteriaComment: 'Buen "pitch"',
       problemSolving: 5,
       rawScore: 4.5,

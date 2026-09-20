@@ -137,7 +137,7 @@ export function assessmentsCsv(projects: ExportProject[]): string {
     "Juez",
     "Estado",
     ...CRITERIA.map((criterion) => CRITERION_LABELS[criterion]),
-    "Comentario criterio propio",
+    "Notas",
     "Nota bruta",
     "Nota ajustada",
     "Enviada el",

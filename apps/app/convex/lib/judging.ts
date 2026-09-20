@@ -1,12 +1,7 @@
 export const JUDGING_SETTINGS_KEY = "judging";
 export const JUDGING_ROUND_KEY = "main";
 
-export const JUDGE_COUNT = 13;
-export const PROJECT_COUNT = 52;
-export const PROJECTS_PER_JUDGE = 8;
 export const JUDGES_PER_PROJECT = 2;
-export const TOTAL_ASSESSMENTS = PROJECT_COUNT * JUDGES_PER_PROJECT;
-
 export const DEFAULT_LAMBDA = 2;
 export const DEFAULT_DISAGREEMENT_THRESHOLD = 1.5;
 export const MAX_COMMENT_LENGTH = 600;
@@ -25,15 +20,15 @@ export const CRITERIA = [
   "craftsmanship",
   "problemSolving",
   "creativity",
-  "ownCriteria",
+  "overall",
 ] as const;
 export type Criterion = (typeof CRITERIA)[number];
 
 export const CRITERION_LABELS: Record<Criterion, string> = {
-  craftsmanship: "Factura técnica",
-  problemSolving: "Resolución del problema",
-  creativity: "Creatividad",
-  ownCriteria: "Criterio propio",
+  craftsmanship: "Craftsmanship",
+  problemSolving: "Problem solving",
+  creativity: "Creativity",
+  overall: "Overall",
 };
 
 export type CriterionScores = Record<Criterion, ScoreValue>;
@@ -57,9 +52,6 @@ export function assertScoreValue(
 
 export function assertComment(comment: string): string {
   const trimmed = comment.trim();
-  if (trimmed.length === 0) {
-    throw new Error("Explica brevemente tu criterio propio");
-  }
   if (trimmed.length > MAX_COMMENT_LENGTH) {
     throw new Error(
       `El comentario no puede superar ${MAX_COMMENT_LENGTH} caracteres`
@@ -98,7 +90,7 @@ export function rawScore(scores: CriterionScores): number {
     (scores.craftsmanship +
       scores.problemSolving +
       scores.creativity +
-      scores.ownCriteria) /
+      scores.overall) /
     CRITERIA.length
   );
 }
@@ -116,8 +108,53 @@ export function assessmentScore(
   return scores ? rawScore(scores) : null;
 }
 
-export function judgingComplete(submittedCount: number): boolean {
-  return submittedCount >= TOTAL_ASSESSMENTS;
+export function judgingComplete(
+  submittedCount: number,
+  total: number
+): boolean {
+  return total > 0 && submittedCount >= total;
+}
+
+export function totalAssessments(projectCount: number): number {
+  return projectCount * JUDGES_PER_PROJECT;
+}
+
+/** Largest project count the cyclic pairing can cover with this many judges. */
+export function maxProjectsFor(judgeCount: number): number {
+  if (judgeCount < 2) {
+    return 0;
+  }
+  return judgeCount * (judgeCount - 1);
+}
+
+export function pairingProblems(
+  judgeCount: number,
+  projectCount: number
+): string[] {
+  const problems: string[] = [];
+  if (judgeCount < 2) {
+    problems.push("Hacen falta al menos 2 jueces");
+  }
+  if (projectCount < 1) {
+    problems.push("Hace falta al menos 1 proyecto enviado");
+  }
+  const max = maxProjectsFor(judgeCount);
+  if (judgeCount >= 2 && projectCount > max) {
+    problems.push(
+      `Con ${judgeCount} jueces el máximo es ${max} proyectos (hay ${projectCount})`
+    );
+  }
+  return problems;
+}
+
+export function assertPairingCounts(
+  judgeCount: number,
+  projectCount: number
+): void {
+  const problems = pairingProblems(judgeCount, projectCount);
+  if (problems.length > 0) {
+    throw new Error(problems.join("; "));
+  }
 }
 
 // --- Assessment writes -----------------------------------------------------
@@ -224,17 +261,6 @@ export function seededShuffle<T>(items: readonly T[], seed: string): T[] {
 
 export type Pair = { project: number; judges: [number, number] };
 
-export function assertPairingCounts(
-  judgeCount: number,
-  projectCount: number
-): void {
-  if (judgeCount !== JUDGE_COUNT || projectCount !== PROJECT_COUNT) {
-    throw new Error(
-      `El reparto necesita exactamente ${JUDGE_COUNT} jueces y ${PROJECT_COUNT} proyectos (hay ${judgeCount} y ${projectCount})`
-    );
-  }
-}
-
 export function pairProjects(judgeCount: number, projectCount: number): Pair[] {
   assertPairingCounts(judgeCount, projectCount);
   const pairs: Pair[] = [];
@@ -310,25 +336,41 @@ export function validatePairs(
       perJudge[judge] = (perJudge[judge] ?? 0) + 1;
     }
   }
-  for (const [judge, count] of perJudge.entries()) {
-    if (count !== PROJECTS_PER_JUDGE) {
-      problems.push(
-        `El juez ${judge} tiene ${count} proyectos, no ${PROJECTS_PER_JUDGE}`
-      );
-    }
-  }
   const adjacency = judgeGraph(pairs, judgeCount);
-  for (const [judge, peers] of adjacency.entries()) {
-    if (peers.size !== PROJECTS_PER_JUDGE) {
-      problems.push(
-        `El juez ${judge} comparte proyectos con ${peers.size} jueces, no ${PROJECTS_PER_JUDGE}`
-      );
+  const assigned = [];
+  for (const [judge, count] of perJudge.entries()) {
+    if (count > 0) {
+      assigned.push(judge);
     }
   }
-  if (!isConnected(adjacency)) {
+  if (assigned.length < 2) {
+    problems.push("Hacen falta al menos dos jueces con proyectos");
+  } else if (!isConnected(subgraph(adjacency, assigned))) {
     problems.push("La red de jueces no está conectada");
   }
   return problems;
+}
+
+function subgraph(
+  adjacency: readonly Set<number>[],
+  nodes: readonly number[]
+): Set<number>[] {
+  const index = new Map<number, number>();
+  for (const [i, node] of nodes.entries()) {
+    index.set(node, i);
+  }
+  const out: Set<number>[] = [];
+  for (const node of nodes) {
+    const peers = new Set<number>();
+    for (const peer of adjacency[node] ?? []) {
+      const mapped = index.get(peer);
+      if (mapped !== undefined) {
+        peers.add(mapped);
+      }
+    }
+    out.push(peers);
+  }
+  return out;
 }
 
 // --- Conflicts of interest -------------------------------------------------

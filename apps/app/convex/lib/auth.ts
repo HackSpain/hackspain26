@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { requireEventOpen } from "./eventWindow";
-import { canJudge } from "./userTypes";
+import { canJudge, canBrowseSponsorCatalog } from "./userTypes";
 import type { Role } from "./validators";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -86,6 +86,17 @@ export async function requireInEvent(ctx: Ctx): Promise<Doc<"users">> {
 
 export async function requireJudgeInEvent(ctx: Ctx): Promise<Doc<"users">> {
   const user = await requireJudge(ctx);
+  await requireEventOpen(ctx, user);
+  return user;
+}
+
+export async function requireSponsorCatalogInEvent(
+  ctx: Ctx
+): Promise<Doc<"users">> {
+  const user = await getCurrentUser(ctx);
+  if (!(await canBrowseSponsorCatalog(ctx, user))) {
+    throw new Error("Se necesita acceso de sponsor");
+  }
   await requireEventOpen(ctx, user);
   return user;
 }

@@ -12,6 +12,7 @@ import {
   requireInEvent,
   requireJudgeInEvent,
   requireOnboarded,
+  requireSponsorCatalogInEvent,
 } from "./auth";
 
 type Resolve = (ctx: QueryCtx | MutationCtx) => Promise<Doc<"users">>;
@@ -56,3 +57,4 @@ export const adminQuery = wrapQuery(requireAdmin);
 export const adminMutation = wrapMutation(requireAdmin);
 export const judgeQuery = wrapQuery(requireJudgeInEvent);
 export const judgeMutation = wrapMutation(requireJudgeInEvent);
+export const catalogQuery = wrapQuery(requireSponsorCatalogInEvent);

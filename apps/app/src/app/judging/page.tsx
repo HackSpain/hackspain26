@@ -3,73 +3,27 @@
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useRef, useState } from "react";
-import type { KeyboardEvent, RefObject } from "react";
+import { Suspense, useState } from "react";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { PROJECTS_PER_JUDGE } from "@convex/lib/judging";
 import type { PartialScores } from "@convex/lib/judging";
 import {
   AssessmentForm,
   formatScore,
 } from "@/components/judging/assessment-form";
 import type { AssessmentDraft } from "@/components/judging/assessment-form";
-import { ProjectDetails } from "@/components/judging/project-details";
-import { VideoFrame } from "@/components/judging/video-frame";
-import { EmptyState, Page, RecordCard, Skeleton } from "@/components/page";
+import {
+  ProjectSheet,
+  ProjectTable,
+  ProjectTableFallback,
+  useProjectPicker,
+} from "@/components/judging/project-table";
+import { EmptyState, Page } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { urlOf } from "@/lib/urls";
+import { TableCell, TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-const PROJECT_PARAM = "proyecto";
-
-type Queue = FunctionReturnType<typeof api.judging.myQueue>;
-type QueueItem = Queue["items"][number];
-
-function activateOnKey(event: KeyboardEvent<HTMLElement>, open: () => void) {
-  if (event.target !== event.currentTarget) {
-    return;
-  }
-  if (event.key !== "Enter" && event.key !== " ") {
-    return;
-  }
-  event.preventDefault();
-  open();
-}
-
-function writeParams(
-  pathname: string,
-  mutate: (params: URLSearchParams) => void,
-  mode: "push" | "replace",
-) {
-  const next = new URLSearchParams(window.location.search);
-  mutate(next);
-  const query = next.toString();
-  const url = query ? `${pathname}?${query}` : pathname;
-  if (mode === "push") {
-    window.history.pushState(null, "", url);
-    return;
-  }
-  window.history.replaceState(null, "", url);
-}
+type QueueItem = FunctionReturnType<typeof api.judging.myQueue>["items"][number];
 
 function StatusBadge({ item }: { item: QueueItem }) {
   if (item.assessment?.status === "submitted") {
@@ -83,18 +37,9 @@ function StatusBadge({ item }: { item: QueueItem }) {
 
 export default function JudgingPage() {
   return (
-    <Suspense fallback={<JudgingFallback />}>
+    <Suspense fallback={<ProjectTableFallback title="Juzgar" />}>
       <JudgingPanel />
     </Suspense>
-  );
-}
-
-function JudgingFallback() {
-  return (
-    <Page title="Juzgar" className="space-y-4">
-      <Skeleton className="h-11 w-56" />
-      <QueueSkeleton />
-    </Page>
   );
 }
 
@@ -102,60 +47,44 @@ function JudgingPanel() {
   const me = useQuery(api.users.me);
   const allowed = me?.canJudge === true;
   const queue = useQuery(api.judging.myQueue, allowed ? {} : "skip");
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const projectId = searchParams.get(PROJECT_PARAM) as Id<"submissions"> | null;
-  const pushed = useRef(false);
-  const triggerRef = useRef<HTMLElement | null>(null);
+  const { projectId, triggerRef, openProject, closeProject } = useProjectPicker();
+  const [saving, setSaving] = useState(false);
+  const saveDraft = useMutation(api.judging.saveDraft);
+  const submit = useMutation(api.judging.submit);
 
   if (me === undefined) {
-    return <JudgingFallback />;
+    return <ProjectTableFallback title="Juzgar" />;
   }
   if (!allowed) {
     return (
       <Page title="Juzgar">
-        <EmptyState title="Solo para jueces">
-          Esta página es para el jurado. Si deberías juzgar, pide a un admin que
-          te asigne el rol.
+        <EmptyState title="Solo para el jurado">
+          Esta página es para puntuar. Si deberías juzgar, pide a un admin que
+          te asigne el tipo Jurado.
         </EmptyState>
       </Page>
     );
   }
   if (!queue) {
-    return <JudgingFallback />;
+    return <ProjectTableFallback title="Juzgar" />;
   }
 
-  const openProject = (id: Id<"submissions">, from: HTMLElement | null) => {
-    triggerRef.current = from;
-    const alreadyOpen = new URLSearchParams(window.location.search).has(
-      PROJECT_PARAM,
-    );
-    writeParams(
-      pathname,
-      (params) => params.set(PROJECT_PARAM, id),
-      alreadyOpen ? "replace" : "push",
-    );
-    if (!alreadyOpen) {
-      pushed.current = true;
-    }
-  };
-
-  const closeProject = () => {
-    if (pushed.current) {
-      pushed.current = false;
-      window.history.back();
-      return;
-    }
-    writeParams(pathname, (params) => params.delete(PROJECT_PARAM), "replace");
-  };
-
   const selected = queue.items.find((item) => item._id === projectId) ?? null;
-  const total = queue.items.length || PROJECTS_PER_JUDGE;
+  const total = queue.items.length;
+
+  const wrap = (work: () => Promise<null>) => async () => {
+    setSaving(true);
+    try {
+      await work();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Page
       title="Juzgar"
-      description="Revisa cada proyecto con sus enlaces y la demo grabada. Puntúa cada criterio con 1, 2, 4 o 5. Los cuatro pesan igual."
+      description="Revisa cada proyecto con sus enlaces y la demo grabada. Puntúa craftsmanship, problem solving, creativity y overall con 1, 2, 4 o 5. Los cuatro pesan igual. Creativity va calibrada al track."
       className="space-y-4"
     >
       {queue.items.length === 0 ? (
@@ -204,162 +133,101 @@ function JudgingPanel() {
             Otro juez evalúa cada proyecto de forma independiente. Sus notas y
             la clasificación no se muestran hasta que termine el jurado.
           </p>
-          <QueueLists
+          <ProjectTable
             rows={queue.items}
             projectId={projectId}
             onOpen={openProject}
+            extraHead={
+              <>
+                <TableHead className="text-right">Mi nota</TableHead>
+                <TableHead>Estado</TableHead>
+              </>
+            }
+            extraCell={(row) => {
+              const item = row as QueueItem;
+              return (
+                <>
+                  <TableCell className="text-right tabular-nums">
+                    <span className="inline-block min-w-[4ch]">
+                      {formatScore(item.assessment?.rawScore)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge item={item} />
+                  </TableCell>
+                </>
+              );
+            }}
+            badges={(row) => {
+              const item = row as QueueItem;
+              return (
+                <>
+                  <StatusBadge item={item} />
+                  <Badge className="tabular-nums">
+                    <span className="inline-block min-w-[4ch] text-center">
+                      {formatScore(item.assessment?.rawScore)}
+                    </span>
+                  </Badge>
+                </>
+              );
+            }}
           />
         </>
       )}
 
       <ProjectSheet
         selected={projectId ? selected : null}
+        emptyHint="No está entre tus proyectos asignados."
         onClose={closeProject}
         returnFocusRef={triggerRef}
-      />
-    </Page>
-  );
-}
-
-function QueueSkeleton() {
-  return (
-    <>
-      <div className="grid gap-3 md:hidden" aria-hidden>
-        {["a", "b", "c"].map((key) => (
-          <div key={key} className="border-[3px] border-hs-ink bg-hs-paper p-4">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="mt-2 h-3 w-56" />
-            <Skeleton className="mt-4 h-3 w-28" />
-          </div>
-        ))}
-      </div>
-      <div className="hidden border-[3px] border-hs-ink md:block" aria-hidden>
-        <div className="h-11 border-b-[3px] border-hs-ink bg-hs-sand" />
-        {["a", "b", "c"].map((key) => (
+      >
+        {selected ? (
           <div
-            key={key}
-            className="flex h-11 items-center gap-3 border-b border-hs-ink/20 px-3"
+            className={cn(
+              "border-t-[3px] border-hs-ink pt-5",
+              saving && "opacity-70",
+            )}
           >
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-3 w-40" />
-            <Skeleton className="h-3 w-10" />
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function QueueLists({
-  rows,
-  projectId,
-  onOpen,
-}: {
-  rows: QueueItem[];
-  projectId: Id<"submissions"> | null;
-  onOpen: (id: Id<"submissions">, from: HTMLElement | null) => void;
-}) {
-  return (
-    <div>
-      <div className="hs-stagger grid gap-3 md:hidden">
-        {rows.map((row) => (
-          <div
-            key={row._id}
-            role="button"
-            tabIndex={0}
-            aria-label={`${row.name}, ${row.teamName ?? "sin equipo"}`}
-            aria-haspopup="dialog"
-            aria-expanded={row._id === projectId}
-            onClick={(event) => onOpen(row._id, event.currentTarget)}
-            onKeyDown={(event) =>
-              activateOnKey(event, () => onOpen(row._id, event.currentTarget))
-            }
-            className="block cursor-pointer outline-none motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97] [@media(hover:hover)_and_(pointer:fine)]:hover:[&>[data-slot=card]]:bg-hs-sand/60 focus-visible:[&>[data-slot=card]]:border-hs-navy aria-expanded:[&>[data-slot=card]]:bg-hs-sand"
-          >
-            <RecordCard
-              title={row.name || "Sin título"}
-              subtitle={row.teamName ?? "Sin equipo"}
-              badges={
-                <>
-                  <StatusBadge item={row} />
-                  <Badge className="tabular-nums">
-                    <span className="inline-block min-w-[4ch] text-center">
-                      {formatScore(row.assessment?.rawScore)}
-                    </span>
-                  </Badge>
-                </>
+            <AssessmentForm
+              key={selected._id}
+              initial={snapshotOf(selected)}
+              saving={saving}
+              onSaveDraft={(draft: AssessmentDraft) =>
+                wrap(() =>
+                  saveDraft({
+                    ...draft.scores,
+                    ownCriteriaComment: draft.ownCriteriaComment,
+                    submissionId: selected._id,
+                  }),
+                )()
               }
-            >
-              <p className="text-sm font-medium text-hs-brown">
-                {row.challenges.map((challenge) => challenge.label).join(" · ") ||
-                  "Sin retos"}
-              </p>
-            </RecordCard>
+              onSubmit={(draft: AssessmentDraft) =>
+                wrap(() => {
+                  const { craftsmanship, creativity, overall, problemSolving } =
+                    draft.scores;
+                  if (
+                    craftsmanship === undefined ||
+                    creativity === undefined ||
+                    overall === undefined ||
+                    problemSolving === undefined
+                  ) {
+                    throw new Error("Faltan criterios por puntuar");
+                  }
+                  return submit({
+                    craftsmanship,
+                    creativity,
+                    overall,
+                    ownCriteriaComment: draft.ownCriteriaComment,
+                    problemSolving,
+                    submissionId: selected._id,
+                  });
+                })()
+              }
+            />
           </div>
-        ))}
-      </div>
-      <div className="hidden md:block">
-        <Table
-          className="border-separate border-spacing-0 font-medium"
-          containerClassName="max-h-[min(40rem,calc(100dvh-18rem))] overflow-auto overscroll-contain"
-        >
-          <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
-            <TableRow>
-              <TableHead>Proyecto</TableHead>
-              <TableHead>Equipo</TableHead>
-              <TableHead>Retos</TableHead>
-              <TableHead className="text-right">Mi nota</TableHead>
-              <TableHead>Estado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow
-                key={row._id}
-                data-state={row._id === projectId ? "selected" : undefined}
-                onClick={(event) =>
-                  onOpen(
-                    row._id,
-                    event.currentTarget.querySelector<HTMLElement>(
-                      "[data-row-trigger]",
-                    ),
-                  )
-                }
-                className="h-11 cursor-pointer motion-safe:transition-colors motion-safe:duration-100 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 [&_td]:border-b [&_td]:border-hs-ink/20"
-              >
-                <TableCell>
-                  <button
-                    type="button"
-                    data-row-trigger
-                    aria-haspopup="dialog"
-                    aria-expanded={row._id === projectId}
-                    className="-mx-1 min-w-0 truncate px-1 text-left underline-offset-2 outline-none focus-visible:border-[3px] focus-visible:border-hs-navy [@media(hover:hover)_and_(pointer:fine)]:hover:underline"
-                  >
-                    {row.name || "Sin título"}
-                  </button>
-                </TableCell>
-                <TableCell className="max-w-48 truncate">
-                  {row.teamName ?? "—"}
-                </TableCell>
-                <TableCell className="max-w-72 truncate">
-                  {row.challenges.map((challenge) => challenge.label).join(" · ") ||
-                    "—"}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  <span className="inline-block min-w-[4ch]">
-                    {formatScore(row.assessment?.rawScore)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge item={row} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+        ) : null}
+      </ProjectSheet>
+    </Page>
   );
 }
 
@@ -370,7 +238,7 @@ function snapshotOf(item: QueueItem) {
   const scores: PartialScores = {
     craftsmanship: item.assessment.craftsmanship,
     creativity: item.assessment.creativity,
-    ownCriteria: item.assessment.ownCriteria,
+    overall: item.assessment.overall,
     problemSolving: item.assessment.problemSolving,
   };
   return {
@@ -378,119 +246,4 @@ function snapshotOf(item: QueueItem) {
     scores,
     status: item.assessment.status,
   };
-}
-
-function ProjectSheet({
-  selected,
-  onClose,
-  returnFocusRef,
-}: {
-  selected: QueueItem | null;
-  onClose: () => void;
-  returnFocusRef: RefObject<HTMLElement | null>;
-}) {
-  const [shown, setShown] = useState<QueueItem | null>(selected);
-  if (selected && selected !== shown) {
-    setShown(selected);
-  }
-  const saveDraft = useMutation(api.judging.saveDraft);
-  const submit = useMutation(api.judging.submit);
-  const [saving, setSaving] = useState(false);
-  const item = selected ?? shown;
-
-  const wrap = (work: () => Promise<null>) => async () => {
-    setSaving(true);
-    try {
-      await work();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Sheet
-      open={selected !== null}
-      onOpenChange={(next) => {
-        if (!next) {
-          onClose();
-        }
-      }}
-    >
-      <SheetContent
-        className="sm:max-w-3xl lg:max-w-5xl"
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          const target = returnFocusRef.current;
-          if (target?.isConnected) {
-            target.focus();
-          }
-          returnFocusRef.current = null;
-        }}
-      >
-        <SheetHeader>
-          <SheetTitle>{item?.name || "Proyecto"}</SheetTitle>
-          <SheetDescription className="font-medium">
-            {item?.teamName ?? "Sin equipo"}
-          </SheetDescription>
-        </SheetHeader>
-        <SheetBody className="space-y-6">
-          {item === null ? (
-            <EmptyState title="Proyecto no encontrado">
-              No está entre tus proyectos asignados.
-            </EmptyState>
-          ) : (
-            <>
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                <VideoFrame url={urlOf(item.urls, "video")} />
-                <ProjectDetails item={item} />
-              </div>
-              <div
-                className={cn(
-                  "border-t-[3px] border-hs-ink pt-5",
-                  saving && "opacity-70",
-                )}
-              >
-                <AssessmentForm
-                  key={item._id}
-                  initial={snapshotOf(item)}
-                  saving={saving}
-                  onSaveDraft={(draft: AssessmentDraft) =>
-                    wrap(() =>
-                      saveDraft({
-                        ...draft.scores,
-                        ownCriteriaComment: draft.ownCriteriaComment,
-                        submissionId: item._id,
-                      }),
-                    )()
-                  }
-                  onSubmit={(draft: AssessmentDraft) =>
-                    wrap(() => {
-                      const { craftsmanship, creativity, ownCriteria, problemSolving } =
-                        draft.scores;
-                      if (
-                        craftsmanship === undefined ||
-                        creativity === undefined ||
-                        ownCriteria === undefined ||
-                        problemSolving === undefined
-                      ) {
-                        throw new Error("Faltan criterios por puntuar");
-                      }
-                      return submit({
-                        craftsmanship,
-                        creativity,
-                        ownCriteria,
-                        ownCriteriaComment: draft.ownCriteriaComment,
-                        problemSolving,
-                        submissionId: item._id,
-                      });
-                    })()
-                  }
-                />
-              </div>
-            </>
-          )}
-        </SheetBody>
-      </SheetContent>
-    </Sheet>
-  );
 }

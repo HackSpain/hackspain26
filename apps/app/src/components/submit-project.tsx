@@ -330,7 +330,7 @@ function SubmitForm({
           </CardTitle>
           <CardDescription>
             Vídeo de 3 minutos para los jueces de San Francisco: contad el
-            proyecto a fondo (creatividad, problem solving y craftsmanship).
+            proyecto a fondo (craftsmanship, problem solving, creativity y overall).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -351,7 +351,7 @@ function SubmitForm({
           <Field
             label="Vídeo de YouTube"
             htmlFor="video-url"
-            hint="Obligatorio. YouTube, 3 minutos. Creatividad, problem solving y craftsmanship."
+            hint="Obligatorio. YouTube, 3 minutos. Craftsmanship, problem solving, creativity y overall."
           >
             <Input
               id="video-url"

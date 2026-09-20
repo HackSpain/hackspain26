@@ -10,7 +10,6 @@ import type { Id } from "@convex/_generated/dataModel";
 import {
   CRITERIA,
   CRITERION_LABELS,
-  PROJECTS_PER_JUDGE,
 } from "@convex/lib/judging";
 import { formatScore, ScoreLegend } from "@/components/judging/assessment-form";
 import { ProjectDetails } from "@/components/judging/project-details";
@@ -77,6 +76,15 @@ type Unresolved = Extract<
   FunctionReturnType<typeof api.judging.generateAssignments>,
   { ok: false }
 >["unresolved"];
+type Preview = FunctionReturnType<typeof api.judging.previewAssignments>;
+
+function randomSeed(): string {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
+}
 
 function formatSigned(value: number | null): string {
   if (value === null) {
@@ -194,15 +202,13 @@ function AdminJudging() {
 function CountBadge({
   label,
   value,
-  required,
 }: {
   label: string;
   value: number;
-  required: number;
 }) {
   return (
-    <Badge variant={value === required ? "gold" : "default"} className="tabular-nums">
-      {label} {value}/{required}
+    <Badge variant={value > 0 ? "gold" : "default"} className="tabular-nums">
+      {label} {value}
     </Badge>
   );
 }
@@ -211,35 +217,72 @@ function SetupCard({ overview }: { overview: Overview }) {
   const generate = useMutation(api.judging.generateAssignments);
   const reset = useMutation(api.judging.resetAssignments);
   const [seed, setSeed] = useState("");
+  const [previewSeed, setPreviewSeed] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [confirmRerun, setConfirmRerun] = useState(false);
   const [saveError, setError] = useState<string | null>(null);
   const [unresolved, setUnresolved] = useState<Unresolved | null>(null);
+  const preview = useQuery(
+    api.judging.previewAssignments,
+    previewSeed ? { seed: previewSeed } : "skip",
+  );
   const { pool, round } = overview;
-  const ready =
-    pool.judgeCount === pool.requiredJudges &&
-    pool.projectCount === pool.requiredProjects;
+  const ready = pool.feasible;
+  const loadLabel =
+    pool.loadMin === pool.loadMax
+      ? String(pool.loadMin)
+      : `${pool.loadMin}–${pool.loadMax}`;
+  const previewUnresolved =
+    preview && preview.ok === false ? preview.unresolved : null;
+  const shownUnresolved = previewUnresolved ?? unresolved;
+  const previewOk = preview && preview.ok === true ? preview : null;
+
+  const runGenerate = (replace: boolean) => {
+    setError(null);
+    setUnresolved(null);
+    setConfirmRerun(false);
+    setPending(true);
+    void generate({
+      replace: replace || undefined,
+      seed: seed.trim() || undefined,
+    })
+      .then((result) => {
+        if (!result.ok) {
+          setUnresolved(result.unresolved);
+          return;
+        }
+        setPreviewSeed(null);
+        setSeed("");
+      })
+      .catch((error: unknown) =>
+        setError(
+          errorMessage(
+            error,
+            replace
+              ? "No se ha podido volver a repartir"
+              : "No se ha podido generar el reparto",
+          ),
+        ),
+      )
+      .finally(() => setPending(false));
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
           Reparto
-          <CountBadge
-            label="Jueces"
-            value={pool.judgeCount}
-            required={pool.requiredJudges}
-          />
-          <CountBadge
-            label="Proyectos"
-            value={pool.projectCount}
-            required={pool.requiredProjects}
-          />
+          <CountBadge label="Jueces" value={pool.judgeCount} />
+          <CountBadge label="Proyectos" value={pool.projectCount} />
         </CardTitle>
         <CardDescription>
-          Con {pool.requiredJudges} jueces y {pool.requiredProjects} proyectos,
-          cada juez recibe {PROJECTS_PER_JUDGE} y cada proyecto dos jueces
-          distintos. Se genera una vez con una semilla guardada y no se vuelve
-          a repartir.
+          Juzgado general: los jueces y proyectos enviados ahora mismo. Cada
+          proyecto recibe dos jueces distintos
+          {ready
+            ? `, cada juez ${loadLabel} y ${pool.projectCount * 2} evaluaciones en total.`
+            : "."}{" "}
+          Prueba el reparto sin guardarlo. Volver a repartir borra las notas y
+          asigna a todos los jueces actuales.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -257,74 +300,130 @@ function SetupCard({ overview }: { overview: Overview }) {
                 ? ` · ${round.swaps} ${round.swaps === 1 ? "intercambio" : "intercambios"} por conflicto`
                 : ""}
             </span>
-            {round.canReset ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={pending}
-                onClick={() => {
-                  setError(null);
-                  setPending(true);
-                  void reset({})
-                    .catch((error: unknown) =>
-                      setError(errorMessage(error, "No se ha podido borrar el reparto")),
-                    )
-                    .finally(() => setPending(false));
-                }}
-              >
-                Borrar reparto
-              </Button>
-            ) : null}
           </div>
-        ) : (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1 sm:max-w-xs">
-              <Field
-                label="Semilla (opcional)"
-                htmlFor="judging-seed"
-                hint="Con la misma semilla sale el mismo reparto."
-              >
-                <Input
-                  id="judging-seed"
-                  value={seed}
-                  onChange={(event) => setSeed(event.target.value)}
-                  placeholder="Aleatoria si se deja vacía"
-                />
-              </Field>
-            </div>
+        ) : null}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1 sm:max-w-xs">
+            <Field
+              label="Semilla (opcional)"
+              htmlFor="judging-seed"
+              hint="Con la misma semilla sale el mismo reparto."
+            >
+              <Input
+                id="judging-seed"
+                value={seed}
+                disabled={pending}
+                onChange={(event) => {
+                  setSeed(event.target.value);
+                  setConfirmRerun(false);
+                }}
+                placeholder="Aleatoria si se deja vacía"
+              />
+            </Field>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
+              variant="outline"
               disabled={!ready || pending}
               onClick={() => {
-                setError(null);
+                const next = seed.trim() || randomSeed();
+                setSeed(next);
                 setUnresolved(null);
-                setPending(true);
-                void generate({ seed: seed.trim() || undefined })
-                  .then((result) => {
-                    if (!result.ok) {
-                      setUnresolved(result.unresolved);
-                    }
-                  })
-                  .catch((error: unknown) =>
-                    setError(errorMessage(error, "No se ha podido generar el reparto")),
-                  )
-                  .finally(() => setPending(false));
+                setError(null);
+                setConfirmRerun(false);
+                setPreviewSeed(next);
               }}
             >
-              {pending ? "Generando…" : "Generar reparto"}
+              Probar
             </Button>
+            {round ? (
+              confirmRerun ? (
+                <>
+                  <Button
+                    type="button"
+                    disabled={!ready || pending}
+                    onClick={() => runGenerate(true)}
+                  >
+                    {pending ? "Repartiendo…" : "Sí, borrar notas y repartir"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => setConfirmRerun(false)}
+                  >
+                    Cancelar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    disabled={!ready || pending}
+                    onClick={() => {
+                      if (round.canReset) {
+                        runGenerate(true);
+                        return;
+                      }
+                      setError(null);
+                      setConfirmRerun(true);
+                    }}
+                  >
+                    {pending ? "Repartiendo…" : "Volver a repartir"}
+                  </Button>
+                  {round.canReset ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={pending}
+                      onClick={() => {
+                        setError(null);
+                        setPending(true);
+                        void reset({})
+                          .then(() => setPreviewSeed(null))
+                          .catch((error: unknown) =>
+                            setError(
+                              errorMessage(error, "No se ha podido borrar el reparto"),
+                            ),
+                          )
+                          .finally(() => setPending(false));
+                      }}
+                    >
+                      Borrar
+                    </Button>
+                  ) : null}
+                </>
+              )
+            ) : (
+              <Button
+                type="button"
+                disabled={!ready || pending}
+                onClick={() => runGenerate(false)}
+              >
+                {pending ? "Generando…" : "Generar"}
+              </Button>
+            )}
           </div>
-        )}
-        {!ready && !round ? (
+        </div>
+        {confirmRerun ? (
           <p className="text-sm font-medium text-pretty text-hs-brown">
-            El algoritmo exige exactamente {pool.requiredJudges} jueces con rol
-            juez y {pool.requiredProjects} proyectos enviados. No se aplica a
-            otros números.
+            Esto borra todas las evaluaciones, también los borradores, y reparte
+            otra vez a los jueces de ahora.
+          </p>
+        ) : null}
+        {!ready ? (
+          <p className="text-sm font-medium text-pretty text-hs-brown">
+            {pool.problems.join(". ") ||
+              "Aún no se puede generar el reparto."}
           </p>
         ) : null}
         <FormError message={saveError} />
-        {unresolved && unresolved.length > 0 ? (
+        {previewSeed && preview === undefined ? (
+          <p className="text-sm font-medium text-hs-brown">Calculando prueba…</p>
+        ) : null}
+        {previewOk ? <PreviewTable preview={previewOk} /> : null}
+        {shownUnresolved && shownUnresolved.length > 0 ? (
           <Alert variant="error">
             <AlertDescription className="space-y-1">
               <p className="font-semibold text-hs-ink">
@@ -332,19 +431,62 @@ function SetupCard({ overview }: { overview: Overview }) {
                 guardado nada.
               </p>
               <ul className="list-disc pl-5">
-                {unresolved.map((item) => (
+                {shownUnresolved.map((item) => (
                   <li key={`${item.judge._id}:${item.submissionId}`}>
                     {item.judge.name} · {item.projectName}
                   </li>
                 ))}
               </ul>
-              <p>Quita o cambia algún conflicto y vuelve a generar.</p>
+              <p>Quita o cambia algún conflicto y vuelve a probar.</p>
             </AlertDescription>
           </Alert>
         ) : null}
         <ConflictsSection overview={overview} />
       </CardContent>
     </Card>
+  );
+}
+
+function PreviewTable({
+  preview,
+}: {
+  preview: Extract<Preview, { ok: true }>;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-pretty text-hs-brown">
+        Prueba con semilla{" "}
+        <code className="border border-hs-ink/20 bg-hs-sand px-1.5 py-0.5 font-mono text-xs text-hs-ink">
+          {preview.seed}
+        </code>
+        {preview.swaps > 0
+          ? ` · ${preview.swaps} ${preview.swaps === 1 ? "intercambio" : "intercambios"} por conflicto`
+          : ""}
+        . Aún no está guardada.
+      </p>
+      <Table className="border-separate border-spacing-0 font-medium">
+        <TableHeader className="[&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+          <TableRow>
+            <TableHead>Juez</TableHead>
+            <TableHead className="text-right">Cola</TableHead>
+            <TableHead>Proyectos</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {preview.judges.map((judge) => (
+            <TableRow key={judge._id} className="[&_td]:border-b [&_td]:border-hs-ink/20">
+              <TableCell className="align-top">{judge.name}</TableCell>
+              <TableCell className="align-top text-right tabular-nums">
+                {judge.assigned}
+              </TableCell>
+              <TableCell className="text-pretty text-hs-brown">
+                {judge.projects.join(" · ") || "—"}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -367,7 +509,7 @@ function ConflictsSection({ overview }: { overview: Overview }) {
           Un juez no evalúa los proyectos con los que tenga conflicto. Se
           resuelven con intercambios al generar el reparto.
           {overview.round
-            ? " El reparto ya está hecho. Los conflictos nuevos solo se aplican si lo borras y lo vuelves a generar."
+            ? " El reparto ya está hecho. Los conflictos nuevos solo se aplican si vuelves a repartir."
             : ""}
         </p>
       </div>
@@ -481,8 +623,17 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
   const [pending, setPending] = useState(false);
   const [saveError, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const seen = `${settings.lambda}:${settings.disagreementThreshold}`;
+  const [synced, setSynced] = useState(seen);
+  if (synced !== seen) {
+    setSynced(seen);
+    setLambda(String(settings.lambda));
+    setThreshold(String(settings.disagreementThreshold));
+  }
   const lambdaValue = Number(lambda);
   const thresholdValue = Number(threshold);
+  const lambdaOk = Number.isFinite(lambdaValue) && lambdaValue > 0;
+  const thresholdOk = Number.isFinite(thresholdValue) && thresholdValue >= 0;
   const dirty =
     lambdaValue !== settings.lambda ||
     thresholdValue !== settings.disagreementThreshold;
@@ -494,9 +645,10 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
         <CardDescription>
           La generosidad de cada juez se estima a partir de la diferencia entre
           las dos notas de cada proyecto. Lambda regulariza esa estimación. El
-          valor 2 es prudente, no óptimo, y queda fijo en cuanto llega la
-          primera evaluación. El umbral marca los proyectos cuyas dos notas
-          brutas se separan demasiado.
+          valor 2 es prudente, no óptimo. Puedes cambiarlo en cualquier
+          momento: generosidad, notas calibradas y puestos se recalculan al
+          guardar. El umbral marca los proyectos cuyas dos notas brutas se
+          separan demasiado.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -504,11 +656,7 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
           <Field
             label="Lambda"
             htmlFor="judging-lambda"
-            hint={
-              settings.lambdaLocked
-                ? "Bloqueada porque ya hay evaluaciones enviadas."
-                : "Mayor que cero."
-            }
+            hint="Mayor que cero. Se aplica a las evaluaciones ya enviadas."
           >
             <Input
               id="judging-lambda"
@@ -517,8 +665,11 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
               min={0}
               step="0.1"
               value={lambda}
-              disabled={settings.lambdaLocked || pending}
-              onChange={(event) => setLambda(event.target.value)}
+              disabled={pending}
+              onChange={(event) => {
+                setNotice(null);
+                setLambda(event.target.value);
+              }}
             />
           </Field>
           <Field
@@ -534,7 +685,10 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
               step="0.25"
               value={threshold}
               disabled={pending}
-              onChange={(event) => setThreshold(event.target.value)}
+              onChange={(event) => {
+                setNotice(null);
+                setThreshold(event.target.value);
+              }}
             />
           </Field>
         </div>
@@ -543,16 +697,16 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
         <Button
           type="button"
           variant="outline"
-          disabled={!dirty || pending}
+          disabled={!dirty || !lambdaOk || !thresholdOk || pending}
           onClick={() => {
             setError(null);
             setNotice(null);
             setPending(true);
             void update({
               disagreementThreshold: thresholdValue,
-              lambda: settings.lambdaLocked ? undefined : lambdaValue,
+              lambda: lambdaValue,
             })
-              .then(() => setNotice("Ajustes guardados"))
+              .then(() => setNotice("Ajustes guardados. La clasificación ya usa los valores nuevos."))
               .catch((error: unknown) =>
                 setError(errorMessage(error, "No se han podido guardar los ajustes")),
               )
@@ -962,6 +1116,21 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
+function noteCopy(
+  assessment: ProjectRow["assessments"][number] | null,
+): string {
+  if (assessment?.ownCriteriaComment) {
+    return assessment.ownCriteriaComment;
+  }
+  if (!assessment) {
+    return "Sin evaluación.";
+  }
+  if (assessment.status === "submitted") {
+    return "Sin notas.";
+  }
+  return "Borrador sin enviar.";
+}
+
 function AssessmentBreakdown({ item }: { item: ProjectRow }) {
   const rows = item.judges.map((judge) => ({
     assessment: item.assessments.find((row) => row.judge._id === judge._id) ?? null,
@@ -1031,11 +1200,7 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
           <div key={judge._id} className="border-[3px] border-hs-ink bg-hs-paper p-3">
             <p className="font-bungee text-xs uppercase">{judge.name}</p>
             <p className="mt-1 text-sm font-medium text-pretty whitespace-pre-wrap">
-              {assessment?.status === "submitted" && assessment.ownCriteriaComment
-                ? assessment.ownCriteriaComment
-                : assessment
-                  ? "Borrador sin enviar."
-                  : "Sin evaluación."}
+              {noteCopy(assessment)}
             </p>
           </div>
         ))}
