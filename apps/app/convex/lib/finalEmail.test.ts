@@ -17,8 +17,10 @@ test("final email is a congratulations with a confirm-only cancel link", () => {
   const html = finalEmailHtml(content);
   const text = finalEmailText(content);
 
-  assert.equal(FINAL_EMAIL_SUBJECT, "Estás en la final de HackSpain 2026");
+  assert.equal(FINAL_EMAIL_SUBJECT, "Estás en la final de HackSpain 2026 · 16:30");
   assert.match(html, /Has pasado a la final de HackSpain 2026/);
+  assert.match(html, /16:30/);
+  assert.match(text, /A LAS 16:30/);
   assert.match(html, /Enhorabuena, Ada/);
   assert.match(html, /El clic no cancela nada/);
   assert.match(html, /href="https:\/\/app\.hackspain\.com\/final\/cancelar\?token=abc"/);
