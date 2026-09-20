@@ -132,8 +132,10 @@ export function rankingCsv(
 
 export function assessmentsCsv(projects: ExportProject[]): string {
   const header = [
+    "Id",
     "Proyecto",
     "Equipo",
+    "Reto",
     "Juez",
     "Estado",
     ...CRITERIA.map((criterion) => CRITERION_LABELS[criterion]),
@@ -144,12 +146,15 @@ export function assessmentsCsv(projects: ExportProject[]): string {
   ];
   const rows: CsvValue[][] = [];
   for (const project of projects) {
+    const track = project.challenges.map((challenge) => challenge.label).join(" | ");
     for (const judge of project.judges) {
       const assessment = assessmentFor(project, judge);
       const submitted = assessment?.status === "submitted";
       rows.push([
+        project._id,
         project.name,
         project.teamName ?? "",
+        track,
         judge.name,
         statusLabel(assessment),
         ...CRITERIA.map((criterion) => assessment?.[criterion] ?? null),
