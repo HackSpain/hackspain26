@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { ClosingPanel } from "@/components/closing/panel";
 import { CLOSING_SLIDES, ClosingSlide } from "@/components/closing/slides";
 import { CLOSING_API_PATH, CLOSING_PATH } from "@/lib/closing";
 import type { ClosingData } from "@/lib/closing";
@@ -9,7 +10,7 @@ import { demoClosingData, summarize } from "@/lib/closing-summary";
 
 const POLL_MS = 60_000;
 
-function useClosingData(demo: boolean): { data: ClosingData | null; failed: boolean; refresh: () => void } {
+function useClosingData(demo: boolean): { data: ClosingData | null; failed: boolean } {
   const [data, setData] = useState<ClosingData | null>(() => (demo ? demoClosingData() : null));
   const [failed, setFailed] = useState(false);
   const refresh = useCallback(() => {
@@ -24,7 +25,7 @@ function useClosingData(demo: boolean): { data: ClosingData | null; failed: bool
         setData((await response.json()) as ClosingData);
         setFailed(false);
       })
-      // Keep the last good numbers on screen; the toolbar says they are stale.
+      // Keep the last good numbers on screen; their stamp shows how old they are.
       .catch(() => setFailed(true));
   }, [demo]);
   useEffect(() => {
@@ -32,7 +33,7 @@ function useClosingData(demo: boolean): { data: ClosingData | null; failed: bool
     const timer = setInterval(refresh, POLL_MS);
     return () => clearInterval(timer);
   }, [refresh]);
-  return { data, failed, refresh };
+  return { data, failed };
 }
 
 function ClosingRoute() {
@@ -41,7 +42,7 @@ function ClosingRoute() {
   const demo = params.get("demo") === "1";
   const slideParam = params.get("slide");
   const single = slideParam === null ? null : Math.min(Math.max(Number(slideParam) || 1, 1), CLOSING_SLIDES.length) - 1;
-  const { data, failed, refresh } = useClosingData(demo);
+  const { data, failed } = useClosingData(demo);
   const summary = useMemo(() => (data ? summarize(data) : null), [data]);
 
   const go = useCallback((index: number | null) => {
@@ -80,7 +81,7 @@ function ClosingRoute() {
     );
   }
 
-  // One slide, letterboxed to the viewport and nothing else: made for a clean capture.
+  // ?slide=n: one full slide, letterboxed to the viewport and nothing else: made for a clean capture.
   if (single !== null) {
     return (
       <main className="flex h-dvh items-center justify-center bg-hs-ink">
@@ -91,28 +92,8 @@ function ClosingRoute() {
     );
   }
 
-  const updated = new Intl.DateTimeFormat("es-ES", { timeStyle: "medium", timeZone: "Europe/Madrid" }).format(summary.generatedAt);
-  return (
-    <main className="min-h-dvh bg-hs-ink text-hs-paper">
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-hs-paper/20 bg-hs-ink px-5 py-3 text-sm">
-        <p className="font-bungee text-base">Cierre · visuales</p>
-        <p className="tabular-nums" role="status">
-          {demo ? "Datos de demostración" : `Actualizado a las ${updated}`}
-          {failed ? " · último refresco fallido" : ""}
-        </p>
-        <button type="button" onClick={refresh} className="bg-hs-gold px-3 py-1.5 font-semibold text-hs-ink">Refrescar</button>
-        {demo ? null : <a href={CLOSING_API_PATH} target="_blank" rel="noreferrer" className="underline underline-offset-4">JSON</a>}
-        <p className="text-hs-paper/70">Clic en una diapositiva para verla sola (flechas para pasar, Esc para volver).</p>
-      </div>
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-8 p-5">
-        {CLOSING_SLIDES.map((slide, index) => (
-          <button key={slide.id} type="button" onClick={() => go(index)} className="block w-full cursor-zoom-in text-left" aria-label={`Ver diapositiva ${index + 1}`}>
-            <ClosingSlide index={index} summary={summary} demo={demo} />
-          </button>
-        ))}
-      </div>
-    </main>
-  );
+  const stepParam = params.get("step");
+  return <ClosingPanel summary={summary} demo={demo} step={stepParam === null ? null : Math.max(Number(stepParam) || 1, 1) - 1} />;
 }
 
 export default function ClosingPage() {

@@ -72,19 +72,19 @@ function Panel({ title, note, className, children }: { title: string; note?: str
   );
 }
 
-function Empty() {
+export function Empty() {
   return <p className="hsx-lg flex h-full items-center justify-center font-semibold text-hs-brown">Sin datos todavía</p>;
 }
 
 /** Ranked magnitudes: one hue, the name and the number carry the identity. */
-function HBars({ rows, fill, columns = 1 }: { rows: Bar[]; fill: string; columns?: 1 | 2 }) {
+export function HBars({ rows, fill, columns = 1, size = "hsx-lg" }: { rows: Bar[]; fill: string; columns?: 1 | 2; size?: string }) {
   if (rows.length === 0) {
     return <Empty />;
   }
   const perColumn = Math.ceil(rows.length / columns);
   return (
     <ol
-      className={cn("hsx-lg grid h-full grid-flow-col gap-x-[calc(var(--u)*3)]", columns === 2 ? "grid-cols-2" : "grid-cols-1")}
+      className={cn(size, "grid h-full grid-flow-col gap-x-[calc(var(--u)*3)]", columns === 2 ? "grid-cols-2" : "grid-cols-1")}
       style={{ gridTemplateRows: `repeat(${perColumn}, minmax(0, 1fr))` }}
     >
       {rows.map((row) => (
@@ -106,7 +106,7 @@ function HBars({ rows, fill, columns = 1 }: { rows: Bar[]; fill: string; columns
 }
 
 /** Columns over time. Night buckets sit on a darker band; only the peak is labelled. */
-function Columns({ values, labels, night, fill, unit, tickEvery }: {
+export function Columns({ values, labels, night, fill, unit, tickEvery }: {
   values: number[]; labels: string[]; night?: boolean[]; fill: string; unit: string; tickEvery: number;
 }) {
   const max = Math.max(...values, 0);
@@ -143,7 +143,7 @@ function Columns({ values, labels, night, fill, unit, tickEvery }: {
   );
 }
 
-function stampOf(summary: ClosingSummary, demo: boolean): string {
+export function stampOf(summary: ClosingSummary, demo: boolean): string {
   const at = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }).format(summary.generatedAt);
   return demo ? "Datos de demostración" : `Datos a las ${at}`;
 }
