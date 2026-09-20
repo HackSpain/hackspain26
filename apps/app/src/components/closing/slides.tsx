@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { Diagonal } from "@/components/tv/market";
+import { Diagonal, Face } from "@/components/tv/market";
 import { figure, percent } from "@/lib/closing-summary";
 import type { Bar, ClosingSummary } from "@/lib/closing-summary";
 import { cn } from "@/lib/utils";
+import { BURNER_CALL, Mugshot, burnerFacts } from "./burner";
 
 const TONES = [
   "bg-hs-paper",
@@ -76,28 +77,33 @@ export function Empty() {
   return <p className="hsx-lg flex h-full items-center justify-center font-semibold text-hs-brown">Sin datos todavía</p>;
 }
 
-/** Ranked magnitudes: one hue, the name and the number carry the identity. */
+/** Ranked magnitudes: one hue; the logo or photo, the name and the number carry the identity. */
 export function HBars({ rows, fill, columns = 1, size = "hsx-lg" }: { rows: Bar[]; fill: string; columns?: 1 | 2; size?: string }) {
   if (rows.length === 0) {
     return <Empty />;
   }
   const perColumn = Math.ceil(rows.length / columns);
+  // All or nothing, so the bars of one list start on the same edge.
+  const faces = rows.some((row) => row.icon || row.photo);
   return (
     <ol
       className={cn(size, "grid h-full grid-flow-col gap-x-[calc(var(--u)*3)]", columns === 2 ? "grid-cols-2" : "grid-cols-1")}
       style={{ gridTemplateRows: `repeat(${perColumn}, minmax(0, 1fr))` }}
     >
       {rows.map((row) => (
-        <li key={row.key} className="flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.45)]" title={`${row.name}: ${figure(row.value)}`}>
-          <div className="flex items-baseline justify-between gap-[calc(var(--u)*1)]">
-            <span className="truncate font-bold">
-              {row.name}
-              {row.detail ? <span className="hsx-sm ml-[calc(var(--u)*0.7)] font-normal text-hs-brown">{row.detail}</span> : null}
-            </span>
-            <span className="hsx-num shrink-0 font-bold">{figure(row.value)}</span>
-          </div>
-          <div className="h-[calc(var(--u)*1)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand">
-            <div className={cn("h-full", fill)} style={{ width: `${Math.max(row.share * 100, 1)}%` }} />
+        <li key={row.key} className="flex min-w-0 items-center gap-[calc(var(--u)*0.9)]" title={`${row.name}: ${figure(row.value)}`}>
+          {faces ? <Face name={row.name} src={row.icon} logo={!row.photo} className="h-[2.2em]" /> : null}
+          <div className="flex min-w-0 flex-1 flex-col gap-[calc(var(--u)*0.45)]">
+            <div className="flex items-baseline justify-between gap-[calc(var(--u)*1)]">
+              <span className="truncate font-bold">
+                {row.name}
+                {row.detail ? <span className="hsx-sm ml-[calc(var(--u)*0.7)] font-normal text-hs-brown">{row.detail}</span> : null}
+              </span>
+              <span className="hsx-num shrink-0 font-bold">{figure(row.value)}</span>
+            </div>
+            <div className="h-[calc(var(--u)*1)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand">
+              <div className={cn("h-full", fill)} style={{ width: `${Math.max(row.share * 100, 1)}%` }} />
+            </div>
           </div>
         </li>
       ))}
@@ -262,7 +268,10 @@ function AwardsSlide({ summary, stamp }: { summary: ClosingSummary; stamp: strin
         <div className="grid h-full grid-cols-3 grid-rows-2 gap-[var(--line)]">
           {summary.awards.map((award, index) => (
             <div key={award.title} className={cn("flex min-w-0 flex-col justify-between", PAD, tone(index))}>
-              <p className="hsx-label">{award.title}</p>
+              <div className="flex items-start justify-between gap-[calc(var(--u)*1)]">
+                <p className="hsx-label">{award.title}</p>
+                <Face name={award.team} src={award.logoUrl} logo className="h-[calc(var(--u)*5.5)] text-[calc(var(--u)*2.4)] text-hs-ink" />
+              </div>
               <div className="min-w-0">
                 <p className="hsx-title line-clamp-2 text-[calc(var(--u)*3)] break-words">{award.team}</p>
                 <p className="hsx-lg mt-[calc(var(--u)*0.7)] font-semibold">{award.detail}</p>
@@ -275,6 +284,54 @@ function AwardsSlide({ summary, stamp }: { summary: ClosingSummary; stamp: strin
   );
 }
 
+function PeopleSlide({ summary, stamp }: { summary: ClosingSummary; stamp: string }) {
+  return (
+    <Frame title="Quién quemó más" kicker="Tokens por persona · solo el podio, nadie más sale de aquí" stamp={stamp}>
+      <Panel title="Personas por tokens" className="h-full"><HBars rows={summary.people} fill="bg-hs-orange" /></Panel>
+    </Frame>
+  );
+}
+
+function BurnerSlide({ summary, stamp }: { summary: ClosingSummary; stamp: string }) {
+  const { burner } = summary;
+  if (!burner) {
+    return <Frame title="Mención especial" kicker="Máximo quemador de tokens" stamp={stamp}><div className="h-full bg-hs-paper"><Empty /></div></Frame>;
+  }
+  const facts = burnerFacts(burner);
+  return (
+    <Frame title={`¿Pero quién es ${burner.name}?`} kicker="Mención especial · máximo quemador de tokens" stamp={stamp}>
+      <div className="grid h-full grid-cols-[minmax(0,1.05fr)_minmax(0,1.5fr)_minmax(0,1.05fr)] gap-[var(--line)]">
+        <div className="flex min-h-0 items-center justify-center bg-hs-gold">
+          <Mugshot burner={burner} className="w-[72%] text-[calc(var(--u)*2.4)]" />
+        </div>
+        <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-[var(--line)]">
+          <div className={cn("flex min-w-0 flex-col justify-between bg-hs-paper", PAD)}>
+            <div className="min-w-0">
+              <p className="hsx-xl font-bold text-hs-brown">Nadie:</p>
+              <p className="hsx-xl font-bold text-hs-brown">Absolutamente nadie:</p>
+              <p className="hsx-title mt-[calc(var(--u)*0.9)] line-clamp-2 text-[calc(var(--u)*3.2)] break-words">{burner.name}:</p>
+              {burner.team ? <p className="hsx-lg mt-[calc(var(--u)*0.5)] truncate font-semibold text-hs-brown">del equipo {burner.team}</p> : null}
+            </div>
+            <div>
+              <p className={cn(NUMBER, "text-[calc(var(--u)*8.5)]")}>{figure(burner.tokens)}</p>
+              <p className="hsx-xl mt-[calc(var(--u)*0.6)] font-bold">tokens. Una sola persona.</p>
+            </div>
+          </div>
+          <p className={cn("hsx-lg bg-hs-red leading-tight font-bold text-hs-paper", PAD)}>{BURNER_CALL}</p>
+        </div>
+        <div className="grid min-h-0 gap-[var(--line)]" style={{ gridTemplateRows: `repeat(${facts.length}, minmax(0, 1fr))` }}>
+          {facts.map((fact, index) => (
+            <div key={fact.label} className={cn("flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.5)]", PAD, tone(index + 2))}>
+              <p className={cn(NUMBER, "text-[calc(var(--u)*3.4)]")}>{fact.value}</p>
+              <p className="hsx-md leading-tight font-semibold">{fact.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Frame>
+  );
+}
+
 export const CLOSING_SLIDES = [
   { id: "cifras", render: HeroSlide },
   { id: "pulso", render: PulseSlide },
@@ -283,6 +340,8 @@ export const CLOSING_SLIDES = [
   { id: "feed", render: FeedSlide },
   { id: "retos", render: TracksSlide },
   { id: "menciones", render: AwardsSlide },
+  { id: "personas", render: PeopleSlide },
+  { id: "quemador", render: BurnerSlide },
 ] as const;
 
 export function ClosingSlide({ index, summary, demo }: { index: number; summary: ClosingSummary; demo: boolean }) {

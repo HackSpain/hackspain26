@@ -3,10 +3,11 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Diagonal } from "@/components/tv/market";
+import { Diagonal, Face } from "@/components/tv/market";
 import { figure, percent } from "@/lib/closing-summary";
 import type { ClosingSummary } from "@/lib/closing-summary";
 import { cn } from "@/lib/utils";
+import { BurnerView } from "./burner";
 import { Columns, Empty, HBars, stampOf } from "./slides";
 
 /** How long each rotating box holds a view; the two boxes change half a turn apart. */
@@ -110,12 +111,15 @@ function AwardsView({ awards }: { awards: ClosingSummary["awards"] }) {
   return (
     <ol className="grid h-full" style={{ gridTemplateRows: `repeat(${awards.length}, minmax(0, 1fr))` }}>
       {awards.map((award) => (
-        <li key={award.title} className="flex min-w-0 flex-col justify-center border-b-[length:calc(var(--line)*0.5)] border-hs-ink/20 last:border-b-0">
-          <p className="hsx-label">{award.title}</p>
-          <p className="hsx-md flex items-baseline justify-between gap-[calc(var(--u)*0.8)]">
-            <span className="truncate font-bold">{award.team}</span>
-            <span className="hsx-sm hsx-num shrink-0 text-hs-brown">{award.detail}</span>
-          </p>
+        <li key={award.title} className="flex min-w-0 items-center gap-[calc(var(--u)*0.9)] border-b-[length:calc(var(--line)*0.5)] border-hs-ink/20 last:border-b-0">
+          <Face name={award.team} src={award.logoUrl} logo className="h-[calc(var(--u)*2.6)]" />
+          <div className="min-w-0 flex-1">
+            <p className="hsx-label">{award.title}</p>
+            <p className="hsx-md flex items-baseline justify-between gap-[calc(var(--u)*0.8)]">
+              <span className="truncate font-bold">{award.team}</span>
+              <span className="hsx-sm hsx-num shrink-0 text-hs-brown">{award.detail}</span>
+            </p>
+          </div>
         </li>
       ))}
     </ol>
@@ -131,11 +135,13 @@ export function ClosingPanel({ summary, demo, step }: { summary: ClosingSummary;
     { body: <HBars rows={summary.harnesses} fill="bg-hs-orange" size="hsx-md" />, title: "Herramientas de IA" },
     { body: <HBars rows={summary.models} fill="bg-hs-teal" size="hsx-md" />, title: "Modelos" },
     { body: <HBars rows={summary.stacks.rows.slice(0, 7)} fill="bg-hs-navy" size="hsx-md" />, title: "El stack" },
+    { body: <HBars rows={summary.people} fill="bg-hs-orange" size="hsx-md" />, title: "Quién quemó más tokens" },
   ];
   const people: View[] = [
     { body: <FeedView feed={summary.feed} />, title: "El feed" },
     { body: <HBars rows={summary.tracks.rows.slice(0, 7)} fill="bg-hs-teal" size="hsx-md" />, title: "Entregas por reto" },
     { body: <AwardsView awards={summary.awards} />, title: "Menciones de honor" },
+    ...(summary.burner ? [{ body: <BurnerView burner={summary.burner} />, title: `¿Quién es ${summary.burner.name}?` }] : []),
   ];
   return (
     <main className="relative h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]" aria-label="HackSpain en cifras">

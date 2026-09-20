@@ -1,5 +1,7 @@
 import { HARNESSES } from "../app/insights/mock-data";
+import { TRACK_SYMBOLS } from "../components/participant-directory/network-model";
 import type { ClosingData } from "./closing";
+import { HARNESS_ICONS, TECH_ICONS } from "./tv-icons";
 
 const MADRID = "Europe/Madrid";
 /** Buckets whose midpoint falls before this hour in Madrid count as night. */
@@ -8,9 +10,25 @@ const SPRINT_BUCKETS = 2;
 /** A team needs this share of the top team's tokens to compete on cache rate. */
 const CACHE_AWARD_FLOOR = 0.05;
 
-export type Bar = { key: string; name: string; value: number; share: number; detail?: string };
+/** `icon` is a logo unless `photo` says it is somebody's face, which gets cropped instead of fitted. */
+export type Bar = { key: string; name: string; value: number; share: number; detail?: string; icon?: string; photo?: boolean };
 
-export type Award = { title: string; team: string; detail: string };
+export type Award = { title: string; team: string; detail: string; logoUrl?: string };
+
+/** The one person who burned the most tokens, with the comparisons that make the number land. */
+export type Burner = {
+  name: string;
+  team: string;
+  photoUrl?: string;
+  tokens: number;
+  /** Of every token of the weekend. */
+  share: number;
+  pushes: number;
+  /** Times the runner-up's tokens; 0 when nobody else has any. */
+  lead: number;
+  /** How many of the quietest teams, added together, still burned less. */
+  teamsOutburned: number;
+};
 
 export type ClosingSummary = {
   hero: { label: string; value: number }[];
@@ -27,6 +45,8 @@ export type ClosingSummary = {
   models: Bar[];
   stacks: { rows: Bar[]; total: number; auto: number };
   tracks: { rows: Bar[]; total: number };
+  people: Bar[];
+  burner: Burner | null;
   feed: ClosingData["totals"]["feed"];
   awards: Award[];
   generatedAt: number;
@@ -34,17 +54,24 @@ export type ClosingSummary = {
 
 const compactFormat = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
 const plainFormat = new Intl.NumberFormat("es-ES", { useGrouping: "always" });
+const UNITS: [number, string][] = [[1e12, "T"], [1e9, "B"], [1e6, "M"], [1e3, "k"]];
+/** Below this the exact number is as short as its compact form. */
+const COMPACT_FROM = 10_000;
 
-/** "1.234", "56,7 mil", "2.345 M": short enough for a slide, never "mil M". */
+/** "1.234", "16,6 k", "456 k", "9,6 M", "13,9 B": three digits and a unit at most. */
 export function figure(value: number): string {
-  if (value >= 10_000_000) {
-    return `${plainFormat.format(Math.round(value / 1_000_000))} M`;
+  if (value < COMPACT_FROM) {
+    return plainFormat.format(Math.round(value));
   }
-  if (value >= 1_000_000) {
-    return `${compactFormat.format(value / 1_000_000)} M`;
-  }
-  if (value >= 100_000) {
-    return `${plainFormat.format(Math.round(value / 1000))} mil`;
+  for (const [index, [size, suffix]] of UNITS.entries()) {
+    if (value < size) {
+      continue;
+    }
+    const scaled = value / size;
+    const shown = scaled < 99.95 ? Math.round(scaled * 10) / 10 : Math.round(scaled);
+    const above = UNITS[index - 1];
+    // 999.960 rounds up to a thousand of its unit: hand it to the next one.
+    return shown >= 1000 && above ? `1 ${above[1]}` : `${compactFormat.format(shown)} ${suffix}`;
   }
   return plainFormat.format(Math.round(value));
 }
@@ -53,7 +80,24 @@ export function percent(share: number): string {
   return `${Math.round(share * 100)} %`;
 }
 
-function bars(rows: { key: string; name: string; value: number; detail?: string }[], limit: number): Bar[] {
+const MODEL_ICONS: Record<string, string | undefined> = {
+  claude: TECH_ICONS.Anthropic,
+  gemini: TECH_ICONS.Gemini,
+  gpt: TECH_ICONS.OpenAI,
+  mistral: TECH_ICONS.Mistral,
+};
+
+function iconOf(icon: string | undefined): { icon?: string } {
+  return icon ? { icon } : {};
+}
+
+/** Track labels carry the sponsor's name ("THEKER Robotics"); the symbols key on its slug. */
+function trackIcon(label: string): string | undefined {
+  const slug = label.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-");
+  return Object.entries(TRACK_SYMBOLS).find(([key]) => slug.startsWith(key))?.[1];
+}
+
+function bars(rows: Omit<Bar, "share">[], limit: number): Bar[] {
   const top = rows
     .filter((row) => row.value > 0)
     .toSorted((a, b) => b.value - a.value)
@@ -87,6 +131,7 @@ export function summarize(data: ClosingData): ClosingSummary {
   );
 
   const teamName = new Map(insights.teams.map((team) => [team.id, team.name]));
+  const teamLogo = new Map(insights.teams.map((team) => [team.id, team.logoUrl]));
   const tokensPerBucket = Array.from({ length: buckets }, () => 0);
   const githubPerBucket = Array.from({ length: buckets }, () => 0);
   const perHarness = new Map<string, number>();
@@ -141,7 +186,19 @@ export function summarize(data: ClosingData): ClosingSummary {
     }
   }
   const award = (title: string, best: [string, number] | null, detail: (value: number) => string): Award[] =>
-    best ? [{ detail: detail(best[1]), team: teamName.get(best[0]) ?? "", title }] : [];
+    best ? [{ detail: detail(best[1]), team: teamName.get(best[0]) ?? "", title, ...(teamLogo.get(best[0]) ? { logoUrl: teamLogo.get(best[0]) } : {}) }] : [];
+
+  const byTokens = insights.people.filter((person) => person.tokens > 0).toSorted((a, b) => b.tokens - a.tokens);
+  const [top, second] = byTokens;
+  let teamsOutburned = 0;
+  let quietest = 0;
+  for (const value of [...teamTokens.values()].toSorted((a, b) => a - b)) {
+    quietest += value;
+    if (!top || quietest >= top.tokens) {
+      break;
+    }
+    teamsOutburned += 1;
+  }
 
   const nightTokens = tokensPerBucket.reduce((sum, value, bucket) => sum + (night[bucket] ? value : 0), 0);
   const harnessName = new Map<string, string>(HARNESSES.map((harness) => [harness.id, harness.name]));
@@ -155,10 +212,22 @@ export function summarize(data: ClosingData): ClosingSummary {
       ...award("Sprint final", winner(teamSprint), (value) => `${figure(value)} tokens en la recta final`),
       ...award("Maestros de la caché", winner(cacheRates), (value) => `${percent(value)} de tokens desde caché`),
     ],
+    burner: top
+      ? {
+          lead: second ? top.tokens / second.tokens : 0,
+          name: top.name,
+          ...(top.photoUrl ? { photoUrl: top.photoUrl } : {}),
+          pushes: top.pushes,
+          share: tokens > 0 ? top.tokens / tokens : 0,
+          team: top.team,
+          teamsOutburned,
+          tokens: top.tokens,
+        }
+      : null,
     feed: totals.feed,
     generatedAt: data.generatedAt,
     harnesses: bars(
-      [...perHarness].map(([id, value]) => ({ detail: tokens > 0 ? percent(value / tokens) : "", key: id, name: harnessName.get(id) ?? id, value })),
+      [...perHarness].map(([id, value]) => ({ detail: tokens > 0 ? percent(value / tokens) : "", ...iconOf(HARNESS_ICONS[id]), key: id, name: harnessName.get(id) ?? id, value })),
       6
     ),
     hero: [
@@ -173,14 +242,18 @@ export function summarize(data: ClosingData): ClosingSummary {
     ],
     hours: scheduled ? Math.round((endsAt - startsAt) / 3_600_000) : 0,
     models: bars(
-      insights.models.map((model) => ({ detail: model.provider, key: model.name, name: model.name, value: model.tokens })),
+      insights.models.map((model) => ({ detail: model.provider, ...iconOf(MODEL_ICONS[model.family]), key: model.name, name: model.name, value: model.tokens })),
       6
+    ),
+    people: bars(
+      byTokens.map((person) => ({ detail: person.team, ...iconOf(person.photoUrl), key: person.id, name: person.name, photo: true, value: person.tokens })),
+      7
     ),
     stacks: {
       auto: insights.stacks.auto,
       rows: bars(
         // "Otras" is the catalog's catch-all; on a slide it reads as noise.
-        insights.stacks.rows.map((row) => ({ ...(row.category === "Otras" ? {} : { detail: row.category }), key: row.name, name: row.name, value: row.count })),
+        insights.stacks.rows.map((row) => ({ ...(row.category === "Otras" ? {} : { detail: row.category }), ...iconOf(TECH_ICONS[row.name]), key: row.name, name: row.name, value: row.count })),
         14
       ),
       total: insights.stacks.total,
@@ -194,7 +267,7 @@ export function summarize(data: ClosingData): ClosingSummary {
     },
     tracks: {
       rows: bars(
-        totals.submissions.byTrack.map((track) => ({ key: track.label, name: track.label, value: track.count })),
+        totals.submissions.byTrack.map((track) => ({ ...iconOf(trackIcon(track.label)), key: track.label, name: track.label, value: track.count })),
         12
       ),
       total: totals.submissions.total,
@@ -258,7 +331,15 @@ export function demoClosingData(): ClosingData {
         { family: "gemini", name: "gemini-3-pro", provider: "google", requests: 900, tokens: 21_000_000 },
         { family: "other", name: "kimi-k2", provider: "moonshot", requests: 300, tokens: 6_000_000 },
       ],
-      people: [],
+      // One anonymous handle far ahead of everybody, like the real thing.
+      people: ["t0kenl0rd_99", "Ana García", "Pau Ferrer", "Irene Sanz", "Marc Soler", "Lucía Vidal", "Hugo Marín", "Noa Prats"].map((name, index) => ({
+        id: `demo-person-${index}`,
+        name,
+        pullRequests: index % 3,
+        pushes: index === 0 ? 4 : 20 + index * 9,
+        team: teams[index]?.name ?? "",
+        tokens: index === 0 ? 61_000_000 : Math.round(34_000_000 / index),
+      })),
       samples,
       stacks: {
         auto: 9,
@@ -283,7 +364,7 @@ export function demoClosingData(): ClosingData {
       milestones: 31,
       people: { checkedIn: 342, inTeams: 318 },
       submissions: {
-        byTrack: ["General", "Agentes", "Fintech", "Salud", "Educación", "Open source"].map((label, index) => ({ count: 12 - index * 2 + (index % 2), label })),
+        byTrack: ["Maisa", "HappyRobot", "Prosper AI", "Embat", "THEKER Robotics"].map((label, index) => ({ count: 12 - index * 2 + (index % 2), label })),
         total: 12,
       },
       teams: 12,
