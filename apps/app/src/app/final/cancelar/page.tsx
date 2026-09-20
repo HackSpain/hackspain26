@@ -24,6 +24,14 @@ function thanksLine(firstName: string) {
   return `Gracias por avisarnos, ${firstName}.`;
 }
 
+function HomeLink({ label }: { label: string }) {
+  return (
+    <Button asChild className="mt-8">
+      <a href="https://hackspain.com">{label}</a>
+    </Button>
+  );
+}
+
 function CancelCard({
   title,
   children,
@@ -88,6 +96,7 @@ function CancelFlow() {
           Este enlace no corresponde a una plaza de la final. Comprueba que lo
           has copiado completo desde el correo.
         </p>
+        <HomeLink label="Volver al inicio" />
       </CancelCard>
     );
   }
@@ -126,6 +135,7 @@ function CancelFlow() {
           Este enlace no corresponde a una plaza de la final. Comprueba que lo
           has copiado completo desde el correo.
         </p>
+        <HomeLink label="Volver al inicio" />
       </CancelCard>
     );
   }
@@ -136,6 +146,7 @@ function CancelFlow() {
         <p className="mt-5 text-lg leading-relaxed text-pretty">
           No tienes que hacer nada más. Ya habíamos registrado esta cancelación.
         </p>
+        <HomeLink label="Volver al inicio" />
       </CancelCard>
     );
   }
@@ -146,17 +157,20 @@ function CancelFlow() {
         <p className="mt-5 text-lg leading-relaxed text-pretty">
           {thanksLine(firstName)} Liberamos tu plaza de la final.
         </p>
+        <HomeLink label="Volver al inicio" />
       </CancelCard>
     );
   }
 
   return (
-    <CancelCard title="¿Seguro que quieres cancelar?">
+    <CancelCard title="Cancelar plaza de la final">
       <p className="mt-5 text-lg leading-relaxed text-pretty">
         {helloLine(firstName)} Si confirmas, sales de la final y podemos dar el
         hueco a otra persona.
       </p>
-      <p className="mt-3 font-bold">Esta acción no se puede deshacer desde este enlace.</p>
+      <p className="mt-3 font-bold">
+        Esta acción no se puede deshacer desde este enlace.
+      </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <Button
           aria-busy={pending}
@@ -165,7 +179,7 @@ function CancelFlow() {
         >
           {pending ? "Cancelando…" : "Sí, cancelar mi plaza"}
         </Button>
-        <Button asChild variant="outline">
+        <Button asChild>
           <a href="https://hackspain.com">No cancelar</a>
         </Button>
       </div>

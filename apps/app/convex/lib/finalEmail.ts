@@ -20,6 +20,15 @@ export interface FinalEmailContent {
   logoUrl: string;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function button(options: {
   background: string;
   border: string;
@@ -28,16 +37,19 @@ function button(options: {
   label: string;
 }): string {
   return `
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
     <tr>
-      <td align="center" bgcolor="${options.background}" style="background:${options.background};border:3px solid ${options.border};padding:16px 34px;">
-        <a href="${options.href}" style="display:block;font-family:${SANS};font-size:17px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${options.foreground};text-decoration:none;">${options.label}</a>
+      <td align="center" bgcolor="${options.background}" style="background:${options.background};border:3px solid ${options.border};padding:16px 28px;">
+        <a href="${options.href}" style="display:block;font-family:${SANS};font-size:16px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${options.foreground};text-decoration:none;">${options.label}</a>
       </td>
     </tr>
   </table>`;
 }
 
 export function finalEmailHtml(content: FinalEmailContent): string {
+  const firstName = escapeHtml(content.firstName);
+  const cancelUrl = escapeHtml(content.cancelUrl);
+
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -48,7 +60,7 @@ export function finalEmailHtml(content: FinalEmailContent): string {
 <title>${FINAL_EMAIL_SUBJECT}</title>
 </head>
 <body style="margin:0;padding:0;background:${PALETTE.ink};">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Has pasado a la final. Si no puedes, cancela tu plaza.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Has pasado a la final de HackSpain 2026.</div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PALETTE.ink}" style="background:${PALETTE.ink};">
     <tr>
@@ -63,40 +75,39 @@ export function finalEmailHtml(content: FinalEmailContent): string {
 
           <tr>
             <td align="center" bgcolor="${PALETTE.gold}" style="background:${PALETTE.gold};border:3px solid ${PALETTE.ink};border-top:0;padding:11px 24px;">
-              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:${PALETTE.brown};">Madrid · 18 a 20 septiembre 2026</div>
+              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:${PALETTE.brown};">Final · Madrid</div>
             </td>
           </tr>
 
           <tr>
             <td align="center" bgcolor="${PALETTE.red}" style="background:${PALETTE.red};border:3px solid ${PALETTE.ink};border-top:0;padding:30px 24px;">
               <div style="font-family:${SANS};font-size:30px;line-height:1.15;font-weight:800;letter-spacing:0.01em;text-transform:uppercase;color:${PALETTE.paper};">Estás en la final</div>
-              <div style="font-family:${SANS};font-size:14px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${PALETTE.gold};padding-top:8px;">¡Enhorabuena, ${content.firstName}!</div>
+              <div style="font-family:${SANS};font-size:14px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${PALETTE.gold};padding-top:8px;">Enhorabuena, ${firstName}</div>
             </td>
           </tr>
 
           <tr>
             <td bgcolor="${PALETTE.paper}" style="background:${PALETTE.paper};border:3px solid ${PALETTE.ink};border-top:0;border-bottom:0;padding:30px 26px 8px;">
-              <p style="margin:0 0 16px;font-family:${SANS};font-size:16px;line-height:1.6;color:${PALETTE.ink};">
-                Has pasado a la final de HackSpain 2026. Te queremos ahí.
-              </p>
               <p style="margin:0;font-family:${SANS};font-size:16px;line-height:1.6;color:${PALETTE.ink};">
-                Si no vas a poder, cancela ahora. Así podemos dar el hueco a otro equipo.
+                Has pasado a la final de HackSpain 2026. Te queremos ahí.
               </p>
             </td>
           </tr>
 
           <tr>
-            <td align="center" bgcolor="${PALETTE.paper}" style="background:${PALETTE.paper};border:3px solid ${PALETTE.ink};border-top:0;padding:28px 26px 32px;">
-              <p style="margin:0 0 16px;font-family:${SANS};font-size:14px;line-height:1.5;color:${PALETTE.brown};">¿No vas a poder estar?</p>
-              ${button({ background: PALETTE.paper, border: PALETTE.ink, foreground: PALETTE.ink, href: content.cancelUrl, label: "Cancelar mi plaza" })}
+            <td bgcolor="${PALETTE.sand}" style="background:${PALETTE.sand};border:3px solid ${PALETTE.ink};border-top:0;padding:24px 26px 28px;">
+              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${PALETTE.red};padding-bottom:10px;">Si no puedes venir</div>
+              <p style="margin:0 0 16px;font-family:${SANS};font-size:15px;line-height:1.6;color:${PALETTE.ink};">
+                Libera tu plaza para que entre otra persona. El botón abre una página de confirmación. El clic no cancela nada.
+              </p>
+              ${button({ background: PALETTE.paper, border: PALETTE.ink, foreground: PALETTE.ink, href: cancelUrl, label: "Cancelar mi plaza" })}
             </td>
           </tr>
 
           <tr>
             <td bgcolor="${PALETTE.navy}" style="background:${PALETTE.navy};border:3px solid ${PALETTE.ink};border-top:0;padding:22px 26px;">
-              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${PALETTE.gold};padding-bottom:8px;">Los datos</div>
+              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${PALETTE.gold};padding-bottom:8px;">Dónde</div>
               <div style="font-family:${SANS};font-size:15px;line-height:1.7;color:${PALETTE.paper};">
-                <strong>18 a 20 de septiembre de 2026</strong><br />
                 UPM · ETSIT, Madrid<br />
                 Final de HackSpain
               </div>
@@ -129,15 +140,14 @@ export function finalEmailText(content: FinalEmailContent): string {
 
 Has pasado a la final de HackSpain 2026. Te queremos ahí.
 
-Si no vas a poder, cancela ahora. Así podemos dar el hueco a otro equipo.
+Si no puedes venir, libera tu plaza para que entre otra persona.
 
 CANCELAR MI PLAZA
 ${content.cancelUrl}
 
-Abrir el enlace no cancela nada: tendrás que confirmarlo en la página.
+El enlace abre una página de confirmación. Abrirlo no cancela nada.
 
-LOS DATOS
-18 a 20 de septiembre de 2026
+DÓNDE
 UPM · ETSIT, Madrid
 Final de HackSpain
 
