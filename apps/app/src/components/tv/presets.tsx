@@ -17,6 +17,7 @@ import { TeamsScreen } from "./teams";
 import { useClock, useTick } from "./motion";
 import { SponsorsScreen } from "./sponsors-screen";
 import { TvStage } from "./stage";
+import { CountdownScreen } from "./countdown-screen";
 
 function Activity() {
   const posts = useQuery(api.tv.listFeed, { source: "all" });
@@ -76,6 +77,7 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
   if (config.preset === "memes") { return <MemesScreen demo={demo} />; }
   if (config.preset === "memes-mini") { return <MemesScreen demo={demo} mini />; }
   if (config.preset === "patrocinadores") { return <SponsorsScreen />; }
+  if (config.preset === "countdown") { return <CountdownScreen />; }
   return (
     <main className="flex h-dvh w-full flex-col gap-[4vmin] overflow-hidden bg-hs-ink p-[4vmin] text-hs-paper">
       <header className="flex shrink-0 items-center justify-between gap-6">
