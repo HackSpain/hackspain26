@@ -605,12 +605,13 @@ export default function AdminFinalPage() {
                   htmlFor={`${ids}-since`}
                   className="text-xs tracking-[0.08em] text-hs-ink/70"
                 >
-                  Entraron desde
+                  Entraron a la final desde
                 </Label>
                 <Input
                   id={`${ids}-since`}
                   type="datetime-local"
                   step={60}
+                  aria-label="Hora a partir de la que entraron a la final"
                   className="w-full bg-hs-paper sm:w-56"
                   value={since}
                   onChange={(event) => setSince(event.target.value)}
@@ -660,7 +661,7 @@ export default function AdminFinalPage() {
                 </TableHead>
                 <TableHead>Persona</TableHead>
                 <TableHead>Equipo</TableHead>
-                <TableHead>Entró</TableHead>
+                <TableHead>A la final</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Correo</TableHead>
                 <TableHead />
