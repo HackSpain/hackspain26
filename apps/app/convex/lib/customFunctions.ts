@@ -10,9 +10,9 @@ import {
   requireAccepted,
   requireAdmin,
   requireInEvent,
-  requireJudgeInEvent,
+  requireJudge,
   requireOnboarded,
-  requireSponsorCatalogInEvent,
+  requireSponsorCatalog,
 } from "./auth";
 
 type Resolve = (ctx: QueryCtx | MutationCtx) => Promise<Doc<"users">>;
@@ -55,6 +55,7 @@ export const anytimeOnboardedMutation = wrapMutation(requireOnboarded);
 export const profileMutation = wrapMutation(requireOnboarded);
 export const adminQuery = wrapQuery(requireAdmin);
 export const adminMutation = wrapMutation(requireAdmin);
-export const judgeQuery = wrapQuery(requireJudgeInEvent);
-export const judgeMutation = wrapMutation(requireJudgeInEvent);
-export const catalogQuery = wrapQuery(requireSponsorCatalogInEvent);
+/** Jury panel: scoring continues after the hackathon window closes. */
+export const judgeQuery = wrapQuery(requireJudge);
+export const judgeMutation = wrapMutation(requireJudge);
+export const catalogQuery = wrapQuery(requireSponsorCatalog);
