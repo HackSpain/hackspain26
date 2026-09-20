@@ -26,4 +26,10 @@ describe("isPathAllowedWhenClosed", () => {
     expect(isPathAllowedWhenClosed("/feed")).toBe(false);
     expect(isPathAllowedWhenClosed("/submit")).toBe(false);
   });
+
+  test("judges keep challenge briefs when the window is closed", () => {
+    expect(isPathAllowedWhenClosed("/tracks", true)).toBe(true);
+    expect(isPathAllowedWhenClosed("/tracks/maisa", true)).toBe(true);
+    expect(isPathAllowedWhenClosed("/teams", true)).toBe(false);
+  });
 });

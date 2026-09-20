@@ -8,6 +8,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
 import { DeliveryBriefing } from "@/components/delivery-briefing";
+import { isEventOpen } from "@/components/event-closed-banner";
 import { LinkedText } from "@/components/linked-text";
 import { TrackBriefLink } from "@/components/markdown";
 import { LoadingText, MetaLink, MetaRow, Page } from "@/components/page";
@@ -333,15 +334,20 @@ function MyProject({
 }
 
 export default function TracksPage() {
+  const me = useQuery(api.users.me);
+  const skipLive =
+    me === undefined ||
+    !isEventOpen(me.event) ||
+    (me.canJudge && !me.sections.includes("tracks"));
   const tracks = useQuery(api.tracks.list);
   const settings = useQuery(api.tracks.settings);
-  const mine = useQuery(api.submissions.mine);
+  const mine = useQuery(api.submissions.mine, skipLive ? "skip" : {});
   const catalog = useQuery(api.perks.listCatalog);
-  const teams = useQuery(api.teams.list);
+  const teams = useQuery(api.teams.list, skipLive ? "skip" : {});
   const ensureCatalog = useMutation(api.tracks.ensureCatalog);
 
   useEffect(() => {
-    if (tracks === undefined) {
+    if (skipLive || tracks === undefined) {
       return;
     }
     const stale =
@@ -349,9 +355,13 @@ export default function TracksPage() {
     if (stale) {
       void ensureCatalog({});
     }
-  }, [tracks, ensureCatalog]);
+  }, [ensureCatalog, skipLive, tracks]);
 
-  if (tracks === undefined || settings === undefined || mine === undefined) {
+  if (
+    tracks === undefined ||
+    settings === undefined ||
+    (!skipLive && mine === undefined)
+  ) {
     return <LoadingText />;
   }
 
@@ -363,7 +373,7 @@ export default function TracksPage() {
       title="Retos"
       description="Un proyecto entra en un reto, o en dos si uno es THEKER. Te apuntas desde la CLI; la entrega del Gran Premio es en Submit a las 11."
     >
-      <DeliveryBriefing />
+      {skipLive ? null : <DeliveryBriefing />}
       {tracks.length === 0 ? (
         <p className="text-hs-brown">Cargando retos…</p>
       ) : (
@@ -388,7 +398,11 @@ export default function TracksPage() {
               <CardContent className="space-y-4">
                 <p>{track.body}</p>
                 <div className="border-t border-hs-ink/15 pt-3">
-                  {teams === undefined ? (
+                  {skipLive ? (
+                    <p className="text-xs text-hs-brown">
+                      {track.teamCount}/{track.teamLimit} equipos
+                    </p>
+                  ) : teams === undefined ? (
                     <p className="text-xs text-hs-brown">Cargando equipos…</p>
                   ) : (
                     <TrackTeams
@@ -405,11 +419,8 @@ export default function TracksPage() {
                   <Button asChild className="w-full sm:w-auto">
                     <TrackBriefLink track={track}>Ver reto</TrackBriefLink>
                   </Button>
-                  <div className="flex min-w-0 flex-wrap items-center gap-3">
-                    <code className="font-mono text-xs text-hs-brown">
-                      hackspain track register {track.slug}
-                    </code>
-                    {track.website ? (
+                  {skipLive ? (
+                    track.website ? (
                       <a
                         href={track.website}
                         target="_blank"
@@ -418,8 +429,24 @@ export default function TracksPage() {
                       >
                         Conoce al sponsor
                       </a>
-                    ) : null}
-                  </div>
+                    ) : null
+                  ) : (
+                    <div className="flex min-w-0 flex-wrap items-center gap-3">
+                      <code className="font-mono text-xs text-hs-brown">
+                        hackspain track register {track.slug}
+                      </code>
+                      {track.website ? (
+                        <a
+                          href={track.website}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex min-h-11 items-center text-sm font-medium text-hs-navy underline-offset-4 hover:underline"
+                        >
+                          Conoce al sponsor
+                        </a>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -427,17 +454,20 @@ export default function TracksPage() {
         </div>
       )}
 
-      <SubmitCallout />
-
-      {mine ? (
-        <MyProject
-          mine={mine}
-          tracks={tracks}
-          catalog={catalog}
-          submissionsOpen={settings.submissionsOpen}
-        />
-      ) : (
-        <NoProject submissionsOpen={settings.submissionsOpen} />
+      {skipLive ? null : (
+        <>
+          <SubmitCallout />
+          {mine ? (
+            <MyProject
+              mine={mine}
+              tracks={tracks}
+              catalog={catalog}
+              submissionsOpen={settings.submissionsOpen}
+            />
+          ) : (
+            <NoProject submissionsOpen={settings.submissionsOpen} />
+          )}
+        </>
       )}
     </Page>
   );

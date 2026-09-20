@@ -21,6 +21,7 @@ import {
   isJudgingPath,
   isPathAllowedWhenClosed,
   isSponsorJudgingPath,
+  isTracksPath,
   judgingDashboardHome,
   JUDGING_PATH,
   JUDGING_SPONSORS_PATH,
@@ -197,8 +198,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Outside the hackathon window only the profile, directory and perks stay.
-    if (!isEventOpen(me.event) && !isPathAllowedWhenClosed(pathname)) {
+    // Outside the hackathon window only the profile, directory, perks and
+    // judging stay; judges also keep the challenge briefs on /tracks.
+    if (
+      !isEventOpen(me.event) &&
+      !isPathAllowedWhenClosed(pathname, me.canJudge)
+    ) {
       router.replace("/");
       return;
     }
@@ -206,7 +211,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     // Hidden sections (CRM user type) bounce home; a judge or sponsor without
     // a signup then continues to their dashboard through the ladder below.
     const section = sectionForPath(pathname);
-    if (section && !me.sections.includes(section)) {
+    if (
+      section &&
+      !me.sections.includes(section) &&
+      !(me.canJudge && section === "tracks")
+    ) {
       router.replace("/");
       return;
     }
@@ -234,6 +243,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           router.replace(JUDGING_PATH);
           return;
         }
+        return;
+      }
+      if (me.canJudge && isTracksPath(pathname)) {
         return;
       }
       if (pathname === "/login") {
@@ -354,11 +366,18 @@ function resolveView({
     if (pathname.startsWith("/admin")) {
       return "blank";
     }
-    if (!isEventOpen(me.event) && !isPathAllowedWhenClosed(pathname)) {
+    if (
+      !isEventOpen(me.event) &&
+      !isPathAllowedWhenClosed(pathname, me.canJudge)
+    ) {
       return "blank";
     }
     const section = sectionForPath(pathname);
-    if (section && !me.sections.includes(section)) {
+    if (
+      section &&
+      !me.sections.includes(section) &&
+      !(me.canJudge && section === "tracks")
+    ) {
       return "blank";
     }
     const next = destination(me);
@@ -379,7 +398,8 @@ function resolveView({
     const judgingAllowed =
       (me.canJudge && isJudgingPath(pathname)) ||
       (hasSponsorCatalog(me.sections) && isSponsorJudgingPath(pathname));
-    if (!judgingAllowed) {
+    const tracksAllowed = me.canJudge && isTracksPath(pathname);
+    if (!judgingAllowed && !tracksAllowed) {
       if (dashboardAccess && pathname === "/login") {
         return "blank";
       }

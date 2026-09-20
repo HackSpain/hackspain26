@@ -3,7 +3,7 @@ import {
   adminMutation,
   adminQuery,
   onboardedMutation,
-  onboardedQuery,
+  tracksQuery,
 } from "./lib/customFunctions";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -189,7 +189,7 @@ export async function seedDefaults(ctx: MutationCtx): Promise<void> {
   }
 }
 
-export const list = onboardedQuery({
+export const list = tracksQuery({
   args: {},
   handler: async (ctx) => {
     const [tracks, counts] = await Promise.all([
@@ -216,7 +216,7 @@ export const list = onboardedQuery({
   ),
 });
 
-export const get = onboardedQuery({
+export const get = tracksQuery({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
     const track = await ctx.db
@@ -236,7 +236,7 @@ const settingsReturn = v.object({
   teamLimit: v.number(),
 });
 
-export const settings = onboardedQuery({
+export const settings = tracksQuery({
   args: {},
   handler: async (ctx) => ({
     submissionsOpen: await submissionsAreOpen(ctx),

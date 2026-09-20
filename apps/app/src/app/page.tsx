@@ -72,6 +72,7 @@ export default function HomePage() {
           sections={me.sections}
           eventOpen={eventOpen}
           featuredSubmit={featuredSubmit}
+          canJudge={me.canJudge}
           className="lg:sticky lg:top-5 lg:order-2 lg:-m-1 lg:max-h-[calc(100dvh-2.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:p-1 lg:[scrollbar-width:thin]"
         />
         <section aria-label="Feed" className="min-w-0 space-y-4 lg:order-1">
