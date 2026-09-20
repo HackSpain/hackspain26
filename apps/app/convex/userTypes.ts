@@ -1,11 +1,13 @@
 import { v } from "convex/values";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import {
+  isSponsorType,
   normalizeSections,
   PARTICIPANT_SECTIONS,
   sectionsValidator,
   slugify,
   userTypeSummaryValidator,
+  withSponsorCatalog,
 } from "./lib/userTypes";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -140,6 +142,20 @@ export const ensureDefaults = adminMutation({
           userTypeId: user.userTypeId ?? juradoId,
         });
       }
+    }
+    const now = Date.now();
+    for (const row of await allTypes(ctx)) {
+      if (!isSponsorType(row)) {
+        continue;
+      }
+      const next = withSponsorCatalog(row.sections);
+      if (next.join(",") === normalizeSections(row.sections).join(",")) {
+        continue;
+      }
+      await ctx.db.patch(row._id, {
+        sections: next,
+        updatedAt: now,
+      });
     }
     return { migratedJudges: legacyJudges.length };
   },

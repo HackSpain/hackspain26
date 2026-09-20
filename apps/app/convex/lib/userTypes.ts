@@ -13,6 +13,7 @@ export const SECTION_KEYS = [
   "perks",
   "participantes",
   "judging",
+  "judgingSponsors",
   "cli",
 ] as const;
 
@@ -101,7 +102,11 @@ export function effectiveSections(
   if (user.role === "admin") {
     return ALL_SECTIONS;
   }
-  return type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS;
+  const sections = type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS;
+  if (isSponsorType(type)) {
+    return withSponsorCatalog(sections);
+  }
+  return sections;
 }
 
 export function grantsJudging(
@@ -109,6 +114,30 @@ export function grantsJudging(
   type: Doc<"userTypes"> | null
 ): boolean {
   return effectiveSections(user, type).includes("judging");
+}
+
+export function grantsSponsorCatalog(
+  user: Pick<Doc<"users">, "role">,
+  type: Doc<"userTypes"> | null
+): boolean {
+  return effectiveSections(user, type).includes("judgingSponsors");
+}
+
+/** CRM type "Sponsor": browses deliveries, never scores in the general pool. */
+export function isSponsorType(
+  type: Pick<Doc<"userTypes">, "slug" | "label"> | null | undefined
+): boolean {
+  if (!type) {
+    return false;
+  }
+  return type.slug === "sponsor" || type.label.trim().toLowerCase() === "sponsor";
+}
+
+export function withSponsorCatalog(sections: readonly string[]): Sections {
+  return normalizeSections([
+    ...sections.filter((key) => key !== "judging"),
+    "judgingSponsors",
+  ]);
 }
 
 /** Async form for the gates: looks the type up when the user has one. */
@@ -120,4 +149,14 @@ export async function canJudge(
     return true;
   }
   return grantsJudging(user, await userTypeFor(ctx, user));
+}
+
+export async function canBrowseSponsorCatalog(
+  ctx: Ctx,
+  user: Pick<Doc<"users">, "role" | "userTypeId">
+): Promise<boolean> {
+  if (user.role === "admin") {
+    return true;
+  }
+  return grantsSponsorCatalog(user, await userTypeFor(ctx, user));
 }

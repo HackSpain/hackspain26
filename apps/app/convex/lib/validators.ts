@@ -28,18 +28,19 @@ export const trackVideoValidator = v.object({
   videoUrl: v.string(),
 });
 
-export const judgingContextValidator = v.union(
-  v.object({
-    group: v.number(),
-    kind: v.literal("general"),
-  }),
-  v.object({
-    kind: v.literal("track"),
-    trackId: v.id("tracks"),
-  })
+export const scoreValueValidator = v.union(
+  v.literal(1),
+  v.literal(2),
+  v.literal(4),
+  v.literal(5)
 );
 
-export type JudgingContext = Infer<typeof judgingContextValidator>;
+export const assessmentStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("submitted")
+);
+
+export type AssessmentStatus = Infer<typeof assessmentStatusValidator>;
 
 export const attendanceValidator = v.union(
   v.literal("attending"),

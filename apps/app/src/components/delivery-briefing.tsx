@@ -21,7 +21,7 @@ export function DeliveryBriefing() {
           <ul className="list-disc space-y-1.5 pl-5 text-hs-brown">
             <li>
               Un vídeo de 3 minutos. Contad el proyecto a fondo, para que
-              puedan juzgar creatividad, problem solving y craftsmanship.
+              puedan juzgar craftsmanship, problem solving, creativity y overall.
             </li>
             <li>Si aplica, una demo que se pueda probar.</li>
             <li>

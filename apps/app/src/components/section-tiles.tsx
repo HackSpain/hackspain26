@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   CircleUserRound,
+  ClipboardList,
   Gavel,
   Gift,
   Network,
@@ -23,6 +24,7 @@ const SECTION_ICONS: Record<SectionKey, LucideIcon> = {
   perks: Gift,
   participantes: Network,
   judging: Gavel,
+  judgingSponsors: ClipboardList,
   cli: Terminal,
 };
 

@@ -12,12 +12,6 @@ import {
 import { fail } from "./lib/errors";
 import { inspectPublicGithubRepo } from "./lib/github";
 import {
-  countGroups,
-  DEFAULT_GENERAL_GROUP_COUNT,
-  JUDGING_SETTINGS_KEY,
-  pickBalancedGroup,
-} from "./lib/judging";
-import {
   parseGithubRepoUrl,
   parseOptionalNotes,
   parseOptionalProductUrl,
@@ -227,21 +221,6 @@ async function resolvePerkIds(
   return unique;
 }
 
-async function nextGeneralGroup(ctx: MutationCtx): Promise<number> {
-  const [settings, submitted] = await Promise.all([
-    ctx.db
-      .query("judgingSettings")
-      .withIndex("by_key", (q) => q.eq("key", JUDGING_SETTINGS_KEY))
-      .unique(),
-    ctx.db
-      .query("submissions")
-      .withIndex("by_status", (q) => q.eq("status", "submitted"))
-      .collect(),
-  ]);
-  const groupCount = settings?.generalGroupCount ?? DEFAULT_GENERAL_GROUP_COUNT;
-  return pickBalancedGroup(countGroups(submitted, groupCount), groupCount);
-}
-
 function projectUrls(repoUrl?: string, demoUrl?: string, videoUrl?: string) {
   return buildUrls([
     { kind: "repo", url: repoUrl },
@@ -389,7 +368,6 @@ export const commitTrack = internalMutation({
     }
 
     const now = Date.now();
-    const firstSubmit = !existing || existing.status !== "submitted";
     const trackVideos = [
       ...already,
       { submittedAt: now, trackId: challengeId, videoUrl: args.videoUrl },
@@ -412,12 +390,6 @@ export const commitTrack = internalMutation({
       trackVideos,
       updatedAt: now,
       urls: projectUrls(args.repoUrl, args.demoUrl, firstVideo),
-      ...(firstSubmit
-        ? {
-            generalGroup:
-              existing?.generalGroup ?? (await nextGeneralGroup(ctx)),
-          }
-        : {}),
     };
 
     const submissionId = existing

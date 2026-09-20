@@ -21,7 +21,13 @@ export const SECTION_NAV: Record<
   judging: {
     href: "/judging",
     label: "Juzgar",
-    hint: "Panel del jurado. Solo jueces.",
+    hint: "Panel del jurado.",
+    private: true,
+  },
+  judgingSponsors: {
+    href: "/judging-sponsors",
+    label: "Entregas",
+    hint: "Submissions por reto. Sin puntuar.",
     private: true,
   },
   cli: { href: "/cli", label: "CLI", hint: "Instalación y comandos." },
@@ -29,7 +35,45 @@ export const SECTION_NAV: Record<
 
 export const SECTION_ORDER: readonly SectionKey[] = SECTION_KEYS;
 
+export const JUDGING_PATH = "/judging";
+export const JUDGING_SPONSORS_PATH = "/judging-sponsors";
+
+export function isJudgingPath(pathname: string): boolean {
+  if (isSponsorJudgingPath(pathname)) {
+    return false;
+  }
+  return pathname === JUDGING_PATH || pathname.startsWith(`${JUDGING_PATH}/`);
+}
+
+export function isSponsorJudgingPath(pathname: string): boolean {
+  return (
+    pathname === JUDGING_SPONSORS_PATH ||
+    pathname.startsWith(`${JUDGING_SPONSORS_PATH}/`)
+  );
+}
+
+export function isAnyJudgingPath(pathname: string): boolean {
+  return isSponsorJudgingPath(pathname) || isJudgingPath(pathname);
+}
+
+export function hasSponsorCatalog(sections: readonly string[]): boolean {
+  return sections.includes("judgingSponsors");
+}
+
+export function judgingDashboardHome(me: {
+  canJudge: boolean;
+  sections: readonly string[];
+}): string {
+  if (me.canJudge) {
+    return JUDGING_PATH;
+  }
+  return JUDGING_SPONSORS_PATH;
+}
+
 export function sectionForPath(pathname: string): SectionKey | null {
+  if (isSponsorJudgingPath(pathname)) {
+    return "judgingSponsors";
+  }
   for (const key of SECTION_ORDER) {
     const { href } = SECTION_NAV[key];
     if (pathname === href || pathname.startsWith(`${href}/`)) {
