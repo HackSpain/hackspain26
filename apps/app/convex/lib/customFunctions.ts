@@ -13,6 +13,7 @@ import {
   requireJudge,
   requireOnboarded,
   requireSponsorCatalog,
+  requireTracksViewer,
 } from "./auth";
 
 type Resolve = (ctx: QueryCtx | MutationCtx) => Promise<Doc<"users">>;
@@ -59,3 +60,5 @@ export const adminMutation = wrapMutation(requireAdmin);
 export const judgeQuery = wrapQuery(requireJudge);
 export const judgeMutation = wrapMutation(requireJudge);
 export const catalogQuery = wrapQuery(requireSponsorCatalog);
+/** Challenge briefs: judges anytime, everyone else onboarded in-window. */
+export const tracksQuery = wrapQuery(requireTracksViewer);

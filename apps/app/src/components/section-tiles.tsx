@@ -37,7 +37,12 @@ type Tile = {
 };
 
 /** Sections that stay open outside the hackathon window (src/lib/sections.ts). */
-const CLOSED_SECTIONS: ReadonlySet<SectionKey> = new Set(["participantes", "perks"]);
+const CLOSED_SECTIONS: ReadonlySet<SectionKey> = new Set([
+  "participantes",
+  "perks",
+  "judging",
+  "judgingSponsors",
+]);
 
 /**
  * The launcher on the home page: one tile per section the user can open,
@@ -49,6 +54,7 @@ export function SectionTiles({
   sections,
   eventOpen = true,
   featuredSubmit = false,
+  canJudge = false,
   className,
 }: {
   sections?: readonly SectionKey[];
@@ -56,10 +62,17 @@ export function SectionTiles({
   eventOpen?: boolean;
   /** Sunday 08:00 Madrid: the Submit tile jumps out until the project is in. */
   featuredSubmit?: boolean;
+  /** Judges can open challenge briefs even when the window is closed. */
+  canJudge?: boolean;
   className?: string;
 }) {
-  const visible = (key: SectionKey) =>
-    sections?.includes(key) && (eventOpen || CLOSED_SECTIONS.has(key));
+  const visible = (key: SectionKey) => {
+    const granted = sections?.includes(key) || (canJudge && key === "tracks");
+    return Boolean(
+      granted &&
+        (eventOpen || CLOSED_SECTIONS.has(key) || (canJudge && key === "tracks"))
+    );
+  };
   const tiles: Tile[] = [
     ...(eventOpen
       ? [

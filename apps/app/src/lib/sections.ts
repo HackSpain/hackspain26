@@ -60,6 +60,10 @@ export function hasSponsorCatalog(sections: readonly string[]): boolean {
   return sections.includes("judgingSponsors");
 }
 
+export function isTracksPath(pathname: string): boolean {
+  return pathname === "/tracks" || pathname.startsWith("/tracks/");
+}
+
 export function judgingDashboardHome(me: {
   canJudge: boolean;
   sections: readonly string[];
@@ -86,8 +90,9 @@ export function sectionForPath(pathname: string): SectionKey | null {
 /**
  * Outside the hackathon window (convex/lib/eventWindow.ts) participants keep
  * the profile, directory and perks. Judging stays too: scoring happens after
- * submit closes. Mirrors the server — gated features throw EVENT_CLOSED, so
- * AuthGate bounces those paths home before they mount.
+ * submit closes. Judges also keep /tracks (challenge briefs). Mirrors the
+ * server — gated features throw EVENT_CLOSED, so AuthGate bounces those paths
+ * home before they mount.
  */
 const OPEN_WHEN_CLOSED = [
   "/",
@@ -105,7 +110,13 @@ const OPEN_WHEN_CLOSED = [
   JUDGING_SPONSORS_PATH,
 ];
 
-export function isPathAllowedWhenClosed(pathname: string): boolean {
+export function isPathAllowedWhenClosed(
+  pathname: string,
+  canJudge = false
+): boolean {
+  if (canJudge && isTracksPath(pathname)) {
+    return true;
+  }
   return OPEN_WHEN_CLOSED.some(
     (href) => pathname === href || (href !== "/" && pathname.startsWith(`${href}/`))
   );
