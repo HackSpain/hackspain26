@@ -358,7 +358,7 @@ function SubmitForm({
           <Field
             label="Vídeo de YouTube"
             htmlFor="video-url"
-            hint="Obligatorio. YouTube, 3 minutos. Creatividad, problem solving y craftsmanship."
+            hint="Obligatorio. Debe ser público u oculto. YouTube, 3 minutos. Creatividad, problem solving y craftsmanship."
           >
             <Input
               id="video-url"
@@ -377,7 +377,7 @@ function SubmitForm({
           <Field
             label="Repo de GitHub"
             htmlFor="repo-url"
-            hint="Obligatorio y público. Los jueces tienen que poder abrirlo. Incluid un README.md con instrucciones de cómo usarlo."
+            hint="Obligatorio. Debe ser público. Los jueces tienen que poder abrirlo. Incluid un README.md con instrucciones de cómo usarlo."
           >
             <Input
               id="repo-url"
