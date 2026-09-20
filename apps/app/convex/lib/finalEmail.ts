@@ -10,7 +10,7 @@ const PALETTE = {
 
 const SANS = "'DM Sans','Helvetica Neue',Helvetica,Arial,sans-serif";
 
-export const FINAL_EMAIL_SUBJECT = "Estás en la final de HackSpain 2026 · 16:30";
+export const FINAL_EMAIL_SUBJECT = "Asiste a la final de HackSpain 2026 · 16:30";
 
 export const FINAL_EMAIL_LOGO_URL = "https://hackspain.com/hs-email-logo.png";
 
