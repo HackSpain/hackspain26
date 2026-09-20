@@ -14,6 +14,7 @@ import {
 } from "@/components/login-transition";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
+import { CLOSING_PATH } from "@/lib/closing";
 import { RECEPTION_PATH } from "@/lib/reception";
 import { isPathAllowedWhenClosed, sectionForPath } from "@/lib/sections";
 
@@ -128,7 +129,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (
       pathname === "/tv" ||
       pathname === CLI_HANDOFF_PATH ||
-      pathname === RECEPTION_PATH
+      pathname === RECEPTION_PATH ||
+      pathname === CLOSING_PATH
     ) {
       return;
     }
@@ -272,7 +274,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (
     pathname === "/tv" ||
     pathname === CLI_HANDOFF_PATH ||
-    pathname === RECEPTION_PATH
+    pathname === RECEPTION_PATH ||
+    pathname === CLOSING_PATH
   ) {
     return <>{children}</>;
   }

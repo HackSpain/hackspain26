@@ -12,6 +12,7 @@ import type * as ResendOTP from "../ResendOTP.js";
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as cliAuth from "../cliAuth.js";
+import type * as closing from "../closing.js";
 import type * as crons from "../crons.js";
 import type * as devOtp from "../devOtp.js";
 import type * as directory from "../directory.js";
@@ -85,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
   cliAuth: typeof cliAuth;
+  closing: typeof closing;
   crons: typeof crons;
   devOtp: typeof devOtp;
   directory: typeof directory;
