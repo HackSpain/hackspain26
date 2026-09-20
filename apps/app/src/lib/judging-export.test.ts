@@ -65,7 +65,7 @@ test("assessment rows cover every assigned judge, drafts without a score", () =>
   const [, ana1, bruno1] = rows(assessmentsCsv([project]));
   assert.equal(
     ana1,
-    'Proyecto Uno,Equipo 1,Ana,Enviada,5,5,4,4,"Buen ""pitch""",4.5,4.25,2026-09-19T10:00:00.000Z'
+    'p1,Proyecto Uno,Equipo 1,Track A,Ana,Enviada,5,5,4,4,"Buen ""pitch""",4.5,4.25,2026-09-19T10:00:00.000Z'
   );
-  assert.equal(bruno1, 'Proyecto Uno,Equipo 1,"Bruno, B.",Borrador,2,,,,,,,');
+  assert.equal(bruno1, 'p1,Proyecto Uno,Equipo 1,Track A,"Bruno, B.",Borrador,2,,,,,,,');
 });
