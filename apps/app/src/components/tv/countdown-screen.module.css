@@ -1,50 +1,49 @@
 .bungee,
-.countdown {
+.finished {
   font-family: var(--font-bungee);
   font-weight: 400;
 }
 
-.countdown {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+.finished {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 2vmin;
   min-width: 0;
   min-height: 0;
+  padding: 3vmin 3vw;
   background: var(--paper);
   text-align: center;
 }
 
-.heading,
-.deadline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.headline {
   margin: 0;
-  padding: 2vmin;
-  font-size: 3.5vmin;
-  line-height: 1.4;
+  color: var(--red);
+  font-size: min(10vw, 13dvh);
+  font-weight: 400;
+  line-height: 1.05;
 }
 
-.deadline { display: block; align-self: center; font-size: 2.5vmin; }
-
-.timer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: start;
-  padding-inline: 2vw;
-  font-variant-numeric: tabular-nums;
+.instructions {
+  margin: 0;
+  font-size: 3.8vmin;
+  line-height: 1.5;
 }
 
-.unit { display: flex; flex-direction: column; align-items: center; min-width: 0; }
-.digits,
-.colon { font-size: min(24vw, 36dvh); line-height: 1.2; }
-.digits { letter-spacing: -0.04em; }
-.colon { padding-inline: 1vw; }
-.label { font-size: 2.8vmin; letter-spacing: 0.12em; }
+.help {
+  width: 100%;
+  padding: 2.2vmin;
+  border: var(--rule) solid #000;
+  background: var(--yellow);
+  font-size: 3vmin;
+  line-height: 1.5;
+}
+
+.help p { margin: 0; }
 
 @media (max-aspect-ratio: 1/1) {
-  .heading { font-size: 4.5vmin; }
-  .digits,
-  .colon { font-size: 24vw; }
-  .label { font-size: 3vmin; }
-  .deadline { font-size: 3vmin; }
+  .headline { font-size: 10vw; }
+  .instructions { font-size: 4vmin; }
+  .help { font-size: 3.8vmin; }
 }
