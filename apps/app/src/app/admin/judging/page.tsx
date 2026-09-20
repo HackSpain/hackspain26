@@ -407,7 +407,7 @@ function SetupCard({ overview }: { overview: Overview }) {
           </div>
         </div>
         {confirmRerun ? (
-          <p className="text-sm font-medium text-pretty text-hs-brown">
+          <p className="hs-enter text-sm font-medium text-pretty text-hs-brown">
             Esto borra todas las evaluaciones, también los borradores, y reparte
             otra vez a los jueces de ahora.
           </p>
@@ -453,7 +453,7 @@ function PreviewTable({
   preview: Extract<Preview, { ok: true }>;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="hs-enter space-y-2">
       <p className="text-sm font-medium text-pretty text-hs-brown">
         Prueba con semilla{" "}
         <code className="border border-hs-ink/20 bg-hs-sand px-1.5 py-0.5 font-mono text-xs text-hs-ink">
@@ -479,7 +479,7 @@ function PreviewTable({
               <TableCell className="align-top text-right tabular-nums">
                 {judge.assigned}
               </TableCell>
-              <TableCell className="text-pretty text-hs-brown">
+              <TableCell className="align-top whitespace-normal text-pretty text-hs-brown">
                 {judge.projects.join(" · ") || "—"}
               </TableCell>
             </TableRow>

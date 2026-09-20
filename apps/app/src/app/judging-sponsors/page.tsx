@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { Suspense, useId } from "react";
+import { Suspense, useId, useState } from "react";
 import { api } from "@convex/_generated/api";
 import {
   PROJECT_PARAM,
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableCell, TableHead } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export default function SponsorJudgingPage() {
   return (
@@ -38,10 +39,17 @@ function SponsorPanel() {
   const { pathname, projectId, searchParams, triggerRef, openProject, closeProject } =
     useProjectPicker();
   const trackSlug = searchParams.get(TRACK_PARAM) ?? undefined;
-  const catalog = useQuery(
+  const live = useQuery(
     api.judging.trackCatalog,
     allowed ? { trackSlug } : "skip",
   );
+  // Keep the last catalog while a new track loads so the select stays mounted.
+  const [shown, setShown] = useState(live);
+  if (live && live !== shown) {
+    setShown(live);
+  }
+  const catalog = live ?? shown;
+  const loading = live === undefined;
   const trackSelectId = useId();
 
   if (me === undefined) {
@@ -108,7 +116,7 @@ function SponsorPanel() {
                 {catalog.tracks.map((track) => (
                   <SelectItem key={track._id} value={track.slug}>
                     {track.label}
-                    <span className="text-xs text-hs-brown">
+                    <span className="ml-1.5 text-xs tabular-nums text-hs-brown">
                       · {track.submittedCount}
                     </span>
                   </SelectItem>
@@ -116,23 +124,31 @@ function SponsorPanel() {
               </SelectContent>
             </Select>
           </Field>
-          {catalog.items.length === 0 ? (
-            <EmptyState title="Nadie ha entregado en este reto">
-              Las submissions aparecen aquí en cuanto un equipo entrega.
-            </EmptyState>
-          ) : (
-            <ProjectTable
-              rows={catalog.items}
-              projectId={projectId}
-              onOpen={openProject}
-              extraHead={<TableHead>Miembros</TableHead>}
-              extraCell={(row) => (
-                <TableCell className="max-w-72 truncate">
-                  {row.members.join(" · ") || "—"}
-                </TableCell>
-              )}
-            />
-          )}
+          <div
+            aria-busy={loading}
+            className={cn(
+              "motion-safe:transition-opacity motion-safe:duration-[var(--duration-exit)] motion-safe:ease-[var(--ease-out)]",
+              loading && "pointer-events-none opacity-50",
+            )}
+          >
+            {catalog.items.length === 0 ? (
+              <EmptyState title="Nadie ha entregado en este reto">
+                Las submissions aparecen aquí en cuanto un equipo entrega.
+              </EmptyState>
+            ) : (
+              <ProjectTable
+                rows={catalog.items}
+                projectId={projectId}
+                onOpen={openProject}
+                extraHead={<TableHead>Miembros</TableHead>}
+                extraCell={(row) => (
+                  <TableCell className="max-w-72 truncate">
+                    {row.members.join(" · ") || "—"}
+                  </TableCell>
+                )}
+              />
+            )}
+          </div>
         </>
       )}
 
