@@ -108,8 +108,8 @@ export function finalEmailHtml(content: FinalEmailContent): string {
             <td bgcolor="${PALETTE.navy}" style="background:${PALETTE.navy};border:3px solid ${PALETTE.ink};border-top:0;padding:22px 26px;">
               <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${PALETTE.gold};padding-bottom:8px;">Dónde</div>
               <div style="font-family:${SANS};font-size:15px;line-height:1.7;color:${PALETTE.paper};">
-                UPM · ETSIT, Madrid<br />
-                Final de HackSpain
+                OneCowork Recoletos<br />
+                C. de Prim, 12, Centro, 28004 Madrid
               </div>
             </td>
           </tr>
@@ -148,8 +148,8 @@ ${content.cancelUrl}
 El enlace abre una página de confirmación. Abrirlo no cancela nada.
 
 DÓNDE
-UPM · ETSIT, Madrid
-Final de HackSpain
+OneCowork Recoletos
+C. de Prim, 12, Centro, 28004 Madrid
 
 Nos vemos en la final,
 El equipo de HackSpain

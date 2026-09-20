@@ -23,7 +23,10 @@ test("final email is a congratulations with a confirm-only cancel link", () => {
   assert.match(html, /El clic no cancela nada/);
   assert.match(html, /href="https:\/\/app\.hackspain\.com\/final\/cancelar\?token=abc"/);
   assert.doesNotMatch(html, /18 a 20/);
+  assert.match(html, /OneCowork Recoletos/);
+  assert.match(html, /C\. de Prim, 12, Centro, 28004 Madrid/);
   assert.match(text, /El enlace abre una página de confirmación/);
+  assert.match(text, /C\. de Prim, 12, Centro, 28004 Madrid/);
   assert.ok(text.includes(content.cancelUrl));
 });
 
