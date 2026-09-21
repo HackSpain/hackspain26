@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
+  FileDown,
   GraduationCap,
   LayoutGrid,
   MapPin,
@@ -14,7 +15,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { contentWidth } from "@/lib/layout";
+import { downloadCsv } from "@/lib/judging-export";
 import { cn } from "@/lib/utils";
+import { directoryCsv, directoryCsvFileName } from "./export";
 import type { DirectoryParticipant } from "./types";
 import { personHeading } from "./types";
 import { normalize, searchHaystack } from "./affinities";
@@ -242,6 +245,16 @@ export function ParticipantDirectory({
               Directorio
             </button>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              downloadCsv(directoryCsvFileName(), directoryCsv(participants))
+            }
+          >
+            <FileDown aria-hidden /> CSV
+          </Button>
           {onEdit ? (
             <Button type="button" variant="outline" size="sm" onClick={onEdit}>
               <PencilLine aria-hidden /> Editar mi ficha

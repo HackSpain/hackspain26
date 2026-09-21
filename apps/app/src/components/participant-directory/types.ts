@@ -25,6 +25,7 @@ export interface DirectoryParticipant {
   tracks?: { id: string; label: string; logoUrl?: string; slug?: string }[];
   interests?: string[];
   displayName: string;
+  email?: string;
   /** Stable public identifier used in shareable links. Never use an email. */
   id: string;
   /** True for the viewer's own card. */

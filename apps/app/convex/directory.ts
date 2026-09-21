@@ -36,6 +36,7 @@ const participantReturn = v.object({
 	company: v.optional(v.string()),
 	degree: v.optional(v.string()),
 	displayName: v.string(),
+	email: v.optional(v.string()),
 	freeTime: v.optional(v.string()),
 	githubUsername: v.optional(v.string()),
 	id: v.string(),
@@ -256,6 +257,7 @@ export const list = directoryQuery({
 				company: card.company,
 				degree: card.degree,
 				displayName: user.name ?? application?.fullName ?? "Participante",
+				email: user.email ?? application?.email,
 				freeTime: application?.freeTime,
 				githubUsername:
 					user.githubUsername ?? application?.githubUsername,
