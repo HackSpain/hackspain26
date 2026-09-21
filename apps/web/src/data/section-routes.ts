@@ -1,4 +1,5 @@
 export const SECTION_SLUGS = [
+  "comunidad",
   "mission",
   "tracks",
   "infra",
@@ -7,6 +8,8 @@ export const SECTION_SLUGS = [
   "apuntate",
 ] as const;
 type SectionSlug = (typeof SECTION_SLUGS)[number];
+
+export const COMMUNITY_SECTION_INDEX = SECTION_SLUGS.indexOf("comunidad") + 1;
 
 /** Section index of the tracks page (index 0 is the hero, so slugs start at 1). */
 export const TRACKS_SECTION_INDEX = SECTION_SLUGS.indexOf("tracks") + 1;

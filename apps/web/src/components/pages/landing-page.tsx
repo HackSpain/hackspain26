@@ -6,6 +6,7 @@ import {
   seoForSectionIndex,
 } from "../../data/landing-meta";
 import {
+  COMMUNITY_SECTION_INDEX,
   GRAND_PRIZE_SECTION_INDEX,
   INFRA_SECTION_INDEX,
   MENTORS_SECTION_INDEX,
@@ -19,7 +20,7 @@ import { cellsForProfile } from "../mosaic/cells";
 import { MosaicBackground } from "../mosaic/mosaic-background";
 import { useLayoutProfile } from "../mosaic/use-layout-profile";
 import { isOverlayOpen } from "../overlay/overlay-lock";
-import { useReferralAwareHref } from "../referral/use-referral-href";
+import { CommunityTimeline } from "../sections/community-timeline";
 import { illustrationsForSection } from "../sections/illustration-themes";
 import {
   GRAND_PRIZE_SPONSORS,
@@ -36,12 +37,13 @@ import { vp } from "../ui/panel";
 
 const SECTION_NAV = [
   "Inicio",
+  "Vuestras historias",
   "Misión",
   "Tracks originales",
   "Infraestructura",
   "Gran premio",
   "Comida, bebida y charlas",
-  "Apúntate",
+  "Así fue",
 ] as const;
 
 const REGION_ARIA =
@@ -98,14 +100,10 @@ export function LandingPage({ initialSection = 0 }: Props) {
 
   const artboard = useMemo(() => artboardFor(profile), [profile]);
   const cells = useMemo(() => cellsForProfile(profile), [profile]);
-  const signupHref = useReferralAwareHref("/signup");
 
   const sections = useMemo(
-    () =>
-      profile === "compact"
-        ? buildSectionsCompact(signupHref)
-        : buildSections(signupHref),
-    [profile, signupHref]
+    () => (profile === "compact" ? buildSectionsCompact() : buildSections()),
+    [profile]
   );
   const ills = useMemo(
     () => illustrationsForSection(section, profile),
@@ -173,6 +171,16 @@ export function LandingPage({ initialSection = 0 }: Props) {
     []
   );
 
+  useEffect(() => {
+    const onEnter = (event: MouseEvent) => {
+      if (event.target instanceof Element && event.target.closest("[data-enter-hackspain]")) {
+        goToSection(COMMUNITY_SECTION_INDEX, 1);
+      }
+    };
+    document.addEventListener("click", onEnter);
+    return () => document.removeEventListener("click", onEnter);
+  }, [goToSection]);
+
   const advance = useCallback(
     (d: 1 | -1) => {
       const next = Math.max(0, Math.min(NUM_SECTIONS - 1, section + d));
@@ -217,6 +225,12 @@ export function LandingPage({ initialSection = 0 }: Props) {
       if (isOverlayOpen()) {
         return;
       }
+      if (
+        e.target instanceof Element &&
+        e.target.closest("button, a, input, textarea, select, video, [contenteditable]")
+      ) {
+        return;
+      }
       if (e.key === "ArrowDown" || e.key === " ") {
         e.preventDefault();
         advance(1);
@@ -236,7 +250,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("keydown", onKey);
     };
-  }, [advance]);
+  }, [advance, section]);
 
   useEffect(() => {
     const onPop = () => {
@@ -282,7 +296,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
   // Partner logos fill any empty open-row cells (o1..o5) on every desktop section.
   // Cells already defined by the section are preserved.
   const current: Record<string, ReactNode> =
-    profile === "compact"
+    profile === "compact" || section === COMMUNITY_SECTION_INDEX
       ? baseCurrent
       : {
           o1: <PartnerLogoCell delay={0} partner={partners[0]} />,
@@ -432,6 +446,12 @@ export function LandingPage({ initialSection = 0 }: Props) {
         strokeOnly
         variant={layoutProfile}
       />
+      <CommunityTimeline
+        isActive={section === COMMUNITY_SECTION_INDEX}
+        onNext={() => advance(1)}
+        onPrevious={() => advance(-1)}
+        reducedMotion={reducedMotion}
+      />
     </>
   );
 
@@ -448,7 +468,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
       {section === 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[max(2.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center">
           <button
-            aria-label="Descubrir más — ir a la siguiente sección"
+            aria-label="Abrir HackSpain — ver el vídeo y la comunidad"
             className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full border border-hs-paper/20 bg-hs-ink px-5 py-2.5 font-bungee text-hs-paper text-xs tracking-[0.18em] shadow-lg transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-hs-gold focus-visible:outline-offset-4 active:scale-[0.96] motion-reduce:transition-none"
             onClick={() => advance(1)}
             type="button"

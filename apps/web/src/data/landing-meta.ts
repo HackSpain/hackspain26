@@ -24,15 +24,20 @@ export interface PageSeo {
 const PAGES: PageSeo[] = [
   {
     description:
-      "El hackathon para unir a los mejores builders jóvenes de España. 18 al 20 de Septiembre, UPM - ETSIT. 250 participantes.",
+      "Así vivimos HackSpain 2026, del 18 al 20 de septiembre en UPM–ETSIT, Madrid. Revive el vídeo, las historias de la comunidad y la información de la edición.",
     ogImageAlt: "HackSpain 2026 — MADRID '26",
-    title: "HackSpain 2026 — MADRID '26",
+    title: "Así fue HackSpain 2026 — Lo que pasó aquí se queda",
+  },
+  {
+    description: "Las historias y los tweets de quienes vivieron HackSpain 2026. El recuerdo de la edición, contado por su comunidad.",
+    ogImageAlt: "HackSpain 2026 — vuestras historias",
+    title: "Vuestras historias | HackSpain 2026",
   },
   {
     description:
-      "36 horas. 250 de los mejores builders menores de 30. HackSpain 2026 es el punto de encuentro de los jóvenes que van a posicionar a España como líder de talento tech joven.",
+      "36 horas. 250 de los mejores builders menores de 30. HackSpain 2026 fue el punto de encuentro de los jóvenes que van a posicionar a España como líder de talento tech joven.",
     ogImageAlt: "HackSpain 2026 — España tiene talento",
-    title: "España tiene talento. Nosotros vamos a juntarlo. | HackSpain 2026",
+    title: "España tiene talento. Y lo juntamos. | HackSpain 2026",
   },
   {
     description:
@@ -54,7 +59,7 @@ const PAGES: PageSeo[] = [
   },
   {
     description:
-      "Conecta con los mejores fundadores y mentores del ecosistema de España. Con RevenueCat, Reveni, Karumi, Invopop y Causa Prima.",
+      "Conectamos con los mejores fundadores y mentores del ecosistema de España. Con RevenueCat, Reveni, Karumi, Invopop y Causa Prima.",
     ogImageAlt: "HackSpain 2026 — comida, bebida y charlas",
     title: "Comida, bebida y charlas | HackSpain 2026",
   },
@@ -70,9 +75,9 @@ const SIGNUP_SECTION_INDEX = PAGES.length - 1;
 
 const SIGNUP_CLOSED_SEO: PageSeo = {
   description:
-    "HackSpain 2026 empieza el 18 de septiembre a las 17:00 en UPM - ETSIT, Madrid. Las plazas están cubiertas.",
-  ogImageAlt: "HackSpain 2026 — empieza el 18 de septiembre",
-  title: "Empieza el 18 de septiembre | HackSpain 2026",
+    "HackSpain 2026 se celebró del 18 al 20 de septiembre en UPM–ETSIT, Madrid. Revive la edición y sigue a la comunidad.",
+  ogImageAlt: "HackSpain 2026 — gracias por hacerlo posible",
+  title: "Gracias por hacerlo posible | HackSpain 2026",
 };
 
 export function seoForSectionIndex(i: number): PageSeo {
@@ -148,12 +153,13 @@ const KEYWORDS_BASE =
 
 const KEYWORDS_BY_SECTION = [
   "MADRID 2026, 18 al 20 de Septiembre, 250 participantes",
+  "comunidad HackSpain, tweets HackSpain, historias del hackathon",
   "España tiene talento, talento tech joven, 36 horas",
   "tracks originales, compute gratis, startups España",
   "infraestructura hackathon, créditos cloud, herramientas para builders, infra sponsors",
   "gran premio, 5.000 euros, premio hackathon, fondos españoles, venture capital España",
   "comida bebida charlas, fundadores España, mentores hackathon, networking startups",
-  "inscripción abierta, apúntate HackSpain",
+  "HackSpain 2026 finalizado, recap hackathon, comunidad HackSpain",
 ];
 
 export function keywordsForSectionIndex(i: number): string {
@@ -242,7 +248,6 @@ export function jsonLdEvent() {
       "HackSpain 2026: 36 horas, 250 builders menores de 30. 18 al 20 de Septiembre en UPM - ETSIT, Madrid.",
     endDate: "2026-09-20",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    eventStatus: "https://schema.org/EventScheduled",
     inLanguage: "es",
     keywords:
       "hackathon Madrid, hackathon España, HackSpain, builders jóvenes, tracks originales, compute gratis",
@@ -281,13 +286,13 @@ export function jsonLdFaq() {
           "@type": "Answer",
           text: "18 al 20 de Septiembre de 2026 en UPM - ETSIT, Madrid, España. Más detalles en hackspain.com.",
         },
-        name: "¿Cuándo es HackSpain 2026 y dónde se celebra?",
+        name: "¿Cuándo se celebró HackSpain 2026 y dónde?",
       },
       {
         "@type": "Question",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Completa tu solicitud en hackspain.com/signup. Revisamos cada candidatura antes de confirmar la plaza. También puedes seguir @hackspain26 en X e Instagram o escribir a contact@hackspain.com.",
+          text: "Las solicitudes para HackSpain 2026 están cerradas. Puedes seguir @hackspain26 en X e Instagram para enterarte de próximas ediciones o escribir a contact@hackspain.com.",
         },
         name: "¿Cómo me apunto o me registro en HackSpain?",
       },
@@ -295,7 +300,7 @@ export function jsonLdFaq() {
         "@type": "Question",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Lee el programa en hackspain.com/ambassador. Puedes solicitar plaza y marcar que quieres participar como embajador o embajadora en hackspain.com/signup.",
+          text: "El programa de embajadores de HackSpain 2026 está cerrado. Puedes consultar la información histórica en hackspain.com/ambassador y seguir @hackspain26 para futuras ediciones.",
         },
         name: "¿Cómo puedo ser embajador o embajadora de HackSpain?",
       },
@@ -303,7 +308,7 @@ export function jsonLdFaq() {
         "@type": "Question",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Los patrocinadores actuales son Google, K Fund, fal.ai, Cognition, Exa, UPM, OneCoWork, Cursor, Exponential, HappyRobot, Embat, Prosper AI, Maisa y THEKER Robotics. Se esperan muchos más; la lista completa y actualizada siempre estará en hackspain.com/sponsors.",
+          text: "Los cinco tracks de 2026 contaron con Maisa, HappyRobot, Prosper AI, Embat y THEKER Robotics. Los patrocinadores de infraestructura y del gran premio se conservan en hackspain.com/infra y hackspain.com/gran-premio.",
         },
         name: "¿Cuáles son los patrocinadores de HackSpain / Hack Spain?",
       },
@@ -311,7 +316,7 @@ export function jsonLdFaq() {
         "@type": "Question",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Los premios aún no están definidos (por determinar). Se anunciarán en hackspain.com y en @hackspain26 (X e Instagram) conforme se acerque el evento.",
+          text: "La edición 2026 contó con un gran premio de 5.000 €. La información del premio y su jurado se conserva en hackspain.com/gran-premio.",
         },
         name: "¿Qué premios hay en HackSpain?",
       },

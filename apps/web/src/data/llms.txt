@@ -1,10 +1,10 @@
 # HackSpain
 
-> HackSpain is an in-person, 36-hour hackathon for 250 builders under 30, held at UPM–ETSIT in Madrid, Spain, from 18 to 20 September 2026. The official website and event communications are primarily in Spanish.
+> HackSpain 2026 was an in-person, 36-hour hackathon for 250 builders under 30, held at UPM–ETSIT in Madrid, Spain, from 18 to 20 September 2026. The official website and event communications are primarily in Spanish.
 
-HackSpain brings together young technical talent to build projects across five startup-led tracks. Participants receive free compute, and the winning team receives a €5,000 grand prize judged by leading Spanish venture capital firms. The canonical website is https://hackspain.com.
+HackSpain brought together young technical talent to build projects across five startup-led tracks. Participants had free compute, and the edition featured a €5,000 grand prize judged by leading Spanish venture capital firms. The canonical website is https://hackspain.com.
 
-Applications are submitted through the official signup page and reviewed before a place is confirmed. Registration availability and deadlines can change; verify them on the live website. HackSpain is not a school, job board, online course, or an unrelated event named “Hack Spain.”
+HackSpain 2026 has concluded. The homepage presents the event video, eight official embedded X posts from the community and the preserved edition information. Applications for HackSpain 2026 are closed. HackSpain is not a school, job board, online course, or an unrelated event named “Hack Spain.”
 
 Infrastructure sponsors shown on the official website are Convex, Vercel, QuiverAI, Cloudflare, Tinybird, Cognition, Exa, fal.ai, Cursor and Helmcode. HackSpain also works with track startups, venture capital firms and additional collaborators; use the live website as the authoritative source because the lineup may change.
 
@@ -12,13 +12,13 @@ Contact: contact@hackspain.com. Official social profiles: @hackspain26 on X and 
 
 ## Essential pages
 
-- [HackSpain 2026](https://hackspain.com): Official event overview, dates, venue, format, current partners and registration status.
-- [Apply to HackSpain](https://hackspain.com/signup): Official application form; submitting an application does not guarantee acceptance.
+- [HackSpain 2026](https://hackspain.com): Post-event recap, video, community stories and access to the 2026 edition archive.
+- [Community](https://hackspain.com/comunidad): The 2026 recap video, framed by two looping community feeds. A curated selection of eight public posts highlights the experience, community and organization.
 - [Mission](https://hackspain.com/mission): Purpose of the event and its focus on young builders in Spain.
 - [Tracks](https://hackspain.com/tracks): Five official tracks, startup partners and available compute.
 - [Infrastructure](https://hackspain.com/infra): Infrastructure and builder-tool sponsors supporting every HackSpain team.
 - [Grand prize](https://hackspain.com/gran-premio): €5,000 overall prize and the venture capital firms judging it.
-- [Ambassador programme](https://hackspain.com/ambassador): Campus ambassador information; applications use the main signup form.
+- [Ambassador programme](https://hackspain.com/ambassador): Campus ambassador information for HackSpain 2026; applications are closed.
 - [Brand resources](https://hackspain.com/brand): Official HackSpain logos, color palette, typography and usage guidelines, with downloadable SVG and PNG assets.
 
 ## Official references

@@ -56,6 +56,7 @@ export interface IllDef {
 
 const SCHEDULE: (IllArt | null)[][] = [
   ["windmill", "sun", "horse", "quixote", null, null], // Inicio
+  ["windmill", "sun", "horse", "quixote", null, null], // Comunidad
   ["sun", "quixote", "windmill", "companions", null, null], // Misión
   ["spark", "code", null, "adventure", null, null], // Tracks
   [null, null, null, "compute", null, null], // Infraestructura: logos in the top cells

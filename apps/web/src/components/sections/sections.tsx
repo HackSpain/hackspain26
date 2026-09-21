@@ -1,10 +1,8 @@
 import { AnimatePresence } from "motion/react";
 import { Fragment, useState } from "react";
 import { HACKSPAIN_SOCIAL_URLS } from "../../data/landing-meta";
-import { areSignupsClosed } from "../../data/signup-deadline";
 import { InlineSvg } from "../media/inline-svg";
 import { ParticipantsCountUp } from "../media/participants-count-up";
-import { SignupCountdown } from "../media/signup-countdown";
 import {
   MOSAIC_BD,
   MOSAIC_DISPLAY,
@@ -25,7 +23,7 @@ import {
   windmillSvg,
 } from "../theme/assets";
 import { GITHUB_SVG, INSTAGRAM_SVG, X_SVG } from "../theme/constants";
-import { Button, ButtonLink } from "../ui/button";
+import { Button } from "../ui/button";
 import { P } from "../ui/panel";
 import { JudgesOverlay } from "./judges-overlay";
 import { MentorsOverlay } from "./mentors-overlay";
@@ -199,67 +197,17 @@ function cardArt(svg: string, corner: "tl" | "br") {
   );
 }
 
-/**
- * Last-section hero: "INSCRIPCIÓN ABIERTA" while applications are open,
- * "EMPIEZA EN" once they close so the cell frames the event countdown.
- */
 function SignupHeroTitle({ compact = false }: { compact?: boolean }) {
-  if (areSignupsClosed()) {
-    return compact ? (
-      <>
-        EMPIEZA <span className="text-hs-gold">EN</span>
-      </>
-    ) : (
-      <>
-        EMPIEZA
-        <br />
-        <span className="text-hs-gold">EN</span>
-      </>
-    );
-  }
-
   return compact ? (
     <>
-      INSCRIPCIÓN <span className="text-hs-gold">ABIERTA</span>
+      GRACIAS <span className="text-hs-gold">POR TODO</span>
     </>
   ) : (
     <>
-      INSCRIPCIÓN
+      GRACIAS
       <br />
-      <span className="text-hs-gold">ABIERTA</span>
+      <span className="text-hs-gold">POR TODO</span>
     </>
-  );
-}
-
-/**
- * Signup CTA while applications are open. Once they close, renders nothing —
- * the event countdown takes its place instead of a disabled "closed" button.
- */
-function SignupCta({
-  ariaLabel,
-  className,
-  href,
-  label,
-}: {
-  ariaLabel: string;
-  className?: string;
-  href: string;
-  label: string;
-}) {
-  if (areSignupsClosed()) {
-    return null;
-  }
-
-  return (
-    <ButtonLink
-      aria-label={ariaLabel}
-      className={className}
-      href={href}
-      size="compact"
-      variant="gold"
-    >
-      {label}
-    </ButtonLink>
   );
 }
 
@@ -329,9 +277,30 @@ function MentorsInfoModal() {
   );
 }
 
-export function buildSections(
-  signupHref = "/signup"
-): Record<string, React.ReactNode>[] {
+function RecapVideoTile() {
+  return (
+    <button
+      aria-label="Abrir HackSpain"
+      className="group relative flex h-full w-full flex-col items-center justify-center gap-2 overflow-hidden bg-hs-ink text-hs-paper focus-visible:outline-4 focus-visible:outline-hs-gold focus-visible:outline-offset-[-4px]"
+      data-enter-hackspain
+      type="button"
+    >
+      <img
+        alt="Participantes de HackSpain en UPM–ETSIT"
+        className="absolute inset-0 h-full w-full object-cover opacity-55"
+        height={1080}
+        src="/recap/poster.jpg"
+        width={1920}
+      />
+      <span className="relative font-bungee text-[clamp(1rem,3vw,2rem)]">ASÍ FUE HACKSPAIN</span>
+      <span aria-hidden="true" className="recap-play">
+        <svg viewBox="0 0 48 48" fill="none"><path d="M18 12 36 24 18 36V12Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="miter" /></svg>
+      </span>
+    </button>
+  );
+}
+
+export function buildSections(): Record<string, React.ReactNode>[] {
   return [
     {
       hero: (
@@ -345,7 +314,7 @@ export function buildSections(
       ),
       r3a: (
         <P bg="bg-hs-orange">
-          <p className={`${LBL} text-hs-paper/60`}>Weekend Hackathon</p>
+          <p className={`${LBL} text-hs-paper/80`}>Así fue · 2026</p>
           <span className={`${MOSAIC_HEADLINE} text-center text-hs-paper`}>
             18 al 20 de Septiembre
           </span>
@@ -395,26 +364,7 @@ export function buildSections(
           </span>
         </P>
       ),
-      r4c: (
-        <P bg="bg-hs-paper" className="!justify-evenly !px-2 !py-3">
-          <p className={`${MOSAIC_HEADLINE} text-center text-hs-ink`}>
-            El hackathon para unir a los mejores{" "}
-            <span className="text-hs-red">builders</span> jóvenes de España.
-          </p>
-          <SignupCta
-            ariaLabel="Solicitar plaza en HackSpain — abrir formulario"
-            className="shrink-0"
-            href={signupHref}
-            label="Apúntate"
-          />
-          <SignupCountdown
-            className="shrink-0 text-hs-ink"
-            label="El evento empieza en"
-            labelClassName={`${D} ${MOSAIC_FOOTER} font-black text-hs-ink/50 uppercase tracking-widest`}
-            variant="mosaicSm"
-          />
-        </P>
-      ),
+      r4c: <RecapVideoTile />,
       ...bottomRow(0),
       r5b: (
         <P bg="bg-hs-paper">
@@ -464,13 +414,22 @@ export function buildSections(
       ),
     },
     {
+      r1c: (
+        <P bg="bg-hs-paper">
+          <p className={`${LBL} text-hs-ink`}>HACKSPAIN 2026</p>
+          <h2 className={`${MOSAIC_HEADLINE_SM} text-center text-hs-red`}>VUESTRAS HISTORIAS</h2>
+        </P>
+      ),
+      ...bottomRow(1),
+    },
+    {
       hero: (
         <P bg="bg-hs-navy">
           <p className={`${LBL} text-hs-gold`}>MISIÓN</p>
           <h2 className={`text-center ${MOSAIC_HERO_LG} text-hs-paper`}>
             ESPAÑA TIENE <span className="text-hs-red">TALENTO.</span>
             <br />
-            NOSOTROS VAMOS A <span className="text-hs-red">JUNTARLO.</span>
+            Y LO <span className="text-hs-red">JUNTAMOS.</span>
           </h2>
         </P>
       ),
@@ -483,7 +442,7 @@ export function buildSections(
           >
             36 horas. 250 de los mejores{" "}
             <span className="text-hs-red">builders</span> menores de 30.
-            HackSpain 2026 es el punto de encuentro de los jóvenes que van a
+            HackSpain 2026 fue el punto de encuentro de los jóvenes que van a
             posicionar a España como líder de talento tech joven.
           </p>
           <p
@@ -595,7 +554,7 @@ export function buildSections(
       r4c: (
         <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-8">
           <p className={`${BD} text-center text-hs-ink`}>
-            Conecta con los mejores{" "}
+            Conectamos con los mejores{" "}
             <span className="text-hs-red">fundadores y mentores</span> del
             ecosistema de España.
           </p>
@@ -615,16 +574,7 @@ export function buildSections(
       ),
       r4c: (
         <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-6">
-          <SignupCountdown
-            className="text-hs-ink"
-            label="El evento empieza en"
-            labelClassName={`${LBL} text-center text-hs-ink/50`}
-          />
-          <SignupCta
-            ariaLabel="Apúntate ya a HackSpain 2026"
-            href={signupHref}
-            label="Apúntate ya"
-          />
+          <a className="font-bold underline underline-offset-4" href="/comunidad">Revive HackSpain 2026 ↗</a>
         </P>
       ),
       ...bottomRow(6),
@@ -758,9 +708,7 @@ function orn(
  * footer, merging the desktop section's scattered tiles into a few readable
  * cards. Keyed by the compact cell ids: `hero`, `b1`, `b2`, `foot`.
  */
-export function buildSectionsCompact(
-  signupHref = "/signup"
-): Record<string, React.ReactNode>[] {
+export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
   const foot = compactFooter();
 
   return [
@@ -804,7 +752,7 @@ export function buildSectionsCompact(
       b1: (
         <P bg="bg-hs-orange" className={CARDART}>
           {cardArt(windmillSvg, "br")}
-          <p className={`${CLBL} text-hs-paper/70`}>Weekend Hackathon</p>
+          <p className={`${CLBL} text-hs-paper/80`}>Así fue · 2026</p>
           <span
             className={`${CH} text-center text-[clamp(1.4rem,6.5vw,2.6rem)] text-hs-paper`}
           >
@@ -820,29 +768,8 @@ export function buildSectionsCompact(
         </P>
       ),
       b2: (
-        <P bg="bg-hs-paper" className={`${CARD} !justify-evenly`}>
-          <p
-            className={`${CH} text-center text-[clamp(1.1rem,5.5vw,2rem)] text-hs-ink`}
-          >
-            El hackathon para unir a los mejores{" "}
-            <span className="text-hs-red">builders</span> jóvenes de España.
-          </p>
-          <p className={`${CLBL} text-center text-hs-ink/50`}>
-            +10.000€ en premios. 5 tracks.
-          </p>
-          <SignupCta
-            ariaLabel="Solicitar plaza en HackSpain — abrir formulario"
-            className="!px-5 !py-2.5 !text-[clamp(0.85rem,3vw,1.1rem)] shrink-0"
-            href={signupHref}
-            label="Apúntate"
-          />
-          <SignupCountdown
-            className="shrink-0 text-hs-ink"
-            label="Empieza en"
-            labelClassName={`${D} font-black text-[clamp(0.6rem,2.6vw,0.85rem)] text-hs-ink/50 uppercase tracking-widest`}
-            layout="inline"
-            variant="compactSm"
-          />
+        <P bg="bg-hs-paper" className="!gap-0 !p-0">
+          <div className="min-h-0 w-full flex-1"><RecapVideoTile /></div>
         </P>
       ),
       ...orn(
@@ -882,6 +809,7 @@ export function buildSectionsCompact(
         </P>
       ),
     },
+    {},
     {
       hero: (
         <P bg="bg-hs-navy" className={CARD}>
@@ -891,7 +819,7 @@ export function buildSectionsCompact(
           >
             ESPAÑA TIENE <span className="text-hs-red">TALENTO.</span>
             <br />
-            NOSOTROS VAMOS A <span className="text-hs-red">JUNTARLO.</span>
+            Y LO <span className="text-hs-red">JUNTAMOS.</span>
           </h2>
         </P>
       ),
@@ -902,7 +830,7 @@ export function buildSectionsCompact(
           >
             36 horas. 250 de los mejores{" "}
             <span className="text-hs-red">builders</span> menores de 30.
-            HackSpain 2026 es el punto de encuentro de los jóvenes que van a
+            HackSpain 2026 fue el punto de encuentro de los jóvenes que van a
             posicionar a España como líder de talento tech joven.
           </p>
         </P>
@@ -1060,7 +988,7 @@ export function buildSectionsCompact(
       b1: (
         <P bg="bg-hs-paper" className={`${CARD} !justify-evenly`}>
           <p className={`${CBD} text-center text-hs-ink`}>
-            Conecta con los mejores{" "}
+            Conectamos con los mejores{" "}
             <span className="text-hs-red">fundadores y mentores</span> del
             ecosistema de España.
           </p>
@@ -1097,18 +1025,7 @@ export function buildSectionsCompact(
       ),
       b1: (
         <P bg="bg-hs-paper" className={`${CARD} !justify-evenly`}>
-          <SignupCountdown
-            className="text-hs-ink"
-            label="El evento empieza en"
-            labelClassName={`${CLBL} text-center text-hs-ink/50`}
-            variant="compact"
-          />
-          <SignupCta
-            ariaLabel="Apúntate ya a HackSpain 2026"
-            className="!px-8 !py-4 !text-[clamp(1rem,4vw,1.4rem)]"
-            href={signupHref}
-            label="Apúntate ya"
-          />
+          <a className="font-bold underline underline-offset-4" href="/comunidad">Revive HackSpain 2026 ↗</a>
         </P>
       ),
       b2: (
