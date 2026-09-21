@@ -13,9 +13,11 @@ import { cn } from "@/lib/utils";
 export function AppHeader({
   pathname,
   accountMenu,
+  homeHref = "/",
 }: {
   pathname: string;
   accountMenu?: ReactNode;
+  homeHref?: string;
 }) {
   return (
     <header className="border-b-[3px] border-hs-ink bg-hs-sand">
@@ -26,7 +28,7 @@ export function AppHeader({
         )}
       >
         <Link
-          href="/"
+          href={homeHref}
           className="inline-flex min-h-11 w-fit shrink-0 items-center motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
         >
           <img

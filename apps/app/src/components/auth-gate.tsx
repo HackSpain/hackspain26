@@ -16,6 +16,7 @@ import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { isPublicAppPath } from "@/lib/public-paths";
 import {
+  DIRECTORY_PATH,
   hasSponsorCatalog,
   isAnyJudgingPath,
   isJudgingPath,
@@ -248,6 +249,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace(home);
         return;
       }
+      if (pathname === "/" && home === DIRECTORY_PATH) {
+        router.replace(home);
+        return;
+      }
       const next = destination(me);
       if (next && pathname !== next) {
         if (
@@ -392,7 +397,11 @@ function resolveView({
       (hasSponsorCatalog(me.sections) && isSponsorJudgingPath(pathname));
     const tracksAllowed = me.canJudge && isTracksPath(pathname);
     if (!judgingAllowed && !tracksAllowed) {
-      if (dashboardAccess && pathname === "/login") {
+      if (
+        dashboardAccess &&
+        (pathname === "/login" ||
+          (pathname === "/" && judgingDashboardHome(me) === DIRECTORY_PATH))
+      ) {
         return "blank";
       }
       if (

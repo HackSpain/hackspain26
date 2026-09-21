@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+  DIRECTORY_PATH,
   isPathAllowedWhenClosed,
+  judgingDashboardHome,
   JUDGING_PATH,
   JUDGING_SPONSORS_PATH,
 } from "./sections";
@@ -31,5 +33,25 @@ describe("isPathAllowedWhenClosed", () => {
     expect(isPathAllowedWhenClosed("/tracks", true)).toBe(true);
     expect(isPathAllowedWhenClosed("/tracks/maisa", true)).toBe(true);
     expect(isPathAllowedWhenClosed("/teams", true)).toBe(false);
+  });
+});
+
+describe("judgingDashboardHome", () => {
+  test("sponsors land on the directory", () => {
+    expect(
+      judgingDashboardHome({
+        canJudge: false,
+        sections: ["judgingSponsors", "participantes"],
+      }),
+    ).toBe(DIRECTORY_PATH);
+  });
+
+  test("judges keep the scoring dashboard", () => {
+    expect(
+      judgingDashboardHome({
+        canJudge: true,
+        sections: ["judging", "judgingSponsors", "participantes"],
+      }),
+    ).toBe(JUDGING_PATH);
   });
 });

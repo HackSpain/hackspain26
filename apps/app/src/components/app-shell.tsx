@@ -22,6 +22,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { contentWidth, fullBleed } from "@/lib/layout";
 import { isPublicAppPath } from "@/lib/public-paths";
+import {
+  DIRECTORY_PATH,
+  judgingDashboardHome,
+  SECTION_NAV,
+  SECTION_ORDER,
+} from "@/lib/sections";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
@@ -129,17 +135,56 @@ function AccountMenu({
   );
 }
 
-/** Every page except the home gets a way back to the tiles. */
-function BackToHome({ pathname }: { pathname: string }) {
+const BACK_LINK_CLASS =
+  "inline-flex min-h-11 items-center gap-2 font-bungee text-xs uppercase text-hs-brown underline-offset-4 outline-none hover:text-hs-ink hover:underline focus-visible:text-hs-ink focus-visible:underline motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]";
+
+function BackToHome({
+  pathname,
+  homeHref,
+}: {
+  pathname: string;
+  homeHref: string;
+}) {
   const toTracks = pathname.startsWith("/tracks/");
   return (
     <Link
-      href={toTracks ? "/tracks" : "/"}
-      className="inline-flex min-h-11 items-center gap-2 font-bungee text-xs uppercase text-hs-brown underline-offset-4 outline-none hover:text-hs-ink hover:underline focus-visible:text-hs-ink focus-visible:underline motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
+      href={toTracks ? "/tracks" : homeHref}
+      className={BACK_LINK_CLASS}
     >
       <ArrowLeft className="size-4" aria-hidden />
       {toTracks ? "Volver a retos" : "Volver al inicio"}
     </Link>
+  );
+}
+
+function SectionShortcuts({
+  sections,
+  pathname,
+}: {
+  sections: readonly string[];
+  pathname: string;
+}) {
+  const links = SECTION_ORDER.filter((key) => {
+    if (!sections.includes(key)) {
+      return false;
+    }
+    const href = SECTION_NAV[key].href;
+    return href !== pathname && !pathname.startsWith(`${href}/`);
+  }).map((key) => SECTION_NAV[key]);
+  if (links.length === 0) {
+    return null;
+  }
+  return (
+    <nav
+      aria-label="Secciones"
+      className="hs-enter mb-4 flex flex-wrap gap-x-4 gap-y-1"
+    >
+      {links.map((item) => (
+        <Link key={item.href} href={item.href} className={BACK_LINK_CLASS}>
+          {item.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -191,6 +236,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAdmin = me?.role === "admin";
   const bleed = fullBleed(pathname);
   const displayName = me?.name ?? me?.email;
+  const homeHref =
+    me && judgingDashboardHome(me) === DIRECTORY_PATH ? DIRECTORY_PATH : "/";
+  const atSponsorHome = pathname === homeHref && homeHref === DIRECTORY_PATH;
   const askGithub =
     me !== undefined &&
     me !== null &&
@@ -202,6 +250,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-hs-paper">
       <AppHeader
         pathname={pathname}
+        homeHref={homeHref}
         accountMenu={
           <div className="flex items-center gap-2">
             {isAdmin && (
@@ -235,9 +284,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Suspense fallback={null}>
             <GithubLinkResult />
           </Suspense>
-          {pathname === "/" ? null : (
+          {pathname === "/" ? null : atSponsorHome && me ? (
+            <SectionShortcuts sections={me.sections} pathname={pathname} />
+          ) : (
             <div className="hs-enter mb-4">
-              <BackToHome pathname={pathname} />
+              <BackToHome pathname={pathname} homeHref={homeHref} />
             </div>
           )}
         </div>

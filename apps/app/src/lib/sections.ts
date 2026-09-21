@@ -37,6 +37,7 @@ export const SECTION_ORDER: readonly SectionKey[] = SECTION_KEYS;
 
 export const JUDGING_PATH = "/judging";
 export const JUDGING_SPONSORS_PATH = "/judging-sponsors";
+export const DIRECTORY_PATH = "/participantes";
 
 export function isJudgingPath(pathname: string): boolean {
   if (isSponsorJudgingPath(pathname)) {
@@ -70,6 +71,9 @@ export function judgingDashboardHome(me: {
 }): string {
   if (me.canJudge) {
     return JUDGING_PATH;
+  }
+  if (hasSponsorCatalog(me.sections)) {
+    return DIRECTORY_PATH;
   }
   return JUDGING_SPONSORS_PATH;
 }
