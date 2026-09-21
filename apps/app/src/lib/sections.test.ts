@@ -46,6 +46,15 @@ describe("judgingDashboardHome", () => {
     ).toBe(DIRECTORY_PATH);
   });
 
+  test("mentors land on the directory", () => {
+    expect(
+      judgingDashboardHome({
+        canJudge: false,
+        sections: ["tracks", "cli", "participantes"],
+      }),
+    ).toBe(DIRECTORY_PATH);
+  });
+
   test("judges keep the scoring dashboard", () => {
     expect(
       judgingDashboardHome({

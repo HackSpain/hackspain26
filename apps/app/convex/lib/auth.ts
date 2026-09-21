@@ -114,7 +114,7 @@ export async function requireDirectoryViewer(
 ): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
   if (!(await canBrowseDirectory(ctx, user))) {
-    throw new Error("Se necesita acceso de sponsor o juez");
+    throw new Error("Se necesita acceso al directorio");
   }
   return user;
 }

@@ -58,7 +58,9 @@ export default function OnboardingPage() {
       return;
     }
     const next =
-      me.canJudge || me.sections.includes("judgingSponsors")
+      me.canJudge ||
+      me.sections.includes("judgingSponsors") ||
+      me.sections.includes("participantes")
         ? judgingDashboardHome(me)
         : "/";
     router.replace(next);

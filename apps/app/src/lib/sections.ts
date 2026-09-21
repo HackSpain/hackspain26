@@ -61,6 +61,10 @@ export function hasSponsorCatalog(sections: readonly string[]): boolean {
   return sections.includes("judgingSponsors");
 }
 
+export function hasDirectory(sections: readonly string[]): boolean {
+  return sections.includes("participantes");
+}
+
 export function isTracksPath(pathname: string): boolean {
   return pathname === "/tracks" || pathname.startsWith("/tracks/");
 }
@@ -72,7 +76,7 @@ export function judgingDashboardHome(me: {
   if (me.canJudge) {
     return JUDGING_PATH;
   }
-  if (hasSponsorCatalog(me.sections)) {
+  if (hasDirectory(me.sections)) {
     return DIRECTORY_PATH;
   }
   return JUDGING_SPONSORS_PATH;

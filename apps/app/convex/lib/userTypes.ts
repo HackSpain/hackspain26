@@ -92,8 +92,8 @@ export async function userTypeFor(
 
 /**
  * Sections this user may open. Admins see everything. The directory is
- * forced on for judges and sponsors and stripped from everyone else, even
- * if the CRM type still has the checkbox.
+ * forced on for judges, sponsors and mentors and stripped from everyone
+ * else, even if the CRM type still has the checkbox.
  */
 export function effectiveSections(
   user: Pick<Doc<"users">, "role">,
@@ -129,7 +129,7 @@ export function grantsSponsorCatalog(
   return effectiveSections(user, type).includes("judgingSponsors");
 }
 
-/** Directory graph: admins, judges and sponsors. Never hackers or mentors. */
+/** Directory graph: admins, judges, sponsors and mentors. Never hackers. */
 export function grantsDirectory(
   user: Pick<Doc<"users">, "role">,
   type: Doc<"userTypes"> | null
@@ -137,7 +137,7 @@ export function grantsDirectory(
   if (user.role === "admin") {
     return true;
   }
-  if (isSponsorType(type)) {
+  if (isSponsorType(type) || isMentorType(type)) {
     return true;
   }
   const sections = type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS;
@@ -148,10 +148,24 @@ export function grantsDirectory(
 export function isSponsorType(
   type: Pick<Doc<"userTypes">, "slug" | "label"> | null | undefined
 ): boolean {
+  return typeNamed(type, "sponsor");
+}
+
+/** CRM type "Mentor": staff on the floor, not a hacker. */
+export function isMentorType(
+  type: Pick<Doc<"userTypes">, "slug" | "label"> | null | undefined
+): boolean {
+  return typeNamed(type, "mentor");
+}
+
+function typeNamed(
+  type: Pick<Doc<"userTypes">, "slug" | "label"> | null | undefined,
+  name: string
+): boolean {
   if (!type) {
     return false;
   }
-  return type.slug === "sponsor" || type.label.trim().toLowerCase() === "sponsor";
+  return type.slug === name || type.label.trim().toLowerCase() === name;
 }
 
 export function withSponsorCatalog(sections: readonly string[]): Sections {

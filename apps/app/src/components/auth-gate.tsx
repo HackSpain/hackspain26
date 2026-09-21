@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { isPublicAppPath } from "@/lib/public-paths";
 import {
   DIRECTORY_PATH,
+  hasDirectory,
   hasSponsorCatalog,
   isAnyJudgingPath,
   isJudgingPath,
@@ -218,7 +219,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     const catalogAccess = hasSponsorCatalog(me.sections);
-    const dashboardAccess = me.canJudge || catalogAccess;
+    const dashboardAccess =
+      me.canJudge || catalogAccess || hasDirectory(me.sections);
     if (dashboardAccess) {
       if (pathname.startsWith("/admin")) {
         router.replace("/");
@@ -233,11 +235,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       const home = judgingDashboardHome(me);
       if (isAnyJudgingPath(pathname)) {
         if (isJudgingPath(pathname) && !me.canJudge) {
-          router.replace(JUDGING_SPONSORS_PATH);
+          router.replace(catalogAccess ? JUDGING_SPONSORS_PATH : home);
           return;
         }
         if (isSponsorJudgingPath(pathname) && !catalogAccess) {
-          router.replace(JUDGING_PATH);
+          router.replace(me.canJudge ? JUDGING_PATH : home);
           return;
         }
         return;
@@ -379,7 +381,9 @@ function resolveView({
     }
     const next = destination(me);
     const dashboardAccess =
-      me.canJudge || hasSponsorCatalog(me.sections);
+      me.canJudge ||
+      hasSponsorCatalog(me.sections) ||
+      hasDirectory(me.sections);
     const isRequiredStatusPage =
       pathname === next && (next === "/unregistered" || next === "/pending");
     if (!me.profileComplete && !isRequiredStatusPage) {
