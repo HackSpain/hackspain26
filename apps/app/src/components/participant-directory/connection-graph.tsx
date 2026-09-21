@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-	ArrowUpRight,
 	LocateFixed,
 	Minus,
 	Plus,
@@ -21,32 +20,17 @@ import {
 	uniqueParticipants,
 } from "./network-model";
 import type { Lens, Link } from "./network-model";
-import { CONNECTION_STYLES, NetworkCanvas } from "./network-canvas";
+import { NetworkCanvas } from "./network-canvas";
 import type { NetworkHandle } from "./network-canvas";
 import type { DirectoryParticipant } from "./types";
 import { personHeading } from "./types";
 import "./connection-graph.css";
 
-const PANEL_WIDTH = 340;
-/** `contentWidth` is max-w-6xl with px-4: the overlays sit inside that box. */
-const CONTAINER_MAX = 1152;
-const CONTAINER_PAD = 16;
 const CONTAINER = contentWidth("/participantes");
 
-/** Left edge of the profile panel for a viewport width, or null when it is a sheet. */
-function panelLeft(viewportWidth: number): number | null {
-	if (viewportWidth < 900) {
-		return null;
-	}
-	const box = Math.min(CONTAINER_MAX, viewportWidth);
-	return (viewportWidth - box) / 2 + box - CONTAINER_PAD - PANEL_WIDTH;
+function panelLeft(): number | null {
+	return null;
 }
-const URL_LABELS: Record<string, string> = {
-	github: "GitHub",
-	linkedin: "LinkedIn",
-	web: "Web",
-	x: "X",
-};
 
 function Portrait({ person }: { person: DirectoryParticipant }) {
 	return person.photoUrl ? (
@@ -59,149 +43,17 @@ function Portrait({ person }: { person: DirectoryParticipant }) {
 	);
 }
 
-export function ProfilePanel({
-	person,
-	links,
-	onClose,
-	onFocus,
-}: {
-	person: DirectoryParticipant;
-	links: Link[];
-	onClose: () => void;
-	onFocus: (id: string) => void;
-}) {
-	const facts = [
-		person.city,
-		person.university,
-		person.company,
-		person.degree,
-	].filter(Boolean);
-	const linksOut = (person.urls ?? []).filter(
-		(entry) => URL_LABELS[entry.kind] && entry.url,
-	);
-	return (
-		<aside className="pg-panel" aria-label={`Perfil de ${person.displayName}`}>
-			<div className="pg-panel-head">
-				<Portrait person={person} />
-				<div className="pg-panel-identity">
-					<h2>
-						{personHeading(person)}
-						{person.isMe ? <span className="pg-me-chip">Tú</span> : null}
-					</h2>
-				</div>
-				<button type="button" aria-label="Cerrar perfil" onClick={onClose}>
-					<X size={18} />
-				</button>
-			</div>
-			{facts.length ? (
-				<p className="pg-panel-facts">{facts.join(" · ")}</p>
-			) : null}
-			{person.team ? (
-				<p className="pg-panel-team">
-					<span style={{ background: CONNECTION_STYLES.team.color }} />
-					{person.projectName
-						? `${person.team.name} · ${person.projectName}`
-						: person.team.name}
-				</p>
-			) : person.projectName ? (
-				<p className="pg-panel-team">{person.projectName}</p>
-			) : null}
-			{person.bio ? <p className="pg-panel-bio">{person.bio}</p> : null}
-			{person.achievements ? (
-				<p className="pg-panel-bio">{person.achievements}</p>
-			) : null}
-			{person.freeTime ? (
-				<p className="pg-panel-bio">{person.freeTime}</p>
-			) : null}
-			{linksOut.length || person.githubUsername ? (
-				<p className="pg-panel-links">
-					{linksOut.map((entry) => (
-						<a
-							key={entry.kind}
-							href={entry.url}
-							rel="noreferrer"
-							target="_blank"
-						>
-							{URL_LABELS[entry.kind]}
-						</a>
-					))}
-					{person.githubUsername &&
-					!linksOut.some((entry) => entry.kind === "github") ? (
-						<a
-							href={`https://github.com/${person.githubUsername}`}
-							rel="noreferrer"
-							target="_blank"
-						>
-							GitHub
-						</a>
-					) : null}
-				</p>
-			) : null}
-			{person.skills.length ? (
-				<ul className="pg-chips" aria-label="Habilidades">
-					{person.skills.slice(0, 8).map((skill) => (
-						<li key={skill}>{skill}</li>
-					))}
-				</ul>
-			) : null}
-			<div className="pg-panel-section">
-				<h3>En común</h3>
-				<span>{links.length}</span>
-			</div>
-			{links.length ? (
-				<ul className="pg-links-list">
-					{links.map((link) => (
-						<li key={link.participant.id}>
-							<button
-								type="button"
-								onClick={() => onFocus(link.participant.id)}
-							>
-								<Portrait person={link.participant} />
-								<span className="pg-link-body">
-                      <span className="pg-link-name">
-										{personHeading(link.participant)}
-										<ArrowUpRight size={14} aria-hidden="true" />
-									</span>
-									<span className="pg-link-reasons">
-										{link.affinities.slice(0, 4).map((affinity) => (
-											<span
-												key={`${affinity.kind}:${affinity.value}`}
-												style={{
-													color: CONNECTION_STYLES[affinity.kind].color,
-												}}
-											>
-												{affinity.value}
-											</span>
-										))}
-										{link.affinities.length > 4 ? (
-											<span className="pg-link-more">
-												+{link.affinities.length - 4}
-											</span>
-										) : null}
-									</span>
-								</span>
-							</button>
-						</li>
-					))}
-				</ul>
-			) : (
-				<p className="pg-panel-empty">
-					Todavía no comparte ciudad, estudios, empresa, equipo, habilidades ni
-					intereses con nadie.
-				</p>
-			)}
-		</aside>
-	);
-}
-
 export function ConnectionGraph({
 	participants: input,
+	selectedId,
+	onSelect,
 }: {
 	participants: DirectoryParticipant[];
+	selectedId: string | null;
+	onSelect: (id: string | null) => void;
 }) {
 	const participants = useMemo(() => uniqueParticipants(input), [input]);
 	const [lens, setLens] = useState<Lens>("team");
-	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [query, setQuery] = useState("");
 	const [searchOpen, setSearchOpen] = useState(false);
 	const canvas = useRef<NetworkHandle>(null);
@@ -226,10 +78,6 @@ export function ConnectionGraph({
 	const me = useMemo(
 		() => participants.find((person) => person.isMe),
 		[participants],
-	);
-	const selected = useMemo(
-		() => participants.find((person) => person.id === selectedId) ?? null,
-		[participants, selectedId],
 	);
 	const searchIndex = useMemo(
 		() =>
@@ -268,13 +116,16 @@ export function ConnectionGraph({
 		[participants, matches, search],
 	);
 
-	const select = useCallback((id: string | null) => {
-		setSelectedId(id);
-		if (id) {
-			setQuery("");
-			setSearchOpen(false);
-		}
-	}, []);
+	const select = useCallback(
+		(id: string | null) => {
+			onSelect(id);
+			if (id) {
+				setQuery("");
+				setSearchOpen(false);
+			}
+		},
+		[onSelect],
+	);
 	function focus(id: string) {
 		canvas.current?.focus(id);
 	}
@@ -293,13 +144,12 @@ export function ConnectionGraph({
 			className="pg-stage"
 			id="participantes"
 			aria-label="Mapa de participantes"
-			style={{ "--pg-panel-width": `${PANEL_WIDTH}px` } as React.CSSProperties}
 		>
 			<NetworkCanvas
 				ref={canvas}
 				participants={participants}
 				lens={lens}
-				selectedId={selected ? selected.id : null}
+				selectedId={selectedId}
 				matches={matches}
 				linksOf={linksOf}
 				panelLeft={panelLeft}
@@ -401,16 +251,6 @@ export function ConnectionGraph({
 						) : null}
 					</div>
 				</div>
-
-				{selected ? (
-					<ProfilePanel
-						key={selected.id}
-						person={selected}
-						links={linksOf(selected.id)}
-						onClose={() => canvas.current?.clear()}
-						onFocus={focus}
-					/>
-				) : null}
 
 				<div className="pg-hint" aria-hidden="true">
 					Arrastra para moverte · Rueda para ampliar

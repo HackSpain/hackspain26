@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@convex/_generated/api";
@@ -9,13 +10,21 @@ import { contentWidth } from "@/lib/layout";
 
 const container = contentWidth("/participantes");
 
-/**
- * Real data. The viewer's own card was filled during onboarding, so the map
- * renders straight away; "Editar mi ficha" goes to the profile. The map
- * bleeds edge to edge, so the loading state wraps itself in the regular
- * content width.
- */
 export default function ParticipantsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className={container}>
+          <LoadingText />
+        </div>
+      }
+    >
+      <ParticipantsBody />
+    </Suspense>
+  );
+}
+
+function ParticipantsBody() {
   const router = useRouter();
   const participants = useQuery(api.directory.list);
 

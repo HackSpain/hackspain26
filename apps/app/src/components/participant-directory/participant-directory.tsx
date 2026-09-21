@@ -18,23 +18,25 @@ import { cn } from "@/lib/utils";
 import type { DirectoryParticipant } from "./types";
 import { personHeading } from "./types";
 import { normalize, searchHaystack } from "./affinities";
-import { ConnectionGraph, ProfilePanel } from "./connection-graph";
-import { linksFor } from "./network-model";
+import { ConnectionGraph } from "./connection-graph";
+import { PersonSheet, PERSON_PARAM, usePersonPicker } from "./person-sheet";
 import "./participant-directory.css";
 import "./connection-graph.css";
 
 type ParticipantView = "graph" | "directory";
 
 const DIRECTORY_PARAM = "directorio";
-const PANEL_WIDTH = 340;
 
 function ParticipantList({
   participants,
+  selectedId,
+  onOpen,
 }: {
   participants: DirectoryParticipant[];
+  selectedId: string | null;
+  onOpen: (id: string, from: HTMLElement | null) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const search = normalize(query);
   const filtered = useMemo(
     () =>
@@ -43,17 +45,12 @@ function ParticipantList({
       ),
     [participants, search],
   );
-  const selected = useMemo(
-    () => participants.find((person) => person.id === selectedId) ?? null,
-    [participants, selectedId],
-  );
 
   return (
     <section
       aria-label="Directorio de participantes"
       className="pd-list"
       id="pd-directory-panel"
-      style={{ "--pg-panel-width": `${PANEL_WIDTH}px` } as React.CSSProperties}
     >
       <div className="pd-list-toolbar">
         <label className="pd-list-search">
@@ -94,7 +91,9 @@ function ParticipantList({
                       className="pd-person-open"
                       type="button"
                       aria-pressed={selectedId === participant.id}
-                      onClick={() => setSelectedId(participant.id)}
+                      onClick={(event) =>
+                        onOpen(participant.id, event.currentTarget)
+                      }
                     >
                       {personHeading(participant)}
                     </button>
@@ -167,23 +166,10 @@ function ParticipantList({
           No hay participantes que coincidan con esta búsqueda.
         </div>
       )}
-
-      {selected ? (
-        <ProfilePanel
-          person={selected}
-          links={linksFor(selected, participants)}
-          onClose={() => setSelectedId(null)}
-          onFocus={setSelectedId}
-        />
-      ) : null}
     </section>
   );
 }
 
-/**
- * The map is the page: it bleeds edge to edge below a compact header. The
- * card directory stays one click away inside the regular content width.
- */
 export function ParticipantDirectory({
   participants,
   onEdit,
@@ -194,14 +180,25 @@ export function ParticipantDirectory({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { personId, triggerRef, openPerson, closePerson } = usePersonPicker();
   const view: ParticipantView = params.has(DIRECTORY_PARAM)
     ? "directory"
     : "graph";
   const container = contentWidth("/participantes");
 
   function setView(next: ParticipantView) {
+    const persona = params.get(PERSON_PARAM);
+    if (next === "directory") {
+      router.replace(
+        persona
+          ? `${pathname}?${DIRECTORY_PARAM}&${PERSON_PARAM}=${persona}`
+          : `${pathname}?${DIRECTORY_PARAM}`,
+        { scroll: false },
+      );
+      return;
+    }
     router.replace(
-      next === "directory" ? `${pathname}?${DIRECTORY_PARAM}` : pathname,
+      persona ? `${pathname}?${PERSON_PARAM}=${persona}` : pathname,
       { scroll: false },
     );
   }
@@ -254,12 +251,34 @@ export function ParticipantDirectory({
       </header>
 
       {view === "graph" ? (
-        <ConnectionGraph participants={participants} />
+        <ConnectionGraph
+          participants={participants}
+          selectedId={personId}
+          onSelect={(id) => {
+            if (id) {
+              openPerson(id);
+            } else {
+              closePerson();
+            }
+          }}
+        />
       ) : (
         <div className={container}>
-          <ParticipantList participants={participants} />
+          <ParticipantList
+            participants={participants}
+            selectedId={personId}
+            onOpen={openPerson}
+          />
         </div>
       )}
+
+      <PersonSheet
+        participants={participants}
+        personId={personId}
+        onClose={closePerson}
+        onOpen={openPerson}
+        returnFocusRef={triggerRef}
+      />
     </div>
   );
 }

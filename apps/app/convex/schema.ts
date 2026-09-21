@@ -16,6 +16,8 @@ import {
   roleValidator,
   scoreValueValidator,
 } from "./lib/validators";
+import { githubProfileFields } from "./lib/githubProfile";
+import { linkedinProfileFields } from "./lib/linkedinProfile";
 
 export default defineSchema({
   tvPlaybackControl: defineTable({ key: v.string(), reloadVersion: v.number() }).index("by_key", ["key"]),
@@ -572,4 +574,12 @@ export default defineSchema({
     .index("by_user_and_context", ["userId", "contextKind", "contextKey"])
     .index("by_group", ["group"])
     .index("by_user_and_group", ["userId", "group"]),
+
+  githubProfiles: defineTable(githubProfileFields).index("by_username", [
+    "username",
+  ]),
+
+  linkedinProfiles: defineTable(linkedinProfileFields).index("by_slug", [
+    "slug",
+  ]),
 });

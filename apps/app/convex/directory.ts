@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { authedMutation, authedQuery, directoryQuery } from "./lib/customFunctions";
+import { requireDirectoryViewer } from "./lib/auth";
 import {
 	directoryFieldValidator,
 	directoryValidator,
@@ -8,6 +9,18 @@ import {
 	missingDirectoryFields,
 	parseDirectoryCard,
 } from "./lib/directory";
+import {
+	githubHackathonValidator,
+	githubProfileFields,
+	githubProfileValidator,
+	normalizeGithubLogin,
+} from "./lib/githubProfile";
+import {
+	hasNyneAuth,
+	linkedinProfileFields,
+	linkedinProfileValidator,
+	normalizeLinkedinSlug,
+} from "./lib/linkedinProfile";
 import { avatarThumbnailFor } from "./lib/photo";
 import { membershipForUser } from "./lib/team";
 import { urlsValidator } from "./lib/urls";
@@ -27,6 +40,15 @@ const participantReturn = v.object({
 	interests: v.array(v.string()),
 	isMe: v.boolean(),
 	photoUrl: v.optional(v.string()),
+	project: v.optional(
+		v.object({
+			description: v.string(),
+			id: v.string(),
+			name: v.string(),
+			techStack: v.array(v.string()),
+			urls: urlsValidator,
+		}),
+	),
 	projectName: v.optional(v.string()),
 	role: v.string(),
 	skills: v.array(v.string()),
@@ -158,18 +180,33 @@ export const list = directoryQuery({
 				? signupByEmail.get(user.email.toLowerCase())
 				: undefined;
 		};
-		const projectByTeam = new Map<Id<"teams">, string>();
+		const projectByTeam = new Map<
+			Id<"teams">,
+			{
+				description: string;
+				id: string;
+				name: string;
+				techStack: string[];
+				urls: Doc<"submissions">["urls"];
+			}
+		>();
 		for (const submission of submissions) {
 			if (!submission.teamId) {
 				continue;
 			}
 			const name = submission.name.trim();
-			if (!name) {
+			if (!name && !submission.description.trim()) {
 				continue;
 			}
 			const current = projectByTeam.get(submission.teamId);
 			if (!current || submission.status === "submitted") {
-				projectByTeam.set(submission.teamId, name);
+				projectByTeam.set(submission.teamId, {
+					description: submission.description,
+					id: submission._id,
+					name: name || "Proyecto",
+					techStack: submission.techStack ?? [],
+					urls: submission.urls,
+				});
 			}
 		}
 		const teamsById = new Map(teams.map((team) => [team._id, team]));
@@ -224,8 +261,11 @@ export const list = directoryQuery({
 				interests: card.interests,
 				isMe: user._id === ctx.user._id,
 				photoUrl: avatarThumbnailFor(user),
-				projectName: team
+				project: team
 					? projectByTeam.get(team.id as Id<"teams">)
+					: undefined,
+				projectName: team
+					? projectByTeam.get(team.id as Id<"teams">)?.name
 					: undefined,
 				role: card.role,
 				skills: card.skills,
@@ -248,4 +288,155 @@ export const list = directoryQuery({
 		);
 	},
 	returns: v.array(participantReturn),
+});
+
+function profileFields(row: Doc<"githubProfiles">) {
+	const { _creationTime: _c, _id: _i, ...profile } = row;
+	return profile;
+}
+
+export const assertViewer = internalQuery({
+	args: {},
+	handler: async (ctx) => {
+		await requireDirectoryViewer(ctx);
+		return null;
+	},
+	returns: v.null(),
+});
+
+export const githubCached = internalQuery({
+	args: { username: v.string() },
+	handler: async (ctx, args) => {
+		const row = await ctx.db
+			.query("githubProfiles")
+			.withIndex("by_username", (q) => q.eq("username", args.username))
+			.unique();
+		return row ? profileFields(row) : null;
+	},
+	returns: v.union(githubProfileValidator, v.null()),
+});
+
+export const saveGithubProfile = internalMutation({
+	args: githubProfileFields,
+	handler: async (ctx, args) => {
+		const existing = await ctx.db
+			.query("githubProfiles")
+			.withIndex("by_username", (q) => q.eq("username", args.username))
+			.unique();
+		if (existing) {
+			await ctx.db.patch(existing._id, args);
+			return null;
+		}
+		await ctx.db.insert("githubProfiles", args);
+		return null;
+	},
+	returns: v.null(),
+});
+
+export const github = directoryQuery({
+	args: { username: v.string() },
+	handler: async (ctx, args) => {
+		const username = normalizeGithubLogin(args.username);
+		if (!username) {
+			return null;
+		}
+		const [row, posts] = await Promise.all([
+			ctx.db
+				.query("githubProfiles")
+				.withIndex("by_username", (q) => q.eq("username", username))
+				.unique(),
+			ctx.db
+				.query("posts")
+				.withIndex("by_kind_created", (q) => q.eq("kind", "github"))
+				.order("desc")
+				.collect(),
+		]);
+		const mine = posts.filter(
+			(post) => post.github?.actor?.toLowerCase() === username,
+		);
+		const counts = new Map<string, number>();
+		for (const post of mine) {
+			const event = post.github?.event ?? "other";
+			counts.set(event, (counts.get(event) ?? 0) + 1);
+		}
+		return {
+			hackathon: {
+				events: [...counts.entries()]
+					.map(([event, count]) => ({ count, event }))
+					.toSorted((a, b) => b.count - a.count),
+				recent: mine.slice(0, 8).map((post) => ({
+					at: post.createdAt,
+					event: post.github?.event ?? "",
+					repo: post.github?.repo ?? "",
+					text: post.text,
+					url: post.github?.url ?? "",
+				})),
+				total: mine.length,
+			},
+			profile: row ? profileFields(row) : null,
+		};
+	},
+	returns: v.union(
+		v.object({
+			hackathon: githubHackathonValidator,
+			profile: v.union(githubProfileValidator, v.null()),
+		}),
+		v.null(),
+	),
+});
+
+function linkedinFields(row: Doc<"linkedinProfiles">) {
+	const { _creationTime: _c, _id: _i, ...profile } = row;
+	return profile;
+}
+
+export const linkedinCached = internalQuery({
+	args: { slug: v.string() },
+	handler: async (ctx, args) => {
+		const row = await ctx.db
+			.query("linkedinProfiles")
+			.withIndex("by_slug", (q) => q.eq("slug", args.slug))
+			.unique();
+		return row ? linkedinFields(row) : null;
+	},
+	returns: v.union(linkedinProfileValidator, v.null()),
+});
+
+export const saveLinkedinProfile = internalMutation({
+	args: linkedinProfileFields,
+	handler: async (ctx, args) => {
+		const existing = await ctx.db
+			.query("linkedinProfiles")
+			.withIndex("by_slug", (q) => q.eq("slug", args.slug))
+			.unique();
+		if (existing) {
+			await ctx.db.patch(existing._id, args);
+			return null;
+		}
+		await ctx.db.insert("linkedinProfiles", args);
+		return null;
+	},
+	returns: v.null(),
+});
+
+export const linkedin = directoryQuery({
+	args: { slug: v.string() },
+	handler: async (ctx, args) => {
+		const slug = normalizeLinkedinSlug(args.slug);
+		if (!slug) {
+			return { enabled: hasNyneAuth(), profile: null };
+		}
+		const row = await ctx.db
+			.query("linkedinProfiles")
+			.withIndex("by_slug", (q) => q.eq("slug", slug))
+			.unique();
+		return {
+			enabled: hasNyneAuth(),
+			profile: row ? linkedinFields(row) : null,
+		};
+	},
+	returns: v.object({
+		enabled: v.boolean(),
+		profile: v.union(linkedinProfileValidator, v.null()),
+	}),
 });

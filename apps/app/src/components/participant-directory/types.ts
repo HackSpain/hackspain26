@@ -12,6 +12,13 @@ export interface DirectoryParticipant {
   degree?: string;
   freeTime?: string;
   githubUsername?: string;
+  project?: {
+    description: string;
+    id: string;
+    name: string;
+    techStack: string[];
+    urls: DirectoryUrl[];
+  };
   projectName?: string;
   team?: { id: string; name: string };
   /** The team's chosen challenges; `logoUrl` is the sponsor wordmark, `slug` finds its symbol. */
