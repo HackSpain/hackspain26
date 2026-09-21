@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { connectionsFor, sharedAffinities } from "./affinities";
+import { connectionsFor, searchHaystack, sharedAffinities } from "./affinities";
 import type { DirectoryParticipant } from "./types";
 
 const anchor: DirectoryParticipant = {
@@ -34,6 +34,16 @@ test("normalizes accents, case and whitespace without counting duplicate skills"
       .filter((item) => item.kind === "skills"),
     [{ kind: "skills", value: "React" }]
   );
+});
+
+test("search haystack includes team and project names", () => {
+  const blob = searchHaystack({
+    ...anchor,
+    projectName: "Molino",
+    team: { id: "t1", name: "Los Molinos" },
+  });
+  assert.ok(blob.includes("molino"));
+  assert.ok(blob.includes("los molinos"));
 });
 
 test("never links a profile to itself or matches missing data", () => {

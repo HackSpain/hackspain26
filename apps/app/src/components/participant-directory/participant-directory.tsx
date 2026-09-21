@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
   GraduationCap,
@@ -15,11 +16,17 @@ import { Button } from "@/components/ui/button";
 import { contentWidth } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import type { DirectoryParticipant } from "./types";
-import { normalize } from "./affinities";
-import { ConnectionGraph } from "./connection-graph";
+import { personHeading } from "./types";
+import { normalize, searchHaystack } from "./affinities";
+import { ConnectionGraph, ProfilePanel } from "./connection-graph";
+import { linksFor } from "./network-model";
 import "./participant-directory.css";
+import "./connection-graph.css";
 
 type ParticipantView = "graph" | "directory";
+
+const DIRECTORY_PARAM = "directorio";
+const PANEL_WIDTH = 340;
 
 function ParticipantList({
   participants,
@@ -27,27 +34,18 @@ function ParticipantList({
   participants: DirectoryParticipant[];
 }) {
   const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const search = normalize(query);
   const filtered = useMemo(
     () =>
       participants.filter((participant) =>
-        normalize(
-          [
-            participant.displayName,
-            participant.role,
-            participant.city,
-            participant.university,
-            participant.company,
-            participant.degree,
-            participant.team?.name,
-            ...participant.skills,
-            ...(participant.interests ?? []),
-          ]
-            .filter(Boolean)
-            .join(" "),
-        ).includes(search),
+        searchHaystack(participant).includes(search),
       ),
     [participants, search],
+  );
+  const selected = useMemo(
+    () => participants.find((person) => person.id === selectedId) ?? null,
+    [participants, selectedId],
   );
 
   return (
@@ -55,6 +53,7 @@ function ParticipantList({
       aria-label="Directorio de participantes"
       className="pd-list"
       id="pd-directory-panel"
+      style={{ "--pg-panel-width": `${PANEL_WIDTH}px` } as React.CSSProperties}
     >
       <div className="pd-list-toolbar">
         <label className="pd-list-search">
@@ -64,7 +63,7 @@ function ParticipantList({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar por nombre, ciudad, universidad…"
+            placeholder="Nombre, equipo, proyecto…"
           />
         </label>
         <p aria-live="polite">
@@ -75,7 +74,11 @@ function ParticipantList({
       {filtered.length ? (
         <div className="pd-list-grid">
           {filtered.map((participant) => (
-            <article className="pd-person-card" key={participant.id}>
+            <article
+              className="pd-person-card"
+              data-selected={selectedId === participant.id ? "" : undefined}
+              key={participant.id}
+            >
               <div className="pd-person-heading">
                 {participant.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- profile images may use authenticated app URLs or GitHub avatars.
@@ -86,8 +89,21 @@ function ParticipantList({
                   </span>
                 )}
                 <div>
-                  <h2>{participant.displayName}</h2>
-                  <p>{participant.role}</p>
+                  <h2>
+                    <button
+                      className="pd-person-open"
+                      type="button"
+                      aria-pressed={selectedId === participant.id}
+                      onClick={() => setSelectedId(participant.id)}
+                    >
+                      {personHeading(participant)}
+                    </button>
+                  </h2>
+                  <p>
+                    {[participant.team?.name, participant.projectName]
+                      .filter(Boolean)
+                      .join(" · ") || participant.city}
+                  </p>
                 </div>
               </div>
 
@@ -126,6 +142,14 @@ function ParticipantList({
                     <dd>{participant.team.name}</dd>
                   </div>
                 ) : null}
+                {participant.projectName ? (
+                  <div>
+                    <dt>
+                      <Network aria-hidden="true" size={15} /> Proyecto
+                    </dt>
+                    <dd>{participant.projectName}</dd>
+                  </div>
+                ) : null}
               </dl>
 
               {participant.skills.length ? (
@@ -143,6 +167,15 @@ function ParticipantList({
           No hay participantes que coincidan con esta búsqueda.
         </div>
       )}
+
+      {selected ? (
+        <ProfilePanel
+          person={selected}
+          links={linksFor(selected, participants)}
+          onClose={() => setSelectedId(null)}
+          onFocus={setSelectedId}
+        />
+      ) : null}
     </section>
   );
 }
@@ -158,8 +191,20 @@ export function ParticipantDirectory({
   participants: DirectoryParticipant[];
   onEdit?: () => void;
 }) {
-  const [view, setView] = useState<ParticipantView>("graph");
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const view: ParticipantView = params.has(DIRECTORY_PARAM)
+    ? "directory"
+    : "graph";
   const container = contentWidth("/participantes");
+
+  function setView(next: ParticipantView) {
+    router.replace(
+      next === "directory" ? `${pathname}?${DIRECTORY_PARAM}` : pathname,
+      { scroll: false },
+    );
+  }
 
   return (
     // Proton Pass can add data-protonpass-form before React hydrates this wrapper.

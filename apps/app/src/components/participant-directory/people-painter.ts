@@ -5,6 +5,7 @@ import type { GraphPoint } from "./network-model";
 import { ease, REST, targetFor } from "./people-visuals";
 import type { Mode, NodeState, Visual } from "./people-visuals";
 import type { DirectoryParticipant } from "./types";
+import { personHeading } from "./types";
 
 /**
  * Draws the people of the map on a 2D canvas. The SVG keeps the cluster
@@ -235,6 +236,7 @@ export function createPeoplePainter(
 		context.stroke();
 		context.restore();
 		if (visual.name > 0.01) {
+			const label = personHeading(person);
 			// The name sits under the disc and does not grow with it, as before.
 			context.save();
 			context.globalAlpha = visual.alpha * visual.name;
@@ -244,9 +246,9 @@ export function createPeoplePainter(
 			context.lineJoin = "round";
 			context.lineWidth = 4;
 			context.strokeStyle = palette.paper;
-			context.strokeText(person.displayName, point.x, point.y + NODE_RADIUS + 16);
+			context.strokeText(label, point.x, point.y + NODE_RADIUS + 16);
 			context.fillStyle = palette.ink;
-			context.fillText(person.displayName, point.x, point.y + NODE_RADIUS + 16);
+			context.fillText(label, point.x, point.y + NODE_RADIUS + 16);
 			context.restore();
 		}
 	}

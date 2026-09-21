@@ -32,6 +32,7 @@ import { createPeoplePainter, readPalette } from "./people-painter";
 import type { Camera, PaintedLink, PeoplePainter } from "./people-painter";
 import type { Mode, NodeState } from "./people-visuals";
 import type { DirectoryParticipant } from "./types";
+import { personHeading } from "./types";
 
 export const CONNECTION_STYLES: Record<
 	AffinityKind,
@@ -106,7 +107,7 @@ const PersonButton = memo(function PersonButton({
 			onBlur={onBlur}
 			onClick={() => onActivate(person.id)}
 		>
-			{person.displayName}, {person.role}, {person.city}
+			{personHeading(person)}, {person.city}
 		</button>
 	);
 });

@@ -13,8 +13,7 @@ import {
 import { initialsOf } from "@/components/avatar";
 import { contentWidth } from "@/lib/layout";
 import { cn } from "@/lib/utils";
-import { normalize, valuesFor } from "./affinities";
-import type { AffinityKind } from "./affinities";
+import { normalize, searchHaystack } from "./affinities";
 import {
 	LENS_LABELS,
 	LENSES,
@@ -25,6 +24,7 @@ import type { Lens, Link } from "./network-model";
 import { CONNECTION_STYLES, NetworkCanvas } from "./network-canvas";
 import type { NetworkHandle } from "./network-canvas";
 import type { DirectoryParticipant } from "./types";
+import { personHeading } from "./types";
 import "./connection-graph.css";
 
 const PANEL_WIDTH = 340;
@@ -41,14 +41,12 @@ function panelLeft(viewportWidth: number): number | null {
 	const box = Math.min(CONTAINER_MAX, viewportWidth);
 	return (viewportWidth - box) / 2 + box - CONTAINER_PAD - PANEL_WIDTH;
 }
-const SEARCH_KINDS: AffinityKind[] = [
-	"city",
-	"university",
-	"company",
-	"team",
-	"skills",
-	"interests",
-];
+const URL_LABELS: Record<string, string> = {
+	github: "GitHub",
+	linkedin: "LinkedIn",
+	web: "Web",
+	x: "X",
+};
 
 function Portrait({ person }: { person: DirectoryParticipant }) {
 	return person.photoUrl ? (
@@ -61,7 +59,7 @@ function Portrait({ person }: { person: DirectoryParticipant }) {
 	);
 }
 
-function ProfilePanel({
+export function ProfilePanel({
 	person,
 	links,
 	onClose,
@@ -78,16 +76,18 @@ function ProfilePanel({
 		person.company,
 		person.degree,
 	].filter(Boolean);
+	const linksOut = (person.urls ?? []).filter(
+		(entry) => URL_LABELS[entry.kind] && entry.url,
+	);
 	return (
 		<aside className="pg-panel" aria-label={`Perfil de ${person.displayName}`}>
 			<div className="pg-panel-head">
 				<Portrait person={person} />
 				<div className="pg-panel-identity">
 					<h2>
-						{person.displayName}
+						{personHeading(person)}
 						{person.isMe ? <span className="pg-me-chip">Tú</span> : null}
 					</h2>
-					<p>{person.role}</p>
 				</div>
 				<button type="button" aria-label="Cerrar perfil" onClick={onClose}>
 					<X size={18} />
@@ -99,10 +99,44 @@ function ProfilePanel({
 			{person.team ? (
 				<p className="pg-panel-team">
 					<span style={{ background: CONNECTION_STYLES.team.color }} />
-					{person.team.name}
+					{person.projectName
+						? `${person.team.name} · ${person.projectName}`
+						: person.team.name}
 				</p>
+			) : person.projectName ? (
+				<p className="pg-panel-team">{person.projectName}</p>
 			) : null}
 			{person.bio ? <p className="pg-panel-bio">{person.bio}</p> : null}
+			{person.achievements ? (
+				<p className="pg-panel-bio">{person.achievements}</p>
+			) : null}
+			{person.freeTime ? (
+				<p className="pg-panel-bio">{person.freeTime}</p>
+			) : null}
+			{linksOut.length || person.githubUsername ? (
+				<p className="pg-panel-links">
+					{linksOut.map((entry) => (
+						<a
+							key={entry.kind}
+							href={entry.url}
+							rel="noreferrer"
+							target="_blank"
+						>
+							{URL_LABELS[entry.kind]}
+						</a>
+					))}
+					{person.githubUsername &&
+					!linksOut.some((entry) => entry.kind === "github") ? (
+						<a
+							href={`https://github.com/${person.githubUsername}`}
+							rel="noreferrer"
+							target="_blank"
+						>
+							GitHub
+						</a>
+					) : null}
+				</p>
+			) : null}
 			{person.skills.length ? (
 				<ul className="pg-chips" aria-label="Habilidades">
 					{person.skills.slice(0, 8).map((skill) => (
@@ -124,8 +158,8 @@ function ProfilePanel({
 							>
 								<Portrait person={link.participant} />
 								<span className="pg-link-body">
-									<span className="pg-link-name">
-										{link.participant.displayName}
+                      <span className="pg-link-name">
+										{personHeading(link.participant)}
 										<ArrowUpRight size={14} aria-hidden="true" />
 									</span>
 									<span className="pg-link-reasons">
@@ -200,16 +234,7 @@ export function ConnectionGraph({
 	const searchIndex = useMemo(
 		() =>
 			new Map(
-				participants.map((person) => [
-					person.id,
-					normalize(
-						[
-							person.displayName,
-							person.role,
-							...SEARCH_KINDS.flatMap((kind) => valuesFor(person, kind)),
-						].join(" "),
-					),
-				]),
+				participants.map((person) => [person.id, searchHaystack(person)]),
 			),
 		[participants],
 	);
@@ -317,7 +342,7 @@ export function ConnectionGraph({
 							ref={searchInput}
 							type="search"
 							aria-label="Buscar participantes"
-							placeholder="Buscar…"
+							placeholder="Nombre, equipo, proyecto…"
 							value={query}
 							onChange={(event) => setQuery(event.target.value)}
 							onFocus={() => setSearchOpen(true)}
@@ -363,9 +388,11 @@ export function ConnectionGraph({
 									>
 										<Portrait person={person} />
 										<span>
-											<strong>{person.displayName}</strong>
+											<strong>{personHeading(person)}</strong>
 											<small>
-												{person.role} · {person.city}
+												{[person.team?.name, person.projectName, person.city]
+													.filter(Boolean)
+													.join(" · ")}
 											</small>
 										</span>
 									</button>

@@ -441,6 +441,23 @@
   line-height: 1.6;
   color: #5a4632;
 }
+.pg-panel-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+.pg-panel-links a {
+  color: var(--pg-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--duration-press) var(--ease-out);
+}
+.pg-panel-links a:hover {
+  color: var(--pg-red);
+}
 .pg-chips {
   display: flex;
   flex-wrap: wrap;

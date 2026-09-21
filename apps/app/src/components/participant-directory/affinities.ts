@@ -31,6 +31,26 @@ export function normalize(value: string): string {
     .toLowerCase();
 }
 
+export function searchHaystack(person: DirectoryParticipant): string {
+  return normalize(
+    [
+      person.displayName,
+      person.role,
+      person.city,
+      person.university,
+      person.company,
+      person.degree,
+      person.team?.name,
+      person.projectName,
+      person.githubUsername,
+      ...person.skills,
+      ...(person.interests ?? []),
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+}
+
 export function valuesFor(
   participant: DirectoryParticipant,
   kind: AffinityKind
