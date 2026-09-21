@@ -137,6 +137,171 @@ export function parsePersonRows(data: unknown[]): PersonUsageRow[] {
   return rows;
 }
 
+const PERSON_USER_ID = /^[a-z0-9]+$/i;
+const PERSON_HARNESS_ROWS = 8;
+const PERSON_MODEL_ROWS = 6;
+
+export type PersonHarnessRow = {
+  harness: string;
+  requests: number;
+  tokens: number;
+};
+
+export type PersonModelRow = {
+  family: string;
+  name: string;
+  requests: number;
+  tokens: number;
+};
+
+export type PersonToolRow = {
+  family: string;
+  harness: string;
+  model: string;
+  requests: number;
+  tokens: number;
+};
+
+export type PersonUsageResult =
+  | { status: "ok"; harnesses: PersonHarnessRow[]; models: PersonModelRow[] }
+  | { status: "unconfigured"; harnesses: []; models: [] }
+  | { status: "empty"; harnesses: []; models: [] };
+
+function assertPersonUserId(userId: string): string {
+  if (!PERSON_USER_ID.test(userId) || userId.length > 64) {
+    throw new Error("Invalid user id");
+  }
+  return userId;
+}
+
+/**
+ * Same dedupe as the TV aggregates, then one person's harnesses and models.
+ * `userId` is interpolated only after the Convex-id allowlist.
+ */
+export function personUsageSql(
+  table: string,
+  window: UsageWindow,
+  userId: string,
+): string {
+  if (!TABLE_NAME.test(table)) {
+    throw new Error("Invalid telemetry table name");
+  }
+  const id = assertPersonUserId(userId);
+  const start = Math.floor(window.startsAt / 1000);
+  const end = Math.floor(window.endsAt / 1000);
+  return `
+${deduplicatedEvents(table)}
+SELECT
+  harness,
+  model,
+  any(family) AS family,
+  sum(total) AS tokens,
+  count() AS requests
+FROM events
+WHERE at >= ${start} AND at < ${end} AND userId = '${id}'
+GROUP BY harness, model
+ORDER BY tokens DESC, harness, model
+LIMIT 64
+`.trim();
+}
+
+export function parsePersonToolRows(data: unknown[]): PersonToolRow[] {
+  const rows: PersonToolRow[] = [];
+  for (const entry of data) {
+    if (typeof entry !== "object" || entry === null) {
+      continue;
+    }
+    const row = entry as Record<string, unknown>;
+    const harness = typeof row.harness === "string" ? row.harness : "";
+    const model = typeof row.model === "string" ? row.model : "";
+    if (!harness && !model) {
+      continue;
+    }
+    rows.push({
+      family:
+        typeof row.family === "string" && row.family ? row.family : "other",
+      harness,
+      model,
+      requests: toCount(row.requests),
+      tokens: toCount(row.tokens),
+    });
+  }
+  return rows;
+}
+
+export function summarizePersonTools(rows: PersonToolRow[]): {
+  harnesses: PersonHarnessRow[];
+  models: PersonModelRow[];
+} {
+  const harnesses = new Map<string, PersonHarnessRow>();
+  const models = new Map<string, PersonModelRow>();
+  for (const row of rows) {
+    if (row.harness) {
+      const current = harnesses.get(row.harness) ?? {
+        harness: row.harness,
+        requests: 0,
+        tokens: 0,
+      };
+      current.requests += row.requests;
+      current.tokens += row.tokens;
+      harnesses.set(row.harness, current);
+    }
+    if (row.model) {
+      const current = models.get(row.model) ?? {
+        family: row.family,
+        name: row.model,
+        requests: 0,
+        tokens: 0,
+      };
+      current.requests += row.requests;
+      current.tokens += row.tokens;
+      models.set(row.model, current);
+    }
+  }
+  return {
+    harnesses: [...harnesses.values()]
+      .toSorted((a, b) => b.tokens - a.tokens || a.harness.localeCompare(b.harness))
+      .slice(0, PERSON_HARNESS_ROWS),
+    models: [...models.values()]
+      .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
+      .slice(0, PERSON_MODEL_ROWS),
+  };
+}
+
+export async function fetchPersonUsage(
+  userId: string,
+  window: UsageWindow,
+  fetchImpl: typeof fetch = fetch,
+): Promise<PersonUsageResult> {
+  const apiKey = process.env.RAWTREE_API_KEY;
+  const database = process.env.RAWTREE_DATABASE;
+  if (!apiKey || !database) {
+    return { harnesses: [], models: [], status: "unconfigured" };
+  }
+  const rawtree = new RawTree({
+    apiKey,
+    database,
+    ...(process.env.RAWTREE_BASE_URL
+      ? { baseUrl: process.env.RAWTREE_BASE_URL }
+      : {}),
+    fetch: fetchImpl,
+    userAgent: "hackspain-dashboard/1.0",
+  });
+  try {
+    const result = await rawtree.query({
+      signal: AbortSignal.timeout(15_000),
+      sql: personUsageSql(OTLP_LOGS_TABLE, window, userId),
+    });
+    const summarized = summarizePersonTools(parsePersonToolRows(result.data));
+    return { ...summarized, status: "ok" };
+  } catch (error) {
+    if (error instanceof RawTreeError && isMissingTable(error)) {
+      return { harnesses: [], models: [], status: "empty" };
+    }
+    throw error;
+  }
+}
+
 export function parseModelRows(data: unknown[]): ModelRow[] {
   const rows: ModelRow[] = [];
   for (const entry of data) {

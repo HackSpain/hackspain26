@@ -1,5 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { fetchUsage, modelsSql, parseModelRows, parsePersonRows, parseUsageRows, peopleSql, usageSql } from "./usage";
+import {
+  fetchPersonUsage,
+  fetchUsage,
+  modelsSql,
+  parseModelRows,
+  parsePersonRows,
+  parsePersonToolRows,
+  parseUsageRows,
+  peopleSql,
+  personUsageSql,
+  summarizePersonTools,
+  usageSql,
+} from "./usage";
 
 const window = {
   buckets: 24,
@@ -73,6 +85,71 @@ test("peopleSql dedupes on the permanent key and sums tokens per person", () => 
   expect(sql).toContain("at >= 1789749900 AND at < 1789920000 AND userId != ''");
   expect(sql).toContain("GROUP BY userId\n");
   expect(() => peopleSql("t; DROP TABLE x", window)).toThrow();
+});
+
+test("personUsageSql scopes the same dedupe to one Convex user id", () => {
+  const sql = personUsageSql("hackspain_otel_logs", window, "jd7abc");
+  expect(sql).toContain("GROUP BY userId, id");
+  expect(sql).toContain("GROUP BY userId, requestKey");
+  expect(sql).toContain("AND userId = 'jd7abc'");
+  expect(sql).toContain("GROUP BY harness, model");
+  expect(() => personUsageSql("hackspain_otel_logs", window, "x'; DROP TABLE t --")).toThrow();
+  expect(() => personUsageSql("t; DROP TABLE x", window, "jd7abc")).toThrow();
+});
+
+test("summarizePersonTools rolls harnesses and models up separately", () => {
+  expect(
+    summarizePersonTools([
+      {
+        family: "claude",
+        harness: "cursor",
+        model: "claude-sonnet-4-5",
+        requests: 2,
+        tokens: 80,
+      },
+      {
+        family: "claude",
+        harness: "claude-code",
+        model: "claude-sonnet-4-5",
+        requests: 1,
+        tokens: 20,
+      },
+      {
+        family: "gpt",
+        harness: "cursor",
+        model: "gpt-5",
+        requests: 1,
+        tokens: 10,
+      },
+    ]),
+  ).toEqual({
+    harnesses: [
+      { harness: "cursor", requests: 3, tokens: 90 },
+      { harness: "claude-code", requests: 1, tokens: 20 },
+    ],
+    models: [
+      { family: "claude", name: "claude-sonnet-4-5", requests: 3, tokens: 100 },
+      { family: "gpt", name: "gpt-5", requests: 1, tokens: 10 },
+    ],
+  });
+});
+
+test("parsePersonToolRows drops rows without a harness or model", () => {
+  expect(
+    parsePersonToolRows([
+      { family: "claude", harness: "cursor", model: "claude-sonnet-4-5", requests: 1, tokens: 9 },
+      { harness: "", model: "", tokens: 4 },
+      null,
+    ]),
+  ).toEqual([
+    {
+      family: "claude",
+      harness: "cursor",
+      model: "claude-sonnet-4-5",
+      requests: 1,
+      tokens: 9,
+    },
+  ]);
 });
 
 test("parsePersonRows drops rows without a user", () => {
@@ -212,5 +289,59 @@ describe("fetchUsage", () => {
         { status: 403 }
       )) as unknown as typeof fetch;
     await expect(fetchUsage(window, broken)).rejects.toThrow();
+  });
+});
+
+describe("fetchPersonUsage", () => {
+  test("without a RawTree key it says so instead of failing", async () => {
+    delete process.env.RAWTREE_API_KEY;
+    process.env.RAWTREE_DATABASE = "hackspain";
+    expect(await fetchPersonUsage("jd7abc", window)).toEqual({
+      harnesses: [],
+      models: [],
+      status: "unconfigured",
+    });
+  });
+
+  test("queries RawTree for one person and rolls up harnesses and models", async () => {
+    process.env.RAWTREE_API_KEY = "rt_read_write";
+    process.env.RAWTREE_DATABASE = "hackspain";
+    process.env.RAWTREE_BASE_URL = "https://rawtree.test";
+    const calls: string[] = [];
+    const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const sql = (JSON.parse(String(init?.body)) as { sql: string }).sql;
+      calls.push(sql);
+      return Response.json({
+        data: [
+          {
+            family: "claude",
+            harness: "cursor",
+            model: "claude-sonnet-4-5",
+            requests: 2,
+            tokens: 80,
+          },
+          {
+            family: "gpt",
+            harness: "cursor",
+            model: "gpt-5",
+            requests: 1,
+            tokens: 20,
+          },
+        ],
+        meta: [],
+        rows: 2,
+        statistics: { bytes_read: 0, elapsed: 0, rows_read: 0 },
+      });
+    }) as typeof fetch;
+    expect(await fetchPersonUsage("jd7abc", window, fetchImpl)).toEqual({
+      harnesses: [{ harness: "cursor", requests: 3, tokens: 100 }],
+      models: [
+        { family: "claude", name: "claude-sonnet-4-5", requests: 2, tokens: 80 },
+        { family: "gpt", name: "gpt-5", requests: 1, tokens: 20 },
+      ],
+      status: "ok",
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain("AND userId = 'jd7abc'");
   });
 });

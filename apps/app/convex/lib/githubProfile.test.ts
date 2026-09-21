@@ -8,6 +8,7 @@ import {
   missingGithubProfile,
   normalizeGithubLogin,
   profileFromGraphql,
+  profileFromRest,
 } from "./githubProfile";
 
 test("github logins come from handles, urls, or the bare name", () => {
@@ -138,4 +139,49 @@ test("the GraphQL user payload becomes a directory profile", () => {
   assert.equal(profile.pinned[0]?.name, "ada/app");
   assert.equal(flattenCalendar([]).length, 0);
   assert.equal(missingGithubProfile("ada", 1).missing, true);
+});
+
+test("the REST user payload becomes a directory profile", () => {
+  const profile = profileFromRest(
+    {
+      bio: "hola",
+      blog: "ada.dev",
+      created_at: "2020-01-02T00:00:00Z",
+      followers: 9,
+      hireable: true,
+      html_url: "https://github.com/Ada",
+      login: "Ada",
+      name: "Ada",
+      public_gists: 1,
+      public_repos: 11,
+      twitter_username: "ada",
+    },
+    [
+      {
+        fork: true,
+        full_name: "ada/fork",
+        html_url: "https://github.com/ada/fork",
+      },
+      {
+        description: "app",
+        fork: false,
+        forks_count: 1,
+        full_name: "ada/app",
+        html_url: "https://github.com/ada/app",
+        language: "TypeScript",
+        stargazers_count: 8,
+      },
+    ],
+    [{ html_url: "https://github.com/hackspain", login: "hackspain" }],
+    "ada",
+    50,
+  );
+  assert.equal(profile.login, "Ada");
+  assert.equal(profile.followers, 9);
+  assert.equal(profile.hireable, true);
+  assert.equal(profile.repos.length, 1);
+  assert.equal(profile.repos[0]?.name, "ada/app");
+  assert.equal(profile.orgs[0]?.login, "hackspain");
+  assert.equal(profile.calendar.length, 0);
+  assert.equal(profile.twitter, "ada");
 });

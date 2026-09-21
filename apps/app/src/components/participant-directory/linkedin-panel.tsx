@@ -89,7 +89,7 @@ export function LinkedinPanel({ person }: { person: DirectoryParticipant }) {
                 {profile.experience.map((job) => (
                   <li
                     key={`${job.name}-${job.title ?? ""}`}
-                    className="border-[3px] border-hs-ink bg-hs-sand px-3 py-2"
+                    className="border-2 border-hs-ink/20 bg-hs-sand/60 px-3 py-2"
                   >
                     <span className="block font-medium">
                       {job.title ?? job.name}

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { authedMutation, authedQuery, directoryQuery } from "./lib/customFunctions";
 import { requireDirectoryViewer } from "./lib/auth";
+import { getEventWindow } from "./lib/eventWindow";
 import {
 	directoryFieldValidator,
 	directoryValidator,
@@ -10,6 +11,7 @@ import {
 	parseDirectoryCard,
 } from "./lib/directory";
 import {
+	GITHUB_FEED_SHOWN,
 	githubHackathonValidator,
 	githubProfileFields,
 	githubProfileValidator,
@@ -364,7 +366,7 @@ export const github = directoryQuery({
 				events: [...counts.entries()]
 					.map(([event, count]) => ({ count, event }))
 					.toSorted((a, b) => b.count - a.count),
-				recent: mine.slice(0, 8).map((post) => ({
+				recent: mine.slice(0, GITHUB_FEED_SHOWN).map((post) => ({
 					at: post.createdAt,
 					event: post.github?.event ?? "",
 					repo: post.github?.repo ?? "",
@@ -438,5 +440,15 @@ export const linkedin = directoryQuery({
 	returns: v.object({
 		enabled: v.boolean(),
 		profile: v.union(linkedinProfileValidator, v.null()),
+	}),
+});
+
+/** Event bounds for the directory person-sheet RawTree query. Staff-only. */
+export const usageWindow = directoryQuery({
+	args: {},
+	handler: async (ctx) => await getEventWindow(ctx),
+	returns: v.object({
+		endsAt: v.optional(v.number()),
+		startsAt: v.optional(v.number()),
 	}),
 });

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { initialsOf } from "@/components/avatar";
 import { LinkedText } from "@/components/linked-text";
@@ -9,6 +10,7 @@ import { ProjectDetails } from "@/components/judging/project-details";
 import { writeParams } from "@/components/judging/project-table";
 import { VideoFrame } from "@/components/judging/video-frame";
 import { EmptyState, MetaLink, MetaRow } from "@/components/page";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetBody,
@@ -20,12 +22,14 @@ import {
 import { urlDisplay, urlLabel, urlOf } from "@/lib/urls";
 import { GithubPanel } from "./github-panel";
 import { LinkedinPanel } from "./linkedin-panel";
+import { UsagePanel } from "./usage-panel";
 import { linksFor } from "./network-model";
 import type { DirectoryParticipant } from "./types";
 import { personHeading } from "./types";
 
 export const PERSON_PARAM = "persona";
-const PERSON_URL_KINDS = ["github", "linkedin", "web", "x"] as const;
+const EXTRA_URL_KINDS = ["web", "x"] as const;
+const SWAP_EASE = [0.23, 1, 0.32, 1] as const;
 
 export function usePersonPicker() {
   const pathname = usePathname();
@@ -66,21 +70,54 @@ export function usePersonPicker() {
   };
 }
 
-function Portrait({ person }: { person: DirectoryParticipant }) {
+function Portrait({
+  person,
+  size = "md",
+}: {
+  person: DirectoryParticipant;
+  size?: "sm" | "md";
+}) {
+  const box = size === "sm" ? "size-10" : "size-16";
   return person.photoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element -- profile images may use authenticated app URLs or GitHub avatars.
     <img
       src={person.photoUrl}
       alt=""
-      className="size-14 rounded-full border-[3px] border-hs-ink object-cover"
+      className={`${box} shrink-0 rounded-full border-[3px] border-hs-ink object-cover outline outline-1 outline-black/10`}
     />
   ) : (
     <span
-      className="grid size-14 place-items-center rounded-full border-[3px] border-hs-ink bg-hs-sand font-bungee text-sm text-hs-brown"
+      className={`grid ${box} shrink-0 place-items-center rounded-full border-[3px] border-hs-ink bg-hs-sand font-bungee text-sm text-hs-brown`}
       aria-hidden="true"
     >
       {initialsOf(person.displayName)}
     </span>
+  );
+}
+
+function PersonRow({
+  person,
+  hint,
+  onOpen,
+}: {
+  person: DirectoryParticipant;
+  hint?: string;
+  onOpen: (id: string, from: HTMLElement | null) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center gap-3 border-2 border-hs-ink/20 bg-hs-sand/60 px-3 py-2 text-left hs-hover-bright motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.96]"
+      onClick={(event) => onOpen(person.id, event.currentTarget)}
+    >
+      <Portrait person={person} size="sm" />
+      <span className="min-w-0">
+        <span className="block font-medium">{personHeading(person)}</span>
+        {hint ? (
+          <span className="block text-sm text-hs-brown">{hint}</span>
+        ) : null}
+      </span>
+    </button>
   );
 }
 
@@ -97,6 +134,7 @@ export function PersonSheet({
   onOpen: (id: string, from: HTMLElement | null) => void;
   returnFocusRef: RefObject<HTMLElement | null>;
 }) {
+  const reduceMotion = useReducedMotion();
   const selected =
     participants.find((person) => person.id === personId) ?? null;
   const [shown, setShown] = useState<DirectoryParticipant | null>(selected);
@@ -119,10 +157,19 @@ export function PersonSheet({
       )
     : [];
   const personLinks = (person?.urls ?? []).filter((entry) =>
-    PERSON_URL_KINDS.includes(
-      entry.kind as (typeof PERSON_URL_KINDS)[number],
-    ),
+    EXTRA_URL_KINDS.includes(entry.kind as (typeof EXTRA_URL_KINDS)[number]),
   );
+  const swap = reduceMotion
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+      }
+    : {
+        initial: { opacity: 0, transform: "translateY(8px)" },
+        animate: { opacity: 1, transform: "translateY(0px)" },
+        exit: { opacity: 0, transform: "translateY(-6px)" },
+      };
 
   return (
     <Sheet
@@ -144,181 +191,183 @@ export function PersonSheet({
           returnFocusRef.current = null;
         }}
       >
-        <SheetHeader>
-          <div className="flex items-start gap-3">
-            {person ? <Portrait person={person} /> : null}
-            <div className="min-w-0">
-              <SheetTitle>{person ? personHeading(person) : "Ficha"}</SheetTitle>
-              <SheetDescription>
-                {person?.team?.name ?? person?.city ?? "Participante"}
-              </SheetDescription>
-            </div>
-          </div>
-        </SheetHeader>
-        <SheetBody className="space-y-8">
+        <AnimatePresence mode="wait" initial={false}>
           {person === null ? (
-            <EmptyState title="Persona no encontrada">
-              Esa ficha no está en el directorio.
-            </EmptyState>
+            <motion.div
+              key="missing"
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              initial={swap.initial}
+              animate={swap.animate}
+              exit={swap.exit}
+              transition={{ duration: 0.16, ease: SWAP_EASE }}
+            >
+              <SheetHeader>
+                <SheetTitle>Ficha</SheetTitle>
+              </SheetHeader>
+              <SheetBody>
+                <EmptyState title="Persona no encontrada">
+                  Esa ficha no está en el directorio.
+                </EmptyState>
+              </SheetBody>
+            </motion.div>
           ) : (
-            <>
-              {facts.length ? (
-                <p className="text-sm text-hs-brown">{facts.join(" · ")}</p>
-              ) : null}
-              {person.bio ? (
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                  <LinkedText text={person.bio} />
-                </p>
-              ) : null}
-              {person.achievements ? (
-                <MetaRow label="Logros">
-                  <span className="whitespace-pre-wrap">
-                    <LinkedText text={person.achievements} />
-                  </span>
-                </MetaRow>
-              ) : null}
-              {person.freeTime ? (
-                <MetaRow label="En el rato libre">
-                  <span className="whitespace-pre-wrap">
-                    <LinkedText text={person.freeTime} />
-                  </span>
-                </MetaRow>
-              ) : null}
-              {personLinks.length || person.githubUsername ? (
-                <div className="grid gap-3">
-                  {personLinks.map((entry) => (
-                    <MetaRow key={entry.kind} label={urlLabel(entry.kind)}>
-                      <MetaLink href={entry.url}>
-                        {urlDisplay(entry.kind, entry.url)}
-                      </MetaLink>
-                    </MetaRow>
-                  ))}
-                  {person.githubUsername &&
-                  !personLinks.some((entry) => entry.kind === "github") ? (
-                    <MetaRow label="GitHub">
-                      <MetaLink
-                        href={`https://github.com/${person.githubUsername}`}
-                      >
-                        {person.githubUsername}
-                      </MetaLink>
-                    </MetaRow>
-                  ) : null}
-                </div>
-              ) : null}
-              {person.skills.length ? (
-                <MetaRow label="Habilidades">
-                  {person.skills.join(" · ")}
-                </MetaRow>
-              ) : null}
-
-              <GithubPanel person={person} />
-              <LinkedinPanel person={person} />
-
-              <section className="space-y-3">
-                <h3 className="font-bungee text-sm uppercase">Equipo</h3>
-                {person.team ? (
-                  <>
-                    <p className="text-sm font-medium">{person.team.name}</p>
-                    {teammates.length ? (
-                      <ul className="grid gap-2">
-                        {teammates.map((mate) => (
-                          <li key={mate.id}>
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-3 border-[3px] border-hs-ink bg-hs-sand px-3 py-2 text-left hs-hover-bright"
-                              onClick={(event) =>
-                                onOpen(mate.id, event.currentTarget)
-                              }
-                            >
-                              <Portrait person={mate} />
-                              <span className="min-w-0">
-                                <span className="block font-medium">
-                                  {personHeading(mate)}
-                                </span>
-                                <span className="block text-sm text-hs-brown">
-                                  {mate.city}
-                                </span>
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-hs-brown">
-                        Nadie más del equipo tiene ficha todavía.
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-hs-brown">Sin equipo.</p>
-                )}
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="font-bungee text-sm uppercase">Proyecto</h3>
-                {person.project ? (
-                  <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                    <VideoFrame url={urlOf(person.project.urls, "video")} />
-                    <ProjectDetails
-                      item={{
-                        challenges: (person.tracks ?? []).map((track) => ({
-                          _id: track.id,
-                          label: track.label,
-                          logoUrl: track.logoUrl,
-                          slug: track.slug,
-                        })),
-                        description: person.project.description,
-                        members: [person, ...teammates].map(
-                          (item) => item.displayName,
-                        ),
-                        perks: [],
-                        teamName: person.team?.name,
-                        techStack: person.project.techStack,
-                        urls: person.project.urls,
-                      }}
-                    />
+            <motion.div
+              key={person.id}
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              initial={swap.initial}
+              animate={swap.animate}
+              exit={{
+                ...swap.exit,
+                transition: { duration: 0.16, ease: SWAP_EASE },
+              }}
+              transition={{ duration: 0.22, ease: SWAP_EASE }}
+            >
+              <SheetHeader>
+                <div className="flex items-start gap-4">
+                  <Portrait person={person} />
+                  <div className="min-w-0">
+                    <SheetTitle className="text-balance">
+                      {person.displayName}
+                    </SheetTitle>
+                    <SheetDescription>
+                      {[person.role, person.team?.name].filter(Boolean).join(" · ") ||
+                        "Participante"}
+                    </SheetDescription>
                   </div>
-                ) : (
-                  <p className="text-sm text-hs-brown">
-                    Este equipo aún no ha presentado proyecto.
+                </div>
+              </SheetHeader>
+              <SheetBody className="space-y-6">
+                {facts.length ? (
+                  <p className="text-sm text-pretty text-hs-brown">
+                    {facts.join(" · ")}
                   </p>
-                )}
-              </section>
-
-              {links.length ? (
-                <section className="space-y-3">
-                  <h3 className="font-bungee text-sm uppercase">En común</h3>
-                  <ul className="grid gap-2">
-                    {links.slice(0, 8).map((link) => (
-                      <li key={link.participant.id}>
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-3 border-[3px] border-hs-ink bg-hs-paper px-3 py-2 text-left hs-hover-bright"
-                          onClick={(event) =>
-                            onOpen(link.participant.id, event.currentTarget)
-                          }
-                        >
-                          <Portrait person={link.participant} />
-                          <span className="min-w-0">
-                            <span className="block font-medium">
-                              {personHeading(link.participant)}
-                            </span>
-                            <span className="block text-sm text-hs-brown">
-                              {link.affinities
-                                .slice(0, 3)
-                                .map((item) => item.value)
-                                .join(" · ")}
-                            </span>
-                          </span>
-                        </button>
+                ) : null}
+                {person.bio ? (
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-pretty">
+                    <LinkedText text={person.bio} />
+                  </p>
+                ) : null}
+                {person.skills.length ? (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {person.skills.map((skill) => (
+                      <li key={skill}>
+                        <Badge>{skill}</Badge>
                       </li>
                     ))}
                   </ul>
+                ) : null}
+                {person.achievements ? (
+                  <MetaRow label="Logros">
+                    <span className="whitespace-pre-wrap">
+                      <LinkedText text={person.achievements} />
+                    </span>
+                  </MetaRow>
+                ) : null}
+                {person.freeTime ? (
+                  <MetaRow label="En el rato libre">
+                    <span className="whitespace-pre-wrap">
+                      <LinkedText text={person.freeTime} />
+                    </span>
+                  </MetaRow>
+                ) : null}
+                {personLinks.length ? (
+                  <div className="grid gap-3">
+                    {personLinks.map((entry) => (
+                      <MetaRow key={entry.kind} label={urlLabel(entry.kind)}>
+                        <MetaLink href={entry.url}>
+                          {urlDisplay(entry.kind, entry.url)}
+                        </MetaLink>
+                      </MetaRow>
+                    ))}
+                  </div>
+                ) : null}
+
+                <GithubPanel person={person} />
+                <LinkedinPanel person={person} />
+                <UsagePanel userId={person.id} />
+
+                <section className="space-y-3">
+                  <h3 className="font-bungee text-sm uppercase">Equipo</h3>
+                  {person.team ? (
+                    <>
+                      <p className="text-sm font-medium">{person.team.name}</p>
+                      {teammates.length ? (
+                        <ul className="grid gap-2">
+                          {teammates.map((mate) => (
+                            <li key={mate.id}>
+                              <PersonRow
+                                person={mate}
+                                hint={mate.city}
+                                onOpen={onOpen}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-hs-brown">
+                          Nadie más del equipo tiene ficha todavía.
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-hs-brown">Sin equipo.</p>
+                  )}
                 </section>
-              ) : null}
-            </>
+
+                <section className="space-y-3">
+                  <h3 className="font-bungee text-sm uppercase">Proyecto</h3>
+                  {person.project ? (
+                    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                      <VideoFrame url={urlOf(person.project.urls, "video")} />
+                      <ProjectDetails
+                        item={{
+                          challenges: (person.tracks ?? []).map((track) => ({
+                            _id: track.id,
+                            label: track.label,
+                            logoUrl: track.logoUrl,
+                            slug: track.slug,
+                          })),
+                          description: person.project.description,
+                          members: [person, ...teammates].map(
+                            (item) => item.displayName,
+                          ),
+                          perks: [],
+                          teamName: person.team?.name,
+                          techStack: person.project.techStack,
+                          urls: person.project.urls,
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-hs-brown">
+                      Este equipo aún no ha presentado proyecto.
+                    </p>
+                  )}
+                </section>
+
+                {links.length ? (
+                  <section className="space-y-3">
+                    <h3 className="font-bungee text-sm uppercase">En común</h3>
+                    <ul className="grid gap-2">
+                      {links.slice(0, 8).map((link) => (
+                        <li key={link.participant.id}>
+                          <PersonRow
+                            person={link.participant}
+                            hint={link.affinities
+                              .slice(0, 3)
+                              .map((item) => item.value)
+                              .join(" · ")}
+                            onOpen={onOpen}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+              </SheetBody>
+            </motion.div>
           )}
-        </SheetBody>
+        </AnimatePresence>
       </SheetContent>
     </Sheet>
   );

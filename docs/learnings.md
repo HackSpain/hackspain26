@@ -2,6 +2,32 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-21 — Directory GitHub GraphQL needs GITHUB_TOKEN, not the OAuth app
+
+**Evidence and consequence.** `/participantes` showed “GitHub no responde” on the
+person sheet. `hasGithubAuth()` is true whenever `GITHUB_CLIENT_ID` and
+`GITHUB_CLIENT_SECRET` exist, so the directory action posted GraphQL with Basic
+auth. GitHub GraphQL only accepts a bearer token; REST public user/repo reads do
+not need one.
+
+**Correction and verification.** Call GraphQL only when `GITHUB_TOKEN` is set.
+Otherwise (and on GraphQL HTTP errors other than 403/429) read
+`/users/{login}` and `/repos`. Unit tests cover the REST payload mapper. After
+deploy, open a ficha with a public GitHub: profile and recent repos should
+render without the token; the contribution calendar still needs `GITHUB_TOKEN`.
+
+## 2026-09-21 — Directory person usage is a Next query, not a Convex action
+
+**Evidence and consequence.** CLI telemetry is stored only in RawTree
+(`hackspain_otel_logs`), keyed by `hackspain.user.id`. `RAWTREE_API_KEY` lives
+on the Vercel dashboard (ingestion + `/api/tv/insights`), not on Convex. A
+Convex action would look unconfigured even when Insights works.
+
+**Correction and verification.** `/api/directory/usage` authenticates with the
+cookie session, gates with `directory.usageWindow`, and reuses the TV dedupe
+CTE scoped to one user id. Tests cover the allowlisted id interpolation and
+the harness/model rollup. Do not name RawTree on the sponsor ficha.
+
 ## 2026-09-19 — Historical telemetry needs source replay, not just saved cursors
 
 **Evidence and consequence.** Login did not collect history; file modification filters,

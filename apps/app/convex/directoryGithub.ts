@@ -3,13 +3,14 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
-import { githubHeaders, hasGithubAuth } from "./lib/github";
+import { githubHeaders } from "./lib/github";
 import {
   githubProfileIsStale,
   githubProfileValidator,
   missingGithubProfile,
   normalizeGithubLogin,
   profileFromGraphql,
+  profileFromRest,
 } from "./lib/githubProfile";
 import type { GithubProfile } from "./lib/githubProfile";
 
@@ -79,9 +80,16 @@ type GraphqlBody = {
   errors?: { type?: string; message?: string }[];
 };
 
-async function loadProfile(username: string, fetchedAt: number): Promise<GithubProfile> {
-  if (!hasGithubAuth()) {
-    throw new Error("GitHub no está configurado.");
+function githubWait(status: number): boolean {
+  return status === 403 || status === 429;
+}
+
+async function loadGraphql(
+  username: string,
+  fetchedAt: number,
+): Promise<GithubProfile | null> {
+  if (!process.env.GITHUB_TOKEN) {
+    return null;
   }
   const response = await fetch("https://api.github.com/graphql", {
     method: "POST",
@@ -92,11 +100,11 @@ async function loadProfile(username: string, fetchedAt: number): Promise<GithubP
     },
     body: JSON.stringify({ query: PROFILE_QUERY, variables: { login: username } }),
   });
-  if (response.status === 403 || response.status === 429) {
+  if (githubWait(response.status)) {
     throw new Error("GitHub pide esperar.");
   }
   if (!response.ok) {
-    throw new Error("GitHub no responde.");
+    return null;
   }
   const body = (await response.json()) as GraphqlBody;
   const notFound = body.errors?.some(
@@ -106,6 +114,51 @@ async function loadProfile(username: string, fetchedAt: number): Promise<GithubP
     return missingGithubProfile(username, fetchedAt);
   }
   return profileFromGraphql(body.data.user, username, fetchedAt);
+}
+
+async function loadRest(
+  username: string,
+  fetchedAt: number,
+): Promise<GithubProfile> {
+  const headers = githubHeaders({ userAgent: "hackspain-directory" });
+  const userResponse = await fetch(`https://api.github.com/users/${username}`, {
+    headers,
+  });
+  if (githubWait(userResponse.status)) {
+    throw new Error("GitHub pide esperar.");
+  }
+  if (userResponse.status === 404) {
+    return missingGithubProfile(username, fetchedAt);
+  }
+  if (!userResponse.ok) {
+    throw new Error("GitHub no responde.");
+  }
+  const user = (await userResponse.json()) as Record<string, unknown>;
+  const [reposResponse, orgsResponse] = await Promise.all([
+    fetch(
+      `https://api.github.com/users/${username}/repos?sort=pushed&per_page=6&type=owner`,
+      { headers },
+    ),
+    fetch(`https://api.github.com/users/${username}/orgs?per_page=8`, {
+      headers,
+    }),
+  ]);
+  if (githubWait(reposResponse.status) || githubWait(orgsResponse.status)) {
+    throw new Error("GitHub pide esperar.");
+  }
+  const repos = reposResponse.ok ? ((await reposResponse.json()) as unknown) : [];
+  const orgs = orgsResponse.ok ? ((await orgsResponse.json()) as unknown) : [];
+  return profileFromRest(
+    user,
+    Array.isArray(repos) ? repos : [],
+    Array.isArray(orgs) ? orgs : [],
+    username,
+    fetchedAt,
+  );
+}
+
+async function loadProfile(username: string, fetchedAt: number): Promise<GithubProfile> {
+  return (await loadGraphql(username, fetchedAt)) ?? (await loadRest(username, fetchedAt));
 }
 
 export const refresh = action({

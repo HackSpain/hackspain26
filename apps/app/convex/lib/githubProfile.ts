@@ -2,6 +2,8 @@ import { v } from "convex/values";
 
 export const GITHUB_PROFILE_FRESH_MS = 6 * 60 * 60 * 1000;
 export const GITHUB_PROFILE_MISSING_MS = 24 * 60 * 60 * 1000;
+export const GITHUB_FEED_SHOWN = 3;
+export const GITHUB_REPOS_SHOWN = 4;
 
 const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 
@@ -418,5 +420,89 @@ export function profileFromGraphql(
     url: optionalString(user.url) ?? `https://github.com/${login}`,
     username,
     year,
+  };
+}
+
+function repoFromRest(node: unknown): GithubRepo | null {
+  if (!node || typeof node !== "object") {
+    return null;
+  }
+  const row = node as {
+    description?: unknown;
+    fork?: unknown;
+    forks_count?: unknown;
+    full_name?: unknown;
+    html_url?: unknown;
+    language?: unknown;
+    stargazers_count?: unknown;
+  };
+  if (row.fork) {
+    return null;
+  }
+  const name = optionalString(row.full_name);
+  const url = optionalString(row.html_url);
+  if (!name || !url) {
+    return null;
+  }
+  return {
+    description: optionalString(row.description),
+    forks: typeof row.forks_count === "number" ? row.forks_count : 0,
+    language: optionalString(row.language),
+    name,
+    stars: typeof row.stargazers_count === "number" ? row.stargazers_count : 0,
+    url,
+  };
+}
+
+export function profileFromRest(
+  user: Record<string, unknown>,
+  repos: unknown[],
+  orgs: unknown[],
+  username: string,
+  fetchedAt: number,
+): GithubProfile {
+  const login = optionalString(user.login) ?? username;
+  const createdAt =
+    typeof user.created_at === "string" ? Date.parse(user.created_at) : undefined;
+  return {
+    bio: optionalString(user.bio),
+    blog: optionalString(user.blog),
+    calendar: [],
+    company: optionalString(user.company),
+    createdAt: Number.isFinite(createdAt) ? createdAt : undefined,
+    fetchedAt,
+    followers: typeof user.followers === "number" ? user.followers : 0,
+    following: typeof user.following === "number" ? user.following : 0,
+    hireable: typeof user.hireable === "boolean" ? user.hireable : undefined,
+    languages: [],
+    location: optionalString(user.location),
+    login,
+    missing: false,
+    name: optionalString(user.name),
+    orgs: orgs.flatMap((node) => {
+      if (!node || typeof node !== "object") {
+        return [];
+      }
+      const row = node as { html_url?: unknown; login?: unknown };
+      const loginName = optionalString(row.login);
+      return loginName
+        ? [
+            {
+              login: loginName,
+              url: optionalString(row.html_url) ?? `https://github.com/${loginName}`,
+            },
+          ]
+        : [];
+    }),
+    pinned: [],
+    publicGists: typeof user.public_gists === "number" ? user.public_gists : 0,
+    publicRepos: typeof user.public_repos === "number" ? user.public_repos : 0,
+    repos: repos.flatMap((node) => {
+      const repo = repoFromRest(node);
+      return repo ? [repo] : [];
+    }).slice(0, 6),
+    twitter: optionalString(user.twitter_username),
+    url: optionalString(user.html_url) ?? `https://github.com/${login}`,
+    username,
   };
 }
