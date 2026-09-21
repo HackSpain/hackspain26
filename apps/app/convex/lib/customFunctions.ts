@@ -13,6 +13,7 @@ import {
   requireJudge,
   requireOnboarded,
   requireSponsorCatalog,
+  requireDirectoryViewer,
   requireTracksViewer,
 } from "./auth";
 
@@ -60,5 +61,6 @@ export const adminMutation = wrapMutation(requireAdmin);
 export const judgeQuery = wrapQuery(requireJudge);
 export const judgeMutation = wrapMutation(requireJudge);
 export const catalogQuery = wrapQuery(requireSponsorCatalog);
+export const directoryQuery = wrapQuery(requireDirectoryViewer);
 /** Challenge briefs: judges anytime, everyone else onboarded in-window. */
 export const tracksQuery = wrapQuery(requireTracksViewer);

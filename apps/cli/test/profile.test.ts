@@ -36,7 +36,7 @@ const base: Me = {
   profileComplete: true,
   profileMissing: [],
   role: "user",
-  sections: ["teams", "tracks", "perks", "participantes", "cli"],
+  sections: ["teams", "tracks", "perks", "cli"],
   signupId: undefined,
   suggestedTwitterHandle: undefined,
   travelOrigin: "Valencia",

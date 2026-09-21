@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { requireEventOpen } from "./eventWindow";
-import { canJudge, canBrowseSponsorCatalog } from "./userTypes";
+import { canJudge, canBrowseSponsorCatalog, canBrowseDirectory } from "./userTypes";
 import type { Role } from "./validators";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -105,6 +105,16 @@ export async function requireSponsorCatalog(
   const user = await getCurrentUser(ctx);
   if (!(await canBrowseSponsorCatalog(ctx, user))) {
     throw new Error("Se necesita acceso de sponsor");
+  }
+  return user;
+}
+
+export async function requireDirectoryViewer(
+  ctx: Ctx
+): Promise<Doc<"users">> {
+  const user = await getCurrentUser(ctx);
+  if (!(await canBrowseDirectory(ctx, user))) {
+    throw new Error("Se necesita acceso de sponsor o juez");
   }
   return user;
 }

@@ -275,7 +275,7 @@ const USER_TYPES: {
 }[] = [
   { label: "Hacker", description: "Participa en la hackathon.", sections: PARTICIPANT_SECTIONS, isDefault: true },
   { label: "Jurado", description: "Puntúa proyectos en el panel del jurado.", sections: ["judging"], isDefault: false },
-  { label: "Mentor", description: "Acompaña a los equipos durante el evento.", sections: ["tracks", "participantes", "cli"], isDefault: false },
+  { label: "Mentor", description: "Acompaña a los equipos durante el evento.", sections: ["tracks", "cli"], isDefault: false },
   { label: "Sponsor", description: "Partner del evento: retos, perks y entregas.", sections: ["tracks", "perks", "participantes", "judgingSponsors"], isDefault: false },
 ];
 

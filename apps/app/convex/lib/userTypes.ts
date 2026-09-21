@@ -42,7 +42,6 @@ export const PARTICIPANT_SECTIONS: Sections = [
   "teams",
   "tracks",
   "perks",
-  "participantes",
   "cli",
 ];
 
@@ -92,8 +91,9 @@ export async function userTypeFor(
 }
 
 /**
- * Sections this user may open. Admins see everything; everyone else sees
- * exactly what their type says. Roles play no part beyond admin.
+ * Sections this user may open. Admins see everything. The directory is
+ * forced on for judges and sponsors and stripped from everyone else, even
+ * if the CRM type still has the checkbox.
  */
 export function effectiveSections(
   user: Pick<Doc<"users">, "role">,
@@ -103,13 +103,16 @@ export function effectiveSections(
     return ALL_SECTIONS;
   }
   const sections = type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS;
+  let next = sections;
   if (isSponsorType(type)) {
-    return withSponsorCatalog(sections);
+    next = withSponsorCatalog(sections);
+  } else if (sections.includes("judging")) {
+    next = normalizeSections([...sections, "judgingSponsors"]);
   }
-  if (sections.includes("judging")) {
-    return normalizeSections([...sections, "judgingSponsors"]);
+  if (grantsDirectory(user, type)) {
+    return normalizeSections([...next, "participantes"]);
   }
-  return sections;
+  return normalizeSections(next.filter((key) => key !== "participantes"));
 }
 
 export function grantsJudging(
@@ -124,6 +127,21 @@ export function grantsSponsorCatalog(
   type: Doc<"userTypes"> | null
 ): boolean {
   return effectiveSections(user, type).includes("judgingSponsors");
+}
+
+/** Directory graph: admins, judges and sponsors. Never hackers or mentors. */
+export function grantsDirectory(
+  user: Pick<Doc<"users">, "role">,
+  type: Doc<"userTypes"> | null
+): boolean {
+  if (user.role === "admin") {
+    return true;
+  }
+  if (isSponsorType(type)) {
+    return true;
+  }
+  const sections = type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS;
+  return sections.includes("judging") || sections.includes("judgingSponsors");
 }
 
 /** CRM type "Sponsor": browses deliveries, never scores in the general pool. */
@@ -162,4 +180,14 @@ export async function canBrowseSponsorCatalog(
     return true;
   }
   return grantsSponsorCatalog(user, await userTypeFor(ctx, user));
+}
+
+export async function canBrowseDirectory(
+  ctx: Ctx,
+  user: Pick<Doc<"users">, "role" | "userTypeId">
+): Promise<boolean> {
+  if (user.role === "admin") {
+    return true;
+  }
+  return grantsDirectory(user, await userTypeFor(ctx, user));
 }

@@ -109,7 +109,6 @@ const NEW_DEFAULT_SECTIONS: SectionKey[] = [
   "teams",
   "tracks",
   "perks",
-  "participantes",
   "cli",
 ];
 

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
-import { authedMutation, authedQuery } from "./lib/customFunctions";
+import { authedMutation, authedQuery, directoryQuery } from "./lib/customFunctions";
 import {
 	directoryFieldValidator,
 	directoryValidator,
@@ -127,11 +127,10 @@ export const normalizeCards = internalMutation({
 });
 
 /**
- * Everyone with a complete card. The viewer has one too: onboarding asks for
- * it before the dashboard opens (convex/lib/profile.ts), so nobody browses
- * without contributing their own data points.
+ * Staff only (sponsors, judges, admins). The card itself is still filled
+ * during onboarding; browsing the graph is not.
  */
-export const list = authedQuery({
+export const list = directoryQuery({
 	args: {},
 	handler: async (ctx) => {
 		const [users, teams, memberships, submissions, tracks, signups] =
