@@ -17,9 +17,9 @@ const PRIVACY: {
   sections: PrivacySection[];
 } = {
   disclaimer:
-    "Esta información se ofrece con fines de transparencia y no sustituye asesoramiento jurídico. La **Asociación HackSpain** puede actualizar este documento; la fecha indicada arriba cambiará cuando lo hagamos.",
+    "Esta información se ofrece con fines de transparencia y no sustituye asesoramiento jurídico. La **Asociación Exponential Fellowship** puede actualizar este documento; la fecha indicada arriba cambiará cuando lo hagamos.",
   goodFaithBody:
-    "La **Asociación HackSpain** se compromete a actuar en todo momento de **buena fe** hacia participantes, patrocinadores y colaboradores cuando tratamos datos personales y organizamos HackSpain. Todo lo recogido en esta política de privacidad está redactado y debe interpretarse y aplicarse de **buena fe**, con intención honesta, equidad y proporcionalidad, junto con el cumplimiento estricto de la ley.",
+    "La **Asociación Exponential Fellowship** se compromete a actuar en todo momento de **buena fe** hacia participantes, patrocinadores y colaboradores cuando tratamos datos personales y organizamos HackSpain. Todo lo recogido en esta política de privacidad está redactado y debe interpretarse y aplicarse de **buena fe**, con intención honesta, equidad y proporcionalidad, junto con el cumplimiento estricto de la ley.",
   goodFaithTitle: "Buena fe",
   pageTitle: "Política de privacidad",
   sections: [
@@ -27,7 +27,7 @@ const PRIVACY: {
       id: "controller",
       title: "1. Responsable del tratamiento",
       paragraphs: [
-        "El responsable del tratamiento es la **Asociación HackSpain** («nosotros», «HackSpain»), asociación sin ánimo de lucro inscrita en España, en el marco de la iniciativa HackSpain 2026 y actividades relacionadas.",
+        "El responsable del tratamiento es la **Asociación Exponential Fellowship** («nosotros»), asociación sin ánimo de lucro inscrita en España con NIF G19717818 y número 628802 del Registro Nacional de Asociaciones. HackSpain es una iniciativa organizada por la Asociación Exponential Fellowship.",
         "Para consultas sobre protección de datos y ejercicio de derechos: contact@hackspain.com.",
         "Tratamos los datos personales de conformidad con el Reglamento (UE) 2016/679 (**RGPD**) y, en su caso, con la Ley Orgánica 3/2018 de Protección de Datos Personales y garantía de los derechos digitales (**LOPDGDD**).",
       ],
@@ -64,7 +64,7 @@ const PRIVACY: {
       id: "legal-basis",
       title: "5. Base jurídica (RGPD)",
       paragraphs: [
-        "El tratamiento por la **Asociación HackSpain** se basa en: tu **consentimiento** al enviar el formulario y aceptar esta política (incluida la comunicación a patrocinadores según el apartado 4, cuando aplique el consentimiento); nuestros **intereses legítimos** en organizar HackSpain, valorar la participación o el programa de embajadores/as, asegurar nuestros servicios y desarrollar el evento con patrocinadores, cuando dichos intereses no prevalezcan sobre tus derechos; y **obligaciones legales** cuando corresponda.",
+        "El tratamiento por la **Asociación Exponential Fellowship** se basa en: tu **consentimiento** al enviar el formulario y aceptar esta política (incluida la comunicación a patrocinadores según el apartado 4, cuando aplique el consentimiento); nuestros **intereses legítimos** en organizar HackSpain, valorar la participación o el programa de embajadores/as, asegurar nuestros servicios y desarrollar el evento con patrocinadores, cuando dichos intereses no prevalezcan sobre tus derechos; y **obligaciones legales** cuando corresponda.",
         "Cuando facilitas restricciones alimentarias o alergias, tratamos esos datos sobre la base de tu **consentimiento explícito**, solicitado mediante una casilla separada antes de enviar la solicitud, de conformidad con el artículo 9.2.a del RGPD. No aportar estos datos no afecta a la valoración de tu candidatura.",
         "Puedes retirar el consentimiento en cualquier momento; la retirada no afecta a la licitud del tratamiento previo. Para derechos frente al tratamiento independiente de un patrocinador, también puedes dirigirte a dicho patrocinador o solicitarnos aclaración sobre el destinatario.",
       ],
@@ -93,7 +93,7 @@ const PRIVACY: {
       title: "8. Tus derechos",
       paragraphs: [
         "En virtud del RGPD y la LOPDGDD puedes, con los límites legales: acceder a tus datos; rectificar los inexactos; suprimirlos («derecho al olvido») cuando proceda; limitar el tratamiento; oponerte al basado en interés legítimo (incluidos ciertos supuestos de comunicación a patrocinadores cuando esa sea la base); recibir tus datos en formato estructurado (portabilidad) cuando el tratamiento se base en consentimiento o contrato y sea automatizado; y retirar el consentimiento.",
-        "Para ejercer derechos frente a la **Asociación HackSpain**, escribe a contact@hackspain.com. Si tu solicitud se refiere al tratamiento por un patrocinador o colaborador como **responsable independiente**, también debes dirigirte a ellos mediante la información de su política de privacidad; te asistiremos cuando el **RGPD** nos obligue (p. ej. información sobre destinatarios).",
+        "Para ejercer derechos frente a la **Asociación Exponential Fellowship**, escribe a contact@hackspain.com. Si tu solicitud se refiere al tratamiento por un patrocinador o colaborador como **responsable independiente**, también debes dirigirte a ellos mediante la información de su política de privacidad; te asistiremos cuando el **RGPD** nos obligue (p. ej. información sobre destinatarios).",
         "Puedes presentar reclamación ante una autoridad de control; en España, la Agencia Española de Protección de Datos (AEPD — https://www.aepd.es).",
       ],
     },
@@ -112,7 +112,7 @@ const PRIVACY: {
       ],
     },
   ],
-  updatedLine: "Última actualización: 29 de julio de 2026",
+  updatedLine: "Última actualización: 22 de septiembre de 2026",
 };
 
 export function PrivacyPage() {

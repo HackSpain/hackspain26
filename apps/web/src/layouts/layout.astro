@@ -3,6 +3,7 @@ import "../styles/global.css";
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
 import CookieConsent from "../components/cookie-consent.astro";
+import LegalFooter from "../components/legal-footer.astro";
 import { ANALYTICS_CONSENT_STORAGE_KEY } from "../data/cookie-consent";
 import {
   jsonLdEvent,
@@ -192,6 +193,7 @@ const faqJson = JSON.stringify(jsonLdFaq());
   >
     <a href="#main" class="skip-link font-sans">Ir al contenido principal</a>
     <slot />
+    <LegalFooter />
     <CookieConsent />
   </body>
 </html>

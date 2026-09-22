@@ -118,7 +118,7 @@ export const PRIVACY_KEYWORDS =
 export function privacySeo(): PageSeo {
   return {
     description:
-      "Política de privacidad de la Asociación HackSpain: responsable del tratamiento, comunicación a patrocinadores, RGPD, LOPDGDD, derechos y tratamiento del registro (incl. análisis automatizado e IA).",
+      "Política de privacidad de la Asociación Exponential Fellowship: responsable del tratamiento, comunicación a patrocinadores, RGPD, LOPDGDD, derechos y tratamiento del registro (incl. análisis automatizado e IA).",
     ogImageAlt: "HackSpain — política de privacidad",
     title: "Política de privacidad — HACKSPAIN 2026",
   };
@@ -175,7 +175,14 @@ export function jsonLdOrganization() {
     "@context": "https://schema.org",
     "@id": `${SITE}/#organization`,
     "@type": "Organization",
-    alternateName: ["Hack Spain", "hack spain", "Hack Spain hackathon"],
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: "ES",
+      addressLocality: "Madrid",
+      postalCode: "28003",
+      streetAddress: "C/ Santa Engracia 148",
+    },
+    alternateName: ["HackSpain", "Hack Spain", "hack spain"],
     description:
       "El hackathon para unir a los mejores builders jóvenes de España.",
     inLanguage: "es",
@@ -186,7 +193,8 @@ export function jsonLdOrganization() {
       "machine learning hackathon",
     ],
     logo: `${SITE}/hs-icon.png`,
-    name: "HackSpain",
+    name: "Asociación Exponential Fellowship",
+    taxID: "G19717818",
     sameAs: [
       HACKSPAIN_SOCIAL_URLS.x,
       HACKSPAIN_SOCIAL_URLS.instagram,
