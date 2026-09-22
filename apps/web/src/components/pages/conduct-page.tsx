@@ -15,7 +15,7 @@ const CONDUCT: {
   updatedLine: string;
 } = {
   intro:
-    "HackSpain es un hackathon presencial. Este código vale para participantes, mentores, jueces, organización y cualquiera que esté en el recinto o en los canales del evento. Lo organiza la **Asociación HackSpain**.",
+    "HackSpain es un hackathon presencial. Este código vale para participantes, mentores, jueces, organización y cualquiera que esté en el recinto o en los canales del evento. Lo organiza la **Asociación Exponential Fellowship**.",
   pageTitle: "Código de conducta",
   sections: [
     {
@@ -67,7 +67,7 @@ const CONDUCT: {
       ],
     },
   ],
-  updatedLine: "Última actualización: 18 de septiembre de 2026",
+  updatedLine: "Última actualización: 22 de septiembre de 2026",
 };
 
 export function ConductPage() {
