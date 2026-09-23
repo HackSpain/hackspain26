@@ -2,6 +2,14 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-23 - Commander exit overrides reach only the subcommands created after them
+
+**Evidence and consequence.** `runToExitCode()` and the menu's `dispatch()` called `program.exitOverride()` and `program.configureOutput()` on the root after `buildProgram()` had registered every subcommand. Commander copies both settings in `copyInheritedSettings()` while `.command()` creates a subcommand, and never again, so the root threw `CommanderError` while `team join`, `feed --bogus` and every other subcommand still called `process.exit(1)`: usage errors exited 1 instead of 2, `--json` callers got no envelope on stdout, and a Commander error inside the interactive menu killed the menu (#330). The unit tests passed because they built a bare `Command` and let `runToExitCode()` configure it before any subcommand existed.
+
+**Correction and prevention.** `overrideExits()` in `apps/cli/src/lib/run.ts` applies both settings to the root and, recursively, to `program.commands`; `runToExitCode()` and the menu dispatcher call it on whatever program they receive. Commander configuration that must reach subcommands goes either before the `register*` calls in `buildProgram()` or into that recursive helper. `addCommand()` never copies inherited settings, not even before registration.
+
+**Verification.** `bun src/index.ts --json team join` exits 2 with one `{"ok":false,"code":"USAGE",…}` line on stdout and `bun src/index.ts feed --bogus` exits 2. `test/run.test.ts` exercises a subcommand usage error through `buildProgram()`, not only through a bare program.
+
 ## 2026-09-22 — The landing legal footer is an in-flow flex item, not fixed
 
 **Evidence and consequence.** The first legal footer (3eef3b4) was
