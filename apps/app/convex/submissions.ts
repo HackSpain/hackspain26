@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { action, internalMutation } from "./_generated/server";
+import { action, internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { isAdmin, requireOnboarded } from "./lib/auth";
 import {
@@ -512,13 +512,19 @@ export const adminForTeam = adminQuery({
   ),
 });
 
+export const verifyRepoAccess = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    await requireOnboarded(ctx);
+    return null;
+  },
+  returns: v.null(),
+});
+
 export const verifyRepo = action({
   args: { url: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("No has iniciado sesión");
-    }
+    await ctx.runQuery(internal.submissions.verifyRepoAccess, {});
     const parsed = parseGithubRepoUrl(args.url);
     if (!parsed.ok) {
       return { message: parsed.message, ok: false as const };
