@@ -14,6 +14,9 @@ const sourceMapsConfigured = Boolean(
 
 export default defineConfig({
   adapter: vercel(),
+  // Astro 7 defaults to JSX whitespace rules ("jsx"); keep the HTML-aware
+  // compression from Astro 6 so spaces between inline elements survive.
+  compressHTML: true,
   integrations: [
     react(),
     sentry({

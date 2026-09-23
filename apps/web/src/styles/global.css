@@ -1,4 +1,6 @@
-@import "tailwindcss";
+/* The explicit subpath keeps the server build working on Vite 8: the bare
+   specifier is externalized during SSR and never resolves. vitejs/vite#23096 */
+@import "tailwindcss/index.css";
 
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
