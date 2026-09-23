@@ -47,6 +47,19 @@ describe("api proxy", () => {
 });
 
 describe("createClient", () => {
+  test("sets a deadline on RPC requests", async () => {
+    let signal: AbortSignal | null | undefined;
+    const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      signal = init?.signal;
+      return Response.json({ ok: true, value: null });
+    }) as typeof fetch;
+    await createClient("https://app.test", async () => "tok", fetchImpl).query(
+      api.users.me,
+      {}
+    );
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+
   test("posts { name, args } with the bearer token and unwraps the value", async () => {
     const { fetch, calls } = fakeFetch(() => ({
       body: { ok: true, value: { _id: "u1" } },
