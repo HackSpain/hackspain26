@@ -23,7 +23,7 @@ import { seedDefaults as seedTracks } from "./tracks";
 
 /**
  * Development seed: a believable hackathon in progress. Run it against the
- * dev deployment only:
+ * dev deployment only, with SEED_ALLOWED=true set on that deployment:
  *
  *   pnpm --filter app exec convex run seed:run            # add the data
  *   pnpm --filter app exec convex run seed:run '{"reset":true}'  # wipe and re-add
@@ -1095,8 +1095,8 @@ async function runSeed(
 }
 
 function assertNotProduction(): void {
-  if (process.env.SEED_ALLOWED === "false") {
-    throw new Error("Seeding is disabled on this deployment (SEED_ALLOWED=false)");
+  if (process.env.SEED_ALLOWED !== "true") {
+    throw new Error("Seeding requires SEED_ALLOWED=true on this deployment");
   }
 }
 
