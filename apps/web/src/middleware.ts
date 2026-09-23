@@ -42,7 +42,7 @@ function shouldAttachLlmsDiscovery(pathname: string): boolean {
   if (p.startsWith("/api/")) {
     return false;
   }
-  if (p === "/llms.txt" || p === "/sitemap.xml") {
+  if (p === "/llms.txt" || p === "/design.md" || p === "/sitemap.xml") {
     return false;
   }
   return true;

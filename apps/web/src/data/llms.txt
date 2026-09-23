@@ -26,6 +26,7 @@ Contact: contact@hackspain.com. Official social profiles: @hackspain26 on X and 
 - [Privacy policy](https://hackspain.com/privacy): Data processing, cookies and applicant privacy information.
 - [Code of conduct](https://hackspain.com/conduct): Event rules — build during the hackathon, good faith, respect for other teams and people, and submission deadlines.
 - [Sitemap](https://hackspain.com/sitemap.xml): Current indexable pages.
+- [Design system](https://hackspain.com/design.md): The website's design system as Markdown: colour and type tokens, spacing, borders, shadows, component patterns, motion and accessibility rules, extracted from the code.
 - [GitHub repository](https://github.com/samuelcorsan/hackspain.com): Open-source code for the official website.
 
 ## Optional
