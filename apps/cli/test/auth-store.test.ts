@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Credentials } from "../src/lib/auth-store";
@@ -183,6 +190,31 @@ describe("currentToken", () => {
 });
 
 describe("withCredentialsLock", () => {
+  test("reclaims an old lock only after its process has exited", async () => {
+    const path = join(dir, "hackspain", "credentials.lock");
+    await withCredentialsLock(async () => {
+      expect(readFileSync(path, "utf8").startsWith(`${process.pid}:`)).toBe(
+        true
+      );
+    });
+    writeFileSync(path, "99999999:abandoned\n");
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(path, old, old);
+    await withCredentialsLock(async () => {
+      expect(readFileSync(path, "utf8").startsWith(`${process.pid}:`)).toBe(
+        true
+      );
+    });
+  });
+
+  test("does not remove a lock whose ownership changed", async () => {
+    const path = join(dir, "hackspain", "credentials.lock");
+    await withCredentialsLock(async () => {
+      writeFileSync(path, "99999999:new-owner\n");
+    });
+    expect(readFileSync(path, "utf8")).toBe("99999999:new-owner\n");
+  });
+
   test("serialises critical sections", async () => {
     const order: string[] = [];
     const entered = Promise.withResolvers<undefined>();
