@@ -202,14 +202,6 @@
   display: block;
   font-size: 10px;
 }
-.cinema-note button {
-  padding: 6px 10px;
-  border: 2px solid var(--color-hs-ink);
-  background: var(--color-hs-gold);
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
 .cinema-nav {
   display: flex;
   grid-row: 2;
