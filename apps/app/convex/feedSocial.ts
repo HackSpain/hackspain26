@@ -32,8 +32,9 @@ async function requirePost(ctx: MutationCtx, postId: Id<"posts">) {
 }
 
 /**
- * Mentions as the server trusts them: the person exists, and the text still
- * says `@name`. The name stays as written so old text keeps rendering.
+ * Mentions as the server trusts them: the person exists, the text still says
+ * `@name`, and that name belongs to the person. Existing mentions retain the
+ * name they had when posted so old text keeps rendering after a rename.
  */
 export async function checkedMentions(
   ctx: MutationCtx,
@@ -42,7 +43,11 @@ export async function checkedMentions(
 ): Promise<Mention[] | undefined> {
   const kept = [];
   for (const mention of mentionsInText(text, mentions ?? [])) {
-    if (await ctx.db.get(mention.userId)) {
+    const user = await ctx.db.get(mention.userId);
+    if (
+      user?.name?.trim().toLocaleLowerCase("es") ===
+      mention.name.trim().toLocaleLowerCase("es")
+    ) {
       kept.push({ name: mention.name, userId: mention.userId });
     }
   }
