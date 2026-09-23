@@ -152,7 +152,7 @@ export function ConfirmationPage({
     // biome-ignore lint/a11y/noStaticElementInteractions: drag-and-drop target, not a control — the photo is optional decoration and everything else on the page is reachable without it.
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: same drop target.
     <div
-      className="relative h-dvh w-full overflow-hidden bg-hs-paper"
+      className="relative h-full w-full overflow-hidden bg-hs-paper"
       onDragLeave={onDragLeave}
       onDragOver={onDragOver}
       onDrop={onDrop}

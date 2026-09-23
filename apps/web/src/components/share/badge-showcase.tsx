@@ -27,7 +27,7 @@ export function BadgeShowcase({ fullName, githubHandle, photoDataUri }: Props) {
   const photo = useImageFromSrc(photoDataUri);
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-hs-paper">
+    <div className="relative h-full w-full overflow-hidden bg-hs-paper">
       <div className="absolute inset-0 z-0">
         <ShareBackdrop wind={wind} />
       </div>

@@ -2,6 +2,30 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-22 — The landing legal footer is an in-flow flex item, not fixed
+
+**Evidence and consequence.** The first legal footer (3eef3b4) was
+`position: fixed; bottom: 0` in `layout.astro`. It covered the mosaic's bottom
+band on `/` (social links, credits, © row) and the last lines of every
+scrolling page. Making `<body>` a flex column exposed a second trap: with
+`html, body { height: 100% }` the body had a definite height, so a `main` with
+an explicit `min-h-dvh` (privacy, conduct) shrank to 100dvh and its content
+overflowed across the footer. An explicit min-height disables a flex item's
+automatic content-based minimum. A third trap: the text pages keep a
+`fixed inset-0 -z-10` mosaic backdrop inside a `relative z-0` root, which paints
+above a static sibling, so a non-positioned footer was invisible under it.
+
+**Correction and verification.** Body is `flex flex-col` plus `h-dvh
+overflow-hidden` (no scroll) or `min-h-dvh` (scroll); only `html` keeps
+`height: 100%`, so the body grows with content. The footer is an in-flow
+`relative z-10 shrink-0` item after the slot. Full-viewport pages (`/`, `/comparte`,
+confirmed `/confirmacion`) size their root with `flex-1 min-h-0` and children
+use `h-full`, never `h-dvh` or `fixed inset-0`. Short centered pages (`/404`,
+`/cancelacion`) use `flex-1` instead of `min-h-dvh` so the footer stays in view.
+Verify with headless Chrome at 1440×900 and 390×844: on `/` the stage bottom
+must equal the footer top, and `/privacy` scrolled to the end must show the
+footer after the text.
+
 ## 2026-09-21 — Directory GitHub GraphQL needs GITHUB_TOKEN, not the OAuth app
 
 **Evidence and consequence.** `/participantes` showed “GitHub no responde” on the

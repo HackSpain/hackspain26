@@ -30,6 +30,9 @@ interface Props {
   title?: string;
 }
 
+// The body is a flex column and the legal footer is its last in-flow item.
+// Full-viewport pages size their root with `flex-1 min-h-0` (never `h-dvh` or
+// `fixed inset-0`) so the footer stays visible below the content.
 const allowScroll = Astro.props.allowScroll ?? false;
 const sectionIndex = Astro.props.sectionIndex ?? 0;
 const seo = seoForSectionIndex(sectionIndex);
@@ -187,7 +190,7 @@ const faqJson = JSON.stringify(jsonLdFaq());
   </head>
   <body
     class:list={[
-      "antialiased font-sans text-hs-ink",
+      "flex flex-col antialiased font-sans text-hs-ink",
       allowScroll ? "min-h-dvh overflow-y-auto" : "h-dvh overflow-hidden",
     ]}
   >
@@ -202,8 +205,10 @@ const faqJson = JSON.stringify(jsonLdFaq());
   html,
   body {
     width: 100%;
-    height: 100%;
     margin: 0;
+  }
+  html {
+    height: 100%;
   }
   .hs-grain {
     background-image: repeating-linear-gradient(
