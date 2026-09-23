@@ -175,6 +175,8 @@ teléfonos ni códigos de acreditación.
 `/tv?view=entradas&demo=1` reproduce ejemplos sin consultar entradas ni hacer check-ins.
 La foto/cargo de Mark Villacampa son públicos; los demás perfiles son ficticios.
 También puede previsualizarse cualquier otra vista con `view=…&demo=1`.
+`/tv?view=actividad&demo=1` enseña las publicaciones inventadas del panel y no se
+suscribe al feed real.
 
 ## Despliegue
 

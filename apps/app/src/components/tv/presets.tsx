@@ -9,6 +9,7 @@ import { tvPresetWidgets } from "@convex/lib/tvLayouts";
 import { useEffect, useMemo, useState } from "react";
 import { setLiveInsightsOverride } from "@/app/insights/use-live-insights";
 import { demoFeed, demoInsights } from "@/lib/tv-market";
+import type { MarketPost } from "@/lib/tv-market";
 import { FeedDemoContext } from "./feed-box";
 import type { FeedPost } from "./feed-box";
 import { MarketScreen } from "./market";
@@ -19,8 +20,14 @@ import { SponsorsScreen } from "./sponsors-screen";
 import { TvStage } from "./stage";
 import { CountdownScreen } from "./countdown-screen";
 
-function Activity() {
-  const posts = useQuery(api.tv.listFeed, { source: "all" });
+type ActivityPost = Pick<MarketPost, "_id" | "authorName" | "teamName" | "text">;
+
+// Demo never subscribes to the real feed: a preview on a public screen must not leak live posts.
+function Activity({ demo }: { demo: boolean }) {
+  const [startedAt] = useState(() => Date.now());
+  const live = useQuery(api.tv.listFeed, demo ? "skip" : { source: "all" });
+  const demoPosts = useMemo(() => (demo ? demoFeed(startedAt) : null), [demo, startedAt]);
+  const posts: ActivityPost[] | null | undefined = demo ? demoPosts : live;
   return (
     <div className="grid min-h-0 flex-1 auto-rows-fr gap-[2vmin] md:grid-cols-2">
       {posts?.slice(0, 4).map((post) => (
@@ -91,7 +98,7 @@ export function PresetScreen({ config, demo = false }: { config: ScreenConfig; d
           <p className="max-w-[90%] whitespace-pre-wrap break-words text-center font-bungee leading-tight text-balance text-hs-gold" style={{ fontSize: config.message.length > 240 ? "4vmin" : config.message.length > 100 ? "6vmin" : "9vmin" }}>{config.message || "HackSpain 2026"}</p>
         </div>
       ) : null}
-      {config.preset === "actividad" ? <Activity /> : null}
+      {config.preset === "actividad" ? <Activity demo={demo} /> : null}
     </main>
   );
 }
