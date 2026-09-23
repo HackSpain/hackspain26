@@ -23,6 +23,27 @@ export const SCREEN_PRESETS: { value: ScreenPreset; label: string; description: 
 ];
 export const SCREEN_OFFLINE_MS = 45_000;
 export const SCREEN_HEARTBEAT_MS = 15_000;
+/** Screens the public heartbeat may register in total; admins prepare more from /admin/tv. */
+export const SCREEN_LIMIT = 50;
+/** Connection rows kept per screen; a new device recycles the least recently seen one. */
+export const SCREEN_CONNECTION_LIMIT = 10;
+export const SCREEN_MAX_DIMENSION = 16_384;
+export const SCREEN_URL_MAX_LENGTH = 1000;
+export const SCREEN_CLIENT_ID_PATTERN = /^[a-zA-Z0-9-]{16,80}$/;
+/** Revisions and versions a kiosk reports back: non-negative safe integers. */
+export function isScreenCounter(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+export function isScreenDimension(value: unknown): value is number {
+  return isScreenCounter(value) && value <= SCREEN_MAX_DIMENSION;
+}
+/** The kiosk's own /tv address over http(s), or null for anything else, including junk that URL cannot parse. */
+export function parseScreenUrl(value: string): URL | null {
+  if (value.length > SCREEN_URL_MAX_LENGTH) { return null; }
+  let url: URL;
+  try { url = new URL(value); } catch { return null; }
+  return ["http:", "https:"].includes(url.protocol) && url.pathname === "/tv" ? url : null;
+}
 export const screenConfigValidator = v.object({
   preset: screenPresetValidator, message: v.string(), revision: v.number(), reloadVersion: v.number(),
 });

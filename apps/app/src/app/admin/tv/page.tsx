@@ -5,7 +5,7 @@ import type { FunctionReturnType } from "convex/server";
 import { ExternalLink, Monitor, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
-import { SCREEN_OFFLINE_MS, SCREEN_PRESETS, screenKey, screenPreset } from "@convex/lib/tvScreens";
+import { SCREEN_LIMIT, SCREEN_OFFLINE_MS, SCREEN_PRESETS, screenKey, screenPreset } from "@convex/lib/tvScreens";
 import type { ScreenPreset } from "@convex/lib/tvScreens";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,7 +102,7 @@ export default function AdminTvPage() {
     <Page title="Pantallas" description="Asigna una vista a cada pantalla y contrólala desde aquí. Los cambios llegan en tiempo real.">
       <section className="space-y-4 border-2 border-hs-ink bg-hs-gold/15 p-5">
         <h2 className="font-bungee">Conectar una pantalla</h2>
-        <p className="max-w-3xl text-sm">Abre <code>/tv?screen=entrada</code> en su navegador. Cambia «entrada» por «auditorio», «hall» o un nombre único. Aparecerá aquí automáticamente. También puedes prepararla antes de conectarla.</p>
+        <p className="max-w-3xl text-sm">Abre <code>/tv?screen=entrada</code> en su navegador. Cambia «entrada» por «auditorio», «hall» o un nombre único. Aparecerá aquí automáticamente. También puedes prepararla antes de conectarla. Las pantallas se registran solas hasta {SCREEN_LIMIT}; a partir de ahí, borra las que sobren o prepara aquí las nuevas.</p>
         <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); void add(); }}>
           <label htmlFor="screen-name" className="min-w-48 flex-1 space-y-2 text-sm font-medium">Nombre de pantalla<Input id="screen-name" value={name} maxLength={48} onChange={(event) => setName(event.target.value)} placeholder="auditorio" required /></label>
           <Button type="submit" disabled={busy || !data || !name.trim()}>Preparar pantalla</Button>
