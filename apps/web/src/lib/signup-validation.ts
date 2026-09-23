@@ -466,10 +466,6 @@ const signupBodySchema = z
         .transform((values) => [...new Set(values)])
     ),
     referralCode: referralCodeField,
-    signupAccessKey: z.preprocess(
-      (value) => (typeof value === "string" ? value.trim() : ""),
-      z.string().max(256)
-    ),
     studyInstitution: z.preprocess(
       (value) => (typeof value === "string" ? value : ""),
       z
