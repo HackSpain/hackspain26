@@ -6,7 +6,7 @@ Public marketing site for [HackSpain](https://hackspain.com) — Hack Spain 2026
 
 | Layer | Technologies |
 | :---- | :------------- |
-| **Framework** | [Astro 6](https://astro.build/) with server output (`output: "server"`) |
+| **Framework** | [Astro 7](https://astro.build/) with server output (`output: "server"`) |
 | **UI** | [React 19](https://react.dev/) islands, [Tailwind CSS v4](https://tailwindcss.com/), [Motion](https://motion.dev/) |
 | **Hosting** | [Vercel](https://vercel.com/) via `@astrojs/vercel` |
 | **Data** | [PostgreSQL](https://www.postgresql.org/) ([Neon](https://neon.tech/)) with [Drizzle ORM](https://orm.drizzle.team/) |
