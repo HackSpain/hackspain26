@@ -15,6 +15,7 @@
     "db:push": "drizzle-kit push",
     "astro": "astro",
     "check": "astro check",
+    "test": "node --test telemetry-sanitize.test.js",
     "lint": "oxlint -c oxlint.config.mjs . && ultracite check",
     "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix",
     "knip": "DATABASE_URL=postgresql://localhost/knip knip"

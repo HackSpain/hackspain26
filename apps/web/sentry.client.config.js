@@ -3,7 +3,12 @@ import {
   init,
   replayIntegration,
 } from "@sentry/astro";
-import { sanitizeTelemetryEvent } from "./telemetry-sanitize.js";
+import {
+  isTokenPage,
+  sanitizeBreadcrumb,
+  sanitizeRecordingEvent,
+  sanitizeTelemetryEvent,
+} from "./telemetry-sanitize.js";
 
 const dsn = import.meta.env.PUBLIC_BETTER_STACK_ERRORS_DSN;
 const isDev = import.meta.env.DEV;
@@ -17,10 +22,19 @@ if (dsn) {
         /^https:\/\/[^/]+\.vercel\.app$/,
       ],
     }),
+    // Replay events skip `beforeSend`; an event processor is what they run through.
+    { name: "TelemetrySanitizer", processEvent: sanitizeTelemetryEvent },
   ];
-  if (!isDev) {
+  // The recording's first event stores `location.href` and no hook can edit it,
+  // so the pages reached through an emailed token link get no replay at all.
+  const replayAllowed =
+    !isDev &&
+    typeof window !== "undefined" &&
+    !isTokenPage(window.location.pathname);
+  if (replayAllowed) {
     integrations.push(
       replayIntegration({
+        beforeAddRecordingEvent: sanitizeRecordingEvent,
         block: ["[data-sentry-block]"],
         blockAllMedia: true,
         mask: ["[data-sentry-mask]", "input", "select", "textarea"],
@@ -31,6 +45,7 @@ if (dsn) {
   }
 
   init({
+    beforeBreadcrumb: sanitizeBreadcrumb,
     beforeSendTransaction: sanitizeTelemetryEvent,
     dsn,
     sendDefaultPii: false,
