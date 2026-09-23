@@ -65,9 +65,7 @@ export function postLines(post: FeedItem, now = Date.now()): string[] {
     }
     return lines;
   }
-  const who = terminalText(
-    post.author?.name ?? post.author?.email ?? "someone"
-  );
+  const who = terminalText(post.author?.name ?? "someone");
   const teamName = terminalText(post.teamName ?? "");
   lines.push(
     `${highlight(who)}${teamName ? c.dim(` · ${teamName}`) : ""} ${c.dim("·")} ${when}`

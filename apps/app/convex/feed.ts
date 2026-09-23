@@ -27,7 +27,6 @@ export const postReturn = v.object({
     v.object({
       _id: v.id("users"),
       name: v.optional(v.string()),
-      email: v.optional(v.string()),
       /** /api/files/<id> for an uploaded picture, else the GitHub avatar. */
       avatarUrl: v.optional(v.string()),
       /** CRM user type label (Mentor, Jurado…); absent for plain hackers. */
@@ -118,7 +117,6 @@ async function hydrate(
       ? {
           _id: author._id,
           name: author.name ?? signup?.fullName,
-          email: author.email,
           avatarUrl: avatarUrlFor(author),
           userType: type?.label,
         }

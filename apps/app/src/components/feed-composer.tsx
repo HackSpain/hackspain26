@@ -48,7 +48,6 @@ function optimisticPost(
         ? {
             _id: me._id,
             name: me.name,
-            email: me.email,
             avatarUrl: me.avatarUrl,
             userType: me.userType?.label,
           }

@@ -1,4 +1,7 @@
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
+import { getSignupForUser } from "./lib/auth";
 import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
 import { membershipForUser } from "./lib/team";
@@ -10,12 +13,27 @@ const FUTURE_TOLERANCE_MS = 5 * 60 * 1000;
 const milestoneReturn = v.object({
   _id: v.id("milestones"),
   at: v.number(),
-  byEmail: v.optional(v.string()),
+  /** Display name of the person who logged it. Never an email. */
+  byName: v.optional(v.string()),
   kind: milestoneKindValidator,
   label: v.optional(v.string()),
   teamId: v.id("teams"),
   teamName: v.string(),
 });
+
+async function loggedBy(
+  ctx: QueryCtx,
+  user: Doc<"users"> | null
+): Promise<string | undefined> {
+  if (!user) {
+    return undefined;
+  }
+  if (user.name) {
+    return user.name;
+  }
+  const signup = await getSignupForUser(ctx, user);
+  return signup?.fullName;
+}
 
 export const add = onboardedMutation({
   args: {
@@ -93,7 +111,7 @@ export const mine = onboardedQuery({
         kind: row.kind,
         label: row.label,
         at: row.at,
-        byEmail: user?.email,
+        byName: await loggedBy(ctx, user),
       });
     }
     return result;
@@ -122,7 +140,7 @@ export const list = onboardedQuery({
         kind: row.kind,
         label: row.label,
         at: row.at,
-        byEmail: user?.email,
+        byName: await loggedBy(ctx, user),
       });
     }
     return result;
