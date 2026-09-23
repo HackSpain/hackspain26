@@ -146,3 +146,7 @@ Do **not** set `ALLOW_EMAIL_OTP_STUB` on production. Do **not** put `.env` / `.e
 `convex deploy --cmd` injects `NEXT_PUBLIC_CONVEX_URL` for the Next.js build. You do not need to paste the prod Convex URL into Vercel unless you skip the deploy-key flow.
 
 Landing Vercel env stays separate (`DATABASE_URL`, `RESEND_*`, `BETTER_STACK_*`, …). Those are not Convex.
+
+## License
+
+The code is released under the [MIT License](LICENSE), copyright Asociación Exponential Fellowship (HackSpain). The HackSpain name, logos, illustrations, video, and the photos and logos of judges, mentors, sponsors and third-party tools are not covered by it. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists those exclusions and the third-party code and fonts bundled in the repository.

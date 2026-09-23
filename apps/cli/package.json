@@ -2,6 +2,7 @@
   "name": "cli",
   "version": "0.5.9",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "hackspain: terminal client for HackSpain participants",
   "bin": {
