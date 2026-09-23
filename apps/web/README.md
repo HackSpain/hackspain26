@@ -79,7 +79,7 @@ link again.
 ```text
 src/
 ├── components/     # React islands (pages, mosaic, UI, sections)
-├── data/           # SEO copy, site metadata, llms.txt source
+├── data/           # SEO copy, site metadata, llms.txt and design.md sources
 ├── db/             # Drizzle client and schema
 ├── layouts/        # Astro layouts
 ├── lib/            # Shared server and client utilities

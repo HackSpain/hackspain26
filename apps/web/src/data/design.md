@@ -1,6 +1,6 @@
 # HackSpain design system
 
-This document records the design system of the landing (`apps/web`). It was extracted from the code on 2026-09-23 with a frequency scan of every `.astro`, `.tsx` and `.ts` file under `apps/web/src`, the shared primitives, and the public brand page (`apps/web/src/pages/brand.astro`). Counts in this document are class occurrences from that scan. Read this document before you build or change UI. The dashboard (`apps/app`) shares the tokens. See the last section for the differences.
+This document records the design system of the landing (`apps/web`). It was extracted from the code on 2026-09-23 with a frequency scan of every `.astro`, `.tsx` and `.ts` file under `apps/web/src`, the shared primitives, and the public brand page (`apps/web/src/pages/brand.astro`). Counts in this document are class occurrences from that scan. Read this document before you build or change UI. The dashboard (`apps/app`) shares the tokens. See the last section for the differences. The landing serves this file at `https://hackspain.com/design.md`.
 
 ## Direction
 

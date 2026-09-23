@@ -5,7 +5,7 @@ pnpm monorepo: `apps/web` is the Astro landing on Neon/Drizzle; `apps/app` is th
 ## Documentation
 
 - Consult relevant entries in [docs/learnings.md](docs/learnings.md) before working in an affected area.
-- Read [docs/design.md](docs/design.md) before building or changing UI. It records the tokens, patterns, motion and focus rules extracted from the landing, and how the dashboard shares them.
+- Read [apps/web/src/data/design.md](apps/web/src/data/design.md) before building or changing UI. It records the tokens, patterns, motion and focus rules extracted from the landing, and how the dashboard shares them. The landing serves it at `/design.md`.
 - Add or update a learning when the task establishes a non-obvious, project-specific fact that will prevent a recurring or costly mistake. Record the evidence, consequence, and prevention/verification step. Mark unknown causes explicitly. Skip routine debugging, generic advice, and unverified theories; update an existing entry rather than duplicating it.
 - Keep this file for project-specific constraints and traps that are hard to infer from code. Personal preferences belong in each contributor's local agent configuration. Put setup in README and historical explanations in learnings. Correct documentation that the task proves stale; avoid feature inventories and permanent bans based solely on past implementations.
 
