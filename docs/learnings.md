@@ -302,3 +302,34 @@ connections are removed by later heartbeats. A regression test records the read
 set and verifies that live peers and other screens are not read or deleted.
 Check production conflict counts after deployment; this does not claim to fix
 unrelated TV transport or rendering failures.
+
+## 2026-09-23 — The Vercel ignore script must survive a shallow clone
+
+**Evidence and consequence.** Every `hackspain-app` production build from
+115d6cb (13:10) to 072c834 failed before installing anything, with
+`fatal: bad object 4a7cb74…` from the ignoreCommand
+`scripts/vercel-ignore.sh`. Vercel clones shallowly and sets
+`VERCEL_GIT_PREVIOUS_SHA` to the last *successful* deployment; skipped builds
+("Not affected") do not move it. After two days of landing-only commits that
+commit was outside the clone, `git diff --quiet $prev HEAD` exited 128, and
+`set -e` turned that into the script's exit code. Only 0 (skip) and 1 (build)
+mean anything to Vercel; anything else fails the deployment. Because failed
+builds do not move the previous SHA either, every later build failed the same
+way, including docs-only commits. Production Convex kept serving the 09-21 code
+(verified with `convex function-spec --prod`: `byEmail` still present), so no
+partial deploy happened. The landing project was not affected.
+
+**Correction and verification.** The script now fetches the previous commit by
+SHA (`git fetch --depth=1 origin $prev`, which GitHub allows) when it is not in
+the clone, builds with a stderr note when it still cannot see it, and maps any
+`git diff` error to exit 1. Tested on a fresh `--depth 2` clone from GitHub
+with `4a7cb74` as the previous SHA: the old script exits 128, the new one exits
+1 for `apps/app` (changed) and 0 for an unchanged path.
+
+**Prevention.** A red `Vercel – hackspain-app` status on master with the last
+green deploy days back is this failure until the log says otherwise; the log
+is one line, before "Running install command". Never let the ignoreCommand exit
+with anything but 0 or 1. Keep the paths argument list in
+[apps/app/vercel.json](../apps/app/vercel.json) in sync with what the dashboard
+build reads.
+
