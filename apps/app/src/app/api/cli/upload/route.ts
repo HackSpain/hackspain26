@@ -1,6 +1,7 @@
 import { api } from "@convex/_generated/api";
 import { fetchMutation } from "convex/nextjs";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
+import { readLimitedBody } from "../_lib/limited-body";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -23,8 +24,8 @@ export async function POST(request: Request) {
   if (length > MAX_BYTES) {
     return fail("La imagen no puede superar 5 MB", 413);
   }
-  const bytes = await request.arrayBuffer();
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) {
+  const bytes = await readLimitedBody(request, MAX_BYTES);
+  if (!bytes || bytes.byteLength === 0) {
     return fail("La imagen no puede superar 5 MB", 413);
   }
   try {
