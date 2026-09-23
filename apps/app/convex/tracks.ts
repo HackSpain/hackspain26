@@ -139,13 +139,28 @@ export async function submissionsAreOpen(
   return row?.submissionsOpen ?? false;
 }
 
-export async function seedDefaults(ctx: MutationCtx): Promise<void> {
+export type SeedMode = "replace" | "fill";
+
+/**
+ * Bring the catalog in line with DEFAULT_TRACKS. `replace` (admins and the
+ * internal sync) rewrites copy, order and activity of every default. `fill`
+ * (participants) only inserts the defaults that are missing, so edits made
+ * through adminUpdate survive. Both retire the placeholder slugs and create the
+ * settings singleton.
+ */
+export async function seedDefaults(
+  ctx: MutationCtx,
+  mode: SeedMode = "replace"
+): Promise<void> {
   for (const track of DEFAULT_TRACKS) {
     const existing = await ctx.db
       .query("tracks")
       .withIndex("by_slug", (q) => q.eq("slug", track.slug))
       .unique();
     if (existing) {
+      if (mode === "fill") {
+        continue;
+      }
       await ctx.db.patch(existing._id, {
         active: true,
         body: track.body,
@@ -274,10 +289,12 @@ export const adminEnsureDefaults = adminMutation({
   returns: v.null(),
 });
 
+// Self-heal for an empty or placeholder catalog from the tracks page. Fill
+// only: a participant must never reset what an admin changed.
 export const ensureCatalog = onboardedMutation({
   args: {},
   handler: async (ctx) => {
-    await seedDefaults(ctx);
+    await seedDefaults(ctx, "fill");
     return null;
   },
   returns: v.null(),
