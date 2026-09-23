@@ -16,11 +16,13 @@ export function isCommanderError(err: unknown): err is CommanderError {
 /**
  * Parse and run, turning every failure into a single explained message and a
  * stable exit code. Commander's own help/version exits are passed through.
+ * An action that finishes normally can still report through
+ * `process.exitCode` (`watch --once`, `telemetry sync`); that value wins.
  */
-export async function runCli(
+export async function runToExitCode(
   program: Command,
   argv = process.argv
-): Promise<never> {
+): Promise<number> {
   program.exitOverride();
   program.configureOutput({
     writeErr: (str) => process.stderr.write(str),
@@ -28,14 +30,15 @@ export async function runCli(
   const json = argv.includes("--json");
   try {
     await program.parseAsync(argv);
-    process.exit(EXIT.OK);
+    const reported = process.exitCode;
+    return typeof reported === "number" ? reported : EXIT.OK;
   } catch (error) {
     if (isCommanderError(error)) {
       const passthrough =
         error.code === "commander.helpDisplayed" ||
         error.code === "commander.version" ||
         error.code === "commander.help";
-      process.exit(passthrough ? EXIT.OK : EXIT.USAGE);
+      return passthrough ? EXIT.OK : EXIT.USAGE;
     }
     const explained = explainError(error);
     if (json) {
@@ -49,6 +52,13 @@ export async function runCli(
         );
       }
     }
-    process.exit(explained.exitCode);
+    return explained.exitCode;
   }
+}
+
+export async function runCli(
+  program: Command,
+  argv = process.argv
+): Promise<never> {
+  process.exit(await runToExitCode(program, argv));
 }
