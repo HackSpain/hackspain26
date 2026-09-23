@@ -1,4 +1,3 @@
-import { log } from "@clack/prompts";
 import type { Command, CommanderError } from "commander";
 import { EXIT, explainError, terminalExplained } from "./errors";
 import { printJsonError } from "./output";
@@ -76,7 +75,7 @@ export async function runToExitCode(
     } else {
       const shown = terminalExplained(explained);
       const hint = shown.hint ? `\n${c.dim(shown.hint)}` : "";
-      log.error(`${c.red(shown.message)}${hint}`);
+      process.stderr.write(`  ${c.red("✗")}  ${c.red(shown.message)}${hint}\n`);
       if (explained.exitCode === EXIT.ERROR && !explained.hint) {
         process.stderr.write(
           `${c.dim(`  Stuck? ${cmd("hackspain --help")} lists every command; organisers are on Discord.`)}\n`

@@ -17,7 +17,7 @@ function programWith(action: () => void | Promise<void>): Command {
 
 const argv = (...args: string[]) => ["bun", "hackspain", ...args];
 
-type Captured<T> = { value: T; stdout: string[] };
+type Captured<T> = { value: T; stdout: string[]; stderr: string[] };
 
 /**
  * Run with stdout, stderr and console muted so explained errors do not litter
@@ -26,6 +26,7 @@ type Captured<T> = { value: T; stdout: string[] };
  */
 async function capture<T>(work: () => Promise<T>): Promise<Captured<T>> {
   const stdout: string[] = [];
+  const stderr: string[] = [];
   const out = process.stdout.write;
   const err = process.stderr.write;
   const consoleLog = console.log;
@@ -33,12 +34,15 @@ async function capture<T>(work: () => Promise<T>): Promise<Captured<T>> {
     stdout.push(String(chunk));
     return true;
   }) as typeof process.stdout.write;
-  process.stderr.write = (() => true) as typeof process.stderr.write;
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    stderr.push(String(chunk));
+    return true;
+  }) as typeof process.stderr.write;
   console.log = (...args: unknown[]) => {
     stdout.push(args.map(String).join(" "));
   };
   try {
-    return { stdout, value: await work() };
+    return { stderr, stdout, value: await work() };
   } finally {
     process.stdout.write = out;
     process.stderr.write = err;
@@ -91,6 +95,19 @@ describe("runToExitCode", () => {
     expect(await quiet(() => runToExitCode(program, argv("sync")))).toBe(
       EXIT.USAGE
     );
+  });
+
+  test("a non-JSON action error is written only to stderr", async () => {
+    const program = programWith(() => {
+      throw usageError("missing name", "pass --name");
+    });
+    const { value, stdout, stderr } = await capture(() =>
+      runToExitCode(program, argv("sync"))
+    );
+    expect(value).toBe(EXIT.USAGE);
+    expect(stdout).toEqual([]);
+    expect(stderr.join("")).toContain("missing name");
+    expect(stderr.join("")).toContain("pass --name");
   });
 
   test("with --json the error keeps its exit code too", async () => {
