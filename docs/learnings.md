@@ -333,3 +333,24 @@ with anything but 0 or 1. Keep the paths argument list in
 [apps/app/vercel.json](../apps/app/vercel.json) in sync with what the dashboard
 build reads.
 
+## 2026-09-23 - Bun keeps a leftover process.exitCode after a green test run
+
+**Evidence and consequence.** `cli-ci` / `check` is red on master (`cd74b46`)
+and on every PR that touches the shared root `package.json` or lockfile (#370),
+although `pnpm --filter cli test` prints `316 pass, 0 fail`. The step ends with
+`Exit status 5`, which is `EXIT.NETWORK`. Running the files one by one shows
+that only `apps/cli/test/run.test.ts` exits 5: its tests set
+`process.exitCode = EXIT.NETWORK` and its hooks reset with
+`process.exitCode = undefined`. Node treats that as a reset; Bun 1.4.1 and
+1.4.2 keep the previous value (`bun -e 'process.exitCode = 5;
+process.exitCode = undefined'` exits 5, `= 0` exits 0). `bun test` then uses
+the leftover value as its own exit code with zero failing tests. The dashboard
+suite that `ci.yml` runs with Bun has the same exposure.
+
+**Prevention and verification.** In Bun tests, reset with `process.exitCode = 0`
+(or save and restore the previous value), never with `undefined`. When a Bun
+step reports `0 fail` and still fails, read the `Exit status` line and run the
+files one by one (`for f in test/*.test.ts; do bun test "$f" >/dev/null 2>&1
+|| echo "$? $f"; done`) instead of looking for a failing assertion. Fixing
+`run.test.ts` is outside #233 and still pending.
+
