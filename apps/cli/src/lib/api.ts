@@ -53,6 +53,18 @@ type Envelope<T> =
 export type FetchLike = typeof fetch;
 
 type PostResult<T> = { status: number; value?: T; error?: Error };
+const REQUEST_TIMEOUT_MS = 15_000;
+
+function networkFailure<T>(url: string): PostResult<T> {
+  return {
+    error: new CliError("Could not reach the HackSpain server.", {
+      code: "NETWORK",
+      hint: `Tried ${url}. Check your connection, or pass --url for a dev server.`,
+      exitCode: EXIT.NETWORK,
+    }),
+    status: 0,
+  };
+}
 
 async function post<T>(
   fetchImpl: FetchLike,
@@ -61,6 +73,7 @@ async function post<T>(
   token?: string | null
 ): Promise<PostResult<T>> {
   let response: Response;
+  const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   try {
     response = await fetchImpl(url, {
       body: JSON.stringify(body),
@@ -70,21 +83,18 @@ async function post<T>(
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
       method: "POST",
+      signal,
     });
   } catch {
-    return {
-      error: new CliError("Could not reach the HackSpain server.", {
-        code: "NETWORK",
-        hint: `Tried ${url}. Check your connection, or pass --url for a dev server.`,
-        exitCode: EXIT.NETWORK,
-      }),
-      status: 0,
-    };
+    return networkFailure<T>(url);
   }
   let envelope: Envelope<T> | null = null;
   try {
     envelope = (await response.json()) as Envelope<T>;
   } catch {
+    if (signal.aborted) {
+      return networkFailure<T>(url);
+    }
     envelope = null;
   }
   if (!envelope) {

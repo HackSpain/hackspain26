@@ -17,6 +17,7 @@ const WHITESPACE = /\s+/;
 const CPUS: Record<string, string> = { arm64: "arm64", x64: "x64" };
 const AUTO_UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const UPDATE_CHECK_TIMEOUT_MS = 3000;
+const MANUAL_UPDATE_CHECK_TIMEOUT_MS = 15_000;
 const UPDATE_DOWNLOAD_TIMEOUT_MS = 2 * 60 * 1000;
 
 type UpdateState = { checkedAt: number };
@@ -286,7 +287,10 @@ export function registerUpdate(program: Command): void {
           hint: "Pull the repo instead of updating.",
         });
       }
-      const release = await latestRelease(fetch);
+      const release = await latestRelease(
+        fetch,
+        AbortSignal.timeout(MANUAL_UPDATE_CHECK_TIMEOUT_MS)
+      );
       const latest = release.tag_name.replace(TAG_PREFIX, "");
       const newer = isNewer(latest, VERSION);
       if (!newer || opts.check) {

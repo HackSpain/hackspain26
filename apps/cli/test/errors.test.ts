@@ -165,6 +165,12 @@ describe("explainError", () => {
       code: "NETWORK",
       exitCode: EXIT.NETWORK,
     });
+    expect(
+      explainError(new DOMException("Timed out", "TimeoutError"))
+    ).toMatchObject({
+      code: "NETWORK",
+      exitCode: EXIT.NETWORK,
+    });
   });
 
   test("CliError defaults", () => {

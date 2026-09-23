@@ -223,7 +223,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const UNCAUGHT_PATTERN = /Uncaught (?:Convex)?Error: ([^\n]*)/;
 const REQUEST_ID_PREFIX = /^\[Request ID: [^\]]+\] Server Error:?\s*/;
 const NETWORK_PATTERN =
-  /ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|fetch failed|Unable to connect|ConnectionRefused/i;
+  /ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|TimeoutError|fetch failed|Unable to connect|ConnectionRefused/i;
 
 /**
  * Strip Convex's "[Request ID: …] Server Error\nUncaught Error: " wrapper.
