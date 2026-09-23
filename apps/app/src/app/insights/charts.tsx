@@ -2,7 +2,7 @@
 
 // Adapted from Amicro Mono Charts by Syed Subhan Uddin (MIT).
 // https://github.com/Subhan-code/Amicro--Micro-transitions-
-// License: ./AMICRO-LICENSE.txt
+// License: MIT, see THIRD_PARTY_NOTICES.md at the repository root.
 import { useState } from "react";
 import {
   Bar,

@@ -1,6 +1,7 @@
 {
   "name": "hackspain",
   "private": true,
+  "license": "MIT",
   "packageManager": "pnpm@11.1.1",
   "engines": {
     "node": ">=22.12.0"

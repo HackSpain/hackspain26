@@ -2,7 +2,7 @@
 
 // Adapted from Amicro Mono Charts: Stream, Composed, Step, Heatmap and Bullet (MIT).
 // https://github.com/Subhan-code/Amicro--Micro-transitions-
-// License: ./AMICRO-LICENSE.txt
+// License: MIT, see THIRD_PARTY_NOTICES.md at the repository root.
 import { useState } from "react";
 import {
   Area,
