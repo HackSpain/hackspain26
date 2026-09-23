@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { validate } from "convex-helpers/validators";
 import {
   LINKEDIN_PROFILE_FRESH_MS,
+  linkedinProfileValidator,
   linkedinProfileIsStale,
   missingLinkedinProfile,
   normalizeLinkedinSlug,
@@ -58,4 +60,34 @@ test("an empty Nyne result is stored as missing", () => {
     true,
   );
   assert.equal(missingLinkedinProfile("x", 1).slug, "x");
+});
+
+test("the table validator accepts the rows production already holds", () => {
+  // Shape of the 2026-09-21 production import: about and education, with
+  // education items that may carry a detail. Dropping either field from the
+  // validator makes every schema push from master fail.
+  const stored = {
+    about: "Builds payment rails.",
+    company: "Acme",
+    education: [{ name: "Universidad de Oviedo" }, { detail: "MSc", name: "UPM" }],
+    experience: [{ current: true, name: "Acme", title: "CTO" }],
+    fetchedAt: 1,
+    followers: 10,
+    headline: "CTO at Acme",
+    location: "Madrid",
+    missing: false,
+    name: "Jane Doe",
+    slug: "janedoe",
+    url: "https://www.linkedin.com/in/janedoe",
+    years: 12,
+  };
+  assert.equal(validate(linkedinProfileValidator, stored), true);
+  assert.equal(
+    validate(linkedinProfileValidator, missingLinkedinProfile("x", 1)),
+    true,
+  );
+  assert.equal(
+    validate(linkedinProfileValidator, { ...stored, summary: "unknown field" }),
+    false,
+  );
 });
