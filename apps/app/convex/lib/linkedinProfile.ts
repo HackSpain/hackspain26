@@ -8,8 +8,22 @@ export const linkedinExperienceValidator = v.object({
   title: v.optional(v.string()),
 });
 
+export const linkedinEducationValidator = v.object({
+  detail: v.optional(v.string()),
+  name: v.string(),
+});
+
+/**
+ * `about`, `education` and `skills` are not filled by `profileFromNyne` yet.
+ * Production accepts them since 2026-09-21 (a directory import deployed
+ * straight to production wrote `about` and `education` into 201 rows), and
+ * the schema push rejects every deploy from master until the table validator
+ * accepts them. Keep them optional.
+ */
 export const linkedinProfileFields = {
+  about: v.optional(v.string()),
   company: v.optional(v.string()),
+  education: v.optional(v.array(linkedinEducationValidator)),
   experience: v.array(linkedinExperienceValidator),
   fetchedAt: v.number(),
   followers: v.optional(v.number()),
@@ -17,6 +31,7 @@ export const linkedinProfileFields = {
   location: v.optional(v.string()),
   missing: v.boolean(),
   name: v.optional(v.string()),
+  skills: v.optional(v.array(v.string())),
   slug: v.string(),
   url: v.string(),
   years: v.optional(v.number()),
@@ -30,8 +45,15 @@ export type LinkedinExperience = {
   title?: string;
 };
 
+export type LinkedinEducation = {
+  detail?: string;
+  name: string;
+};
+
 export type LinkedinProfile = {
+  about?: string;
   company?: string;
+  education?: LinkedinEducation[];
   experience: LinkedinExperience[];
   fetchedAt: number;
   followers?: number;
@@ -39,6 +61,7 @@ export type LinkedinProfile = {
   location?: string;
   missing: boolean;
   name?: string;
+  skills?: string[];
   slug: string;
   url: string;
   years?: number;

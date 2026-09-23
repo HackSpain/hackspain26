@@ -2,6 +2,12 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-23: Production Convex can run code that master never had
+
+**Evidence and consequence.** After the Vercel ignore script was fixed (#368), the first production build of the dashboard failed in `convex deploy` with `Schema validation failed`: a `linkedinProfiles` row carried `about` and `education`, which the validator on master does not declare. `npx convex data linkedinProfiles --prod --format jsonl` (read-only) showed 291 rows, 201 with those fields, all created within 15 seconds on 2026-09-21 at 15:49 UTC. `npx convex function-spec --prod` listed `directory:importLinkedinProfiles`, a function that exists in no pushed branch, and a `saveLinkedinProfile` whose args already accept both fields. Someone deployed a local branch straight to production and ran the import. Every deploy from master was blocked until the table validator accepted the rows, and the next successful deploy replaces the production functions with master's, so the unpushed import disappears from production.
+
+**Correction and prevention.** The validator now carries `about`, `education` and `skills` as optional fields with the shapes production's `saveLinkedinProfile` accepts (`education` items are `{ name, detail? }`, `skills` is `string[]`), and a test validates that shape with `convex-helpers/validators`. Production Convex is only ever the dashboard's Vercel build of master; code deployed by hand must reach master before the next build, or its functions vanish and its rows can block the schema push. When a production build fails on schema validation, run `convex function-spec --prod` and `convex data <table> --prod --format jsonl` first: both are read-only and tell whether the offending rows came from master or from a direct deploy. Do not delete the rows to make the push pass; extend the validator or migrate the data on purpose.
+
 ## 2026-09-22 — The landing legal footer is an in-flow flex item, not fixed
 
 **Evidence and consequence.** The first legal footer (3eef3b4) was

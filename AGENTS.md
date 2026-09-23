@@ -11,7 +11,7 @@ pnpm monorepo: `apps/web` is the Astro landing on Neon/Drizzle; `apps/app` is th
 
 ## Project traps
 
-- Production Convex deploys through the dashboard's Vercel build (`pnpm vercel-build`). Do not use `convex deploy` for local validation. Signup migration imports real Neon data; seed/reset/clear and OTP stubs are development-only.
+- Production Convex deploys through the dashboard's Vercel build (`pnpm vercel-build`), which replaces whatever is deployed. Do not use `convex deploy` for local validation, and never deploy a branch to production by hand: its functions vanish on the next build and its rows can block the schema push (learnings 2026-09-23). Signup migration imports real Neon data; seed/reset/clear and OTP stubs are development-only.
 - Public signup still writes Neon; dashboard data belongs in Convex. Changing that boundary is a migration, not a routine endpoint edit.
 - Landing brand tokens are duplicated in `apps/web/src/styles/global.css` and `apps/web/src/components/theme/palette.ts`, and mirrored in `apps/app/src/app/globals.css`; keep them synchronized. `apps/web/src/data/llms.txt` is served by middleware for markdown requests and must follow visible copy changes.
 - Convex access wrappers enforce both permissions and event timing. Use `onboarded*` for new event features; use `anytimeOnboarded*` only when intentionally available outside the event. Check `apps/app/convex/lib/auth.ts` before choosing a wrapper.
