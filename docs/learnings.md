@@ -2,6 +2,42 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-23: Astro 7 breaks the bare Tailwind import in the server build and drops inter-tag spaces
+
+**Symptom and evidence.** After moving `apps/web` to Astro 7.3.4 (Vite 8.3.0),
+`astro build` failed in "Building server entrypoints" with
+`[postcss] ENOENT: no such file or directory, open '.../apps/web/tailwindcss'`,
+a path that exists in no source file, and without Vite's usual
+`Unable to resolve @import` line. `astro dev` and the client build of the same
+stylesheet work. Cause, confirmed in Vite's `compilePostCSS`: with a PostCSS
+config present, Vite's bundled `postcss-import` runs before `@tailwindcss/postcss`;
+in the SSR environment the resolver treats the bare `tailwindcss` specifier as
+external and hands it back unresolved, `path.resolve` turns it into
+`<root>/tailwindcss`, and the load step fails. Upstream report:
+vitejs/vite#23096 (open at the time of writing). Separately, Astro 7 changed the
+`compressHTML` default from `true` to `'jsx'`; diffing the prerendered HTML
+against the Astro 6 build showed every space between adjacent inline elements
+removed (about 30 per page, 381 on `/brand`). Neither point is in the Astro 7
+upgrade guide's Tailwind or adapter notes.
+
+**Correction.** `src/styles/global.css` imports `tailwindcss/index.css`, an
+explicit `exports` key that needs no condition matching. The built CSS keeps the
+same rule counts and brand tokens as before. `astro.config.mjs` sets
+`compressHTML: true`; with it the prerendered pages match the Astro 6 output
+apart from the generator meta and one space inside the `@vercel/analytics`
+component.
+
+**Prevention and verification.** Do not simplify the import back to
+`@import "tailwindcss"` while Vite 8 externalizes SSR CSS imports: only
+`astro build` fails, so run the server build, not just `astro dev`. If
+`compressHTML` is ever switched to `'jsx'`, audit inline elements for `{" "}`
+page by page first. A quick check for both is to build and diff
+`dist/client/**/index.html` against the previous build after normalizing hashed
+asset names. The `pnpm audit --prod` findings left after the upgrade
+(`path-to-regexp` under `@vercel/routing-utils`, `fflate` under `satori`) are
+pinned by their latest upstream releases and need a root `pnpm.overrides`
+decision, not another `apps/web` bump.
+
 ## 2026-09-23 - Commander exit overrides reach only the subcommands created after them
 
 **Evidence and consequence.** `runToExitCode()` and the menu's `dispatch()` called `program.exitOverride()` and `program.configureOutput()` on the root after `buildProgram()` had registered every subcommand. Commander copies both settings in `copyInheritedSettings()` while `.command()` creates a subcommand, and never again, so the root threw `CommanderError` while `team join`, `feed --bogus` and every other subcommand still called `process.exit(1)`: usage errors exited 1 instead of 2, `--json` callers got no envelope on stdout, and a Commander error inside the interactive menu killed the menu (#330). The unit tests passed because they built a bare `Command` and let `runToExitCode()` configure it before any subcommand existed.
@@ -360,44 +396,6 @@ with anything but 0 or 1. Keep the paths argument list in
 [apps/app/vercel.json](../apps/app/vercel.json) in sync with what the dashboard
 build reads.
 
-<<<<<<< HEAD
-
-## 2026-09-23: Astro 7 breaks the bare Tailwind import in the server build and drops inter-tag spaces
-
-**Symptom and evidence.** After moving `apps/web` to Astro 7.3.4 (Vite 8.3.0),
-`astro build` failed in "Building server entrypoints" with
-`[postcss] ENOENT: no such file or directory, open '.../apps/web/tailwindcss'`,
-a path that exists in no source file, and without Vite's usual
-`Unable to resolve @import` line. `astro dev` and the client build of the same
-stylesheet work. Cause, confirmed in Vite's `compilePostCSS`: with a PostCSS
-config present, Vite's bundled `postcss-import` runs before `@tailwindcss/postcss`;
-in the SSR environment the resolver treats the bare `tailwindcss` specifier as
-external and hands it back unresolved, `path.resolve` turns it into
-`<root>/tailwindcss`, and the load step fails. Upstream report:
-vitejs/vite#23096 (open at the time of writing). Separately, Astro 7 changed the
-`compressHTML` default from `true` to `'jsx'`; diffing the prerendered HTML
-against the Astro 6 build showed every space between adjacent inline elements
-removed (about 30 per page, 381 on `/brand`). Neither point is in the Astro 7
-upgrade guide's Tailwind or adapter notes.
-
-**Correction.** `src/styles/global.css` imports `tailwindcss/index.css`, an
-explicit `exports` key that needs no condition matching. The built CSS keeps the
-same rule counts and brand tokens as before. `astro.config.mjs` sets
-`compressHTML: true`; with it the prerendered pages match the Astro 6 output
-apart from the generator meta and one space inside the `@vercel/analytics`
-component.
-
-**Prevention and verification.** Do not simplify the import back to
-`@import "tailwindcss"` while Vite 8 externalizes SSR CSS imports: only
-`astro build` fails, so run the server build, not just `astro dev`. If
-`compressHTML` is ever switched to `'jsx'`, audit inline elements for `{" "}`
-page by page first. A quick check for both is to build and diff
-`dist/client/**/index.html` against the previous build after normalizing hashed
-asset names. The `pnpm audit --prod` findings left after the upgrade
-(`path-to-regexp` under `@vercel/routing-utils`, `fflate` under `satori`) are
-pinned by their latest upstream releases and need a root `pnpm.overrides`
-decision, not another `apps/web` bump.
-=======
 ## 2026-09-23 - Bun keeps a leftover process.exitCode after a green test run
 
 **Evidence and consequence.** `cli-ci` / `check` is red on master (`cd74b46`)
@@ -419,4 +417,3 @@ files one by one (`for f in test/*.test.ts; do bun test "$f" >/dev/null 2>&1
 || echo "$? $f"; done`) instead of looking for a failing assertion. Fixing
 `run.test.ts` is outside #233 and still pending.
 
->>>>>>> origin/master
