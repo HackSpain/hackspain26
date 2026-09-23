@@ -6,15 +6,22 @@ import "../../styles/community-timeline.css";
 
 const EMPTY_CARDS = [0, 1, 2, 3];
 
-function TweetCard({ post }: { post: CommunityPost }) {
+function TweetCard({ post, allowX }: { post: CommunityPost; allowX: boolean }) {
   const frameRef = useRef<HTMLElement>(null);
   const embedRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [width, setWidth] = useState(250);
   const scale = Math.min(1, width / 250);
+  let fallbackLabel = "Publicación de X sin cargar";
+  if (allowX) {
+    fallbackLabel = failed ? "Ver publicación original" : "Cargando publicación de X…";
+  }
 
   useEffect(() => {
+    if (!allowX) {
+      return;
+    }
     const frame = frameRef.current;
     const container = embedRef.current;
     if (!(frame && container)) {
@@ -70,7 +77,7 @@ function TweetCard({ post }: { post: CommunityPost }) {
       observer.disconnect();
       target.remove();
     };
-  }, [post.url]);
+  }, [allowX, post.url]);
 
   return (
     <article className="reel-embed" ref={frameRef}>
@@ -82,7 +89,7 @@ function TweetCard({ post }: { post: CommunityPost }) {
       {!loaded && (
         <div className="reel-embed-fallback">
           <span>
-            {failed ? "Ver publicación original" : "Cargando publicación de X…"}
+            {fallbackLabel}
           </span>
           <a href={post.url} rel="noopener noreferrer" target="_blank">
             {post.author} · @{post.handle} ↗
@@ -97,10 +104,12 @@ function TweetReel({
   posts,
   reverse,
   label,
+  allowX,
 }: {
   posts: CommunityPost[];
   reverse?: boolean;
   label: string;
+  allowX: boolean;
 }) {
   // Repeat short collections to fill tall screens without an empty seam.
   const sequence =
@@ -113,7 +122,9 @@ function TweetReel({
       : [];
   const cards =
     sequence.length > 0
-      ? sequence.map(({ post, key }) => <TweetCard key={key} post={post} />)
+      ? sequence.map(({ post, key }) => (
+          <TweetCard allowX={allowX} key={key} post={post} />
+        ))
       : EMPTY_CARDS.map((id) => (
           <div
             aria-hidden="true"
@@ -173,6 +184,7 @@ export function CommunityTimeline({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hidden, setHidden] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [allowX, setAllowX] = useState(false);
   const leftPosts = communityPosts.filter((_, index) => index % 2 === 0);
   const rightPosts =
     communityPosts.length > 1
@@ -254,7 +266,7 @@ export function CommunityTimeline({
         ease: [0.22, 1, 0.36, 1],
       }}
     >
-      <TweetReel label="VUESTRAS HISTORIAS" posts={leftPosts} />
+      <TweetReel allowX={allowX} label="VUESTRAS HISTORIAS" posts={leftPosts} />
       <div className="cinema-center">
         <header className="cinema-heading">
           <span>MADRID · 18—20 SEPTIEMBRE 2026</span>
@@ -280,6 +292,11 @@ export function CommunityTimeline({
           </video>
         </div>
         <div className="cinema-note">
+          {!allowX && communityPosts.length > 0 && (
+            <button onClick={() => setAllowX(true)} type="button">
+              Cargar publicaciones desde X
+            </button>
+          )}
           {communityPosts.length === 0 && (
             <span>Tweets de la comunidad · Próximamente</span>
           )}
@@ -288,7 +305,7 @@ export function CommunityTimeline({
           )}
         </div>
       </div>
-      <TweetReel label="LO QUE NOS LLEVAMOS" posts={rightPosts} reverse />
+      <TweetReel allowX={allowX} label="LO QUE NOS LLEVAMOS" posts={rightPosts} reverse />
       <nav aria-label="Secciones de HackSpain" className="cinema-nav">
         <button onClick={onPrevious} type="button">
           ↑ Volver al inicio
