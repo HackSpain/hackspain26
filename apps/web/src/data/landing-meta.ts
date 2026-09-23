@@ -92,6 +92,9 @@ export const SIGNUP_KEYWORDS =
   "apuntarse HackSpain, registro hackathon España, hackathon Madrid 2026, Hack Spain registro, interés hackathon jóvenes";
 
 export function signupSeo(): PageSeo {
+  if (areSignupsClosed()) {
+    return SIGNUP_CLOSED_SEO;
+  }
   return {
     description:
       "Completa tu solicitud para HackSpain 2026. Revisamos cada candidatura antes de confirmar la plaza.",

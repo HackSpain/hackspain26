@@ -18,10 +18,6 @@ import {
   SIGNUP_DEADLINE_MS,
 } from "../../data/signup-deadline";
 import { getStoredReferralCode } from "../../lib/referral-code";
-import {
-  hasValidSignupAccessKey,
-  signupLateAccessKeyFromSearch,
-} from "../../lib/signup-late-access";
 import type {
   DietaryRestrictionId,
   HeardFromSourceId,
@@ -244,13 +240,6 @@ function clearStoredFields() {
   }
 }
 
-function signupLateAccessKeyFromLocation(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
-  return signupLateAccessKeyFromSearch(window.location.search);
-}
-
 const X_PREFIX = "x.com/";
 const LINKEDIN_PREFIX = "linkedin.com/in/";
 const GITHUB_PREFIX = "github.com/";
@@ -379,11 +368,6 @@ export function SignupPage() {
   const [deadlinePassed, setDeadlinePassed] = useState(() =>
     areSignupsClosed()
   );
-  const [lateAccessKey, setLateAccessKey] = useState("");
-
-  useLayoutEffect(() => {
-    setLateAccessKey(signupLateAccessKeyFromLocation());
-  }, []);
 
   // No polling: arm a single timer for the deadline so a page left open across
   // it closes itself instead of letting someone finish a doomed form.
@@ -495,9 +479,6 @@ export function SignupPage() {
     const referralCode = getStoredReferralCode();
     if (referralCode) {
       Object.assign(payload, { referralCode });
-    }
-    if (hasValidSignupAccessKey(lateAccessKey)) {
-      Object.assign(payload, { signupAccessKey: lateAccessKey });
     }
     const parsed = parseSignupBodyClient(payload);
     if (!parsed.ok) {
@@ -693,10 +674,7 @@ export function SignupPage() {
   // An application already sent still wins over the closed notice — whoever got
   // in before the deadline should see their confirmation, not "estamos cerrados".
   const alreadyDone = status === "success" || status === "alreadyApplied";
-  const lateAccessAllowed = hasValidSignupAccessKey(lateAccessKey);
-  const showClosed =
-    !alreadyDone &&
-    ((deadlinePassed && !lateAccessAllowed) || status === "closed");
+  const showClosed = !alreadyDone && (deadlinePassed || status === "closed");
   const showFinalPanel = alreadyDone || showClosed;
   let finalPanelMessage = t.applicationReceived;
   if (status === "alreadyApplied") {
