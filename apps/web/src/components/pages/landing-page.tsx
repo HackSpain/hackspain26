@@ -269,7 +269,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
   if (layoutProfile === null) {
     return (
       <div
-        className="fixed inset-0 flex items-center justify-center"
+        className="flex min-h-0 w-full flex-1 items-center justify-center"
         style={{ background: INK }}
       >
         <div className="flex items-end gap-1 font-bungee text-4xl text-hs-gold leading-none">
@@ -458,7 +458,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
   return (
     <section
       aria-label={REGION_ARIA}
-      className="fixed inset-0 font-sans"
+      className="relative min-h-0 w-full flex-1 font-sans"
       style={{ background: INK }}
     >
       <p aria-atomic="true" aria-live="polite" className="sr-only">

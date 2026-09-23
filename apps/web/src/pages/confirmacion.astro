@@ -107,12 +107,12 @@ const PAGE_TITLES: Record<PageState, string> = {
   title={`${PAGE_TITLES[state]} — HackSpain 2026`}
 >
   {state === "confirmed" ? (
-      <main class="relative h-dvh w-full" id="main">
+      <main class="relative min-h-0 w-full flex-1" id="main">
         <ConfirmationPage {...badgeProps} client:only="react" />
       </main>
     ) : (
       <main
-        class="relative flex min-h-dvh w-full items-center justify-center bg-hs-paper px-4"
+        class="relative flex w-full flex-1 items-center justify-center bg-hs-paper px-4"
         id="main"
       >
         <div class="hs-grain pointer-events-none absolute inset-0" />
