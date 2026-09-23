@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 132" width="1000" height="132" role="img" aria-label="HackSpain colour tokens">
+<rect width="1000" height="132" fill="#F4ECD8"/>
+<rect x="0" y="0" width="100" height="78" fill="#F4ECD8" stroke="#2A170F" stroke-width="3"/>
+<text x="50" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Paper</text>
+<text x="50" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#F4ECD8</text>
+<rect x="100" y="0" width="100" height="78" fill="#2A170F" stroke="#2A170F" stroke-width="3"/>
+<text x="150" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Ink</text>
+<text x="150" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#2A170F</text>
+<rect x="200" y="0" width="100" height="78" fill="#EAB619" stroke="#2A170F" stroke-width="3"/>
+<text x="250" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Gold</text>
+<text x="250" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#EAB619</text>
+<rect x="300" y="0" width="100" height="78" fill="#E8DCC4" stroke="#2A170F" stroke-width="3"/>
+<text x="350" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Sand</text>
+<text x="350" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#E8DCC4</text>
+<rect x="400" y="0" width="100" height="78" fill="#D96B2A" stroke="#2A170F" stroke-width="3"/>
+<text x="450" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Orange</text>
+<text x="450" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#D96B2A</text>
+<rect x="500" y="0" width="100" height="78" fill="#CC291F" stroke="#2A170F" stroke-width="3"/>
+<text x="550" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Red</text>
+<text x="550" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#CC291F</text>
+<rect x="600" y="0" width="100" height="78" fill="#35858A" stroke="#2A170F" stroke-width="3"/>
+<text x="650" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Teal</text>
+<text x="650" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#35858A</text>
+<rect x="700" y="0" width="100" height="78" fill="#1E3958" stroke="#2A170F" stroke-width="3"/>
+<text x="750" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Navy</text>
+<text x="750" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#1E3958</text>
+<rect x="800" y="0" width="100" height="78" fill="#4A2C1F" stroke="#2A170F" stroke-width="3"/>
+<text x="850" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Brown</text>
+<text x="850" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#4A2C1F</text>
+<rect x="900" y="0" width="100" height="78" fill="#8FB8D1" stroke="#2A170F" stroke-width="3"/>
+<text x="950" y="104" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#2A170F">Slate</text>
+<text x="950" y="124" text-anchor="middle" font-family="SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#4A2C1F">#8FB8D1</text>
+<rect x="1.5" y="1.5" width="997" height="129" fill="none" stroke="#2A170F" stroke-width="3"/>
+</svg>
