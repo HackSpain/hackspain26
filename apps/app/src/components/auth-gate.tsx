@@ -14,6 +14,11 @@ import {
 } from "@/components/login-transition";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
+import {
+  CLI_AUTH_PATH,
+  cliAuthReturnTo,
+  safeCliAuthReturnTo,
+} from "@/lib/cli-handoff";
 import { isPublicAppPath } from "@/lib/public-paths";
 import {
   DIRECTORY_PATH,
@@ -54,10 +59,10 @@ function destination(me: {
   return null;
 }
 
-// /cli-auth approves a CLI login and carries a one-time ?code=. The code is
-// preserved through the login redirect via sessionStorage, since neither the
-// middleware nor this gate has a returnTo query.
-const CLI_AUTH_PATH = "/cli-auth";
+// /cli-auth approves a CLI login and carries a one-time hs-code, in the URL
+// fragment for current CLI links and in the query for older ones. The whole
+// location is kept through the login redirect via sessionStorage, since
+// neither the middleware nor this gate has a returnTo query.
 // /cli-auth/handoff signs the browser in with a token minted by the CLI
 // (`hackspain open`). Like /tv it renders without a session; the page itself
 // navigates onward once the cookies are set, and the gates apply there.
@@ -65,11 +70,12 @@ const CLI_HANDOFF_PATH = "/cli-auth/handoff";
 const RETURN_TO_KEY = "hs-return-to";
 
 function stashReturnTo(): void {
+  const returnTo = cliAuthReturnTo(window.location);
+  if (!returnTo) {
+    return;
+  }
   try {
-    sessionStorage.setItem(
-      RETURN_TO_KEY,
-      window.location.pathname + window.location.search,
-    );
+    sessionStorage.setItem(RETURN_TO_KEY, returnTo);
   } catch {
     // Storage blocked; the user can reopen the link from the terminal.
   }
@@ -80,8 +86,7 @@ function stashReturnTo(): void {
 // through to the participant-gate redirect. Cleared on arrival at /cli-auth.
 function peekReturnTo(): string | null {
   try {
-    const value = sessionStorage.getItem(RETURN_TO_KEY);
-    return value?.startsWith(`${CLI_AUTH_PATH}?`) ? value : null;
+    return safeCliAuthReturnTo(sessionStorage.getItem(RETURN_TO_KEY));
   } catch {
     return null;
   }

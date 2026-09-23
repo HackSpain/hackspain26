@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { ConvexError } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
+import { SCREEN_CONNECTION_LIMIT, SCREEN_LIMIT, SCREEN_MAX_DIMENSION, SCREEN_URL_MAX_LENGTH } from "./lib/tvScreens";
 import { githubActivityKind, heartbeat, reloadScreen, removeScreen, screenConfiguration, screens, setScreen } from "./tvPlayback";
 
 test("insights recognise the canonical GitHub feed event names", () => {
@@ -10,6 +12,18 @@ test("insights recognise the canonical GitHub feed event names", () => {
 });
 
 type Row = Record<string, unknown> & { _id: string; table: string };
+// Convex returns index scans in index order; the mock sorts by the same fields so `.order("asc")` means oldest first.
+const INDEX_FIELDS: Record<string, string[]> = {
+  by_key: ["key"], by_client: ["clientId"], by_screen: ["screenId"], by_screen_last_seen: ["screenId", "lastSeenAt"],
+};
+function compareField(a: unknown, b: unknown) {
+  if (a === b) { return 0; }
+  return (a as string | number) < (b as string | number) ? -1 : 1;
+}
+function must<T>(value: T | null | undefined): T {
+  assert.ok(value);
+  return value;
+}
 function venue() {
   let serial = 0;
   let admin = true;
@@ -21,12 +35,24 @@ function venue() {
       query(table: string) {
         let matches = [...rows.values()].filter((row) => row.table === table);
         const result = {
-          withIndex(_name: string, filter: (q: { eq: (key: string, value: unknown) => unknown; lt: (key: string, value: number) => unknown }) => void) {
+          withIndex(name: string, filter: (q: { eq: (key: string, value: unknown) => unknown; lt: (key: string, value: number) => unknown }) => void) {
             const range = {
               eq(key: string, value: unknown) { matches = matches.filter((row) => row[key] === value); return range; },
               lt(key: string, value: number) { matches = matches.filter((row) => Number(row[key]) < value); return range; },
             };
             filter(range);
+            const fields = INDEX_FIELDS[name] ?? [];
+            matches = matches.toSorted((a, b) => {
+              for (const field of fields) {
+                const order = compareField(a[field], b[field]);
+                if (order !== 0) { return order; }
+              }
+              return 0;
+            });
+            return result;
+          },
+          order(direction: "asc" | "desc") {
+            if (direction === "desc") { matches = matches.toReversed(); }
             return result;
           },
           unique: async () => {
@@ -170,4 +196,65 @@ test("heartbeats clean expired connections without reading live peers", async ()
   assert.equal(await ctx.db.get(expired._id), null);
   assert.ok(await ctx.db.get(peer._id));
   assert.ok(await ctx.db.get(other._id));
+});
+
+
+test("public registration stops at SCREEN_LIMIT screens, while prepared and existing names keep working", async () => {
+  const { ctx, ping } = venue();
+  for (let index = 0; index < SCREEN_LIMIT; index += 1) {
+    await ping(`screen-${index}`, `client-${String(index).padStart(12, "0")}`);
+  }
+  await assert.rejects(ping("one-too-many", "attacker-1234567890"), (error: unknown) =>
+    error instanceof ConvexError && (error.data as { code: string }).code === "SCREEN_LIMIT");
+  assert.equal((await screens._handler(ctx, {})).screens.length, SCREEN_LIMIT);
+  // Known names are unaffected by the cap.
+  assert.equal((await ping("screen-0", "client-000000000000")).preset, "entradas");
+  // Admins are not bounded, and their prepared name is then accepted from the venue.
+  await setScreen._handler(ctx, { key: "one-too-many", preset: "avisos", message: "Prepared" });
+  assert.equal((await ping("one-too-many", "attacker-1234567890")).message, "Prepared");
+  assert.equal((await screens._handler(ctx, {})).screens.length, SCREEN_LIMIT + 1);
+});
+
+test("a screen keeps at most SCREEN_CONNECTION_LIMIT connections and recycles the least recently seen", async () => {
+  const { ctx, ping, connectionReads } = venue();
+  for (let index = 0; index < SCREEN_CONNECTION_LIMIT; index += 1) {
+    await ping("entrada", `device-${String(index).padStart(12, "0")}`);
+  }
+  await ping("hall", "hall-123456789012");
+  const all = await ctx.db.query("tvScreenConnections").collect();
+  const stale = must(all.find((row) => row.clientId === "device-000000000003"));
+  const hall = must(all.find((row) => row.clientId === "hall-123456789012"));
+  await ctx.db.patch(stale._id, { lastSeenAt: Date.now() - 600_000 });
+  connectionReads.length = 0;
+
+  await ping("entrada", "device-new-1234567890");
+
+  // Only a first heartbeat reads its peers, and only its own screen's.
+  assert.equal(connectionReads.length, SCREEN_CONNECTION_LIMIT);
+  assert.ok(!connectionReads.includes(hall._id));
+  const entry = must((await screens._handler(ctx, {})).screens.find((screen) => screen.key === "entrada"));
+  assert.equal(entry.connections.length, SCREEN_CONNECTION_LIMIT);
+  assert.ok(entry.connections.some((row) => row.clientId === "device-new-1234567890"));
+  assert.ok(!entry.connections.some((row) => row.clientId === "device-000000000003"));
+  assert.equal((await ctx.db.get(stale._id))?.clientId, "device-new-1234567890");
+  // A known device still reads nothing but its own row and expired ones.
+  connectionReads.length = 0;
+  await ping("entrada", "device-new-1234567890");
+  assert.deepEqual(connectionReads, [stale._id]);
+  assert.equal((await ctx.db.query("tvScreenConnections").collect()).filter((row) => row.screenId === entry._id).length, SCREEN_CONNECTION_LIMIT);
+});
+
+test("junk URLs and sizes are refused with a controlled error and register nothing", async () => {
+  const { ctx } = venue();
+  const beat = (url: string, width = 1920) => heartbeat._handler(ctx, {
+    key: "entrada", clientId: "client-1234567890", url, initialPreset: "entradas",
+    width, height: 1080, receivedRevision: 0, receivedReloadVersion: 0,
+  });
+  await assert.rejects(beat("not a url"), /URL de pantalla/);
+  await assert.rejects(beat("ftp://hackspain.app/tv"), /URL de pantalla/);
+  await assert.rejects(beat("https://hackspain.app/admin/tv"), /URL de pantalla/);
+  await assert.rejects(beat(`https://hackspain.app/tv?screen=entrada&pad=${"x".repeat(SCREEN_URL_MAX_LENGTH)}`), /URL de pantalla/);
+  await assert.rejects(beat("https://hackspain.app/tv?screen=entrada", SCREEN_MAX_DIMENSION + 1), /Resolución/);
+  assert.equal((await screens._handler(ctx, {})).screens.length, 0);
+  assert.equal((await ctx.db.query("tvScreenConnections").collect()).length, 0);
 });

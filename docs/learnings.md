@@ -2,6 +2,19 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-23 - Commander exit overrides reach only the subcommands created after them
+
+**Evidence and consequence.** `runToExitCode()` and the menu's `dispatch()` called `program.exitOverride()` and `program.configureOutput()` on the root after `buildProgram()` had registered every subcommand. Commander copies both settings in `copyInheritedSettings()` while `.command()` creates a subcommand, and never again, so the root threw `CommanderError` while `team join`, `feed --bogus` and every other subcommand still called `process.exit(1)`: usage errors exited 1 instead of 2, `--json` callers got no envelope on stdout, and a Commander error inside the interactive menu killed the menu (#330). The unit tests passed because they built a bare `Command` and let `runToExitCode()` configure it before any subcommand existed.
+
+**Correction and prevention.** `overrideExits()` in `apps/cli/src/lib/run.ts` applies both settings to the root and, recursively, to `program.commands`; `runToExitCode()` and the menu dispatcher call it on whatever program they receive. Commander configuration that must reach subcommands goes either before the `register*` calls in `buildProgram()` or into that recursive helper. `addCommand()` never copies inherited settings, not even before registration.
+
+**Verification.** `bun src/index.ts --json team join` exits 2 with one `{"ok":false,"code":"USAGE",…}` line on stdout and `bun src/index.ts feed --bogus` exits 2. `test/run.test.ts` exercises a subcommand usage error through `buildProgram()`, not only through a bare program.
+## 2026-09-23: Production Convex can run code that master never had
+
+**Evidence and consequence.** After the Vercel ignore script was fixed (#368), the first production build of the dashboard failed in `convex deploy` with `Schema validation failed`: a `linkedinProfiles` row carried `about` and `education`, which the validator on master does not declare. `npx convex data linkedinProfiles --prod --format jsonl` (read-only) showed 291 rows, 201 with those fields, all created within 15 seconds on 2026-09-21 at 15:49 UTC. `npx convex function-spec --prod` listed `directory:importLinkedinProfiles`, a function that exists in no pushed branch, and a `saveLinkedinProfile` whose args already accept both fields. Someone deployed a local branch straight to production and ran the import. Every deploy from master was blocked until the table validator accepted the rows, and the next successful deploy replaces the production functions with master's, so the unpushed import disappears from production.
+
+**Correction and prevention.** The validator now carries `about`, `education` and `skills` as optional fields with the shapes production's `saveLinkedinProfile` accepts (`education` items are `{ name, detail? }`, `skills` is `string[]`), and a test validates that shape with `convex-helpers/validators`. Production Convex is only ever the dashboard's Vercel build of master; code deployed by hand must reach master before the next build, or its functions vanish and its rows can block the schema push. When a production build fails on schema validation, run `convex function-spec --prod` and `convex data <table> --prod --format jsonl` first: both are read-only and tell whether the offending rows came from master or from a direct deploy. Do not delete the rows to make the push pass; extend the validator or migrate the data on purpose.
+
 ## 2026-09-22 — The landing legal footer is an in-flow flex item, not fixed
 
 **Evidence and consequence.** The first legal footer (3eef3b4) was
@@ -251,7 +264,7 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 
 **Evidence.** Better Stack contained CLI handoff credentials in Vercel proxy paths and referers, and browser error breadcrumbs retained the same query parameters. The existing sanitizer removed request query strings but did not inspect breadcrumbs. No credential values belong in this file, and the observation does not establish misuse.
 
-**Correction and prevention.** New CLI links place `hs-code` and `hs-token` in URL fragments, which browsers do not send in HTTP requests. The dashboard still accepts query links from older CLI versions and removes either form after reading it. Error breadcrumbs redact the known authentication parameters as a second layer. Old CLI links can still reach the proxy log before client code scrubs them, so verify the result after the updated CLI is distributed and handle retention of historical logs separately.
+**Correction and prevention.** New CLI links place `hs-code` and `hs-token` in URL fragments, which browsers do not send in HTTP requests. The dashboard still accepts query links from older CLI versions and removes either form after reading it. Error breadcrumbs redact the known authentication parameters as a second layer. Old CLI links can still reach the proxy log before client code scrubs them, so verify the result after the updated CLI is distributed and handle retention of historical logs separately. The move also created a client-side trap: any code that copies `window.location` for a later redirect must include `hash`, or the credential is lost. The auth gate's login return-to stashed `pathname + search` only and accepted `/cli-auth?` alone, so fragment links landed on `/` after sign-in (#275). Both helpers now live in `apps/app/src/lib/cli-handoff.ts` with unit tests; add a case there before changing the link shape again.
 
 ## 2026-09-18 — A GitHub 404 can be repository configuration or access
 
@@ -303,6 +316,20 @@ set and verifies that live peers and other screens are not read or deleted.
 Check production conflict counts after deployment; this does not claim to fix
 unrelated TV transport or rendering failures.
 
+**Bounds (2026-09-23, #299).** The heartbeat must stay public and must keep
+creating screens: `/tv` without `?screen=` assigns itself a `tv-<8 hex>` name
+per tab (`apps/app/src/app/tv/page.tsx`) and the admin page promises that new
+names appear by themselves, so accepting only admin-prepared names would break
+the plain kiosk flow. Unknown names therefore stop at `SCREEN_LIMIT` rows
+(`setScreen` is exempt, so an admin can still prepare a name past the cap), and
+each screen keeps at most `SCREEN_CONNECTION_LIMIT` connection rows, recycling
+the least recently seen one through the same `screenId,lastSeenAt` index. That
+recycling read touches live peers, so it runs only on a device's first heartbeat
+(no row for its `clientId`); a recurring heartbeat must keep its read set to its
+own row plus expired ones, and the regression test asserts both. Every page
+reload mints a new `clientId`, so without the per-screen cap reload churn piles
+up rows for 24 hours.
+
 ## 2026-09-23 — The Vercel ignore script must survive a shallow clone
 
 **Evidence and consequence.** Every `hackspain-app` production build from
@@ -333,6 +360,7 @@ with anything but 0 or 1. Keep the paths argument list in
 [apps/app/vercel.json](../apps/app/vercel.json) in sync with what the dashboard
 build reads.
 
+<<<<<<< HEAD
 
 ## 2026-09-23 - Sentry Replay has no hook for the page URL
 
@@ -360,3 +388,26 @@ credential; a sanitizer cannot reach the recording's Meta event. When a new
 telemetry field is added, run `pnpm --filter web test` and check the four
 places above, not only `event.request`. Old events already stored in Better
 Stack are unaffected by this change.
+=======
+## 2026-09-23 - Bun keeps a leftover process.exitCode after a green test run
+
+**Evidence and consequence.** `cli-ci` / `check` is red on master (`cd74b46`)
+and on every PR that touches the shared root `package.json` or lockfile (#370),
+although `pnpm --filter cli test` prints `316 pass, 0 fail`. The step ends with
+`Exit status 5`, which is `EXIT.NETWORK`. Running the files one by one shows
+that only `apps/cli/test/run.test.ts` exits 5: its tests set
+`process.exitCode = EXIT.NETWORK` and its hooks reset with
+`process.exitCode = undefined`. Node treats that as a reset; Bun 1.4.1 and
+1.4.2 keep the previous value (`bun -e 'process.exitCode = 5;
+process.exitCode = undefined'` exits 5, `= 0` exits 0). `bun test` then uses
+the leftover value as its own exit code with zero failing tests. The dashboard
+suite that `ci.yml` runs with Bun has the same exposure.
+
+**Prevention and verification.** In Bun tests, reset with `process.exitCode = 0`
+(or save and restore the previous value), never with `undefined`. When a Bun
+step reports `0 fail` and still fails, read the `Exit status` line and run the
+files one by one (`for f in test/*.test.ts; do bun test "$f" >/dev/null 2>&1
+|| echo "$? $f"; done`) instead of looking for a failing assertion. Fixing
+`run.test.ts` is outside #233 and still pending.
+
+>>>>>>> origin/master
