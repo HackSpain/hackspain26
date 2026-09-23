@@ -49,7 +49,10 @@ describe("api proxy", () => {
 describe("createClient", () => {
   test("sets a deadline on RPC requests", async () => {
     let signal: AbortSignal | null | undefined;
-    const fetchImpl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchImpl = (async (
+      _input: RequestInfo | URL,
+      init?: RequestInit
+    ) => {
       signal = init?.signal;
       return Response.json({ ok: true, value: null });
     }) as typeof fetch;
