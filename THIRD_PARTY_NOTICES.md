@@ -6,10 +6,10 @@ The HackSpain code in this repository is released under the [MIT License](LICENS
 
 All rights reserved by their owners. You may run the code with these files in place, but you may not reuse them outside HackSpain without permission.
 
-- **HackSpain name, logos and brand kit**: `apps/web/public/brand-assets/`, `apps/web/public/hs-icon.png`, `apps/web/public/hs-email-logo.png`, `apps/web/public/apple-touch-icon.png`, `apps/web/public/og-landing.png`, `apps/web/src/assets/logo.svg`, `apps/app/public/logo.svg`, and the icons in `apps/app/public/tv-icons/`.
-- **Illustrations and artwork**: the Quixote illustrations in `apps/web/src/assets/illustration-*`, `apps/web/src/assets/windmill-*.svg`, `apps/web/public/*quijote*.png`, and `apps/web/public/horse-trot.png`.
+- **HackSpain name, logos and brand kit**: `apps/web/public/brand-assets/`, `apps/web/public/hs-icon.png`, `apps/web/public/hs-email-logo.png`, `apps/web/public/apple-touch-icon.png`, `apps/web/public/og-landing.png`, `apps/web/src/assets/logo.svg`, `apps/app/public/logo.svg`, the icons in `apps/app/public/tv-icons/`, and the copies in `docs/readme/` (`hero.png`, `wordmark-*.svg`, `palette.svg`, `cli-help.webp`).
+- **Illustrations and artwork**: the Quixote illustrations in `apps/web/src/assets/illustration-*`, `apps/web/src/assets/windmill-*.svg`, `apps/web/public/*quijote*.png`, `apps/web/public/horse-trot.png`, and the copies in `docs/readme/illustration-*.webp`.
 - **Video and photos**: the recap video and poster in `apps/web/public/recap/`, the photos of judges and mentors in `apps/web/src/assets/judges/` and `apps/web/src/assets/mentors/`, and the photos in `apps/app/public/arrivals/`, which belong to the people shown.
-- **Sponsor and partner logos**: `apps/web/src/assets/sponsors/`, `apps/app/public/sponsors/` and `apps/app/public/tracks/` belong to the companies shown.
+- **Sponsor and partner logos**: `apps/web/src/assets/sponsors/`, `apps/app/public/sponsors/` and `apps/app/public/tracks/` belong to the companies shown, as do the logos visible in the README screenshots `docs/readme/landing.webp`, `docs/readme/tv-panel.webp` and `docs/readme/tv-sponsors.webp`.
 - **Third-party tool logos**: the files in `apps/web/public/harnesses/` (Claude, Cline, Cursor, Devin, GitHub Copilot, Google Gemini, Kilo Code, OpenAI, OpenCode, Qwen) are trademarks of their respective owners and appear only to identify those tools.
 
 ## Third-party code included in the repository
