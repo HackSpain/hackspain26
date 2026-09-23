@@ -5,6 +5,7 @@ pnpm monorepo: `apps/web` is the Astro landing on Neon/Drizzle; `apps/app` is th
 ## Documentation
 
 - Consult relevant entries in [docs/learnings.md](docs/learnings.md) before working in an affected area.
+- Read [docs/design.md](docs/design.md) before building or changing UI. It records the tokens, patterns, motion and focus rules extracted from the landing, and how the dashboard shares them.
 - Add or update a learning when the task establishes a non-obvious, project-specific fact that will prevent a recurring or costly mistake. Record the evidence, consequence, and prevention/verification step. Mark unknown causes explicitly. Skip routine debugging, generic advice, and unverified theories; update an existing entry rather than duplicating it.
 - Keep this file for project-specific constraints and traps that are hard to infer from code. Personal preferences belong in each contributor's local agent configuration. Put setup in README and historical explanations in learnings. Correct documentation that the task proves stale; avoid feature inventories and permanent bans based solely on past implementations.
 
@@ -12,7 +13,7 @@ pnpm monorepo: `apps/web` is the Astro landing on Neon/Drizzle; `apps/app` is th
 
 - Production Convex deploys through the dashboard's Vercel build (`pnpm vercel-build`). Do not use `convex deploy` for local validation. Signup migration imports real Neon data; seed/reset/clear and OTP stubs are development-only.
 - Public signup still writes Neon; dashboard data belongs in Convex. Changing that boundary is a migration, not a routine endpoint edit.
-- Landing brand tokens are duplicated in `apps/web/src/styles/global.css` and `apps/web/src/components/theme/palette.ts`; keep them synchronized. `apps/web/src/data/llms.txt` is served by middleware for markdown requests and must follow visible copy changes.
+- Landing brand tokens are duplicated in `apps/web/src/styles/global.css` and `apps/web/src/components/theme/palette.ts`, and mirrored in `apps/app/src/app/globals.css`; keep them synchronized. `apps/web/src/data/llms.txt` is served by middleware for markdown requests and must follow visible copy changes.
 - Convex access wrappers enforce both permissions and event timing. Use `onboarded*` for new event features; use `anytimeOnboarded*` only when intentionally available outside the event. Check `apps/app/convex/lib/auth.ts` before choosing a wrapper.
 - The CLI reaches Convex through allowlisted `/api/cli/*` handlers using the participant's bearer session. Public middleware routing does not remove endpoint authentication. Keep generated backend API imports type-only in the CLI; shared pure helpers are separate runtime dependencies.
 - Preserve the CLI refresh-token lock: concurrent reuse of rotating tokens can invalidate sessions. Auth handoffs use `hs-code` / `hs-token`; a query parameter named `code` is consumed by Convex Auth middleware.
