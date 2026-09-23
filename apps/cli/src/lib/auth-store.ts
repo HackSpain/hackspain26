@@ -1,5 +1,12 @@
-import { closeSync, openSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  openSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { configDir, ensureDir, readJsonFile, writeFileAtomic } from "./config";
 import { CliError, EXIT } from "./errors";
