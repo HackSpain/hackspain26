@@ -8,7 +8,7 @@ import type { Participant } from "../lib/participant";
 import { openParticipant } from "../lib/participant";
 import { alreadySubmitted, planTracks, projectArgsFrom } from "../lib/project";
 import { pickOne } from "../lib/prompts";
-import { c, highlight } from "../lib/style";
+import { c, highlight, terminalSafe, terminalText } from "../lib/style";
 
 function occupancy(count: number, limit: number): string {
   return `${count}/${limit}`;
@@ -69,14 +69,14 @@ async function applyPlan(
     tracks: entered.map((t) => t.slug),
   });
   for (const t of plan.added) {
-    ui.celebrate(`You are in for ${highlight(t.label)}.`);
+    ui.celebrate(`You are in for ${highlight(terminalText(t.label))}.`);
   }
   for (const t of plan.removed) {
-    ui.success(`Out of ${t.label}.`);
+    ui.success(`Out of ${terminalText(t.label)}.`);
   }
   ui.line(
     entered.length
-      ? `${c.dim("Entering:")} ${entered.map((t) => t.label).join(", ")}`
+      ? `${c.dim("Entering:")} ${entered.map((t) => terminalText(t.label)).join(", ")}`
       : c.dim("Not entering any track right now.")
   );
   if (entered.length > 0) {
@@ -120,7 +120,7 @@ export function registerTrack(program: Command): void {
         })),
       });
       ui.table(
-        tracks.map((t) => [
+        terminalSafe(tracks).map((t) => [
           currentIds.has(t._id) ? c.gold("●") : c.dim("○"),
           currentIds.has(t._id) ? highlight(t.slug) : t.slug,
           t.label,
@@ -169,7 +169,7 @@ export function registerTrack(program: Command): void {
       const chosen = await pickOne(ctx, slugs[0], {
         choices: tracks.map((t) => ({
           hint: occupancy(t.teamCount, t.teamLimit),
-          label: t.label,
+          label: terminalText(t.label),
           value: t.slug,
         })),
         flag: "<slug>",

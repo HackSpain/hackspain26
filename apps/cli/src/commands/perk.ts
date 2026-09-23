@@ -4,7 +4,7 @@ import { contextFor } from "../lib/context";
 import { uiFor } from "../lib/output";
 import type { PerkEntry } from "../lib/participant";
 import { openAnytimeParticipant } from "../lib/participant";
-import { c } from "../lib/style";
+import { c, terminalSafe } from "../lib/style";
 
 function perkStatus(
   perk: PerkEntry["perk"],
@@ -53,7 +53,7 @@ export function registerPerk(program: Command): void {
         return;
       }
       ui.table(
-        entries.map(({ perk: p, claim }) => [
+        terminalSafe(entries).map(({ perk: p, claim }) => [
           p.company,
           p.title,
           c.gold(p.value),

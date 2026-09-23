@@ -6,11 +6,11 @@ import { ensureGithubLinked } from "../lib/github-link";
 import { formatMember, parseMember } from "../lib/members";
 import type { Ui } from "../lib/output";
 import { formatWhen, uiFor } from "../lib/output";
-import type { Team } from "../lib/participant";
+import type { Team, TeamSummary } from "../lib/participant";
 import { openParticipant } from "../lib/participant";
 import { confirmOrFlag, pickOne, textOrFlag } from "../lib/prompts";
 import { detectAndConfirmStack } from "../lib/stack-flow";
-import { c, cmd, highlight } from "../lib/style";
+import { c, cmd, highlight, terminalSafe, terminalText } from "../lib/style";
 
 const REPO_SPLIT = /[,\s]+/;
 
@@ -25,8 +25,9 @@ function roleOf(member: Team["members"][number], team: Team): string {
   return member.status === "pending" ? c.dim("invited") : "member";
 }
 
-function renderTeam(ui: Ui, team: Team, myId: string): void {
-  ui.result(team);
+export function renderTeam(ui: Ui, raw: Team, myId: string): void {
+  ui.result(raw);
+  const team = terminalSafe(raw);
   ui.kv([
     [
       "Team",
@@ -59,6 +60,21 @@ function renderTeam(ui: Ui, team: Team, myId: string): void {
       "Join code"
     );
   }
+}
+
+/** One row per team for `team list`, styled from terminal-safe copies. */
+export function teamListRows(teams: TeamSummary[]): string[][] {
+  return terminalSafe(teams).map((t) => [
+    t.isMine ? `${highlight(t.name)}${c.dim(" (you)")}` : t.name,
+    `${t.memberCount}${t.pendingCount ? c.dim(` +${t.pendingCount} invited`) : ""}`,
+    t.tracks.map((x) => x.slug).join(", ") || c.dim("–"),
+    t.submissionStatus === "submitted"
+      ? c.green("submitted")
+      : (t.submissionStatus ?? c.dim("–")),
+    t.repoUrl
+      ? c.dim(t.repoUrl.replace("https://github.com/", ""))
+      : c.dim("–"),
+  ]);
 }
 
 function noTeam(): never {
@@ -108,20 +124,13 @@ export function registerTeam(program: Command): void {
         ui.info("No teams yet. Be the first: hackspain team create <name>.");
         return;
       }
-      ui.table(
-        teams.map((t) => [
-          t.isMine ? `${highlight(t.name)}${c.dim(" (you)")}` : t.name,
-          `${t.memberCount}${t.pendingCount ? c.dim(` +${t.pendingCount} invited`) : ""}`,
-          t.tracks.map((x) => x.slug).join(", ") || c.dim("–"),
-          t.submissionStatus === "submitted"
-            ? c.green("submitted")
-            : (t.submissionStatus ?? c.dim("–")),
-          t.repoUrl
-            ? c.dim(t.repoUrl.replace("https://github.com/", ""))
-            : c.dim("–"),
-        ]),
-        ["Team", "Members", "Tracks", "Project", "Repo"]
-      );
+      ui.table(teamListRows(teams), [
+        "Team",
+        "Members",
+        "Tracks",
+        "Project",
+        "Repo",
+      ]);
     });
 
   team
@@ -151,7 +160,9 @@ export function registerTeam(program: Command): void {
         if (!mine) {
           throw new CliError("Team was created but could not be read back.");
         }
-        ui.celebrate(`${highlight(mine.name)} is live and you own it.`);
+        ui.celebrate(
+          `${highlight(terminalText(mine.name))} is live and you own it.`
+        );
         renderTeam(ui, mine, me._id);
         ui.next([
           ["hackspain team repo <url>", "point organisers at your GitHub repo"],
@@ -181,7 +192,9 @@ export function registerTeam(program: Command): void {
       if (!mine) {
         throw new CliError("Joined, but the team could not be read back.");
       }
-      ui.celebrate(`You are in ${highlight(mine.name)}. Welcome aboard.`);
+      ui.celebrate(
+        `You are in ${highlight(terminalText(mine.name))}. Welcome aboard.`
+      );
       renderTeam(ui, mine, me._id);
       ui.next([
         ["hackspain", "see where the team stands"],
@@ -208,10 +221,11 @@ export function registerTeam(program: Command): void {
           hint: "Hand it over with `hackspain team transfer`, or delete it with `hackspain team dissolve` once everyone else has left.",
         });
       }
+      const name = terminalText(mine.name);
       const ok = await confirmOrFlag(ctx, opts.yes, {
         flag: "--yes",
         initialValue: false,
-        message: `Leave ${mine.name}?`,
+        message: `Leave ${name}?`,
       });
       if (!ok) {
         ui.info("Kept your membership.");
@@ -219,7 +233,7 @@ export function registerTeam(program: Command): void {
       }
       await session.client.mutation(api.teams.leave, {});
       ui.result({ left: mine.name });
-      ui.success(`Left ${mine.name}.`);
+      ui.success(`Left ${name}.`);
     });
 
   team
@@ -296,17 +310,22 @@ export function registerTeam(program: Command): void {
             repoUrls: mine.repoUrls,
             techStack: mine.techStack,
           });
-          ui.line(mine.repoUrls.join("\n") || mine.repoUrl || "(not set)");
+          ui.line(
+            terminalText(
+              mine.repoUrls.join("\n") || mine.repoUrl || "(not set)"
+            )
+          );
           return;
         }
         await ensureGithubLinked(ctx, ui, session, me);
+        const current = mine.repoUrls.join(", ") || mine.repoUrl;
         const raw =
           urls.length > 0
             ? urls.flatMap((value) => value.split(REPO_SPLIT)).filter(Boolean)
             : (
                 await textOrFlag(ctx, undefined, {
                   flag: "<urls>",
-                  initialValue: mine.repoUrls.join(", ") || mine.repoUrl,
+                  initialValue: current ? terminalText(current) : undefined,
                   message:
                     "Public team project repo(s), GitHub URLs or org/name",
                   placeholder: "org/repo, org/other",
@@ -332,7 +351,7 @@ export function registerTeam(program: Command): void {
         });
         ui.success(
           saved.length === 1
-            ? `Repository set to ${saved[0]}`
+            ? `Repository set to ${terminalText(saved[0] ?? "")}`
             : `Repositories set (${saved.length})`
         );
       }
@@ -372,7 +391,9 @@ export function registerTeam(program: Command): void {
           });
         }
         const label = (m: (typeof candidates)[number]) =>
-          [m.name, m.email ?? formatMember(m)].filter(Boolean).join(" · ");
+          terminalText(
+            [m.name, m.email ?? formatMember(m)].filter(Boolean).join(" · ")
+          );
         let memberId: string | undefined;
         if (memberArg) {
           const needle = memberArg.trim().toLowerCase();
@@ -406,7 +427,7 @@ export function registerTeam(program: Command): void {
         const ok = await confirmOrFlag(ctx, opts.yes, {
           flag: "--yes",
           initialValue: false,
-          message: `Make ${target ? label(target) : chosen} the owner of ${mine.name}? You stay as a member.`,
+          message: `Make ${target ? label(target) : chosen} the owner of ${terminalText(mine.name)}? You stay as a member.`,
         });
         if (!ok) {
           ui.info("Ownership unchanged.");
@@ -420,7 +441,7 @@ export function registerTeam(program: Command): void {
           renderTeam(ui, after, me._id);
         }
         ui.success(
-          `${target ? label(target) : "Your teammate"} now owns ${mine.name}.`
+          `${target ? label(target) : "Your teammate"} now owns ${terminalText(mine.name)}.`
         );
       }
     );
@@ -455,7 +476,7 @@ export function registerTeam(program: Command): void {
       const ok = await confirmOrFlag(ctx, opts.yes, {
         flag: "--yes",
         initialValue: false,
-        message: `Delete ${mine.name}? Its draft project, milestones and pending invites go with it.`,
+        message: `Delete ${terminalText(mine.name)}? Its draft project, milestones and pending invites go with it.`,
       });
       if (!ok) {
         ui.info("Kept the team.");
@@ -463,6 +484,6 @@ export function registerTeam(program: Command): void {
       }
       await session.client.mutation(api.teams.dissolve, {});
       ui.result({ dissolved: mine.name });
-      ui.success(`Dissolved ${mine.name}.`);
+      ui.success(`Dissolved ${terminalText(mine.name)}.`);
     });
 }

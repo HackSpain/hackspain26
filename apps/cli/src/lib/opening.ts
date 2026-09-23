@@ -1,5 +1,5 @@
 import { firstName } from "./output";
-import { BRAND, c, highlight } from "./style";
+import { BRAND, c, highlight, terminalSafe, terminalText } from "./style";
 import { box, cardWidth, kvLines, SPINNER } from "./tui";
 
 /**
@@ -69,7 +69,8 @@ function projectValue(
 }
 
 /** Four-row status board: Team / Project / Repo / Signed in. */
-export function openingBoardRows(input: OpeningBoardInput): [string, string][] {
+export function openingBoardRows(raw: OpeningBoardInput): [string, string][] {
+  const input = terminalSafe(raw);
   return [
     ["Team", input.team ? teamValue(input.team) : c.dim("none yet")],
     [
@@ -135,7 +136,9 @@ export function greetingFor(
   name?: string | null,
   email?: string | null
 ): string {
-  return formatGreeting(firstName(name ?? undefined, email ?? undefined));
+  return formatGreeting(
+    terminalText(firstName(name ?? undefined, email ?? undefined))
+  );
 }
 
 export type Boot = {

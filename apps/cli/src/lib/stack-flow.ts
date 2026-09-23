@@ -4,7 +4,7 @@ import type { CliContext } from "./context";
 import { CliError } from "./errors";
 import type { Ui } from "./output";
 import { confirmOrFlag, textOrFlag } from "./prompts";
-import { c, highlight } from "./style";
+import { c, highlight, terminalText } from "./style";
 
 const TAG_SPLIT = /[,\s]+/;
 
@@ -33,7 +33,9 @@ export async function detectAndConfirmStack(
     );
     return [];
   }
-  ui.line(techStack.map((tag) => highlight(tag)).join(c.dim(" · ")));
+  ui.line(
+    techStack.map((tag) => highlight(terminalText(tag))).join(c.dim(" · "))
+  );
   if (!ctx.interactive || opts.yes) {
     return techStack;
   }
@@ -48,7 +50,7 @@ export async function detectAndConfirmStack(
   const edited = parseTags(
     await textOrFlag(ctx, undefined, {
       flag: "--stack",
-      initialValue: techStack.join(", "),
+      initialValue: terminalText(techStack.join(", ")),
       message: "Stack, comma-separated",
     })
   );
@@ -58,6 +60,8 @@ export async function detectAndConfirmStack(
   if (techStack.length === 0) {
     throw new CliError("Stack cleared.");
   }
-  ui.line(techStack.map((tag) => highlight(tag)).join(c.dim(" · ")));
+  ui.line(
+    techStack.map((tag) => highlight(terminalText(tag))).join(c.dim(" · "))
+  );
   return techStack;
 }

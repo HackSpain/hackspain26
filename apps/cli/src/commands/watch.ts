@@ -6,7 +6,7 @@ import { contextFor } from "../lib/context";
 import { usageError } from "../lib/errors";
 import { formatEventDate, requireOnboarded } from "../lib/me";
 import { firstName, uiFor } from "../lib/output";
-import { c } from "../lib/style";
+import { c, terminalText } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
 import { acquireWatchLock, runWatch } from "../watcher";
 import { openMemory } from "../watcher/memory";
@@ -188,7 +188,7 @@ export function registerWatch(program: Command): void {
         }
       };
       const log = (message: string) => {
-        process.stderr.write(`${message}\n`);
+        process.stderr.write(`${terminalText(message)}\n`);
       };
       const announce = (subject: string, body: string, at: number) => {
         if (ctx.json) {
@@ -199,8 +199,8 @@ export function registerWatch(program: Command): void {
         }
         process.stdout.write("\u0007");
         note(
-          body,
-          `📣 ${c.bold(subject)} ${c.dim(`· organisers · ${new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`)}`
+          terminalText(body),
+          `📣 ${c.bold(terminalText(subject))} ${c.dim(`· organisers · ${new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`)}`
         );
       };
       let code: number;
@@ -213,7 +213,7 @@ export function registerWatch(program: Command): void {
         if (!flags.once) {
           ui.line(
             c.dim(
-              `Hi ${firstName(me.name, me.email)}. Leave this running: your AI usage feeds the live board${team ? ` for ${team.name}` : ""}, and organiser messages show up here.`
+              `Hi ${terminalText(firstName(me.name, me.email))}. Leave this running: your AI usage feeds the live board${team ? ` for ${terminalText(team.name)}` : ""}, and organiser messages show up here.`
             )
           );
         }

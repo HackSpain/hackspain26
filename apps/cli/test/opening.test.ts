@@ -4,10 +4,12 @@ import {
   formatGreeting,
   formatStatusBoard,
   formatVersionLine,
+  greetingFor,
   openingBoardRows,
   renderOpening,
 } from "../src/lib/opening";
 import { stripAnsi } from "../src/lib/style";
+import { HOSTILE_CONTROL, RLO, withoutStyling } from "./recording-ui";
 
 function lines(text: string): string[] {
   return stripAnsi(text).split("\n");
@@ -91,6 +93,38 @@ describe("openingBoardRows", () => {
     expect(values[1]).toContain("draft");
     expect(values[1]).toContain("AI Agents");
     expect(values[2]).toBe("https://github.com/org/repo");
+  });
+
+  test("remote names cannot inject terminal controls into the board or the greeting", () => {
+    const rows = openingBoardRows({
+      email: "ana@example.com\rforged",
+      team: {
+        name: "Quijote\u001B[2J Labs",
+        isOwner: true,
+        members: 3,
+        repoUrl:
+          "\u001B]8;;https://evil.example\u0007https://github.com/org/repo\u001B]8;;\u0007",
+      },
+      project: {
+        name: "Agent\u001B]52;c;ZXZpbA==\u0007OS",
+        submitted: false,
+        tracks: 1,
+        trackLabels: [`Maisa${RLO}`],
+      },
+    });
+    const joined = rows.map(([, value]) => value).join(" | ");
+    expect(withoutStyling(joined)).not.toMatch(HOSTILE_CONTROL);
+    expect(joined).not.toContain("evil.example");
+    const values = rows.map(([, value]) => stripAnsi(value));
+    expect(values[0]).toContain("Quijote Labs");
+    expect(values[1]).toContain("AgentOS");
+    expect(values[1]).toContain("Maisa");
+    expect(values[2]).toBe("https://github.com/org/repo");
+    expect(values[3]).toBe("ana@example.comforged");
+
+    const greeting = greetingFor("Ana\u001B[2J Pérez", "ana@example.com");
+    expect(withoutStyling(greeting)).not.toMatch(HOSTILE_CONTROL);
+    expect(stripAnsi(greeting)).toBe("Hey Ana 👋");
   });
 });
 

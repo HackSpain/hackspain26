@@ -5,7 +5,7 @@ import { contextFor } from "../lib/context";
 import { EXIT } from "../lib/errors";
 import { requireOnboarded } from "../lib/me";
 import { compactNumber, formatWhen, uiFor } from "../lib/output";
-import { c } from "../lib/style";
+import { c, terminalText } from "../lib/style";
 import type { TelemetryEvent } from "../watcher/schema";
 import { readSpool, spoolDir } from "../watcher/sinks/spool";
 import { syncTelemetry } from "../watcher/sync";
@@ -110,7 +110,7 @@ export function registerTelemetry(program: Command): void {
       const session = await openSession(ctx, { requireAuth: true });
       const me = await requireOnboarded(session, { allowClosed: true });
       const result = await syncTelemetry(session, me, (message) =>
-        process.stderr.write(`${message}\n`)
+        process.stderr.write(`${terminalText(message)}\n`)
       );
       ui.result(result);
       if (result.status === "synced") {

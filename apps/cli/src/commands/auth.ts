@@ -25,7 +25,7 @@ import { describeGate, fetchMe } from "../lib/me";
 import type { Ui } from "../lib/output";
 import { firstName, formatWhen, uiFor } from "../lib/output";
 import { pickOne, textOrFlag } from "../lib/prompts";
-import { c, highlight } from "../lib/style";
+import { c, highlight, terminalText } from "../lib/style";
 import { syncTelemetry } from "../watcher/sync";
 import { completeProfile } from "./profile";
 
@@ -108,7 +108,9 @@ async function finishLogin(
     ui.result({ email: shownEmail, url, gate });
     return;
   }
-  ui.celebrate(`Welcome, ${highlight(firstName(me?.name, shownEmail))}!`);
+  ui.celebrate(
+    `Welcome, ${highlight(terminalText(firstName(me?.name, shownEmail)))}!`
+  );
   if (me) {
     await completeProfile(ctx, ui, session, me);
   }
@@ -384,7 +386,10 @@ export function registerAuth(program: Command): void {
           gate ? gate.message : c.red("session rejected by the server"),
         ],
         ...(me?.githubUsername
-          ? ([["GitHub", me.githubUsername]] as [string, string][])
+          ? ([["GitHub", terminalText(me.githubUsername)]] as [
+              string,
+              string,
+            ][])
           : []),
         ["Server", c.dim(`${url} (${source})`)],
         ["Session renews", c.dim(formatWhen(refreshed.tokenExpiresAt))],

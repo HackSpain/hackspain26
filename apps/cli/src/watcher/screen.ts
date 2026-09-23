@@ -175,7 +175,7 @@ function explainerBox(
   compact: boolean
 ): string[] {
   const inner = w - 4;
-  const team = state.team ? state.team.name : "your team";
+  const team = state.team ? terminalText(state.team.name) : "your team";
   const paragraphs = compact
     ? [
         `Leave this running in a spare terminal while you build. It puts ${team} on the live board and shows organiser announcements here. Only counts leave your machine, never prompts or code.`,
@@ -192,16 +192,18 @@ function explainerBox(
 
 function youBox(state: WatchState, w: number): string[] {
   const team = state.team
-    ? `${c.bold(state.team.name)} ${c.dim(`· ${state.team.members} member${state.team.members === 1 ? "" : "s"}${state.team.isOwner ? " · you own it" : ""}`)}`
+    ? `${c.bold(terminalText(state.team.name))} ${c.dim(`· ${state.team.members} member${state.team.members === 1 ? "" : "s"}${state.team.isOwner ? " · you own it" : ""}`)}`
     : c.dim("no team yet · hackspain team create <name>");
   const project = state.project
-    ? `${state.project.name || c.dim("(untitled draft)")} ${c.dim(`· ${state.project.status}${state.project.tracks.length ? ` · ${state.project.tracks.join(", ")}` : " · no track yet"}`)}`
+    ? `${terminalText(state.project.name) || c.dim("(untitled draft)")} ${c.dim(`· ${state.project.status}${state.project.tracks.length ? ` · ${state.project.tracks.map(terminalText).join(", ")}` : " · no track yet"}`)}`
     : c.dim("no project yet · hackspain track register <slug>");
+  const repoUrl = state.team?.repoUrl;
   const repo =
-    state.team?.repoUrl?.replace("https://github.com/", "") ??
-    c.dim("not set · hackspain team repo <url>");
+    typeof repoUrl === "string"
+      ? terminalText(repoUrl.replace("https://github.com/", ""))
+      : c.dim("not set · hackspain team repo <url>");
   return box(
-    { height: 3, title: state.me.name },
+    { height: 3, title: terminalText(state.me.name) },
     kvLines(
       [
         ["Team", team],
@@ -368,8 +370,8 @@ function organisersBox(
     );
   }
   for (const n of state.notifications) {
-    lines.push(`${rgb(GOLD, clock(n.at))}  ${c.bold(n.subject)}`);
-    for (const bodyLine of n.body.split("\n")) {
+    lines.push(`${rgb(GOLD, clock(n.at))}  ${c.bold(terminalText(n.subject))}`);
+    for (const bodyLine of terminalText(n.body).split("\n")) {
       lines.push(...wrap(bodyLine, inner - 7).map((l) => `       ${l}`));
     }
     lines.push("");

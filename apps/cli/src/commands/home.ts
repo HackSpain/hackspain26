@@ -5,7 +5,7 @@ import { banner } from "../lib/banner";
 import { resolveAppUrl } from "../lib/config";
 import type { CliContext } from "../lib/context";
 import { contextFor } from "../lib/context";
-import { explainError } from "../lib/errors";
+import { explainError, terminalExplained } from "../lib/errors";
 import type { Gate, Me } from "../lib/me";
 import { describeGate, fetchMe } from "../lib/me";
 import type { MenuStatus } from "../lib/menu";
@@ -20,7 +20,7 @@ import {
 import type { Ui } from "../lib/output";
 import { uiFor } from "../lib/output";
 import type { Submission, Team } from "../lib/participant";
-import { c, cmd } from "../lib/style";
+import { c, cmd, terminalText } from "../lib/style";
 import { VERSION } from "../version";
 import { profileNudge } from "./profile";
 
@@ -222,8 +222,8 @@ function menuStatusOf(snapshot: Snapshot): MenuStatus {
       return {
         loggedIn: true,
         gate: snapshot.gate.state,
-        email: snapshot.email,
-        name: snapshot.name ?? undefined,
+        email: terminalText(snapshot.email),
+        name: snapshot.name ? terminalText(snapshot.name) : undefined,
       };
     }
     case "ready": {
@@ -258,7 +258,7 @@ export function registerHome(program: Command, rebuild?: () => Command): void {
       try {
         snapshot = await loadSnapshot(ctx, url);
       } catch (error) {
-        const explained = explainError(error);
+        const explained = terminalExplained(explainError(error));
         ui.warn(
           `${explained.message}${explained.hint ? `\n${c.dim(explained.hint)}` : ""}`
         );

@@ -10,7 +10,7 @@ import { uiFor } from "../lib/output";
 import { openProfile } from "../lib/participant";
 import { formatPhone, validatePhone } from "../lib/phone";
 import { confirmOrFlag, textOrFlag } from "../lib/prompts";
-import { c, cmd, highlight } from "../lib/style";
+import { c, cmd, highlight, terminalSafe, terminalText } from "../lib/style";
 import { normalizeX, validateX } from "../lib/x-handle";
 
 /**
@@ -61,7 +61,8 @@ export function profileNudge(me: Me): string | undefined {
   return `The dashboard still needs ${pieces.join(" and ")}. ${cmd("hackspain open onboarding")} takes you straight to those steps.`;
 }
 
-export function profileRows(me: Me): [string, string][] {
+export function profileRows(raw: Me): [string, string][] {
+  const me = terminalSafe(raw);
   return [
     ["Name", me.name ?? c.dim("not set · hackspain profile edit")],
     ["Email", me.email ?? c.dim("–")],
@@ -245,7 +246,9 @@ async function setPhoneCommand(
   ui.intro("profile · phone");
   const phone = await savePhone(ctx, ui, session, me, number);
   ui.result({ phone });
-  ui.success(`${phone} saved. Organisers can reach you at the venue.`);
+  ui.success(
+    `${terminalText(phone)} saved. Organisers can reach you at the venue.`
+  );
 }
 
 async function setXCommand(
@@ -277,7 +280,7 @@ async function setXCommand(
   ui.result({ twitterHandle: saved });
   ui.success(
     saved
-      ? `@${saved} saved. Team invites sent to that handle find you now.`
+      ? `@${terminalText(saved)} saved. Team invites sent to that handle find you now.`
       : "X handle cleared."
   );
 }
@@ -297,7 +300,7 @@ async function linkGithub(
     const ok = await confirmOrFlag(ctx, opts.yes, {
       flag: "--yes",
       initialValue: false,
-      message: `Unlink ${me.githubUsername ?? "your GitHub account"}?`,
+      message: `Unlink ${terminalText(me.githubUsername ?? "your GitHub account")}?`,
     });
     if (!ok) {
       ui.info("Kept it linked.");
@@ -315,14 +318,14 @@ async function linkGithub(
   if (me.githubLinked) {
     ui.result({ githubLinked: true, githubUsername: me.githubUsername });
     ui.info(
-      `Already linked as ${highlight(me.githubUsername ?? "?")}. Use ${cmd("--unlink")} to change it.`
+      `Already linked as ${highlight(terminalText(me.githubUsername ?? "?"))}. Use ${cmd("--unlink")} to change it.`
     );
     return;
   }
   const url = await startGithubLink(session, ui);
   ui.result({ url });
   ui.note(
-    `${url}\n\nGitHub asks you to authorise HackSpain, then sends you back to the dashboard. Run ${cmd("hackspain profile")} afterwards to check.`,
+    `${terminalText(url)}\n\nGitHub asks you to authorise HackSpain, then sends you back to the dashboard. Run ${cmd("hackspain profile")} afterwards to check.`,
     "Open this link in your browser"
   );
 }
@@ -435,12 +438,12 @@ export async function completeProfile(
         phone: formatPhone(phone),
       });
       current = { ...current, phone: saved };
-      ui.success(`${saved} saved.`);
+      ui.success(`${terminalText(saved)} saved.`);
     }
   }
   if (githubUrl) {
     ui.note(
-      `${githubUrl}\n\nAuthorise HackSpain there and you are done; it is how your pushes show up on the feed.`,
+      `${terminalText(githubUrl)}\n\nAuthorise HackSpain there and you are done; it is how your pushes show up on the feed.`,
       "Link your GitHub in the browser"
     );
   }

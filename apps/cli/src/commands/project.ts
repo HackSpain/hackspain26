@@ -4,12 +4,13 @@ import { contextFor } from "../lib/context";
 import { CliError } from "../lib/errors";
 import type { Ui } from "../lib/output";
 import { formatAgo, formatWhen, uiFor } from "../lib/output";
-import type { Submission } from "../lib/participant";
+import type { PublicSubmission, Submission } from "../lib/participant";
 import { openParticipant } from "../lib/participant";
-import { c, highlight } from "../lib/style";
+import { c, highlight, terminalSafe } from "../lib/style";
 
-export function renderSubmission(ui: Ui, submission: Submission): void {
-  ui.result(submission);
+export function renderSubmission(ui: Ui, raw: Submission): void {
+  ui.result(raw);
+  const submission = terminalSafe(raw);
   const urlOf = (kind: "repo" | "demo" | "video") =>
     submission.urls.find((u) => u.kind === kind)?.url ?? c.dim("–");
   const status =
@@ -39,6 +40,21 @@ export function renderSubmission(ui: Ui, submission: Submission): void {
   if (submission.description) {
     ui.line(`\n${c.italic(submission.description)}`);
   }
+}
+
+/** One row per project for `project list`, styled from terminal-safe copies. */
+export function projectListRows(projects: PublicSubmission[]): string[][] {
+  return terminalSafe(projects).map((p) => [
+    p.name,
+    c.dim(p.teamName ?? "–"),
+    p.challenges.map((x) => x.slug).join(", ") || c.dim("–"),
+    p.status === "submitted" ? c.green("submitted") : c.dim("draft"),
+    c.dim(
+      p.urls
+        .find((u) => u.kind === "repo")
+        ?.url.replace("https://github.com/", "") ?? "–"
+    ),
+  ]);
 }
 
 export function registerProject(program: Command): void {
@@ -84,19 +100,12 @@ export function registerProject(program: Command): void {
         ui.info("No projects yet. Yours could be the first on this list.");
         return;
       }
-      ui.table(
-        projects.map((p) => [
-          p.name,
-          c.dim(p.teamName ?? "–"),
-          p.challenges.map((x) => x.slug).join(", ") || c.dim("–"),
-          p.status === "submitted" ? c.green("submitted") : c.dim("draft"),
-          c.dim(
-            p.urls
-              .find((u) => u.kind === "repo")
-              ?.url.replace("https://github.com/", "") ?? "–"
-          ),
-        ]),
-        ["Project", "Team", "Tracks", "Status", "Repo"]
-      );
+      ui.table(projectListRows(projects), [
+        "Project",
+        "Team",
+        "Tracks",
+        "Status",
+        "Repo",
+      ]);
     });
 }
