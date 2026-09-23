@@ -553,6 +553,7 @@ export default defineSchema({
     addedAt: v.number(),
     addedBy: v.id("users"),
     emailedAt: v.optional(v.number()),
+    deliveryError: v.optional(v.string()),
     canceledAt: v.optional(v.number()),
     canceledBy: v.optional(v.union(v.literal("self"), v.literal("admin"))),
   })
