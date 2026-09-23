@@ -146,6 +146,7 @@ async function upsertIn(
       canceledAt: undefined,
       canceledBy: undefined,
       emailedAt: undefined,
+      deliveryError: undefined,
       signupId: person.signupId ?? existing.signupId,
       status: "in",
       userId: person.userId ?? existing.userId,
@@ -182,6 +183,7 @@ async function hydrateFinalist(ctx: QueryCtx | MutationCtx, row: Doc<"finalists"
     canceledAt: row.canceledAt,
     email: person?.email ?? "",
     emailedAt: row.emailedAt,
+    deliveryError: row.deliveryError,
     name: person?.name ?? "Sin nombre",
     signupId: row.signupId,
     status: row.status,
@@ -196,6 +198,7 @@ const finalistRowValidator = v.object({
   canceledAt: v.optional(v.number()),
   email: v.string(),
   emailedAt: v.optional(v.number()),
+  deliveryError: v.optional(v.string()),
   name: v.string(),
   signupId: v.optional(v.id("signups")),
   status: finalistStatusValidator,
@@ -860,6 +863,7 @@ export const setStatus = adminMutation({
       canceledAt: undefined,
       canceledBy: undefined,
       emailedAt: undefined,
+      deliveryError: undefined,
       status: "in",
     });
     return null;
@@ -928,7 +932,8 @@ export const deliver = internalAction({
     const resend = new ResendAPI(apiKey);
     const from = process.env.AUTH_EMAIL ?? "HackSpain <onboarding@resend.dev>";
     const sent: Id<"finalists">[] = [];
-    const failures: { email: string; error: string }[] = [];
+    const failures: { finalistId: Id<"finalists">; error: string }[] = [];
+    const errorKinds = new Set<string>();
 
     for (let i = 0; i < args.items.length; i += RESEND_BATCH_LIMIT) {
       const chunk = args.items.slice(i, i + RESEND_BATCH_LIMIT);
@@ -950,8 +955,9 @@ export const deliver = internalAction({
           })
         );
         if (error) {
+          errorKinds.add(error.name ?? "ResendError");
           for (const item of chunk) {
-            failures.push({ email: item.email, error: error.message });
+            failures.push({ finalistId: item.finalistId, error: error.message });
           }
         } else {
           for (const item of chunk) {
@@ -959,17 +965,21 @@ export const deliver = internalAction({
           }
         }
       } catch (error) {
+        errorKinds.add(error instanceof Error ? error.name : "UnknownError");
         const message =
           error instanceof Error ? error.message : "Unknown error";
         for (const item of chunk) {
-          failures.push({ email: item.email, error: message });
+          failures.push({ finalistId: item.finalistId, error: message });
         }
       }
     }
 
-    await ctx.runMutation(internal.finalists.markEmailed, { ids: sent });
+    await ctx.runMutation(internal.finalists.markEmailed, { failures, ids: sent });
     if (failures.length > 0) {
-      console.error("finalists.deliver failures", failures);
+      console.error("finalists.deliver failures", {
+        count: failures.length,
+        errorKinds: [...errorKinds],
+      });
     }
     return null;
   },
@@ -977,7 +987,12 @@ export const deliver = internalAction({
 });
 
 export const markEmailed = internalMutation({
-  args: { ids: v.array(v.id("finalists")) },
+  args: {
+    failures: v.array(
+      v.object({ finalistId: v.id("finalists"), error: v.string() })
+    ),
+    ids: v.array(v.id("finalists")),
+  },
   handler: async (ctx, args) => {
     const emailedAt = Date.now();
     for (const id of args.ids) {
@@ -985,7 +1000,13 @@ export const markEmailed = internalMutation({
       if (!row || row.status !== "in") {
         continue;
       }
-      await ctx.db.patch(id, { emailedAt });
+      await ctx.db.patch(id, { deliveryError: undefined, emailedAt });
+    }
+    for (const failure of args.failures) {
+      const row = await ctx.db.get(failure.finalistId);
+      if (row?.status === "in") {
+        await ctx.db.patch(failure.finalistId, { deliveryError: failure.error });
+      }
     }
     return null;
   },
