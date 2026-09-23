@@ -5,6 +5,7 @@ import {
   explainError,
   RemoteError,
   serverMessage,
+  terminalExplained,
   usageError,
 } from "../src/lib/errors";
 
@@ -118,6 +119,22 @@ describe("explainError", () => {
       expect(e.message).not.toBe("es");
       expect(e.hint).toBeTruthy();
     }
+  });
+
+  test("terminalExplained cleans the server copy the terminal will style", () => {
+    const explained = explainError(
+      new RemoteError({
+        code: "NOT_FOUND",
+        message: "No existe el equipo Quijote\u001B]52;c;ZXZpbA==\u0007 Labs",
+      })
+    );
+    expect(explained.message).toContain("\u001B]52");
+    const shown = terminalExplained({ ...explained, hint: "x\u001B[2Jy\r" });
+    expect(shown.message).toBe("No existe el equipo Quijote Labs");
+    expect(shown.hint).toBe("xy");
+    expect(shown.code).toBe("NOT_FOUND");
+    expect(shown.exitCode).toBe(EXIT.ERROR);
+    expect(terminalExplained(explained).hint).toBeUndefined();
   });
 
   test("strips the Convex wrapper from unknown server errors", () => {

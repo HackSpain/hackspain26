@@ -1,3 +1,5 @@
+import { terminalText } from "./style";
+
 export const EXIT = {
   AUTH: 3,
   ERROR: 1,
@@ -16,6 +18,20 @@ export type Explained = {
   hint?: string;
   exitCode: ExitCode;
 };
+
+/**
+ * The same explanation with message and hint safe to style for the terminal.
+ * Server copy and ConvexError data end up in there; `--json` prints the raw
+ * `Explained` instead.
+ */
+export function terminalExplained(explained: Explained): Explained {
+  return {
+    ...explained,
+    hint:
+      explained.hint === undefined ? undefined : terminalText(explained.hint),
+    message: terminalText(explained.message),
+  };
+}
 
 export class CliError extends Error {
   readonly code: string;

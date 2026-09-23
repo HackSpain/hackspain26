@@ -52,5 +52,29 @@ export function terminalText(text: string): string {
     );
 }
 
+function terminalValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    return terminalText(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(terminalValue);
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, terminalValue(entry)])
+    );
+  }
+  return value;
+}
+
+/**
+ * A copy of a remote object with every string passed through `terminalText`,
+ * for the renderer that is about to style it. Call it after `ui.result()`, so
+ * `--json` keeps the raw data.
+ */
+export function terminalSafe<T>(value: T): T {
+  return terminalValue(value) as T;
+}
+
 /** Visible terminal width, including ANSI, emoji and wide characters. */
 export const width = Bun.stringWidth;

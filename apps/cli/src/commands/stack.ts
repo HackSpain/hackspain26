@@ -6,7 +6,7 @@ import { ensureGithubLinked } from "../lib/github-link";
 import { uiFor } from "../lib/output";
 import { openParticipant } from "../lib/participant";
 import { detectAndConfirmStack } from "../lib/stack-flow";
-import { c, highlight } from "../lib/style";
+import { c, highlight, terminalText } from "../lib/style";
 
 export function registerStack(program: Command): void {
   const stack = program
@@ -37,7 +37,9 @@ export function registerStack(program: Command): void {
         ]);
         return;
       }
-      ui.line(mine.techStack.map((t) => highlight(t)).join(c.dim(" · ")));
+      ui.line(
+        mine.techStack.map((t) => highlight(terminalText(t))).join(c.dim(" · "))
+      );
     });
 
   stack
@@ -83,7 +85,7 @@ export function registerStack(program: Command): void {
       ui.result({ techStack: saved });
       ui.success(
         saved.length
-          ? `Building with ${saved.map((t) => highlight(t)).join(c.dim(" · "))}`
+          ? `Building with ${saved.map((t) => highlight(terminalText(t))).join(c.dim(" · "))}`
           : "Stack cleared."
       );
     });

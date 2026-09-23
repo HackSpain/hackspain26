@@ -16,6 +16,7 @@ import { CliError, EXIT } from "../lib/errors";
 import { withImageUrls } from "../lib/feed-format";
 import type { Me } from "../lib/me";
 import { fetchMe } from "../lib/me";
+import { terminalText } from "../lib/style";
 import { PIXELS_PER_COLUMN, pngSize } from "../lib/term-images";
 import { VERSION } from "../version";
 import type { Batcher } from "./batcher";
@@ -353,7 +354,7 @@ export function formatNotification(
     hour: "2-digit",
     minute: "2-digit",
   });
-  return `[${time}] Organisers: ${subject}\n${body.replaceAll("\n", "\n  ")}`;
+  return `[${time}] Organisers: ${terminalText(subject)}\n${terminalText(body).replaceAll("\n", "\n  ")}`;
 }
 
 export async function runWatch(

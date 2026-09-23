@@ -5,7 +5,7 @@ import { usageError } from "../lib/errors";
 import { formatWhen, uiFor } from "../lib/output";
 import type { Milestone } from "../lib/participant";
 import { openParticipant } from "../lib/participant";
-import { c, highlight } from "../lib/style";
+import { c, highlight, terminalSafe } from "../lib/style";
 
 const KINDS = ["firstCommit", "firstBuild", "firstDemo", "custom"] as const;
 type Kind = (typeof KINDS)[number];
@@ -50,8 +50,12 @@ function parseAt(raw: string | undefined): number | undefined {
   return at;
 }
 
-function rows(list: Milestone[], withTeam: boolean): string[][] {
-  return list.map((m) => [
+/** One row per milestone, styled from terminal-safe copies; the team column only with --all. */
+export function milestoneRows(
+  list: Milestone[],
+  withTeam: boolean
+): string[][] {
+  return terminalSafe(list).map((m) => [
     c.dim(formatWhen(m.at)),
     ...(withTeam ? [m.teamName] : []),
     highlight(KIND_LABEL[m.kind]),
@@ -131,7 +135,7 @@ export function registerMilestone(program: Command): void {
         return;
       }
       ui.table(
-        rows(list, Boolean(opts.all)),
+        milestoneRows(list, Boolean(opts.all)),
         opts.all
           ? ["When", "Team", "Milestone", "Label", "By"]
           : ["When", "Milestone", "Label", "By"]

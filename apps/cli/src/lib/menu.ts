@@ -6,12 +6,12 @@ import { readCredentials } from "./auth-store";
 import { banner } from "./banner";
 import { resolveAppUrl } from "./config";
 import type { CliContext } from "./context";
-import { explainError } from "./errors";
+import { explainError, terminalExplained } from "./errors";
 import type { Gate, GateState } from "./me";
 import { describeGate, fetchMe } from "./me";
 import { greetingFor, openingBoardRows, renderOpening } from "./opening";
 import { isCommanderError, overrideExits } from "./run";
-import { c, cmd } from "./style";
+import { c, cmd, terminalSafe, terminalText } from "./style";
 import { cardWidth, isPickCancel, pickInBox } from "./tui";
 
 /**
@@ -442,20 +442,25 @@ export function statusLine(status: MenuStatus): string {
 
 /** Build a menu status from the objects the home command already fetched. */
 export function menuStatusFrom(
-  me: { email?: string | null; name?: string | null },
+  rawMe: { email?: string | null; name?: string | null },
   gate: Gate,
-  team: {
+  rawTeam: {
     name: string;
     isOwner: boolean;
     members: unknown[];
     repoUrl?: string | null;
   } | null,
-  submission: {
+  rawSubmission: {
     name?: string | null;
     status: string;
     challenges: { label?: string }[];
   } | null
 ): MenuStatus {
+  // The snapshot only ever reaches the terminal (hints, the status line, the
+  // home board), so remote text is made terminal-safe once, here.
+  const me = terminalSafe(rawMe);
+  const team = terminalSafe(rawTeam);
+  const submission = terminalSafe(rawSubmission);
   const track =
     submission?.challenges.map((challenge) => challenge.label).join(", ") ||
     null;
@@ -503,8 +508,8 @@ export async function fetchMenuStatus(ctx: CliContext): Promise<MenuStatus> {
       loggedIn: true,
       gate: gate.state,
       gateMessage: gate.message,
-      email: me.email ?? creds.email,
-      name: me.name ?? undefined,
+      email: terminalText(me.email ?? creds.email),
+      name: me.name ? terminalText(me.name) : undefined,
     };
   }
   const [team, submission] = await Promise.all([
@@ -719,7 +724,7 @@ export async function runMenu(options: {
       await dispatch(rebuild, ctx, argv);
     } catch (error) {
       if (!isCommanderError(error)) {
-        const explained = explainError(error);
+        const explained = terminalExplained(explainError(error));
         const hint = explained.hint ? `\n${c.dim(explained.hint)}` : "";
         console.error(`  ${c.red("✗")}  ${explained.message}${hint}`);
       }

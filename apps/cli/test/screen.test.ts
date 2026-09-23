@@ -14,6 +14,7 @@ import {
   recordEvent,
   recordNotification,
 } from "../src/watcher/state";
+import { HOSTILE_CONTROL, RLO, withoutStyling } from "./recording-ui";
 import { validEvent } from "./schema.test";
 
 const NOW = Date.UTC(2026, 8, 19, 12, 0, 0);
@@ -265,6 +266,50 @@ describe("primitives", () => {
     expect(state.harnesses[0]?.tokens).toBe(6 * 30);
     expect(state.harnesses[0]?.cached).toBe(6 * 70);
   });
+});
+
+test("team, project, profile and organiser text cannot inject terminal controls", () => {
+  const state = createState({
+    me: { email: "d@example.com", name: "Domènec\u001B[2J" },
+    project: {
+      name: "Agent\u001B]52;c;ZXZpbA==\u0007OS",
+      status: "draft",
+      tracks: [`Maisa${RLO}`],
+      updatedAt: NOW,
+    },
+    team: {
+      isOwner: true,
+      members: 3,
+      name: "Quijote\u001B[2J Labs",
+      repoUrl: "https://github.com/quijote/agentos\rforged",
+    },
+    uploadEnabled: false,
+  });
+  state.startedAt = NOW - 60_000;
+  recordNotification(
+    state,
+    "Pizza\u001B]8;;https://evil.example\u0007 at 14:00\u001B]8;;\u0007",
+    "Courtyard\u001BPdcs\u001B\\, bring your badge.\rforged",
+    NOW - 30_000
+  );
+  for (const size of [
+    { columns: 120, rows: 40 },
+    { columns: 80, rows: 24 },
+  ]) {
+    const raw = frame(state, size, { now: NOW }).join("");
+    expect(withoutStyling(raw)).not.toMatch(HOSTILE_CONTROL);
+    expect(raw).not.toContain("evil.example");
+  }
+  // The wide layout shows every box; small terminals drop the profile box.
+  const text = stripAnsi(
+    frame(state, { columns: 120, rows: 40 }, { now: NOW }).join("\n")
+  );
+  expect(text).toContain("Quijote Labs");
+  expect(text).toContain("AgentOS");
+  expect(text).toContain("Maisa");
+  expect(text).toContain("Domènec");
+  expect(text).toContain("Pizza at 14:00");
+  expect(text).toContain("Courtyard, bring your badge.forged");
 });
 
 test("watcher diagnostics stay visible and cannot inject terminal controls", () => {
