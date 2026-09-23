@@ -56,7 +56,7 @@ function rows(list: Milestone[], withTeam: boolean): string[][] {
     ...(withTeam ? [m.teamName] : []),
     highlight(KIND_LABEL[m.kind]),
     m.label ?? "",
-    c.dim(m.byEmail ?? ""),
+    c.dim(m.byName ?? ""),
   ]);
 }
 

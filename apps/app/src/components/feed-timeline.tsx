@@ -93,7 +93,7 @@ function PostCard({ post, fresh, meId }: { post: FeedPost; fresh: boolean; meId:
   const isGithub = post.kind === "github";
   const who = isGithub
     ? (post.teamName ?? post.github?.repo ?? "GitHub")
-    : (post.author?.name ?? post.author?.email ?? "Alguien");
+    : (post.author?.name ?? "Alguien");
 
   // The enter animation lives on a wrapper: `hs-enter` fills `opacity` forwards
   // and would otherwise override the pending dim on the card itself.
