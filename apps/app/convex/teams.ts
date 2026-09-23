@@ -837,6 +837,49 @@ export const transferOwnership = onboardedMutation({
   returns: v.null(),
 });
 
+async function deleteTeamWithoutMembers(
+  ctx: MutationCtx,
+  team: Doc<"teams">,
+  members: Doc<"teamMembers">[]
+): Promise<void> {
+  const submission = await ctx.db
+    .query("submissions")
+    .withIndex("by_team", (q) => q.eq("teamId", team._id))
+    .first();
+  if (submission?.status === "submitted") {
+    fail(
+      "VALIDATION",
+      "El equipo ya ha enviado un proyecto y no se puede disolver"
+    );
+  }
+  if (submission) {
+    await ctx.db.delete(submission._id);
+  }
+  const milestones = await ctx.db
+    .query("milestones")
+    .withIndex("by_team", (q) => q.eq("teamId", team._id))
+    .collect();
+  for (const milestone of milestones) {
+    await ctx.db.delete(milestone._id);
+  }
+  const posts = await ctx.db
+    .query("posts")
+    .withIndex("by_team", (q) => q.eq("teamId", team._id))
+    .collect();
+  for (const post of posts) {
+    if (post.kind === "github") {
+      await removePostSocial(ctx, post._id);
+      await ctx.db.delete(post._id);
+    } else {
+      await ctx.db.patch(post._id, { teamId: undefined });
+    }
+  }
+  for (const member of members) {
+    await ctx.db.delete(member._id);
+  }
+  await ctx.db.delete(team._id);
+}
+
 /**
  * Delete a team that has no other members. Pending invites, the team's
  * draft and its milestones go with it; a submitted project blocks it.
@@ -861,42 +904,7 @@ export const dissolve = onboardedMutation({
         "El equipo aún tiene miembros: transfiere la propiedad o quítalos antes"
       );
     }
-    const submission = await ctx.db
-      .query("submissions")
-      .withIndex("by_team", (q) => q.eq("teamId", team._id))
-      .first();
-    if (submission?.status === "submitted") {
-      fail(
-        "VALIDATION",
-        "El equipo ya ha enviado un proyecto y no se puede disolver"
-      );
-    }
-    if (submission) {
-      await ctx.db.delete(submission._id);
-    }
-    const milestones = await ctx.db
-      .query("milestones")
-      .withIndex("by_team", (q) => q.eq("teamId", team._id))
-      .collect();
-    for (const milestone of milestones) {
-      await ctx.db.delete(milestone._id);
-    }
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_team", (q) => q.eq("teamId", team._id))
-      .collect();
-    for (const post of posts) {
-      if (post.kind === "github") {
-        await removePostSocial(ctx, post._id);
-        await ctx.db.delete(post._id);
-      } else {
-        await ctx.db.patch(post._id, { teamId: undefined });
-      }
-    }
-    for (const member of members) {
-      await ctx.db.delete(member._id);
-    }
-    await ctx.db.delete(team._id);
+    await deleteTeamWithoutMembers(ctx, team, members);
     return null;
   },
   returns: v.null(),
@@ -1197,6 +1205,9 @@ async function dropMemberships(
   memberships: Doc<"teamMembers">[]
 ): Promise<void> {
   for (const membership of memberships) {
+    if (!(await ctx.db.get(membership._id))) {
+      continue;
+    }
     const team = await ctx.db.get(membership.teamId);
     if (team && membership.userId && team.ownerId === membership.userId) {
       const members = await ctx.db
@@ -1214,6 +1225,11 @@ async function dropMemberships(
           ownerId: successor.userId,
           updatedAt: Date.now(),
         });
+      } else {
+        // Admin removal of the sole owner must not leave an owned team
+        // visible to someone who is no longer a member.
+        await deleteTeamWithoutMembers(ctx, team, members);
+        continue;
       }
     }
     await ctx.db.delete(membership._id);
