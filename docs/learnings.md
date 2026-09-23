@@ -303,6 +303,20 @@ set and verifies that live peers and other screens are not read or deleted.
 Check production conflict counts after deployment; this does not claim to fix
 unrelated TV transport or rendering failures.
 
+**Bounds (2026-09-23, #299).** The heartbeat must stay public and must keep
+creating screens: `/tv` without `?screen=` assigns itself a `tv-<8 hex>` name
+per tab (`apps/app/src/app/tv/page.tsx`) and the admin page promises that new
+names appear by themselves, so accepting only admin-prepared names would break
+the plain kiosk flow. Unknown names therefore stop at `SCREEN_LIMIT` rows
+(`setScreen` is exempt, so an admin can still prepare a name past the cap), and
+each screen keeps at most `SCREEN_CONNECTION_LIMIT` connection rows, recycling
+the least recently seen one through the same `screenId,lastSeenAt` index. That
+recycling read touches live peers, so it runs only on a device's first heartbeat
+(no row for its `clientId`); a recurring heartbeat must keep its read set to its
+own row plus expired ones, and the regression test asserts both. Every page
+reload mints a new `clientId`, so without the per-screen cap reload churn piles
+up rows for 24 hours.
+
 ## 2026-09-23 — The Vercel ignore script must survive a shallow clone
 
 **Evidence and consequence.** Every `hackspain-app` production build from

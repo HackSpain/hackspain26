@@ -21,7 +21,9 @@ export type ErrorCode =
   | "BAD_OTP"
   | "OTP_EXPIRED"
   | "TOO_MANY_ATTEMPTS"
-  | "SEND_FAILED";
+  | "SEND_FAILED"
+  // Public TV heartbeat (convex/tvPlayback.ts); /api/tv maps it to 429.
+  | "SCREEN_LIMIT";
 
 export type CodedError = { code: ErrorCode; message: string };
 

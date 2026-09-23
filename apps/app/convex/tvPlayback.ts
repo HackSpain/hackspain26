@@ -6,12 +6,16 @@ import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { getSignupForUser } from "./lib/auth";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
+import { fail } from "./lib/errors";
 import { getEventWindow } from "./lib/eventWindow";
 import { GITHUB_FEED_EVENTS } from "./lib/github";
 import { externalThumbnail } from "./lib/photo";
 import { histogramReturn, stackHistogram } from "./stack";
 import { messageReturn, widgetReturn } from "./tv";
-import { SCREEN_OFFLINE_MS, screenConfig, screenConfigValidator, screenKey, screenPresetValidator } from "./lib/tvScreens";
+import {
+  SCREEN_CLIENT_ID_PATTERN, SCREEN_CONNECTION_LIMIT, SCREEN_LIMIT, SCREEN_OFFLINE_MS,
+  isScreenCounter, isScreenDimension, parseScreenUrl, screenConfig, screenConfigValidator, screenKey, screenPresetValidator,
+} from "./lib/tvScreens";
 
 export const snapshotValidator = v.object({
   widgets: v.array(widgetReturn),
@@ -77,21 +81,25 @@ export const heartbeat = mutation({
   returns: screenConfigValidator,
   handler: async (ctx, args) => {
     const key = screenKey(args.key);
-    if (!/^[a-zA-Z0-9-]{16,80}$/.test(args.clientId)) { throw new Error("Identificador no válido"); }
-    const url = new URL(args.url);
-    if (!["http:", "https:"].includes(url.protocol) || url.pathname !== "/tv" || args.url.length > 1000) {
-      throw new Error("URL de pantalla no válida");
-    }
+    if (!SCREEN_CLIENT_ID_PATTERN.test(args.clientId)) { throw new Error("Identificador no válido"); }
+    const url = parseScreenUrl(args.url);
+    if (!url) { throw new Error("URL de pantalla no válida"); }
     // Only retain display parameters, never auth tokens or other query strings.
     const safeUrl = new URL("/tv", url.origin);
     safeUrl.searchParams.set("screen", key);
     if (url.searchParams.has("view")) { safeUrl.searchParams.set("view", args.initialPreset); }
-    for (const value of [args.width, args.height, args.receivedRevision, args.receivedReloadVersion]) {
-      if (!Number.isSafeInteger(value) || value < 0) { throw new Error("Estado de pantalla no válido"); }
+    if (!isScreenCounter(args.receivedRevision) || !isScreenCounter(args.receivedReloadVersion)) {
+      throw new Error("Estado de pantalla no válido");
     }
-    if (args.width > 32_768 || args.height > 32_768) { throw new Error("Resolución no válida"); }
+    if (!isScreenDimension(args.width) || !isScreenDimension(args.height)) { throw new Error("Resolución no válida"); }
     let screen = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", key)).unique();
     if (!screen) {
+      // Anyone can reach this without a session, so unknown names stop at SCREEN_LIMIT rows.
+      // setScreen (admin) is not bounded, and a prepared name never hits this branch.
+      const registered = await ctx.db.query("tvScreens").take(SCREEN_LIMIT);
+      if (registered.length >= SCREEN_LIMIT) {
+        fail("SCREEN_LIMIT", `Ya hay ${SCREEN_LIMIT} pantallas registradas. Borra alguna o prepara «${key}» desde el panel.`);
+      }
       const id = await ctx.db.insert("tvScreens", {
         key, preset: args.initialPreset, message: "", revision: 0, reloadVersion: 0,
       });
@@ -106,7 +114,16 @@ export const heartbeat = mutation({
       receivedRevision: args.receivedRevision, receivedReloadVersion: args.receivedReloadVersion,
     };
     if (connection) { await ctx.db.patch(connection._id, fields); }
-    else { await ctx.db.insert("tvScreenConnections", fields); }
+    else {
+      // A new device reads its peers once, here; recurring heartbeats never do (see the cleanup below).
+      // At the cap it takes over the least recently seen row instead of adding one.
+      const peers = await ctx.db.query("tvScreenConnections")
+        .withIndex("by_screen_last_seen", (q) => q.eq("screenId", screen._id))
+        .order("asc").take(SCREEN_CONNECTION_LIMIT);
+      const recycled = peers.length >= SCREEN_CONNECTION_LIMIT ? peers[0] : undefined;
+      if (recycled) { await ctx.db.patch(recycled._id, fields); }
+      else { await ctx.db.insert("tvScreenConnections", fields); }
+    }
     // Read only expired connections: reading live peers makes their heartbeats conflict.
     const old = await ctx.db.query("tvScreenConnections")
       .withIndex("by_screen_last_seen", (q) =>
