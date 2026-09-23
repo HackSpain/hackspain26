@@ -13,6 +13,9 @@ import {
 } from "./lib/otpEmail";
 import { resendApiKey, resendFrom } from "./lib/resend";
 
+const SEND_FAILED_MESSAGE =
+  "No hemos podido enviar el código ahora mismo. Inténtalo en un minuto.";
+
 function randomDigits(length: number): string {
   const random: RandomReader = {
     read(bytes) {
@@ -22,7 +25,7 @@ function randomDigits(length: number): string {
   return generateRandomString(random, "0123456789", length);
 }
 
-type VerificationRequest = {
+export type VerificationRequest = {
   identifier: string;
   token: string;
   expires: Date;
@@ -31,29 +34,30 @@ type VerificationRequest = {
 
 // Convex Auth passes the action ctx as a second argument, but the Auth.js
 // EmailConfig type only declares one. Optional keeps this assignable.
-async function sendVerificationRequest(
+export async function sendVerificationRequest(
   { identifier: email, provider, token, expires }: VerificationRequest,
   ctx?: ActionCtx
 ): Promise<void> {
   if (!provider.apiKey) {
-    console.log(`[auth] Email OTP for ${email}: ${token}`);
-    if (emailOtpStubEnabled()) {
-      if (!ctx) {
-        throw new Error("Action ctx missing in sendVerificationRequest");
-      }
-      await ctx.runMutation(internal.devOtp.remember, {
-        code: token,
-        email,
-        expiresAt: expires.getTime(),
-      });
-      console.log(
-        `[auth] ALLOW_EMAIL_OTP_STUB is on. ${STUB_CODE} also works.`
+    if (!emailOtpStubEnabled()) {
+      // No key and no stub means a misconfigured deployment. Refuse instead
+      // of writing a real login code and its recipient into Convex logs.
+      console.warn(
+        "[auth] RESEND_API_KEY is not set and ALLOW_EMAIL_OTP_STUB is off. The code was not sent."
       );
-    } else {
-      console.log(
-        "[auth] RESEND_API_KEY is not set. The code was logged instead of emailed."
-      );
+      fail("SEND_FAILED", SEND_FAILED_MESSAGE);
     }
+    if (!ctx) {
+      throw new Error("Action ctx missing in sendVerificationRequest");
+    }
+    await ctx.runMutation(internal.devOtp.remember, {
+      code: token,
+      email,
+      expiresAt: expires.getTime(),
+    });
+    // Development only: the stub is never enabled on production (README).
+    console.log(`[auth] Email OTP for ${email}: ${token}`);
+    console.log(`[auth] ALLOW_EMAIL_OTP_STUB is on. ${STUB_CODE} also works.`);
     return;
   }
 
@@ -70,10 +74,7 @@ async function sendVerificationRequest(
     // (invalid key, unverified domain, quota), and the recipient stays out
     // of the log. The client only gets the coded error.
     console.warn(`[auth] Resend rejected the code email: ${error.name}: ${error.message}`);
-    fail(
-      "SEND_FAILED",
-      "No hemos podido enviar el código ahora mismo. Inténtalo en un minuto."
-    );
+    fail("SEND_FAILED", SEND_FAILED_MESSAGE);
   }
 }
 
