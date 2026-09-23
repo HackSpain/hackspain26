@@ -10,7 +10,7 @@ import { explainError } from "./errors";
 import type { Gate, GateState } from "./me";
 import { describeGate, fetchMe } from "./me";
 import { greetingFor, openingBoardRows, renderOpening } from "./opening";
-import { isCommanderError } from "./run";
+import { isCommanderError, overrideExits } from "./run";
 import { c, cmd } from "./style";
 import { cardWidth, isPickCancel, pickInBox } from "./tui";
 
@@ -682,10 +682,9 @@ async function dispatch(
   argv: string[]
 ): Promise<void> {
   const program = rebuild();
-  program.exitOverride();
-  program.configureOutput({
-    writeErr: (str) => process.stderr.write(str),
-  });
+  // Every subcommand, not only the root: a Commander error inside a menu
+  // action must come back here, not process.exit the menu (#330).
+  overrideExits(program);
   const full = ctx.urlOverride ? ["--url", ctx.urlOverride, ...argv] : argv;
   await program.parseAsync(full, { from: "user" });
 }
