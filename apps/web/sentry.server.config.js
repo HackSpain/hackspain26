@@ -1,9 +1,13 @@
 import { init } from "@sentry/astro";
-import { sanitizeTelemetryEvent } from "./telemetry-sanitize.js";
+import {
+  sanitizeBreadcrumb,
+  sanitizeTelemetryEvent,
+} from "./telemetry-sanitize.js";
 
 const dsn = import.meta.env.PUBLIC_BETTER_STACK_ERRORS_DSN;
 if (dsn) {
   init({
+    beforeBreadcrumb: sanitizeBreadcrumb,
     beforeSend: sanitizeTelemetryEvent,
     beforeSendTransaction: sanitizeTelemetryEvent,
     dsn,

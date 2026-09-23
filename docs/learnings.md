@@ -381,3 +381,29 @@ files one by one (`for f in test/*.test.ts; do bun test "$f" >/dev/null 2>&1
 || echo "$? $f"; done`) instead of looking for a failing assertion. Fixing
 `run.test.ts` is outside #233 and still pending.
 
+## 2026-09-23 - Sentry Replay has no hook for the page URL
+
+**Evidence.** `@sentry/astro` 10.73 (`@sentry/replay` 10.73): rrweb writes
+`window.location.href` into the recording's Meta event, and
+`beforeAddRecordingEvent` only receives custom events (breadcrumbs and
+performance spans), so the hook never sees that URL. The replay event's `urls`
+list starts with the full initial URL, search included, and `prepareReplayEvent`
+runs event processors but not `beforeSend`. The browser `HttpContext`
+integration copies `document.referrer` into `request.headers.Referer` and the
+full page URL into the pageload span's `url.full`, which lands in
+`contexts.trace.data`. The landing's `/confirmacion?token=` and
+`/cancelacion?token=` links therefore reached error tracking in several places
+that `event.request` sanitization did not touch (issue #253).
+
+**Correction.** The fix for issue #253 made the landing sanitizer
+([apps/web/telemetry-sanitize.js](../apps/web/telemetry-sanitize.js)) redact
+breadcrumbs, `contexts.trace.data`, spans, replay `urls` and referer headers,
+registered it as `beforeBreadcrumb`, `beforeAddRecordingEvent` and as an
+integration `processEvent` (the only path replay events take), and stopped
+starting replay on the token pages.
+
+**Prevention and verification.** Do not start Replay on any page whose URL is a
+credential; a sanitizer cannot reach the recording's Meta event. When a new
+telemetry field is added, run `pnpm --filter web test` and check the four
+places above, not only `event.request`. Old events already stored in Better
+Stack are unaffected by this change.
