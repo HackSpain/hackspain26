@@ -49,7 +49,7 @@ Errors, logs, Web Vitals and uptime are consolidated in Better Stack.
 pnpm exec convex env set SITE_URL http://localhost:3000
 pnpm exec convex env set ADMIN_EMAILS you@example.com
 pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
-# optional email delivery; without this, OTPs print in Convex logs
+# email delivery. Without a key, sign-in refuses to send codes unless the stub below is on.
 pnpm exec convex env set AUTH_RESEND_KEY re_...
 pnpm exec convex env set AUTH_EMAIL "HackSpain <onboarding@resend.dev>"
 # dev only: 00000000 also works as the email sign-in code (ignored if AUTH_RESEND_KEY is set).
