@@ -32,7 +32,8 @@
     "seed:convex:clear": "pnpm --filter app seed:clear",
     "dev:cli": "pnpm --filter cli dev",
     "build:cli": "pnpm --filter cli build:bin",
-    "test:cli": "pnpm --filter cli test"
+    "test:cli": "pnpm --filter cli test",
+    "test:app": "pnpm --filter app test"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

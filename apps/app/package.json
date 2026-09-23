@@ -12,6 +12,7 @@
     "lint": "oxlint -c oxlint.config.mjs .",
     "fix": "oxlint -c oxlint.config.mjs --fix .",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "dev:convex": "convex dev",
     "convex:dev": "convex dev",
     "convex:codegen": "convex codegen",

@@ -8,7 +8,7 @@ Monorepo for [HackSpain](https://hackspain.com) (Hack Spain 2026, Madrid).
 | `apps/app` | Next.js, Convex, Convex Auth, shadcn | [localhost:3000](http://localhost:3000) |
 | `apps/cli` | Bun, Commander, clack; `hackspain` binary for participants | `pnpm dev:cli -- --help` |
 
-Package manager is pnpm 11. The CLI still requires Bun to run its tests and compile standalone binaries. Node.js ≥ 22.13.
+Package manager is pnpm 11. Bun runs the dashboard and CLI tests and compiles the CLI binaries. Node.js ≥ 22.13.
 
 ## Setup
 
@@ -36,9 +36,12 @@ Errors, logs, Web Vitals and uptime are consolidated in Better Stack.
 | `pnpm preview` | Preview the landing build |
 | `pnpm check` | Astro + TypeScript checks |
 | `pnpm lint` / `pnpm fix` | Check or fix the monorepo with Oxlint and Ultracite |
+| `pnpm test:app` | Dashboard unit tests (Bun) |
 | `pnpm migrate:convex` | Import Neon signups/ambassadors into Convex |
 | `pnpm dev:cli -- <args>` / `pnpm test:cli` / `pnpm build:cli` | Run, test, or compile the `hackspain` CLI (participants install it with `curl -fsSL https://hackspain.com/install.sh \| sh`) |
 | `pnpm db:generate` / `pnpm db:migrate` / `pnpm db:push` | Landing Drizzle |
+
+GitHub Actions runs on pull requests: `ci.yml` typechecks, tests and builds `apps/app` and builds `apps/web` (lint and `astro check` report but do not block until #235 and #236 land); `cli-ci.yml` checks the CLI and `cli-release.yml` publishes its binaries on `cli-v*` tags.
 
 ## Convex auth and admin
 

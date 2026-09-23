@@ -6,7 +6,6 @@ import { areSignupsClosed } from "../../data/signup-deadline";
 import { getDb } from "../../db";
 import { hackathonPreSignups, hackathonSignups } from "../../db/schema";
 import { sendSignupConfirmationEmail } from "../../lib/signup-confirmation-email";
-import { hasValidSignupAccessKey } from "../../lib/signup-late-access";
 import { parseSignupBody } from "../../lib/signup-validation";
 
 export const prerender = false;
@@ -133,14 +132,9 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ error: "invalid_body" }, { status: 400 });
   }
 
-  // Public signups are closed. A known query key can still submit; those
-  // applications are reviewed by hand the same as everyone else.
-  if (
-    areSignupsClosed() &&
-    !hasValidSignupAccessKey(
-      "signupAccessKey" in body ? body.signupAccessKey : ""
-    )
-  ) {
+  // Signups closed for good when HackSpain 2026 ended. Nothing bypasses this
+  // gate: no query key, no invitation link.
+  if (areSignupsClosed()) {
     safeSentry(() => {
       withScope((scope) => {
         scope.setTag("api", "signup");
