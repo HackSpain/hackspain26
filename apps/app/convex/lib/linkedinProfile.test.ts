@@ -63,8 +63,8 @@ test("an empty Nyne result is stored as missing", () => {
 });
 
 test("the table validator accepts the rows production already holds", () => {
-  // Shape of the 2026-09-21 production import: about and education, with
-  // education items that may carry a detail. Dropping either field from the
+  // Shape production accepts since 2026-09-21: about, skills and education,
+  // with education items that may carry a detail. Dropping a field from the
   // validator makes every schema push from master fail.
   const stored = {
     about: "Builds payment rails.",
@@ -77,6 +77,7 @@ test("the table validator accepts the rows production already holds", () => {
     location: "Madrid",
     missing: false,
     name: "Jane Doe",
+    skills: ["Payments", "TypeScript"],
     slug: "janedoe",
     url: "https://www.linkedin.com/in/janedoe",
     years: 12,
