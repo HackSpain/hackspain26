@@ -1,4 +1,5 @@
-import { closeSync, openSync, statSync, unlinkSync } from "node:fs";
+import { closeSync, openSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { configDir, ensureDir, readJsonFile, writeFileAtomic } from "./config";
 import { CliError, EXIT } from "./errors";
@@ -29,6 +30,19 @@ export function credentialsPath(): string {
 
 function lockPath(): string {
   return join(configDir(), "credentials.lock");
+}
+
+function holderAlive(raw: string): boolean {
+  const pid = Number(raw.split(":", 1)[0]);
+  if (!Number.isSafeInteger(pid) || pid <= 0) {
+    return false;
+  }
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as { code?: string }).code !== "ESRCH";
+  }
 }
 
 export function readCredentials(): Credentials | null {
@@ -107,18 +121,28 @@ export function isFresh(creds: Credentials, now = Date.now()): boolean {
 export async function withCredentialsLock<T>(fn: () => Promise<T>): Promise<T> {
   ensureDir(configDir(), 0o700);
   const path = lockPath();
+  const owner = `${process.pid}:${randomUUID()}\n`;
   const deadline = Date.now() + LOCK_WAIT_MS;
   for (;;) {
     try {
-      const fd = openSync(path, "wx");
-      closeSync(fd);
+      const fd = openSync(path, "wx", 0o600);
+      try {
+        writeFileSync(fd, owner);
+      } finally {
+        closeSync(fd);
+      }
       break;
     } catch (error) {
       if ((error as { code?: string }).code !== "EEXIST") {
         throw error;
       }
       try {
-        if (Date.now() - statSync(path).mtimeMs > LOCK_STALE_MS) {
+        const existing = readFileSync(path, "utf8");
+        if (
+          Date.now() - statSync(path).mtimeMs > LOCK_STALE_MS &&
+          !holderAlive(existing) &&
+          readFileSync(path, "utf8") === existing
+        ) {
           unlinkSync(path);
           continue;
         }
@@ -141,7 +165,9 @@ export async function withCredentialsLock<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } finally {
     try {
-      unlinkSync(path);
+      if (readFileSync(path, "utf8") === owner) {
+        unlinkSync(path);
+      }
     } catch {
       // Released by the stale-lock path already.
     }
