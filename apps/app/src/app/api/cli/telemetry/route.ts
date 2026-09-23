@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { fetchQuery } from "convex/nextjs";
 import { reportServerEvent } from "@/lib/server-observability";
 import { bearerToken, fail, fromError, ok } from "../_lib/respond";
+import { readLimitedBody } from "../_lib/limited-body";
 import { rememberTelemetry } from "./canonical";
 import {
   exportTelemetryAsOtlpLogs,
@@ -87,11 +88,12 @@ export async function POST(request: Request) {
     return fromError(error);
   }
 
-  const text = await request.text();
-  const encoder = new TextEncoder();
-  if (encoder.encode(text).byteLength > MAX_BODY_BYTES) {
+  const body = await readLimitedBody(request, MAX_BODY_BYTES);
+  if (!body) {
     return fail("Batch too large", 413);
   }
+  const text = new TextDecoder().decode(body);
+  const encoder = new TextEncoder();
 
   const lines = text
     .split("\n")
