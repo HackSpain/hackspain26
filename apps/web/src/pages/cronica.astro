@@ -3,6 +3,11 @@ export const prerender = true;
 
 import Layout from "../layouts/layout.astro";
 import InsightsOpening from "../components/insights-opening.astro";
+// AGENTS: this recap contains the final historical snapshot of HackSpain 2026,
+// held on September 18–20, 2026. These event data are already recorded and
+// versioned. Do not modify, recalculate, regenerate, sync, or update these
+// figures or insights-2026.json and insights-2026-charts.json, even if RawTree,
+// Convex, or another source returns different values. These are not live data.
 import insightData from "../data/insights-2026.json";
 import chartData from "../data/insights-2026-charts.json";
 
@@ -52,10 +57,10 @@ const chartTicks = [0, 5, 10, 15, 20, 23].map((index) => ({
 const publishedAt = dateTime(insightData.snapshotAt, { day: "numeric", month: "long", year: "numeric" });
 
 const stats = [
-  { value: "250+", label: "participantes", detail: "jóvenes reunidos en Madrid" },
-  { value: "50+", label: "mentores", detail: "compartiendo experiencia y tiempo" },
-  { value: number(insightData.teams), label: "equipos", detail: "formados para construir" },
-  { value: "5", label: "tracks", detail: "propuestos por startups" },
+  { value: "250+", label: "participantes", detail: `${number(insightData.teams)} equipos construyendo en Madrid` },
+  { value: number(totals.pullRequests), label: "pull requests", detail: `${number(totals.pushes)} pushes durante el fin de semana` },
+  { value: tokenBillions, label: "mil millones de tokens", detail: "procesados por IA, incluida la caché" },
+  { value: number(totals.sessions), label: "sesiones con agentes", detail: "de la primera idea a la última demo" },
 ];
 
 const trackWinners = [
@@ -107,7 +112,7 @@ const matrixTint = (count: number, total: number) =>
 
 <Layout
   allowScroll
-  canonicalPathOverride="/2026-insights"
+  canonicalPathOverride="/cronica"
   description="Así fue HackSpain 2026: 250 jóvenes, cinco tracks, grandes mentores, premios por track y una final entre los proyectos del fin de semana."
   includeStructuredData={false}
   keywordsOverride="HackSpain 2026, crónica hackathon Madrid, resultados HackSpain, datos hackathon, proyectos, GitHub, IA"
@@ -118,29 +123,24 @@ const matrixTint = (count: number, total: number) =>
     <article>
       <InsightsOpening />
 
-      <div id="cronica" class="reading-width prose intro">
-        <div class="byline"><span>HackSpain</span><span aria-hidden="true">·</span><time datetime="2026-09-24">{publishedAt}</time></div>
-        <p class="lead">El viernes llegaron con ideas. El domingo se fueron con proyectos, nuevos compañeros y ganas de seguir construyendo. Más de 250 jóvenes, 60 equipos y un fin de semana en Madrid que dio para mucho más que escribir código.</p>
-        <p>La semilla de HackSpain la plantaron <strong>Leonardo Ollero, con 18 años, y Samuel Cordero, con 15</strong>. Se aliaron con <a href="https://goexponential.org" target="_blank" rel="noopener noreferrer">The Exponential Fellowship</a> para convertirla en un encuentro entre jóvenes, startups, mentores e inversores. En esta primera edición participaron más de 50 mentores y una veintena de voluntarios. Lo que vino después fue tan importante como los proyectos: conversaciones, ayuda entre equipos y una comunidad que empezó a reconocerse en persona.</p>
-      </div>
-
-      <section class="stats-section wide-width" aria-labelledby="numbers-heading">
-        <div class="section-kicker"><span>01</span><h2 id="numbers-heading">Un fin de semana, de un vistazo</h2></div>
+      <section id="cronica" class="stats-section wide-width" aria-labelledby="numbers-heading">
+        <div class="section-kicker"><h2 id="numbers-heading">Un fin de semana, de un vistazo</h2></div>
         <div class="stats-grid">
           {stats.map((stat) => <div class="stat"><strong>{stat.value}</strong><span>{stat.label}</span><p>{stat.detail}</p></div>)}
         </div>
       </section>
 
+      <div class="reading-width prose intro">
+        <div class="byline"><span>HackSpain</span><span aria-hidden="true">·</span><time datetime="2026-09-24">{publishedAt}</time></div>
+        <p>El viernes llegaron con ideas. El domingo se fueron con proyectos, nuevos compañeros y ganas de seguir construyendo. Más de 250 jóvenes, 60 equipos y un fin de semana en Madrid que dio para mucho más que escribir código.</p>
+        <p>La semilla de HackSpain la plantaron <strong>Leonardo Ollero, con 18 años, y Samuel Cordero, con 15</strong>. Se aliaron con <a href="https://goexponential.org" target="_blank" rel="noopener noreferrer">The Exponential Fellowship</a> para convertirla en un encuentro entre jóvenes, startups, mentores e inversores. En esta primera edición participaron más de 50 mentores y una veintena de voluntarios. Lo que vino después fue tan importante como los proyectos: conversaciones, ayuda entre equipos y una comunidad que empezó a reconocerse en persona.</p>
+      </div>
+
+
+
       <section class="reading-width prose chapter" aria-labelledby="start-heading">
-        <p class="chapter-number">01 / El arranque</p>
         <h2 id="start-heading">El viernes había cinco tracks y muchas formas de empezar.</h2>
-        <div class="track-intro">
-          <p>Maisa, HappyRobot, Prosper AI, Embat y THEKER Robotics propusieron los cinco tracks. Cada equipo escogió por dónde empezar y qué quería enseñar el domingo.</p>
-          <details class="track-info">
-            <summary aria-label="Qué es un track">i</summary>
-            <div class="track-tooltip">Un track es un reto propuesto por una startup. Los equipos podían elegir uno o construir por libre.</div>
-          </details>
-        </div>
+        <p>Maisa, HappyRobot, Prosper AI, Embat y THEKER Robotics propusieron los cinco tracks. Cada equipo escogió por dónde empezar y qué quería enseñar el domingo.</p>
         <p>Se formaron <strong>{number(insightData.teams)} equipos</strong> y <strong>{number(insightData.namedProjects)} proyectos recibieron un nombre</strong>. Entre una cifra y la otra hubo bocetos, cambios de idea, primeros repositorios y presentaciones rehechas a última hora.</p>
         <p>Muchos empezaron por conocerse y aprender a trabajar juntos en horas, no en semanas. Esa coordinación también formaba parte del hackathon.</p>
       </section>
@@ -151,14 +151,13 @@ const matrixTint = (count: number, total: number) =>
       </aside>
 
       <section class="reading-width prose chapter" aria-labelledby="build-heading">
-        <p class="chapter-number">02 / El desarrollo</p>
         <h2 id="build-heading">La noche también fue parte del hackathon.</h2>
         <p>La UPM fue el punto de encuentro, pero el trabajo se extendió más allá. En el <strong>Night Hack</strong>, Embat abrió sus oficinas a todos los participantes. A pesar de la hora, la gente seguía <em>on fire</em>: equipos construyendo, mentores ayudando y organizadores trayendo comida para mantener el ritmo.</p>
         <p>El fin de semana dejó <strong>{number(totals.pushes)} pushes y {number(totals.pullRequests)} pull requests</strong>. Las herramientas de IA procesaron <strong>{tokenBillions} mil millones de tokens</strong> en <strong>{number(totals.sessions)} sesiones</strong>, contando la caché. trace-it, por ejemplo, sumó 488 pushes y 227 pull requests antes de la demo.</p>
       </section>
 
       <figure class="chart-figure wide-width" aria-labelledby="chart-heading">
-        <div class="figure-heading"><div><p class="eyebrow">El pulso del evento</p><h3 id="chart-heading">Así avanzó el trabajo con IA</h3></div><p>Solicitudes por intervalo</p></div>
+        <div class="figure-heading"><div><h3 id="chart-heading">Así avanzó el trabajo con IA</h3></div><p>Solicitudes por intervalo</p></div>
         <div class="chart-scroll" tabindex="0" role="region" aria-label="Gráfico de solicitudes, desplazar horizontalmente en pantallas pequeñas">
           <svg viewBox="0 0 970 320" role="img" aria-labelledby="chart-title chart-desc">
             <title id="chart-title">Solicitudes de IA en 24 intervalos durante HackSpain 2026</title>
@@ -174,7 +173,6 @@ const matrixTint = (count: number, total: number) =>
       </figure>
 
       <aside class="leaders reading-width" aria-labelledby="leaders-heading">
-        <p class="eyebrow">Actividad en GitHub</p>
         <h3 id="leaders-heading">Los equipos y participantes que más movieron el código</h3>
         <div class="leader-grid">
           <div><h4>Equipos</h4><ol>{insightData.githubLeaders.teams.map((leader) => <li><span>{leader.name}</span><strong>{number(leader.pushes + leader.pullRequests)}</strong></li>)}</ol></div>
@@ -184,21 +182,19 @@ const matrixTint = (count: number, total: number) =>
       </aside>
 
       <section class="reading-width prose chapter" aria-labelledby="mentors-heading">
-        <p class="chapter-number">03 / Más que una hackathon</p>
         <h2 id="mentors-heading">Los mentores no se limitaron a pasar por el escenario.</h2>
         <p>Entre las más de 50 personas que compartieron experiencia estaban <strong>Miguel Carranza</strong>, cofundador y CTO de RevenueCat; <strong>Mark Villacampa</strong>, ingeniero sénior de la misma empresa; <strong>Joan Rodríguez</strong>, fundador de Quiver AI; y <strong>David Gomes</strong>, ingeniero de software en SpaceX. También pasaron perfiles como Maex Ament y Guillermo García Cobo. Y se dejó caer <a href="https://x.com/XMihura" target="_blank" rel="noopener noreferrer">XMihura</a>, famoso experto en lectores de PDFs, firmando PDFs 😉. <a href="/mentores">Conoce a los mentores ↗</a></p>
         <p>Pasaron a lo largo de todo el fin de semana. Los equipos recibieron <em>early thoughts</em> sobre proyectos todavía en construcción y pudieron hablar cara a cara con referentes a los que admiraban. Para muchos chavales, conocerlos y verlos implicarse de cerca fue una forma de imaginar hasta dónde podían llegar ellos también.</p>
       </section>
 
       <section class="reading-width prose chapter" aria-labelledby="models-heading">
-        <p class="chapter-number">04 / La mesa de trabajo</p>
         <h2 id="models-heading">La IA acompañó ideas muy diferentes.</h2>
         <p>Construir tan deprisa también significó probar herramientas. Claude Code, Codex, Devin, OpenCode y otras aparecieron en la actividad del fin de semana. Detrás hubo modelos de varias familias: Claude, GPT, Gemini, GLM y DeepSeek. <strong>Claude Opus 5 fue el modelo identificado con más solicitudes</strong> en este conjunto.</p>
         <p>Muchos equipos pasaron de un modelo a otro según lo que necesitaban resolver en cada momento. Los gráficos dejan ver esa mezcla.</p>
       </section>
 
       <figure class="table-figure model-figure wide-width" aria-labelledby="models-table-heading">
-        <div class="figure-heading"><div><p class="eyebrow">Dentro de los proyectos</p><h3 id="models-table-heading">Modelos más usados</h3></div><p>Los 10 primeros por solicitudes</p></div>
+        <div class="figure-heading"><div><h3 id="models-table-heading">Modelos más usados</h3></div><p>Los 10 primeros por solicitudes</p></div>
         <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de modelos, desplazar horizontalmente en pantallas pequeñas">
           <table>
             <thead><tr><th scope="col">#</th><th scope="col">Modelo</th><th scope="col">Familia</th><th scope="col">Solicitudes</th><th scope="col">Del total</th></tr></thead>
@@ -213,7 +209,7 @@ const matrixTint = (count: number, total: number) =>
       </div>
 
       <figure class="heatmap-figure wide-width" aria-labelledby="heatmap-heading">
-        <div class="figure-heading"><div><p class="eyebrow">Una mirada más de cerca</p><h3 id="heatmap-heading">Qué modelos aparecieron en cada herramienta</h3></div><p>Porcentaje de uso dentro de cada herramienta</p></div>
+        <div class="figure-heading"><div><h3 id="heatmap-heading">Qué modelos aparecieron en cada herramienta</h3></div><p>Porcentaje de uso dentro de cada herramienta</p></div>
         <p class="scroll-hint heatmap-hint">Desplázate horizontalmente para ver todos los modelos <span aria-hidden="true">→</span></p>
         <div class="heatmap-scroll" tabindex="0" role="region" aria-label="Mapa de calor de herramientas y modelos, desplazar horizontalmente en pantallas pequeñas">
           <table class="heatmap-table">
@@ -225,16 +221,19 @@ const matrixTint = (count: number, total: number) =>
       </figure>
 
       <section class="reading-width prose chapter" aria-labelledby="finish-heading">
-        <p class="chapter-number">05 / El domingo</p>
         <h2 id="finish-heading">De las demos a la final.</h2>
         <p>Después de las noches de trabajo, tocaba elegir qué mostrar y contarlo en pocos minutos. De los <strong>{number(insightData.teams)} equipos</strong>, <strong>{number(insightData.namedProjects)} dieron nombre a su proyecto</strong>. El jurado general probó las entregas y evaluó los proyectos para seleccionar a los finalistas. Cada startup eligió además al equipo ganador de su track, con un premio propio.</p>
         <p>La final reunió a los proyectos seleccionados ante un jurado de cinco fondos: <strong>JME Ventures, Enzo Ventures, Acurio Ventures, Kfund y Kibo Ventures</strong>. El <a href="/gran-premio">gran premio de 5.000 €</a> fue para <a href="https://es.linkedin.com/posts/alejandra-rubira-posse-de-riobo%C3%B3-987b95145_el-equipo-de-mafer-ai-gan%C3%B3-los-5k-este-finde-activity-7508145203854188544-MPQ4" target="_blank" rel="noopener noreferrer">mafer AI</a>.</p>
+        <figure class="awards-photo">
+          <img src="/images/2026-insights/entrega-premios.webp" alt="Los equipos en el escenario durante la entrega de premios de HackSpain, con el cheque del gran premio de 5.000 euros." width="1600" height="1200" loading="lazy" decoding="async" />
+          <figcaption>La entrega de premios, después de un fin de semana construyendo.</figcaption>
+        </figure>
         <details class="winners-accordion">
           <summary>Ver ganadores de los cinco tracks <span class="accordion-icon" aria-hidden="true">+</span></summary>
           <ol class="winners-list">
             {trackWinners.map((winner, index) => <li>
               <span class="winner-index">{String(index + 1).padStart(2, "0")}</span>
-              <div><p class="winner-track">{winner.track}</p><h3>{winner.project}</h3><p>{winner.description}</p><a href={winner.source} target="_blank" rel="noopener noreferrer">Ver la publicación del equipo <span aria-hidden="true">↗</span></a></div>
+              <div><h3>{winner.track} · {winner.project}</h3><p>{winner.description}</p><a href={winner.source} target="_blank" rel="noopener noreferrer">Ver la publicación del equipo <span aria-hidden="true">↗</span></a></div>
             </li>)}
           </ol>
         </details>
@@ -242,13 +241,17 @@ const matrixTint = (count: number, total: number) =>
       </section>
 
       <figure class="stack-figure wide-width" aria-labelledby="stack-heading">
-        <div class="figure-heading"><div><p class="eyebrow">En los repositorios</p><h3 id="stack-heading">Tecnologías que más aparecieron</h3></div><p>Equipos con cada tecnología</p></div>
-        <div class="stack-list">{stacks.map((stack, index) => <div class="stack-row"><span class="stack-rank">{String(index + 1).padStart(2, "0")}</span><span class="stack-name">{stack.name}</span><span class="stack-bar"><span style={`width:${(stack.count / insightData.stacksDetected) * 100}%`}></span></span><strong>{stack.count}</strong></div>)}</div>
+        <div class="figure-heading"><div><h3 id="stack-heading">Tecnologías que más aparecieron</h3></div><p>Equipos con cada tecnología</p></div>
+        <div id="technology-list" class="stack-list">{stacks.map((stack, index) => <div class="stack-row"><span class="stack-rank">{String(index + 1).padStart(2, "0")}</span><span class="stack-name">{stack.name}</span><span class="stack-bar"><span style={`width:${(stack.count / insightData.stacksDetected) * 100}%`}></span></span><strong>{stack.count}</strong></div>)}</div>
+        <nav class="stack-pagination" aria-label="Páginas de tecnologías" hidden>
+          <button type="button" data-stack-prev aria-label="Página anterior de tecnologías" aria-controls="technology-list">← Anterior</button>
+          <span data-stack-status role="status" aria-live="polite" aria-atomic="true"></span>
+          <button type="button" data-stack-next aria-label="Página siguiente de tecnologías" aria-controls="technology-list">Siguiente →</button>
+        </nav>
         <figcaption>Equipos que usaron cada tecnología entre los {number(insightData.stacksDetected)} proyectos con información técnica disponible. Un mismo proyecto puede aparecer en varias filas.</figcaption>
       </figure>
 
       <section class="reading-width prose conclusion" aria-labelledby="end-heading">
-        <p class="chapter-number">Después de la final</p>
         <h2 id="end-heading">Queda una comunidad que ya se conoce.</h2>
         <p>La mejor señal de lo que pasó no está en un ranking. Está en quienes se quedaron para ayudar a otro equipo, en los mentores que prolongaron la noche y en participantes que ahora saben que pueden construir algo real con personas que acababan de conocer. Varios salieron con más ganas de construir y con compañeros a los que, después de seguirlos en internet, por fin habían conocido cara a cara.</p>
         <p>Gracias a los participantes, mentores, empresas, jurado, voluntarios y a la universidad por abrir ese espacio. HackSpain 2026 duró un fin de semana, pero para muchos fue el principio. De aquí saldrán futuros founders e ingenieros que cambiarán el mundo. <a href="/comunidad">Revive el vídeo y las historias de la comunidad ↗</a></p>
@@ -259,73 +262,94 @@ const matrixTint = (count: number, total: number) =>
   </main>
 </Layout>
 
+<script>
+  const pagination = document.querySelector<HTMLElement>(".stack-pagination");
+  const rows = Array.from(document.querySelectorAll<HTMLElement>(".stack-row"));
+  const previous = pagination?.querySelector<HTMLButtonElement>("[data-stack-prev]");
+  const next = pagination?.querySelector<HTMLButtonElement>("[data-stack-next]");
+  const status = pagination?.querySelector<HTMLElement>("[data-stack-status]");
+  const pageSize = 10;
+  const pageCount = Math.ceil(rows.length / pageSize);
+
+  if (pagination && previous && next && status && pageCount > 1) {
+    let page = 0;
+    const renderPage = () => {
+      rows.forEach((row, index) => {
+        row.hidden = Math.floor(index / pageSize) !== page;
+      });
+      previous.disabled = page === 0;
+      next.disabled = page === pageCount - 1;
+      status.textContent = `${page + 1} / ${pageCount}`;
+    };
+    previous.addEventListener("click", () => {
+      page = Math.max(0, page - 1);
+      renderPage();
+    });
+    next.addEventListener("click", () => {
+      page = Math.min(pageCount - 1, page + 1);
+      renderPage();
+    });
+    renderPage();
+    pagination.hidden = false;
+  }
+</script>
+
 <style>
-  .article-page { flex: 1; min-width: 0; background: var(--color-hs-paper); padding-bottom: 80px; }
+  .article-page { --article-body: 20px; --article-heading: 28px; --article-small: 14px; --article-metric: 32px; flex: 1; min-width: 0; background: var(--color-hs-paper); padding-bottom: 80px; }
   .reading-width { width: min(100% - 40px, 760px); margin-inline: auto; }
   .wide-width { width: min(100% - 40px, 1120px); margin-inline: auto; }
   a:hover { color: var(--color-hs-orange); }
-  .eyebrow, .chapter-number { color: var(--color-hs-red); font-size: 12px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
-  .byline { margin: 0 0 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--color-hs-brown); }
+  .byline { margin: 0 0 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: var(--article-small); font-weight: 700; color: var(--color-hs-brown); }
   .byline span:first-child { color: var(--color-hs-ink); font-weight: 900; }
   figure { margin-top: 0; margin-bottom: 0; }
-  figcaption { margin-top: 12px; color: var(--color-hs-brown); font-size: 13px; line-height: 1.5; font-weight: 600; text-wrap: pretty; }
-  figcaption a, .prose a { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
-  .prose { font-size: 18px; line-height: 1.72; font-weight: 650; }
+  figcaption { margin-top: 12px; color: var(--color-hs-brown); font-size: var(--article-small); line-height: 1.5; font-weight: 600; text-wrap: pretty; }
+  figcaption a, .prose a { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .prose { font-size: var(--article-body); line-height: 1.7; font-weight: 600; }
   .prose p { margin: 0 0 22px; text-wrap: pretty; }
-  .prose strong { font-weight: 900; }
-  .track-intro { display: flex; align-items: start; gap: 12px; }
-  .track-intro > p { flex: 1; min-width: 0; }
-  .track-info { position: relative; flex: none; margin-top: 2px; }
-  .track-info summary { display: grid; place-items: center; width: 36px; height: 36px; border: 2px solid var(--color-hs-ink); border-radius: 50%; background: var(--color-hs-gold); color: var(--color-hs-ink); font: 18px/1 var(--font-bungee); cursor: pointer; list-style: none; }
-  .track-info summary::-webkit-details-marker, .winners-accordion summary::-webkit-details-marker { display: none; }
-  .track-tooltip { position: absolute; z-index: 2; right: 0; top: calc(100% + 8px); width: min(300px, 78vw); padding: 14px 16px; border: 2px solid var(--color-hs-ink); background: var(--color-hs-gold); box-shadow: 5px 5px 0 var(--color-hs-ink); font-size: 14px; line-height: 1.45; font-weight: 750; }
-  .intro { padding-top: 88px; scroll-margin-top: 24px; }
-  .prose .lead { margin-bottom: 40px; font-size: clamp(25px, 3vw, 34px); line-height: 1.45; font-weight: 750; }
-  .stats-section { margin-top: 70px; border: 3px solid var(--color-hs-ink); }
-  .section-kicker { display: flex; align-items: stretch; min-height: 76px; background: var(--color-hs-sand); border-bottom: 3px solid var(--color-hs-ink); }
-  .section-kicker span { display: grid; place-items: center; min-width: 90px; border-right: 3px solid var(--color-hs-ink); background: var(--color-hs-gold); color: var(--color-hs-red); font: 28px var(--font-bungee); }
-  .section-kicker h2 { align-self: center; margin: 0; padding: 16px 22px; font: clamp(18px, 3vw, 24px)/1.25 var(--font-bungee); }
+  .prose strong { font-weight: 800; }
+  .winners-accordion summary::-webkit-details-marker { display: none; }
+  .intro { padding-top: 64px; }
+  .stats-section { margin-top: 64px; border: 3px solid var(--color-hs-ink); scroll-margin-top: 24px; }
+  .section-kicker { display: flex; align-items: stretch; min-height: 56px; background: var(--color-hs-sand); border-bottom: 3px solid var(--color-hs-ink); }
+  .section-kicker h2 { align-self: center; margin: 0; padding: 12px 16px; font: 800 var(--article-body)/1.3 var(--font-sans); }
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; background: var(--color-hs-ink); }
-  .stat { display: flex; flex-direction: column; min-height: 168px; padding: 20px 17px; background: var(--color-hs-paper); }
+  .stat { display: flex; flex-direction: column; min-height: 128px; padding: 16px; background: var(--color-hs-paper); }
   .stat:nth-child(2) { background: var(--color-hs-gold); }
-  .stat strong { font: clamp(27px, 2.8vw, 38px)/1 var(--font-bungee); font-variant-numeric: tabular-nums; }
-  .stat > span { margin-top: 10px; font-size: 15px; font-weight: 900; }
-  .stat p { margin: auto 0 0; padding-top: 12px; font-size: 12px; font-weight: 700; line-height: 1.4; color: var(--color-hs-brown); }
-  .chapter { padding-top: 100px; }
-  .chapter-number { margin-bottom: 18px !important; }
-  .prose h2 { margin: 0 0 32px; font-family: var(--font-bungee); font-size: clamp(27px, 4vw, 42px); line-height: 1.2; text-wrap: balance; }
-  .pullquote { margin-top: 68px; padding: 24px 0 24px 30px; border-left: 8px solid var(--color-hs-red); }
-  .pullquote blockquote { margin: 0; font-size: clamp(23px, 3.6vw, 34px); font-weight: 900; line-height: 1.35; text-wrap: balance; }
-  .pullquote p { margin: 16px 0 0; font-size: 13px; line-height: 1.4; font-weight: 800; }
+  .stat strong { font: var(--article-metric)/1 var(--font-bungee); font-variant-numeric: tabular-nums; }
+  .stat > span { margin-top: 6px; font-size: var(--article-small); font-weight: 900; }
+  .stat p { margin: auto 0 0; padding-top: 8px; font-size: var(--article-small); font-weight: 700; line-height: 1.4; color: var(--color-hs-brown); }
+  .chapter { padding-top: 64px; }
+  .prose h2 { margin: 0 0 24px; font-family: var(--font-sans); font-size: var(--article-heading); font-weight: 800; line-height: 1.3; text-wrap: balance; }
+  .pullquote { margin-top: 40px; padding: 8px 0 8px 24px; border-left: 3px solid var(--color-hs-red); }
+  .pullquote blockquote { margin: 0; font-size: var(--article-body); font-weight: 600; line-height: 1.7; text-wrap: balance; }
+  .pullquote p { margin: 16px 0 0; font-size: var(--article-small); line-height: 1.4; font-weight: 800; }
   .pullquote a { text-decoration: underline; text-underline-offset: 3px; }
   .chart-figure, .table-figure, .stack-figure, .heatmap-figure { margin-top: 48px; border: 3px solid var(--color-hs-ink); background: var(--color-hs-paper); }
   .figure-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding: 26px 28px; border-bottom: 3px solid var(--color-hs-ink); }
-  .figure-heading .eyebrow { margin: 0 0 8px; }
-  .figure-heading h3 { margin: 0; font: clamp(19px, 3vw, 26px)/1.25 var(--font-bungee); text-wrap: balance; }
-  .figure-heading > p { margin: 0; color: var(--color-hs-brown); text-align: right; font-size: 13px; font-weight: 700; }
+  .figure-heading h3 { margin: 0; font: 800 var(--article-body)/1.3 var(--font-sans); text-wrap: balance; }
+  .figure-heading > p { margin: 0; color: var(--color-hs-brown); text-align: right; font-size: var(--article-small); font-weight: 700; }
   .chart-scroll { padding: 28px 25px 12px; overflow-x: auto; }
   .chart-scroll svg { display: block; min-width: 710px; width: 100%; height: auto; }
   .grid-line { stroke: var(--color-hs-ink); stroke-opacity: .2; stroke-width: 1; }
-  .axis-label { fill: var(--color-hs-brown); font: 12px var(--font-sans); font-weight: 700; }
+  .axis-label { fill: var(--color-hs-brown); font: var(--article-small) var(--font-sans); font-weight: 700; }
   .chart-area { fill: var(--color-hs-gold); fill-opacity: .5; }
   .chart-line { fill: none; stroke: var(--color-hs-red); stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
   .peak-dot { fill: var(--color-hs-red); stroke: var(--color-hs-paper); stroke-width: 3; }
   .chart-figure figcaption, .table-figure figcaption, .stack-figure figcaption, .heatmap-figure figcaption { padding: 0 28px 24px; }
   .leaders { margin-top: 44px; }
-  .leaders .eyebrow { margin: 0 0 8px; }
-  .leaders h3 { margin: 0 0 22px; font: clamp(20px, 3vw, 26px)/1.25 var(--font-bungee); text-wrap: balance; }
+  .leaders h3 { margin: 0 0 22px; font: 800 var(--article-body)/1.3 var(--font-sans); text-wrap: balance; }
   .leader-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
-  .leader-grid h4 { margin: 0 0 8px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+  .leader-grid h4 { margin: 0 0 8px; font-size: var(--article-small); font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
   .leader-grid ol { margin: 0; padding: 0; list-style: none; counter-reset: leader; }
-  .leader-grid li { counter-increment: leader; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 9px 0; border-top: 2px solid var(--color-hs-ink); font-size: 14px; line-height: 1.35; font-weight: 750; }
-  .leader-grid li::before { content: counter(leader, decimal-leading-zero); color: var(--color-hs-red); font-family: var(--font-bungee); font-size: 13px; }
+  .leader-grid li { counter-increment: leader; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 9px 0; border-top: 2px solid var(--color-hs-ink); font-size: var(--article-small); line-height: 1.35; font-weight: 750; }
+  .leader-grid li::before { content: counter(leader, decimal-leading-zero); color: var(--color-hs-red); font-family: var(--font-bungee); font-size: var(--article-small); }
   .leader-grid li span { overflow-wrap: anywhere; }
   .leader-grid li strong { font-variant-numeric: tabular-nums; }
-  .leader-note { margin: 10px 0 0; color: var(--color-hs-brown); font-size: 12px; line-height: 1.45; font-weight: 700; }
+  .leader-note { margin: 10px 0 0; color: var(--color-hs-brown); font-size: var(--article-small); line-height: 1.45; font-weight: 700; }
   .table-scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 15px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: var(--article-small); font-weight: 700; }
   th, td { padding: 15px 20px; border-bottom: 2px solid var(--color-hs-ink); text-align: left; }
-  thead th { background: var(--color-hs-sand); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
+  thead th { background: var(--color-hs-sand); font-size: var(--article-small); font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
   tbody th { font-weight: 900; }
   td:nth-child(2), td:nth-child(3) { font-variant-numeric: tabular-nums; white-space: nowrap; }
   tbody tr.featured { background: var(--color-hs-gold); }
@@ -334,65 +358,66 @@ const matrixTint = (count: number, total: number) =>
   .model-figure tbody tr.featured .model-rank { color: var(--color-hs-ink); }
   .model-figure tbody th { overflow-wrap: anywhere; }
   .figure-bridge { padding-top: 56px; }
-  .heatmap-scroll { overflow-x: auto; padding: 16px 18px 0; }
-  .heatmap-table { min-width: 1410px; border-collapse: separate; border-spacing: 3px; table-layout: fixed; font-size: 13px; }
-  .heatmap-table th, .heatmap-table td { padding: 10px 6px; border: 0; text-align: center; white-space: normal; }
-  .heatmap-table thead th { background: var(--color-hs-sand); vertical-align: bottom; height: 108px; font-size: 10px; letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
+  .heatmap-scroll { overflow-x: auto; padding-top: 16px; }
+  .heatmap-table { min-width: 1410px; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: var(--article-small); }
+  .heatmap-table th, .heatmap-table td { padding: 10px 8px; border: 0; border-right: 3px solid var(--color-hs-paper); border-bottom: 3px solid var(--color-hs-paper); text-align: center; white-space: normal; }
+  .heatmap-table thead th { background: var(--color-hs-sand); vertical-align: bottom; height: 108px; font-size: var(--article-small); letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
   .heatmap-table thead th:first-child, .heatmap-table tbody th { position: sticky; left: 0; z-index: 1; width: 136px; min-width: 136px; background: var(--color-hs-paper); text-align: left; }
   .heatmap-table thead th:first-child { z-index: 2; background: var(--color-hs-sand); }
-  .heatmap-table .model-label { font-size: 10px; line-height: 1.35; white-space: normal; }
-  .heatmap-table tbody th { font-size: 13px; font-weight: 900; }
-  .heatmap-table tbody th small { display: block; margin-top: 4px; color: var(--color-hs-brown); font-size: 10px; font-weight: 700; }
-  .heatmap-table tbody td { height: 51px; background: color-mix(in srgb, var(--color-hs-red) var(--heat), var(--color-hs-paper)); font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .heatmap-table .model-label { font-size: var(--article-small); line-height: 1.35; white-space: normal; }
+  .heatmap-table tbody th { font-size: var(--article-small); font-weight: 900; }
+  .heatmap-table tbody th small { display: block; margin-top: 4px; color: var(--color-hs-brown); font-size: var(--article-small); font-weight: 700; }
+  .heatmap-table tbody td { height: 51px; background: color-mix(in srgb, var(--color-hs-red) var(--heat), var(--color-hs-paper)); font-size: var(--article-small); font-weight: 900; font-variant-numeric: tabular-nums; }
   .heatmap-table tbody td.empty { background: var(--color-hs-sand); color: var(--color-hs-brown); }
-  .scroll-hint { display: none; margin: 0; padding: 12px 22px 0; color: var(--color-hs-red); font-size: 12px; font-weight: 900; }
+  .scroll-hint { display: none; margin: 0; padding: 12px 22px 0; color: var(--color-hs-brown); font-size: var(--article-small); font-weight: 900; }
   .heatmap-hint { display: block; }
   .share { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
   .share-track { display: block; width: 120px; height: 8px; background: var(--color-hs-sand); border: 1px solid var(--color-hs-ink); }
   .share-track > span { display: block; height: 100%; background: var(--color-hs-red); }
   .stack-list { padding: 12px 28px 20px; }
-  .stack-row { display: grid; grid-template-columns: 40px minmax(110px, 1fr) minmax(100px, 3fr) 35px; align-items: center; gap: 16px; min-height: 51px; border-bottom: 2px solid var(--color-hs-ink); font-size: 15px; font-weight: 800; }
+  .stack-row { display: grid; grid-template-columns: 40px minmax(110px, 1fr) minmax(100px, 3fr) 35px; align-items: center; gap: 16px; min-height: 51px; border-bottom: 2px solid var(--color-hs-ink); font-size: var(--article-small); font-weight: 800; }
+  .stack-row[hidden], .stack-pagination[hidden] { display: none; }
+  .stack-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 28px 16px; font-size: var(--article-small); font-weight: 700; }
+  .stack-pagination button { min-height: 44px; padding: 8px 12px; border: 2px solid var(--color-hs-ink); background: var(--color-hs-paper); font: inherit; cursor: pointer; }
+  .stack-pagination button:disabled { opacity: .4; cursor: default; }
+  .stack-pagination span { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  @media (hover: hover) and (pointer: fine) { .stack-pagination button:not(:disabled):hover { background: var(--color-hs-sand); } }
   .stack-row:last-child { border-bottom: 0; }
   .stack-rank { color: var(--color-hs-red); font-family: var(--font-bungee); }
   .stack-bar { height: 13px; background: var(--color-hs-sand); }
   .stack-bar > span { display: block; height: 100%; background: var(--color-hs-teal); }
   .stack-row strong { text-align: right; font-variant-numeric: tabular-nums; }
+  .awards-photo { margin: 30px 0 24px; }
+  .awards-photo img { display: block; width: 100%; height: auto; border: 3px solid var(--color-hs-ink); }
   .winners-accordion { margin: 4px 0 26px; }
-  .winners-accordion summary { display: inline-flex; align-items: center; gap: 10px; padding: 7px 10px; border: 2px solid var(--color-hs-ink); background: var(--color-hs-sand); font-size: 13px; line-height: 1.25; font-weight: 900; cursor: pointer; list-style: none; }
+  .winners-accordion summary { display: inline-flex; align-items: center; gap: 10px; padding: 7px 10px; border: 2px solid var(--color-hs-ink); background: var(--color-hs-sand); font-size: var(--article-small); line-height: 1.25; font-weight: 900; cursor: pointer; list-style: none; }
   .accordion-icon { flex: none; color: var(--color-hs-red); font: 17px/1 var(--font-bungee); transition: transform .2s ease; }
   .winners-accordion[open] .accordion-icon { transform: rotate(45deg); }
   .winners-list { margin: 14px 0 0; padding: 0; list-style: none; border-top: 2px solid var(--color-hs-ink); }
   .winners-list li { display: grid; grid-template-columns: 40px 1fr; gap: 14px; padding: 20px 0; border-bottom: 1px solid var(--color-hs-ink); }
   .winners-list li:last-child { border-bottom: 0; }
-  .winner-index { color: var(--color-hs-red); font: 17px var(--font-bungee); }
-  .winner-track { margin: 0 0 6px !important; color: var(--color-hs-red); font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
-  .winners-list h3 { margin: 0 0 8px; font: 19px/1.25 var(--font-bungee); }
-  .winners-list li p:not(.winner-track) { margin: 0 0 8px; font-size: 16px; line-height: 1.5; font-weight: 700; }
-  .winners-list a { font-size: 13px; font-weight: 900; text-decoration: underline; text-underline-offset: 3px; }
-  .conclusion { padding-top: 110px; }
-  .article-note { margin-top: 96px; color: var(--color-hs-brown); font-size: 12px; line-height: 1.6; font-weight: 600; text-wrap: pretty; }
-  a:focus-visible, summary:focus-visible, .chart-scroll:focus-visible, .heatmap-scroll:focus-visible, .table-scroll:focus-visible { outline: 2px solid var(--color-hs-navy); outline-offset: 3px; }
+  .winner-index { color: var(--color-hs-red); font: var(--article-small) var(--font-bungee); }
+  .winners-list h3 { margin: 0 0 8px; font: 800 var(--article-body)/1.3 var(--font-sans); }
+  .winners-list li p { margin: 0 0 8px; font-size: var(--article-body); line-height: 1.7; font-weight: 600; }
+  .winners-list a { font-size: var(--article-small); font-weight: 900; text-decoration: underline; text-underline-offset: 3px; }
+  .conclusion { padding-top: 64px; }
+  .article-note { margin-top: 96px; color: var(--color-hs-brown); font-size: var(--article-small); line-height: 1.6; font-weight: 600; text-wrap: pretty; }
+  a:focus-visible, button:focus-visible, summary:focus-visible, .chart-scroll:focus-visible, .heatmap-scroll:focus-visible, .table-scroll:focus-visible { outline: 2px solid var(--color-hs-navy); outline-offset: 3px; }
   @media (max-width: 760px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .stat { min-height: 156px; }
     .figure-heading { display: block; padding: 22px; }
     .figure-heading > p { margin-top: 10px; text-align: left; }
     .scroll-hint { display: block; }
   }
   @media (max-width: 520px) {
     .reading-width, .wide-width { width: min(100% - 28px, 760px); }
-    .prose { font-size: 17px; }
-    .prose .lead { font-size: 25px; }
+    .article-page { --article-body: 18px; --article-heading: 24px; --article-metric: 28px; }
     .intro { padding-top: 48px; }
-    .chapter { padding-top: 72px; }
+    .chapter, .conclusion { padding-top: 48px; }
     .stats-section { margin-top: 55px; }
-    .section-kicker span { min-width: 64px; }
-    .stat { min-height: 150px; padding: 16px 12px; }
-    .stat strong { font-size: 26px; }
-    .stat > span { font-size: 14px; }
-    .stat p { font-size: 11px; }
-    .stack-list { padding-inline: 16px; }
-    .stack-row { grid-template-columns: 28px minmax(80px, 1fr) minmax(60px, 1.5fr) 25px; gap: 8px; font-size: 13px; }
+    .stat { min-height: 128px; padding: 12px; }
+    .stack-list, .stack-pagination { padding-inline: 16px; }
+    .stack-row { grid-template-columns: 28px minmax(80px, 1fr) minmax(60px, 1.5fr) 25px; gap: 8px; font-size: var(--article-small); }
     .leader-grid { grid-template-columns: 1fr; gap: 22px; }
     .winners-list li { grid-template-columns: 30px 1fr; gap: 10px; }
     .article-note { margin-top: 70px; }

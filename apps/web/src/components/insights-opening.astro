@@ -7,10 +7,10 @@ const tiles = [
   { area: "e", tone: "paper", col: 4 },
   { area: "f", tone: "red", shape: "triangle reverse", col: 5 },
   { area: "g", tone: "navy", col: 0 },
-  { area: "h", tone: "gold", shape: "sun", col: 5 },
+  { area: "h", tone: "gold", col: 5 },
   { area: "i", tone: "orange", col: 0 },
   { area: "j", tone: "teal", col: 5 },
-  { area: "k", tone: "red", shape: "sun", col: 0 },
+  { area: "k", tone: "red", col: 0 },
   { area: "l", tone: "sand", col: 5 },
   { area: "m", tone: "gold", col: 0 },
   { area: "n", tone: "paper", col: 1 },
@@ -43,7 +43,6 @@ const slats = ["gold", "orange", "red", "teal", "gold"];
           <span class="stamp-ghost ghost-teal" aria-hidden="true" />
           <img src="/brand-assets/hackspain-wordmark-color.svg" alt="HackSpain" width="928" height="306" fetchpriority="high" />
         </span>
-        <span class="opening-year">2026</span>
         <span class="opening-epic">
           <span class="epic-line"><span class="epic-word">El fin de semana</span></span>
           <span class="epic-line"><span class="epic-word">que Madrid <em>no durmió</em></span></span>
@@ -60,18 +59,47 @@ const slats = ["gold", "orange", "red", "teal", "gold"];
   </div>
 </header>
 
+<script is:inline>
+  (() => {
+    const opening = document.currentScript.previousElementSibling;
+    const cue = opening.querySelector('.opening-scroll');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (!cue || reducedMotion.matches || window.location.hash || window.scrollY > 0) return;
+
+    const controller = new AbortController();
+    const { signal } = controller;
+    const cancel = () => controller.abort();
+    // Any scroll intent cancels the handoff, even if the user returns to the top.
+    for (const event of ['scroll', 'wheel', 'touchmove']) {
+      window.addEventListener(event, cancel, { passive: true, signal });
+    }
+    window.addEventListener('keydown', (event) => {
+      if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' '].includes(event.key)) cancel();
+    }, { signal });
+    document.addEventListener('visibilitychange', cancel, { signal });
+    window.addEventListener('pagehide', cancel, { signal });
+
+    // The scroll cue is the final entrance in the opening sequence.
+    cue.addEventListener('animationend', () => {
+      cancel();
+      if (!reducedMotion.matches && !window.location.hash && window.scrollY === 0) {
+        document.getElementById('cronica')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, { once: true, signal });
+  })();
+</script>
+
 <style>
   .opening { display: grid; grid-template-areas: "a b c d e f" "g s s s s h" "i s s s s j" "k s s s s l" "m n o p q r"; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(48px, 10svh) repeat(3, 1fr) minmax(48px, 10svh); min-height: 700px; height: 100svh; max-height: 1100px; gap: 3px; padding: 3px; background: var(--color-hs-ink); overflow: hidden; }
   .tile-shell { overflow: hidden; min-width: 0; min-height: 0; }
   .tile { position: relative; width: 100%; height: 100%; }
   .triangle { clip-path: polygon(0 0, 100% 0, 0 100%); }
   .triangle.reverse { clip-path: polygon(0 0, 100% 0, 100% 100%); }
-  .sun::after { content: ""; position: absolute; width: 76%; aspect-ratio: 1; border: 3px solid var(--color-hs-ink); border-radius: 50%; left: 12%; top: 50%; transform: translateY(-50%); }
   .opening-stage { grid-area: s; position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; background: var(--color-hs-paper); padding: 72px 32px 64px; }
   .opening-topbar { position: absolute; inset: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 26px; }
   .opening-topbar a { display: inline-flex; align-items: center; min-height: 40px; font-size: 12px; font-weight: 900; }
   .opening-topbar a span { margin-left: 5px; color: var(--color-hs-red); }
-  .opening-content { width: 100%; max-width: 520px; text-align: center; }
+  .opening-content { width: 100%; max-width: 640px; container-type: inline-size; text-align: center; }
   .opening-date { margin: 0 0 16px; font-size: 11px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
   h1 { margin: 0; }
   .stamp { position: relative; display: block; width: min(100%, 380px); margin-inline: auto; }
@@ -79,10 +107,9 @@ const slats = ["gold", "orange", "red", "teal", "gold"];
   .stamp-ghost { display: none; position: absolute; inset: 0; mix-blend-mode: multiply; mask: url("/brand-assets/hackspain-wordmark-black.svg") center / contain no-repeat; -webkit-mask: url("/brand-assets/hackspain-wordmark-black.svg") center / contain no-repeat; }
   .ghost-red { background: var(--color-hs-red); }
   .ghost-teal { background: var(--color-hs-teal); }
-  .opening-year { display: block; margin-top: 8px; color: var(--color-hs-red); font: clamp(32px, 4vw, 42px)/1 var(--font-bungee); letter-spacing: .04em; }
-  .opening-epic { display: block; margin-top: 26px; font: clamp(26px, 3.6vw, 46px)/1.06 var(--font-bungee); letter-spacing: -.01em; text-transform: uppercase; text-wrap: balance; }
+  .opening-epic { display: block; margin-top: 26px; font: clamp(14px, 7.2cqi, 40px)/1.06 var(--font-bungee); letter-spacing: -.01em; text-transform: uppercase; text-wrap: balance; }
   .epic-line { display: block; overflow: hidden; padding-bottom: .08em; }
-  .epic-word { display: block; }
+  .epic-word { display: block; white-space: nowrap; }
   .opening-epic em { font-style: normal; color: var(--color-hs-red); }
   .opening-scroll { position: absolute; bottom: 14px; display: inline-flex; align-items: center; gap: 18px; min-height: 40px; font-size: 11px; font-weight: 800; }
   .opening-scroll span { color: var(--color-hs-red); font-size: 18px; }
@@ -99,12 +126,10 @@ const slats = ["gold", "orange", "red", "teal", "gold"];
     .slat { animation: slat-lift 650ms cubic-bezier(.87, 0, .13, 1) both; animation-delay: var(--lift); }
     .opening-prelude { animation: prelude 1440ms cubic-bezier(.16, 1, .3, 1) 560ms both; }
     .tile { animation: band-rise 600ms cubic-bezier(.16, 1, .3, 1) both; animation-delay: var(--d); }
-    .sun::after { animation: ring-set 420ms cubic-bezier(.34, 1.56, .64, 1) both; animation-delay: calc(var(--d) + 300ms); }
     .opening-content > *, .opening-scroll { animation-name: copy-arrive; animation-duration: 620ms; animation-timing-function: cubic-bezier(.16, 1, .3, 1); animation-fill-mode: both; }
     .opening-date { animation-delay: 2260ms; }
     .opening-content > h1 { animation-name: none; }
     .stamp img { animation: stamp-set 520ms cubic-bezier(.16, 1, .3, 1) 2340ms both; }
-    .opening-year { animation-delay: 2460ms; }
     .epic-word { animation: epic-rise 620ms cubic-bezier(.16, 1, .3, 1) both; }
     .epic-line:first-child .epic-word { animation-delay: 2540ms; }
     .epic-line:last-child .epic-word { animation-delay: 2620ms; }
@@ -116,7 +141,6 @@ const slats = ["gold", "orange", "red", "teal", "gold"];
     }
   }
   @keyframes band-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
-  @keyframes ring-set { from { transform: translateY(-50%) scale(.2); opacity: 0; } to { transform: translateY(-50%) scale(1); opacity: 1; } }
   @keyframes slat-lift { from { transform: translateY(0); } to { transform: translateY(-101%); } }
   @keyframes prelude { 0% { opacity: 0; transform: translateY(14px); } 22%, 78% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-14px); } }
   @keyframes stamp-set { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: none; } }
@@ -130,9 +154,7 @@ const slats = ["gold", "orange", "red", "teal", "gold"];
     .opening-topbar { padding: 12px 16px; }
     .opening-topbar a { font-size: 11px; }
     .opening-date { font-size: 9px; letter-spacing: .09em; }
-    .opening-year { margin-top: 16px; font-size: 38px; }
-    .opening-epic { margin-top: 24px; font-size: 26px; }
+    .opening-epic { margin-top: 24px; }
     .slat span { height: 4px; }
-    .sun::after { display: none; }
   }
 </style>

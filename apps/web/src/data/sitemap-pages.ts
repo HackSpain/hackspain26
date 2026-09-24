@@ -22,7 +22,7 @@ export function getAllSitemapPageUrls(): string[] {
     ...(areSignupsClosed() ? [] : [`${o}/signup`]),
     `${o}/ambassador`,
     `${o}/brand`,
-    `${o}/2026-insights`,
+    `${o}/cronica`,
     `${o}/privacy`,
     `${o}/conduct`,
   ];

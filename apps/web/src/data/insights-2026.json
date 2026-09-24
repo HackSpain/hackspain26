@@ -287,6 +287,471 @@
       "category": "Datos",
       "count": 16,
       "name": "Pandas"
+    },
+    {
+      "category": "Otras",
+      "count": 15,
+      "name": "pytest"
+    },
+    {
+      "category": "Datos",
+      "count": 14,
+      "name": "OpenAI"
+    },
+    {
+      "category": "Otras",
+      "count": 13,
+      "name": "GitHub Actions"
+    },
+    {
+      "category": "Backend",
+      "count": 13,
+      "name": "WebSockets"
+    },
+    {
+      "category": "Datos",
+      "count": 11,
+      "name": "AI SDK"
+    },
+    {
+      "category": "Otras",
+      "count": 11,
+      "name": "JavaScript"
+    },
+    {
+      "category": "Datos",
+      "count": 11,
+      "name": "Matplotlib"
+    },
+    {
+      "category": "Datos",
+      "count": 9,
+      "name": "Anthropic"
+    },
+    {
+      "category": "Otras",
+      "count": 9,
+      "name": "Vercel"
+    },
+    {
+      "category": "Frontend",
+      "count": 8,
+      "name": "React Router"
+    },
+    {
+      "category": "Backend",
+      "count": 7,
+      "name": "Bun"
+    },
+    {
+      "category": "Otras",
+      "count": 7,
+      "name": "Playwright"
+    },
+    {
+      "category": "Datos",
+      "count": 7,
+      "name": "scikit-learn"
+    },
+    {
+      "category": "Datos",
+      "count": 7,
+      "name": "SciPy"
+    },
+    {
+      "category": "Frontend",
+      "count": 7,
+      "name": "shadcn/ui"
+    },
+    {
+      "category": "Backend",
+      "count": 7,
+      "name": "Supabase"
+    },
+    {
+      "category": "Backend",
+      "count": 6,
+      "name": "Cloudflare Workers"
+    },
+    {
+      "category": "Frontend",
+      "count": 6,
+      "name": "Leaflet"
+    },
+    {
+      "category": "Datos",
+      "count": 6,
+      "name": "OpenCV"
+    },
+    {
+      "category": "Otras",
+      "count": 6,
+      "name": "Render"
+    },
+    {
+      "category": "Datos",
+      "count": 6,
+      "name": "SQLite"
+    },
+    {
+      "category": "Datos",
+      "count": 5,
+      "name": "DuckDB"
+    },
+    {
+      "category": "Backend",
+      "count": 5,
+      "name": "Express"
+    },
+    {
+      "category": "Datos",
+      "count": 5,
+      "name": "Postgres"
+    },
+    {
+      "category": "Otras",
+      "count": 5,
+      "name": "Railway"
+    },
+    {
+      "category": "Otras",
+      "count": 5,
+      "name": "Vitest"
+    },
+    {
+      "category": "Datos",
+      "count": 4,
+      "name": "Gemini"
+    },
+    {
+      "category": "Datos",
+      "count": 4,
+      "name": "LightGBM"
+    },
+    {
+      "category": "Datos",
+      "count": 4,
+      "name": "ONNX"
+    },
+    {
+      "category": "Datos",
+      "count": 4,
+      "name": "Polars"
+    },
+    {
+      "category": "Datos",
+      "count": 3,
+      "name": "MCP"
+    },
+    {
+      "category": "Frontend",
+      "count": 3,
+      "name": "React Flow"
+    },
+    {
+      "category": "Frontend",
+      "count": 3,
+      "name": "Recharts"
+    },
+    {
+      "category": "Datos",
+      "count": 3,
+      "name": "SQLAlchemy"
+    },
+    {
+      "category": "Frontend",
+      "count": 3,
+      "name": "TanStack Query"
+    },
+    {
+      "category": "Backend",
+      "count": 2,
+      "name": "Axum"
+    },
+    {
+      "category": "Backend",
+      "count": 2,
+      "name": "Hono"
+    },
+    {
+      "category": "Datos",
+      "count": 2,
+      "name": "Jupyter"
+    },
+    {
+      "category": "Frontend",
+      "count": 2,
+      "name": "MapLibre"
+    },
+    {
+      "category": "Datos",
+      "count": 2,
+      "name": "Pipecat"
+    },
+    {
+      "category": "Datos",
+      "count": 2,
+      "name": "Plotly"
+    },
+    {
+      "category": "Otras",
+      "count": 2,
+      "name": "Rust"
+    },
+    {
+      "category": "Backend",
+      "count": 2,
+      "name": "Starlette"
+    },
+    {
+      "category": "Otras",
+      "count": 2,
+      "name": "Swift"
+    },
+    {
+      "category": "Datos",
+      "count": 2,
+      "name": "Transformers"
+    },
+    {
+      "category": "Frontend",
+      "count": 2,
+      "name": "Vue"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "aiohttp"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Angular"
+    },
+    {
+      "category": "Otras",
+      "count": 1,
+      "name": "Azure"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Beautiful Soup"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "Better Auth"
+    },
+    {
+      "category": "Otras",
+      "count": 1,
+      "name": "C++"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Chroma"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "Convex"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "Django"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Drizzle"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "fal"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "Fastify"
+    },
+    {
+      "category": "Otras",
+      "count": 1,
+      "name": "Fly.io"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "GSAP"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Hugging Face"
+    },
+    {
+      "category": "Otras",
+      "count": 1,
+      "name": "Java"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "LangChain"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "LiveKit"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Mapbox"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Mastra"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "MongoDB"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Motion"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Neo4j"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "NestJS"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Nuxt"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Pinia"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Prisma"
+    },
+    {
+      "category": "Otras",
+      "count": 1,
+      "name": "Puppeteer"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Pydantic AI"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "PyTorch"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Redis"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Remotion"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "Spring"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "SQLModel"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "SQLx"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Streamlit"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Svelte"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "SWR"
+    },
+    {
+      "category": "Otras",
+      "count": 1,
+      "name": "Testing Library"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Three.js"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "Twilio"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "TypeORM"
+    },
+    {
+      "category": "Backend",
+      "count": 1,
+      "name": "Warp"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "Whisper"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "XGBoost"
+    },
+    {
+      "category": "Datos",
+      "count": 1,
+      "name": "YOLO"
+    },
+    {
+      "category": "Frontend",
+      "count": 1,
+      "name": "Zustand"
     }
   ],
   "models": [
