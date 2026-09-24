@@ -131,7 +131,7 @@ const matrixTint = (count: number, total: number) =>
       </section>
 
       <div class="reading-width prose intro">
-        <div class="byline"><span>HackSpain</span><span aria-hidden="true">·</span><time datetime="2026-09-24">{publishedAt}</time></div>
+        <div class="byline"><span>By Samuel Cordero</span><time datetime="2026-09-24">{publishedAt}</time></div>
         <p>El viernes llegaron con ideas. El domingo se fueron con proyectos, nuevos compañeros y ganas de seguir construyendo. Más de 250 jóvenes, 60 equipos y un fin de semana en Madrid que dio para mucho más que escribir código.</p>
         <p>La semilla de HackSpain la plantaron <strong>Leonardo Ollero, con 18 años, y Samuel Cordero, con 15</strong>. Se aliaron con <a href="https://goexponential.org" target="_blank" rel="noopener noreferrer">The Exponential Fellowship</a> para convertirla en un encuentro entre jóvenes, startups, mentores e inversores. En esta primera edición participaron más de 50 mentores y una veintena de voluntarios. Lo que vino después fue tan importante como los proyectos: conversaciones, ayuda entre equipos y una comunidad que empezó a reconocerse en persona.</p>
       </div>
@@ -299,7 +299,7 @@ const matrixTint = (count: number, total: number) =>
   .reading-width { width: min(100% - 40px, 760px); margin-inline: auto; }
   .wide-width { width: min(100% - 40px, 1120px); margin-inline: auto; }
   a:hover { color: var(--color-hs-orange); }
-  .byline { margin: 0 0 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: var(--article-small); font-weight: 700; color: var(--color-hs-brown); }
+  .byline { margin: 0 0 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: var(--article-small); font-weight: 700; color: var(--color-hs-brown); }
   .byline span:first-child { color: var(--color-hs-ink); font-weight: 900; }
   figure { margin-top: 0; margin-bottom: 0; }
   figcaption { margin-top: 12px; color: var(--color-hs-brown); font-size: var(--article-small); line-height: 1.5; font-weight: 600; text-wrap: pretty; }
