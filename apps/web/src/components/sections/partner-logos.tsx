@@ -1,6 +1,13 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { shuffled } from "../../lib/shuffle";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { shuffled, shuffledWithSeed } from "../../lib/shuffle";
 import {
   acurioLogo,
   causaPrimaLogo,
@@ -37,6 +44,8 @@ export interface Partner {
   size: string;
   src: string;
 }
+
+export const SponsorSeedContext = createContext<number | undefined>(undefined);
 
 /** Shared logo height (container query units inside mosaic cells). */
 const LOGO_SIZE = "h-[26cqh]";
@@ -352,19 +361,30 @@ interface RotationState {
  */
 export function usePartnerRotation(
   count = PARTNER_CELL_COUNT,
-  pinned?: Partner[]
+  pinned?: Partner[],
+  initialSeed?: number
 ): Partner[] {
+  const contextSeed = useContext(SponsorSeedContext);
+  const seed = initialSeed ?? contextSeed;
   const [state, setState] = useState<RotationState>(() => ({
     nextCell: 0,
     onScreen: PARTNERS.slice(0, count),
     queue: PARTNERS.slice(count),
   }));
-  // Keep the server's first sponsor order through hydration; reshuffle when
-  // navigation hands the hook a different pinned list.
+  // The server-selected shuffle is serialized with the island, so hydration
+  // keeps the same order. Later section changes use the existing random shuffle.
+  const [firstPinnedOrder] = useState(() => {
+    if (pinned === undefined) {
+      return;
+    }
+    return seed === undefined
+      ? shuffled(pinned)
+      : shuffledWithSeed(pinned, seed);
+  });
   const shuffledPinned = useRef<{
     source: Partner[] | undefined;
     order: Partner[] | undefined;
-  }>({ source: pinned, order: pinned });
+  }>({ source: pinned, order: firstPinnedOrder });
   const pinnedOrder = useSyncExternalStore(
     () => () => {
       // Sponsor order changes only when the pinned list changes.
@@ -378,7 +398,7 @@ export function usePartnerRotation(
       }
       return shuffledPinned.current.order;
     },
-    () => pinned
+    () => shuffledPinned.current.order
   );
   const [pinnedOffset, setPinnedOffset] = useState(0);
   const rotatingPinned =

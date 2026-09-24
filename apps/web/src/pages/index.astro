@@ -3,10 +3,12 @@ export const prerender = false;
 
 import { LandingPage } from "../components/pages/landing-page";
 import Layout from "../layouts/layout.astro";
+
+const sponsorSeed = Math.floor(Math.random() * 4_294_967_296);
 ---
 
 <Layout sectionIndex={0}>
   <main id="main" class="contents">
-    <LandingPage client:load initialSection={0} />
+    <LandingPage client:load sponsorSeed={sponsorSeed} initialSection={0} />
   </main>
 </Layout>

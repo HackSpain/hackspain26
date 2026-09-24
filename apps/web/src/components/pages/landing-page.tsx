@@ -25,6 +25,7 @@ import {
   MENTOR_SPONSORS,
   PARTNER_CELL_COUNT,
   PartnerLogoCell,
+  SponsorSeedContext,
   TRACK_SPONSORS,
   usePartnerRotation,
 } from "../sections/partner-logos";
@@ -78,11 +79,13 @@ function applySeoToDocument(sectionIdx: number) {
 
 interface Props {
   initialSection?: number;
+  sponsorSeed: number;
 }
 
-export function LandingPage({ initialSection = 0 }: Props) {
+export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
   const [section, setSection] = useState(initialSection);
   const [dir, setDir] = useState(1);
+  const [hydrated, setHydrated] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const locked = useRef(false);
 
@@ -118,7 +121,13 @@ export function LandingPage({ initialSection = 0 }: Props) {
       return MENTOR_SPONSORS;
     }
   }, [section]);
-  const partners = usePartnerRotation(PARTNER_CELL_COUNT, pinnedSponsors);
+  const partners = usePartnerRotation(
+    PARTNER_CELL_COUNT,
+    pinnedSponsors,
+    hydrated ? undefined : sponsorSeed
+  );
+
+  useEffect(() => setHydrated(true), []);
 
   useEffect(() => {
     applySeoToDocument(initialSection);
@@ -428,74 +437,76 @@ export function LandingPage({ initialSection = 0 }: Props) {
   };
 
   return (
-    <section
-      aria-label={REGION_ARIA}
-      className="relative min-h-0 w-full flex-1 font-sans"
-      style={{ background: INK }}
-    >
-      <h1 className="sr-only">{seoForSectionIndex(section).title}</h1>
-      <p aria-atomic="true" aria-live="polite" className="sr-only">
-        {liveLabel}
-      </p>
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 hidden md:block">
-          {renderMosaic("desktop")}
+    <SponsorSeedContext.Provider value={hydrated ? undefined : sponsorSeed}>
+      <section
+        aria-label={REGION_ARIA}
+        className="relative min-h-0 w-full flex-1 font-sans"
+        style={{ background: INK }}
+      >
+        <h1 className="sr-only">{seoForSectionIndex(section).title}</h1>
+        <p aria-atomic="true" aria-live="polite" className="sr-only">
+          {liveLabel}
+        </p>
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute inset-0 hidden md:block">
+            {renderMosaic("desktop")}
+          </div>
+          <div className="absolute inset-0 md:hidden">
+            {renderMosaic("compact")}
+          </div>
+          <CommunityTimeline
+            isActive={section === COMMUNITY_SECTION_INDEX}
+            onNext={() => advance(1)}
+            onPrevious={() => advance(-1)}
+            reducedMotion={reducedMotion}
+          />
         </div>
-        <div className="absolute inset-0 md:hidden">
-          {renderMosaic("compact")}
-        </div>
-        <CommunityTimeline
-          isActive={section === COMMUNITY_SECTION_INDEX}
-          onNext={() => advance(1)}
-          onPrevious={() => advance(-1)}
-          reducedMotion={reducedMotion}
-        />
-      </div>
-      {section === 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[max(2.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center">
-          <button
-            aria-label="Abrir HackSpain — ver el vídeo y la comunidad"
-            className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full border border-hs-paper/20 bg-hs-ink px-5 py-2.5 font-bungee text-hs-paper text-xs tracking-[0.18em] shadow-lg transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-hs-gold focus-visible:outline-offset-4 active:scale-[0.96] motion-reduce:transition-none"
-            onClick={() => advance(1)}
-            type="button"
-          >
-            SCROLL
-            <svg
-              aria-hidden="true"
-              className="h-7 w-5 shrink-0 text-hs-gold"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.5"
-              viewBox="0 0 20 28"
+        {section === 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-[max(2.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center">
+            <button
+              aria-label="Abrir HackSpain — ver el vídeo y la comunidad"
+              className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full border border-hs-paper/20 bg-hs-ink px-5 py-2.5 font-bungee text-hs-paper text-xs tracking-[0.18em] shadow-lg transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-hs-gold focus-visible:outline-offset-4 active:scale-[0.96] motion-reduce:transition-none"
+              onClick={() => advance(1)}
+              type="button"
             >
-              <rect height="25" rx="8.5" width="17" x="1.5" y="1.5" />
-              <motion.path
-                animate={
-                  reducedMotion
-                    ? { opacity: 1, y: 0 }
-                    : { opacity: [0, 1, 1, 0], y: [0, 0, 7, 7] }
-                }
-                d="M10 7v4"
-                initial={{ opacity: 1, y: 0 }}
-                strokeWidth="3"
-                transition={
-                  reducedMotion
-                    ? { duration: 0 }
-                    : {
-                        duration: 1.8,
-                        ease: "easeInOut",
-                        repeat: Number.POSITIVE_INFINITY,
-                        repeatDelay: 0.4,
-                        times: [0, 0.15, 0.7, 1],
-                      }
-                }
-              />
-            </svg>
-          </button>
-        </div>
-      )}
-    </section>
+              SCROLL
+              <svg
+                aria-hidden="true"
+                className="h-7 w-5 shrink-0 text-hs-gold"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.5"
+                viewBox="0 0 20 28"
+              >
+                <rect height="25" rx="8.5" width="17" x="1.5" y="1.5" />
+                <motion.path
+                  animate={
+                    reducedMotion
+                      ? { opacity: 1, y: 0 }
+                      : { opacity: [0, 1, 1, 0], y: [0, 0, 7, 7] }
+                  }
+                  d="M10 7v4"
+                  initial={{ opacity: 1, y: 0 }}
+                  strokeWidth="3"
+                  transition={
+                    reducedMotion
+                      ? { duration: 0 }
+                      : {
+                          duration: 1.8,
+                          ease: "easeInOut",
+                          repeat: Number.POSITIVE_INFINITY,
+                          repeatDelay: 0.4,
+                          times: [0, 0.15, 0.7, 1],
+                        }
+                  }
+                />
+              </svg>
+            </button>
+          </div>
+        )}
+      </section>
+    </SponsorSeedContext.Provider>
   );
 }
