@@ -46,17 +46,6 @@ const SECTION_NAV = [
 const REGION_ARIA =
   "HackSpain 2026 — cambia de sección con la rueda del ratón, deslizamiento o flechas";
 
-const FALLBACK_LINKS = [
-  { href: "/", label: "Inicio" },
-  { href: "/comunidad", label: "Comunidad" },
-  { href: "/mission", label: "Misión" },
-  { href: "/tracks", label: "Tracks" },
-  { href: "/infra", label: "Infraestructura" },
-  { href: "/gran-premio", label: "Gran premio" },
-  { href: "/mentores", label: "Mentores" },
-  { href: "/apuntate", label: "Inscripción" },
-] as const;
-
 function applySeoToDocument(sectionIdx: number) {
   if (typeof document === "undefined") {
     return;
@@ -275,35 +264,30 @@ export function LandingPage({ initialSection = 0 }: Props) {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // All hooks are above this line. The viewport-specific mosaic cannot render
-  // on the server, so its loading state carries the page's content and links.
+  // All hooks are above this line. Keep the loading state while the viewport
+  // size is unknown, but identify the event in the initial HTML.
   if (layoutProfile === null) {
-    const seo = seoForSectionIndex(initialSection);
     return (
       <div
-        className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5 px-6 text-center"
+        className="flex min-h-0 w-full flex-1 items-center justify-center"
         style={{ background: INK }}
       >
-        <h1 className="max-w-3xl font-bungee text-3xl text-hs-gold leading-tight sm:text-4xl">
-          {seo.title}
+        <h1 className="flex items-end gap-1 font-bungee text-4xl text-hs-gold leading-none">
+          <span>HACKSPAIN</span>
+          <span style={{ animation: "hs-blink 1.2s ease-in-out 0ms infinite" }}>
+            .
+          </span>
+          <span
+            style={{ animation: "hs-blink 1.2s ease-in-out 400ms infinite" }}
+          >
+            .
+          </span>
+          <span
+            style={{ animation: "hs-blink 1.2s ease-in-out 800ms infinite" }}
+          >
+            .
+          </span>
         </h1>
-        <p className="max-w-2xl font-bold font-sans text-hs-paper leading-relaxed">
-          {seo.description}
-        </p>
-        <nav aria-label="Explorar HackSpain" className="max-w-2xl">
-          <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-            {FALLBACK_LINKS.map((link) => (
-              <li key={link.href}>
-                <a
-                  className="font-bold font-sans text-hs-paper text-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-hs-gold"
-                  href={link.href}
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
       </div>
     );
   }
