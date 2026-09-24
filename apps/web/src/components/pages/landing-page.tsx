@@ -12,10 +12,10 @@ import {
   TRACKS_SECTION_INDEX,
 } from "../../data/section-routes";
 import { InlineSvg } from "../media/inline-svg";
+import type { LayoutProfile } from "../mosaic/artboard";
 import { artboardFor } from "../mosaic/artboard";
 import { cellsForProfile } from "../mosaic/cells";
 import { MosaicBackground } from "../mosaic/mosaic-background";
-import { useLayoutProfile } from "../mosaic/use-layout-profile";
 import { isOverlayOpen } from "../overlay/overlay-lock";
 import { CommunityTimeline } from "../sections/community-timeline";
 import { illustrationsForSection } from "../sections/illustration-themes";
@@ -86,23 +86,22 @@ export function LandingPage({ initialSection = 0 }: Props) {
   const [reducedMotion, setReducedMotion] = useState(false);
   const locked = useRef(false);
 
-  const layoutProfile = useLayoutProfile();
-
-  // profile is non-null after the early return below.
-  const profile = (layoutProfile ?? "desktop") as NonNullable<
-    typeof layoutProfile
-  >;
-
-  const artboard = useMemo(() => artboardFor(profile), [profile]);
-  const cells = useMemo(() => cellsForProfile(profile), [profile]);
-
-  const sections = useMemo(
-    () => (profile === "compact" ? buildSectionsCompact() : buildSections()),
-    [profile]
-  );
-  const ills = useMemo(
-    () => illustrationsForSection(section, profile),
-    [section, profile]
+  // Both responsive layouts are static, so render them on the server and let
+  // the existing CSS breakpoint choose which one is visible.
+  const layouts = useMemo(
+    () => ({
+      desktop: {
+        artboard: artboardFor("desktop"),
+        cells: cellsForProfile("desktop"),
+        sections: buildSections(),
+      },
+      compact: {
+        artboard: artboardFor("compact"),
+        cells: cellsForProfile("compact"),
+        sections: buildSectionsCompact(),
+      },
+    }),
+    []
   );
   // Sponsor-led sections hand the open row to their own partners.
   const pinnedSponsors = useMemo(() => {
@@ -190,8 +189,6 @@ export function LandingPage({ initialSection = 0 }: Props) {
     [section, goToSection]
   );
 
-  const isCompact = profile === "compact";
-
   useEffect(() => {
     // A full-screen overlay scrolls its own content, so section snapping — and
     // in particular the wheel preventDefault below — has to stand down.
@@ -250,7 +247,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("keydown", onKey);
     };
-  }, [advance, section]);
+  }, [advance]);
 
   useEffect(() => {
     const onPop = () => {
@@ -264,196 +261,171 @@ export function LandingPage({ initialSection = 0 }: Props) {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // All hooks are above this line. Keep the loading state while the viewport
-  // size is unknown, but identify the event in the initial HTML.
-  if (layoutProfile === null) {
-    return (
-      <div
-        className="flex min-h-0 w-full flex-1 items-center justify-center"
-        style={{ background: INK }}
-      >
-        <h1 className="flex items-end gap-1 font-bungee text-4xl text-hs-gold leading-none">
-          <span>HACKSPAIN</span>
-          <span style={{ animation: "hs-blink 1.2s ease-in-out 0ms infinite" }}>
-            .
-          </span>
-          <span
-            style={{ animation: "hs-blink 1.2s ease-in-out 400ms infinite" }}
-          >
-            .
-          </span>
-          <span
-            style={{ animation: "hs-blink 1.2s ease-in-out 800ms infinite" }}
-          >
-            .
-          </span>
-        </h1>
-      </div>
-    );
-  }
-
-  const baseCurrent = sections[section] ?? {};
-  // Partner logos fill any empty open-row cells (o1..o5) on every desktop section.
-  // Cells already defined by the section are preserved.
-  const current: Record<string, ReactNode> =
-    profile === "compact" || section === COMMUNITY_SECTION_INDEX
-      ? baseCurrent
-      : {
-          o1: <PartnerLogoCell delay={0} partner={partners[0]} />,
-          o2: <PartnerLogoCell delay={0.05} partner={partners[1]} />,
-          o3: <PartnerLogoCell delay={0.1} partner={partners[2]} />,
-          o4: <PartnerLogoCell delay={0.15} partner={partners[3]} />,
-          o5: <PartnerLogoCell delay={0.2} partner={partners[4]} />,
-          ...baseCurrent,
-        };
-  if (!isCompact && section === INFRA_SECTION_INDEX) {
-    // Frame the central headline and copy with all ten infra sponsors.
-    for (const id of ["o1", "o2", "o3", "o4", "o5"]) {
-      delete current[id];
-    }
-    const sponsorCells = [
-      "r1b",
-      "r1c",
-      "r1d",
-      "r3a",
-      "r3b",
-      "r4b",
-      "r4d",
-      "o2",
-      "o3",
-      "o4",
-    ];
-    sponsorCells.forEach((id, index) => {
-      current[id] = <PartnerLogoCell partner={INFRA_SPONSORS[index]} />;
-    });
-  }
   const liveLabel = SECTION_NAV[section] ?? SECTION_NAV[0];
 
-  const tileMotionClass = "absolute inset-0";
+  const renderMosaic = (profile: LayoutProfile) => {
+    const { artboard, cells, sections } = layouts[profile];
+    const isCompact = profile === "compact";
+    const ills = illustrationsForSection(section, profile);
+    const baseCurrent = sections[section] ?? {};
+    // Partner logos fill any empty open-row cells (o1..o5) on every desktop section.
+    // Cells already defined by the section are preserved.
+    const current: Record<string, ReactNode> =
+      profile === "compact" || section === COMMUNITY_SECTION_INDEX
+        ? baseCurrent
+        : {
+            o1: <PartnerLogoCell delay={0} partner={partners[0]} />,
+            o2: <PartnerLogoCell delay={0.05} partner={partners[1]} />,
+            o3: <PartnerLogoCell delay={0.1} partner={partners[2]} />,
+            o4: <PartnerLogoCell delay={0.15} partner={partners[3]} />,
+            o5: <PartnerLogoCell delay={0.2} partner={partners[4]} />,
+            ...baseCurrent,
+          };
+    if (!isCompact && section === INFRA_SECTION_INDEX) {
+      // Frame the central headline and copy with all ten infra sponsors.
+      for (const id of ["o1", "o2", "o3", "o4", "o5"]) {
+        delete current[id];
+      }
+      const sponsorCells = [
+        "r1b",
+        "r1c",
+        "r1d",
+        "r3a",
+        "r3b",
+        "r4b",
+        "r4d",
+        "o2",
+        "o3",
+        "o4",
+      ];
+      sponsorCells.forEach((id, index) => {
+        current[id] = <PartnerLogoCell partner={INFRA_SPONSORS[index]} />;
+      });
+    }
+    const tileMotionClass = "absolute inset-0";
 
-  const renderIll = (ill: (typeof ills)[number]) =>
-    ill.svg || ill.src ? (
-      <div
-        aria-hidden
-        className="pointer-events-none absolute z-10 overflow-hidden"
-        key={ill.id}
-        style={{
-          ...vp(ill.x, ill.y, ill.w, ill.h, artboard),
-          ...(ill.clip && !isCompact ? { clipPath: ill.clip } : {}),
-        }}
-      >
-        <AnimatePresence custom={dir} initial={false} mode="popLayout">
-          <motion.div
-            animate="center"
-            className={`absolute inset-0 flex min-h-0 ${ill.box}`}
-            custom={dir}
-            exit="exit"
-            initial="enter"
-            key={`${ill.id}-${section}`}
-            transition={
-              reducedMotion
-                ? { delay: ill.delay * 0.2, duration: 0.2, type: "tween" }
-                : { ...SPRING, delay: ill.delay }
-            }
-            variants={variants}
-          >
-            {ill.src && (
-              <img
-                alt=""
-                className="h-full w-full object-contain"
-                decoding="async"
-                height={640}
-                src={ill.src}
-                width={640}
-              />
-            )}
-            {!ill.src && ill.svg && (
-              <InlineSvg
-                className={ill.img}
-                decorative
-                fill={ill.fill}
-                svg={ill.svg}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    ) : null;
-
-  const stageContent = (
-    <>
-      <MosaicBackground
-        aria-hidden
-        className="absolute inset-0 h-full w-full"
-        variant={layoutProfile}
-      />
-
-      {!isCompact && ills.map(renderIll)}
-
-      {cells.map((cell) => {
-        if (isCompact && !current[cell.id]) {
-          return null;
-        }
-
-        const mosaicCell = layoutProfile === "compact" ? "" : "hs-mosaic-cell ";
-        const cellFrameClass =
-          cell.id === "r2c"
-            ? `${mosaicCell}absolute z-10 overflow-visible @container`
-            : `${mosaicCell}absolute overflow-hidden @container`;
-
-        const cellInner = (
+    const renderIll = (ill: (typeof ills)[number]) =>
+      ill.svg || ill.src ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-10 overflow-hidden"
+          key={ill.id}
+          style={{
+            ...vp(ill.x, ill.y, ill.w, ill.h, artboard),
+            ...(ill.clip && !isCompact ? { clipPath: ill.clip } : {}),
+          }}
+        >
           <AnimatePresence custom={dir} initial={false} mode="popLayout">
-            {current[cell.id] ? (
-              <motion.div
-                animate="center"
-                className={tileMotionClass}
-                custom={dir}
-                exit="exit"
-                initial="enter"
-                key={
-                  cell.id.startsWith("o") ? cell.id : `${cell.id}-${section}`
-                }
-                transition={
-                  reducedMotion
-                    ? { delay: cell.delay * 0.3, duration: 0.2, type: "tween" }
-                    : { ...SPRING, delay: cell.delay }
-                }
-                variants={variants}
-              >
-                {current[cell.id]}
-              </motion.div>
-            ) : null}
+            <motion.div
+              animate="center"
+              className={`absolute inset-0 flex min-h-0 ${ill.box}`}
+              custom={dir}
+              exit="exit"
+              initial="enter"
+              key={`${ill.id}-${section}`}
+              transition={
+                reducedMotion
+                  ? { delay: ill.delay * 0.2, duration: 0.2, type: "tween" }
+                  : { ...SPRING, delay: ill.delay }
+              }
+              variants={variants}
+            >
+              {ill.src && (
+                <img
+                  alt=""
+                  className="h-full w-full object-contain"
+                  decoding="async"
+                  height={640}
+                  src={ill.src}
+                  width={640}
+                />
+              )}
+              {!ill.src && ill.svg && (
+                <InlineSvg
+                  className={ill.img}
+                  decorative
+                  fill={ill.fill}
+                  svg={ill.svg}
+                />
+              )}
+            </motion.div>
           </AnimatePresence>
-        );
+        </div>
+      ) : null;
 
-        return (
-          <div
-            className={cellFrameClass}
-            key={cell.id}
-            style={{
-              ...vp(cell.x, cell.y, cell.w, cell.h, artboard),
-              ...(cell.clip ? { clipPath: cell.clip } : {}),
-            }}
-          >
-            {cellInner}
-          </div>
-        );
-      })}
+    return (
+      <>
+        <MosaicBackground
+          aria-hidden
+          className="absolute inset-0 h-full w-full"
+          variant={profile}
+        />
 
-      <MosaicBackground
-        aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        strokeOnly
-        variant={layoutProfile}
-      />
-      <CommunityTimeline
-        isActive={section === COMMUNITY_SECTION_INDEX}
-        onNext={() => advance(1)}
-        onPrevious={() => advance(-1)}
-        reducedMotion={reducedMotion}
-      />
-    </>
-  );
+        {!isCompact && ills.map(renderIll)}
+
+        {cells.map((cell) => {
+          if (isCompact && !current[cell.id]) {
+            return null;
+          }
+
+          const mosaicCell = profile === "compact" ? "" : "hs-mosaic-cell ";
+          const cellFrameClass =
+            cell.id === "r2c"
+              ? `${mosaicCell}absolute z-10 overflow-visible @container`
+              : `${mosaicCell}absolute overflow-hidden @container`;
+
+          const cellInner = (
+            <AnimatePresence custom={dir} initial={false} mode="popLayout">
+              {current[cell.id] ? (
+                <motion.div
+                  animate="center"
+                  className={tileMotionClass}
+                  custom={dir}
+                  exit="exit"
+                  initial="enter"
+                  key={
+                    cell.id.startsWith("o") ? cell.id : `${cell.id}-${section}`
+                  }
+                  transition={
+                    reducedMotion
+                      ? {
+                          delay: cell.delay * 0.3,
+                          duration: 0.2,
+                          type: "tween",
+                        }
+                      : { ...SPRING, delay: cell.delay }
+                  }
+                  variants={variants}
+                >
+                  {current[cell.id]}
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          );
+
+          return (
+            <div
+              className={cellFrameClass}
+              key={cell.id}
+              style={{
+                ...vp(cell.x, cell.y, cell.w, cell.h, artboard),
+                ...(cell.clip ? { clipPath: cell.clip } : {}),
+              }}
+            >
+              {cellInner}
+            </div>
+          );
+        })}
+
+        <MosaicBackground
+          aria-hidden
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          strokeOnly
+          variant={profile}
+        />
+      </>
+    );
+  };
 
   return (
     <section
@@ -461,10 +433,24 @@ export function LandingPage({ initialSection = 0 }: Props) {
       className="relative min-h-0 w-full flex-1 font-sans"
       style={{ background: INK }}
     >
+      <h1 className="sr-only">{seoForSectionIndex(section).title}</h1>
       <p aria-atomic="true" aria-live="polite" className="sr-only">
         {liveLabel}
       </p>
-      <div className="absolute inset-0 overflow-hidden">{stageContent}</div>
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 hidden md:block">
+          {renderMosaic("desktop")}
+        </div>
+        <div className="absolute inset-0 md:hidden">
+          {renderMosaic("compact")}
+        </div>
+        <CommunityTimeline
+          isActive={section === COMMUNITY_SECTION_INDEX}
+          onNext={() => advance(1)}
+          onPrevious={() => advance(-1)}
+          reducedMotion={reducedMotion}
+        />
+      </div>
       {section === 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[max(2.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center">
           <button

@@ -18,7 +18,7 @@ function subscribe(onChange: () => void): () => void {
 
 /**
  * Returns null during SSR and the initial hydration pass so that the
- * landing page renders nothing until the real viewport size is known.
+ * pages using this hook render nothing until the real viewport size is known.
  * This prevents mobile users on slow connections from seeing the
  * desktop layout while JS is still loading.
  */

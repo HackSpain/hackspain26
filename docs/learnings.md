@@ -15,15 +15,18 @@ navigation uses buttons and `pushState`. Tracks, judges and mentor details are
 also conditionally mounted only after a click. The effect on Google's actual
 index remains unverified without Search Console.
 
-**Correction in this branch; verification.** The loading state now identifies
-HackSpain in an H1 instead of saying `LOADING`, without adding temporary
-navigation or changing the hydrated mosaic. The web build and a local raw-HTML
-check verify the heading. The section copy, internal navigation, tracks, jury
-and mentor details remain dependent on client rendering and interactions; this
-branch does not claim to make them available in the initial HTML. Production
-indexing remains unverified until Search Console confirms it. Check raw HTTP
-HTML separately from the hydrated browser: metadata, sitemap presence and a
-working browser alone do not establish that content is available to crawlers.
+**Correction in this branch; verification.** The landing now renders both
+existing mosaic layouts in the initial HTML and selects the visible one with
+the same 768 px CSS breakpoint. A single accessible H1 identifies each route.
+This removes the viewport-dependent loading screen while keeping the mobile and
+desktop designs. Sponsor ordering starts deterministically so server markup
+and hydration match, then resumes the existing random rotation. A local raw-HTML
+crawl, desktop and mobile browser checks, and the web build verify the change.
+Details inside overlays still
+require interaction, and production indexing remains unverified without
+Search Console. Check raw HTTP HTML separately from the hydrated browser:
+metadata, sitemap presence and a working browser alone do not establish that
+content is available to crawlers.
 
 ## 2026-09-23: Astro 7 breaks the bare Tailwind import in the server build and drops inter-tag spaces
 

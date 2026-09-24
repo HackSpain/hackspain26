@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { shuffled } from "../../lib/shuffle";
 import {
   acurioLogo,
@@ -359,9 +359,25 @@ export function usePartnerRotation(
     onScreen: PARTNERS.slice(0, count),
     queue: PARTNERS.slice(count),
   }));
-  const pinnedOrder = useMemo(
-    () => (pinned === undefined ? undefined : shuffled(pinned)),
-    [pinned]
+  // Hydrate the server's sponsor order, then randomize once in the browser.
+  const shuffledPinned = useRef<{
+    source: Partner[];
+    order: Partner[];
+  } | null>(null);
+  const pinnedOrder = useSyncExternalStore(
+    () => () => {
+      // Sponsor order changes only when the pinned list changes.
+    },
+    () => {
+      if (pinned === undefined) {
+        return;
+      }
+      if (shuffledPinned.current?.source !== pinned) {
+        shuffledPinned.current = { source: pinned, order: shuffled(pinned) };
+      }
+      return shuffledPinned.current.order;
+    },
+    () => pinned
   );
   const [pinnedOffset, setPinnedOffset] = useState(0);
   const rotatingPinned =
