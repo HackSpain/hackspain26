@@ -7,11 +7,9 @@ import LegalFooter from "../components/legal-footer.astro";
 import { ANALYTICS_CONSENT_STORAGE_KEY } from "../data/cookie-consent";
 import {
   jsonLdEvent,
-  jsonLdFaq,
   jsonLdOrganization,
   jsonLdWebPage,
   jsonLdWebSite,
-  keywordsForSectionIndex,
   SOCIAL_SHARE_IMAGE,
   seoForSectionIndex,
 } from "../data/landing-meta";
@@ -22,7 +20,6 @@ interface Props {
   canonicalPathOverride?: string;
   description?: string;
   includeStructuredData?: boolean;
-  keywordsOverride?: string;
   ogImage?: { path: string; width: number; height: number };
   ogImageAlt?: string;
   robotsDirectives?: string;
@@ -53,8 +50,6 @@ const canonicalPath =
 const canonical = new URL(canonicalPath, Astro.site);
 const ogImage = new URL(ogImageAsset.path, Astro.site);
 const ogImageUrl = ogImage.href;
-const keywords =
-  Astro.props.keywordsOverride ?? keywordsForSectionIndex(sectionIndex);
 const robotsDirectives =
   Astro.props.robotsDirectives ??
   "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
@@ -69,8 +64,13 @@ const REFERRAL_CODE_INLINE_PATTERN = "^[a-zA-Z0-9_-]+$";
 const orgJson = JSON.stringify(jsonLdOrganization());
 const webSiteJson = JSON.stringify(jsonLdWebSite());
 const eventJson = JSON.stringify(jsonLdEvent());
-const webPageJson = JSON.stringify(jsonLdWebPage(sectionIndex, canonical.href));
-const faqJson = JSON.stringify(jsonLdFaq());
+const webPageJson = JSON.stringify(
+  jsonLdWebPage(
+    canonical.href,
+    { title, description },
+    sectionIndex > 0 || canonical.pathname === "/"
+  )
+);
 ---
 
 <!doctype html>
@@ -98,7 +98,6 @@ const faqJson = JSON.stringify(jsonLdFaq());
     <meta name="color-scheme" content="light">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="format-detection" content="telephone=no">
-    <meta name="keywords" content={keywords}>
 
     <meta property="og:title" content={title}>
     <meta property="og:description" content={description}>
@@ -141,9 +140,8 @@ const faqJson = JSON.stringify(jsonLdFaq());
         <>
           <script set:html={orgJson} type="application/ld+json" />
           <script set:html={webSiteJson} type="application/ld+json" />
-          <script set:html={eventJson} type="application/ld+json" />
+          {canonical.pathname === "/" && <script set:html={eventJson} type="application/ld+json" />}
           <script set:html={webPageJson} type="application/ld+json" />
-          <script set:html={faqJson} type="application/ld+json" />
         </>
       )}
     <script is:inline define:vars={{ ANALYTICS_CONSENT_STORAGE_KEY }}>

@@ -3,7 +3,7 @@ export const prerender = true;
 
 import SignupNavbar from "../components/nav/signup-navbar.astro";
 import { ConductPage } from "../components/pages/conduct-page";
-import { CONDUCT_KEYWORDS, conductSeo } from "../data/landing-meta";
+import { conductSeo } from "../data/landing-meta";
 import Layout from "../layouts/layout.astro";
 
 const seo = conductSeo();
@@ -16,7 +16,6 @@ const seo = conductSeo();
   description={seo.description}
   ogImageAlt={seo.ogImageAlt}
   canonicalPathOverride="/conduct"
-  keywordsOverride={CONDUCT_KEYWORDS}
 >
   <main id="main" class="relative min-h-dvh w-full">
     <div class="relative z-10 mx-auto max-w-5xl px-3 pt-6 sm:px-4 sm:pt-10">

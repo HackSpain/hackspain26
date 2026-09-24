@@ -2,6 +2,33 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-24 — Landing viewport detection suppresses its server-rendered content
+
+**Evidence and consequence.** An HTTP audit of all 13 production sitemap URLs
+found that the homepage and seven section routes return metadata and JSON-LD,
+but their main HTML contains only `LOADING`, with no headings. The cause is
+confirmed in `useLayoutProfile`: its server snapshot is `null`, so `LandingPage`
+returns the loading screen before rendering its section. `client:load` does
+not restore content to the server response. A browser renders the section after
+hydration, but the homepage then still has no anchors to the other sections;
+navigation uses buttons and `pushState`. Tracks, judges and mentor details are
+also conditionally mounted only after a click. The effect on Google's actual
+index remains unverified without Search Console.
+
+**Correction in this branch; verification.** The landing now renders both
+existing mosaic layouts in the initial HTML and selects the visible one with
+the same 768 px CSS breakpoint. A single accessible H1 identifies each route.
+This removes the viewport-dependent loading screen while keeping the mobile and
+desktop designs. A server-generated sponsor seed keeps the randomized first
+order stable through hydration; later pinned sections reshuffle on navigation.
+A local raw-HTML
+crawl, desktop and mobile browser checks, and the web build verify the change.
+Details inside overlays still
+require interaction, and production indexing remains unverified without
+Search Console. Check raw HTTP HTML separately from the hydrated browser:
+metadata, sitemap presence and a working browser alone do not establish that
+content is available to crawlers.
+
 ## 2026-09-23: Astro 7 breaks the bare Tailwind import in the server build and drops inter-tag spaces
 
 **Symptom and evidence.** After moving `apps/web` to Astro 7.3.4 (Vite 8.3.0),

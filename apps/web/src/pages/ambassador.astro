@@ -3,7 +3,7 @@ export const prerender = true;
 
 import AmbassadorNavbar from "../components/nav/ambassador-navbar.astro";
 import { AmbassadorPage } from "../components/pages/ambassador-page";
-import { AMBASSADOR_KEYWORDS, ambassadorSeo } from "../data/landing-meta";
+import { ambassadorSeo } from "../data/landing-meta";
 import Layout from "../layouts/layout.astro";
 
 const seo = ambassadorSeo();
@@ -16,7 +16,6 @@ const seo = ambassadorSeo();
   description={seo.description}
   ogImageAlt={seo.ogImageAlt}
   canonicalPathOverride="/ambassador"
-  keywordsOverride={AMBASSADOR_KEYWORDS}
 >
   <main id="main" class="relative min-h-dvh w-full">
     <div class="relative z-10 mx-auto max-w-5xl px-3 pt-6 sm:px-4 sm:pt-10">

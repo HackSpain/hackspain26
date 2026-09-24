@@ -4,10 +4,16 @@ export const prerender = false;
 import { LandingPage } from "../components/pages/landing-page";
 import { COMMUNITY_SECTION_INDEX } from "../data/section-routes";
 import Layout from "../layouts/layout.astro";
+
+const sponsorSeed = Math.floor(Math.random() * 4_294_967_296);
 ---
 
 <Layout sectionIndex={COMMUNITY_SECTION_INDEX}>
   <main id="main" class="contents">
-    <LandingPage client:load initialSection={COMMUNITY_SECTION_INDEX} />
+    <LandingPage
+      client:load
+      sponsorSeed={sponsorSeed}
+      initialSection={COMMUNITY_SECTION_INDEX}
+    />
   </main>
 </Layout>

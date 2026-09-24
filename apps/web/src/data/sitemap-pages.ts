@@ -1,4 +1,5 @@
 import { SECTION_SLUGS } from "./section-routes";
+import { areSignupsClosed } from "./signup-deadline";
 
 const TRAILING_SLASHES = /\/+$/;
 
@@ -18,7 +19,7 @@ export function getAllSitemapPageUrls(): string[] {
   const raw = [
     o,
     ...SECTION_SLUGS.map((s) => `${o}/${s}`),
-    `${o}/signup`,
+    ...(areSignupsClosed() ? [] : [`${o}/signup`]),
     `${o}/ambassador`,
     `${o}/brand`,
     `${o}/privacy`,

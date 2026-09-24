@@ -6,10 +6,15 @@ import { SECTION_SLUGS } from "../data/section-routes";
 import Layout from "../layouts/layout.astro";
 
 const sectionIndex = SECTION_SLUGS.indexOf("apuntate") + 1;
+const sponsorSeed = Math.floor(Math.random() * 4_294_967_296);
 ---
 
 <Layout sectionIndex={sectionIndex}>
   <main id="main" class="contents">
-    <LandingPage client:load initialSection={sectionIndex} />
+    <LandingPage
+      client:load
+      sponsorSeed={sponsorSeed}
+      initialSection={sectionIndex}
+    />
   </main>
 </Layout>

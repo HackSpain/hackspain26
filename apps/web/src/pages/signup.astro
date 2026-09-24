@@ -3,7 +3,8 @@ export const prerender = true;
 
 import SignupNavbar from "../components/nav/signup-navbar.astro";
 import { SignupPage } from "../components/pages/signup-page";
-import { SIGNUP_KEYWORDS, signupSeo } from "../data/landing-meta";
+import { signupSeo } from "../data/landing-meta";
+import { areSignupsClosed } from "../data/signup-deadline";
 import Layout from "../layouts/layout.astro";
 
 const seo = signupSeo();
@@ -15,8 +16,7 @@ const seo = signupSeo();
   title={seo.title}
   description={seo.description}
   ogImageAlt={seo.ogImageAlt}
-  canonicalPathOverride="/signup"
-  keywordsOverride={SIGNUP_KEYWORDS}
+  canonicalPathOverride={areSignupsClosed() ? "/apuntate" : "/signup"}
 >
   <main id="main" class="relative min-h-dvh w-full overflow-hidden">
     <div class="relative z-10 mx-auto max-w-6xl px-0 pt-0 sm:px-4 sm:pt-10">
