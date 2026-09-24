@@ -19,8 +19,8 @@ index remains unverified without Search Console.
 existing mosaic layouts in the initial HTML and selects the visible one with
 the same 768 px CSS breakpoint. A single accessible H1 identifies each route.
 This removes the viewport-dependent loading screen while keeping the mobile and
-desktop designs. Sponsor ordering starts deterministically so server markup
-and hydration match, then resumes the existing random rotation. A local raw-HTML
+desktop designs. The first sponsor order stays stable through hydration;
+later pinned sections reshuffle on navigation. A local raw-HTML
 crawl, desktop and mobile browser checks, and the web build verify the change.
 Details inside overlays still
 require interaction, and production indexing remains unverified without

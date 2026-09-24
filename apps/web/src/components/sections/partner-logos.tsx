@@ -359,21 +359,22 @@ export function usePartnerRotation(
     onScreen: PARTNERS.slice(0, count),
     queue: PARTNERS.slice(count),
   }));
-  // Hydrate the server's sponsor order, then randomize once in the browser.
+  // Keep the server's first sponsor order through hydration; reshuffle when
+  // navigation hands the hook a different pinned list.
   const shuffledPinned = useRef<{
-    source: Partner[];
-    order: Partner[];
-  } | null>(null);
+    source: Partner[] | undefined;
+    order: Partner[] | undefined;
+  }>({ source: pinned, order: pinned });
   const pinnedOrder = useSyncExternalStore(
     () => () => {
       // Sponsor order changes only when the pinned list changes.
     },
     () => {
-      if (pinned === undefined) {
-        return;
-      }
-      if (shuffledPinned.current?.source !== pinned) {
-        shuffledPinned.current = { source: pinned, order: shuffled(pinned) };
+      if (shuffledPinned.current.source !== pinned) {
+        shuffledPinned.current = {
+          source: pinned,
+          order: pinned === undefined ? undefined : shuffled(pinned),
+        };
       }
       return shuffledPinned.current.order;
     },
