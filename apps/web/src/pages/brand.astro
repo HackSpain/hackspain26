@@ -1,7 +1,7 @@
 ---
 export const prerender = true;
 
-import { BRAND_KEYWORDS, brandSeo } from "../data/landing-meta";
+import { brandSeo } from "../data/landing-meta";
 import Layout from "../layouts/layout.astro";
 
 const seo = brandSeo();
@@ -94,7 +94,6 @@ const downloadIcon = `
   allowScroll
   canonicalPathOverride="/brand"
   description={seo.description}
-  keywordsOverride={BRAND_KEYWORDS}
   ogImageAlt={seo.ogImageAlt}
   sectionIndex={0}
   title={seo.title}

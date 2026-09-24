@@ -24,44 +24,44 @@ export interface PageSeo {
 const PAGES: PageSeo[] = [
   {
     description:
-      "Así vivimos HackSpain 2026, del 18 al 20 de septiembre en UPM–ETSIT, Madrid. Revive el vídeo, las historias de la comunidad y la información de la edición.",
+      "HackSpain 2026 reunió a 250 jóvenes builders en un hackathon de 36 horas en Madrid. Explora la edición, sus cinco tracks, mentores y comunidad.",
     ogImageAlt: "HackSpain 2026 — MADRID '26",
-    title: "Así fue HackSpain 2026 — Lo que pasó aquí se queda",
+    title: "HackSpain 2026: hackathon en Madrid, tracks y comunidad",
   },
   {
-    description: "Las historias y los tweets de quienes vivieron HackSpain 2026. El recuerdo de la edición, contado por su comunidad.",
+    description: "Vídeo y publicaciones de quienes participaron en HackSpain 2026, el hackathon celebrado del 18 al 20 de septiembre en Madrid.",
     ogImageAlt: "HackSpain 2026 — vuestras historias",
-    title: "Vuestras historias | HackSpain 2026",
+    title: "Comunidad y vídeo de HackSpain 2026",
   },
   {
     description:
       "36 horas. 250 de los mejores builders menores de 30. HackSpain 2026 fue el punto de encuentro de los jóvenes que van a posicionar a España como líder de talento tech joven.",
     ogImageAlt: "HackSpain 2026 — España tiene talento",
-    title: "España tiene talento. Y lo juntamos. | HackSpain 2026",
+    title: "Misión de HackSpain: jóvenes builders en España",
   },
   {
     description:
       "Compute gratis para todos. Cinco tracks con retos de las mejores startups de España: Maisa, HappyRobot, Prosper AI, Embat y THEKER Robotics.",
     ogImageAlt: "HackSpain 2026 — tracks originales",
-    title: "Tracks originales | HackSpain 2026",
+    title: "Tracks y startups de HackSpain 2026",
   },
   {
     description:
       "Infraestructura para construir sin límites en HackSpain 2026, con Convex, Vercel, QuiverAI, Cloudflare, Tinybird, Cognition, Exa, fal.ai, Cursor y Helmcode.",
     ogImageAlt: "HackSpain 2026 — infraestructura para construir",
-    title: "Infraestructura para construir | HackSpain 2026",
+    title: "Infraestructura de HackSpain 2026",
   },
   {
     description:
-      "Un único gran premio de 5.000 € para el equipo ganador de HackSpain 2026, con el patrocinio de JME Ventures, Kfund, Kibo Ventures, Enzo Ventures y Acurio Ventures.",
+      "El gran premio de 5.000 € y los jurados de HackSpain 2026, con JME Ventures, Kfund, Kibo Ventures, Enzo Ventures y Acurio Ventures.",
     ogImageAlt: "HackSpain 2026 — 1 gran premio de 5.000 €",
-    title: "1 gran premio de 5.000 € | HackSpain 2026",
+    title: "Gran premio y jurado de HackSpain 2026",
   },
   {
     description:
-      "Conectamos con los mejores fundadores y mentores del ecosistema de España. Con RevenueCat, Reveni, Karumi, Invopop y Causa Prima.",
+      "Conoce a los fundadores, ingenieros y mentores que acompañaron a los equipos de HackSpain 2026 en Madrid.",
     ogImageAlt: "HackSpain 2026 — comida, bebida y charlas",
-    title: "Comida, bebida y charlas | HackSpain 2026",
+    title: "Fundadores y mentores de HackSpain 2026",
   },
   {
     description: "Inscripción abierta para HackSpain 2026. Envía tu solicitud.",
@@ -77,7 +77,7 @@ const SIGNUP_CLOSED_SEO: PageSeo = {
   description:
     "HackSpain 2026 se celebró del 18 al 20 de septiembre en UPM–ETSIT, Madrid. Revive la edición y sigue a la comunidad.",
   ogImageAlt: "HackSpain 2026 — gracias por hacerlo posible",
-  title: "Gracias por hacerlo posible | HackSpain 2026",
+  title: "Inscripción cerrada | HackSpain 2026",
 };
 
 export function seoForSectionIndex(i: number): PageSeo {
@@ -87,9 +87,6 @@ export function seoForSectionIndex(i: number): PageSeo {
   }
   return PAGES[index] ?? PAGES[0];
 }
-
-export const SIGNUP_KEYWORDS =
-  "apuntarse HackSpain, registro hackathon España, hackathon Madrid 2026, Hack Spain registro, interés hackathon jóvenes";
 
 export function signupSeo(): PageSeo {
   if (areSignupsClosed()) {
@@ -103,20 +100,14 @@ export function signupSeo(): PageSeo {
   };
 }
 
-export const AMBASSADOR_KEYWORDS =
-  "embajador HackSpain, campus hackathon España, universidad hackathon Madrid 2026, embajador estudiantil hackathon";
-
 export function ambassadorSeo(): PageSeo {
   return {
     description:
-      "Junta builders, mueve el boca a boca y empuja hacia el registro — te mantenemos al día con fechas y enlaces oficiales, te aclaramos dudas si las tienes, y tienes contacto directo con el equipo para Madrid 2026.",
+      "Así fue el programa de embajadores de HackSpain 2026, que dio a conocer el hackathon en campus y comunidades tecnológicas de España.",
     ogImageAlt: "HackSpain 2026 — programa de embajadores",
-    title: "Sé la cara de HackSpain en tu campus | HackSpain 2026",
+    title: "Programa de embajadores de HackSpain 2026",
   };
 }
-
-export const PRIVACY_KEYWORDS =
-  "privacidad HackSpain, comunicación datos patrocinadores, RGPD, datos personales, registro hackathon, LOPDGDD";
 
 export function privacySeo(): PageSeo {
   return {
@@ -127,9 +118,6 @@ export function privacySeo(): PageSeo {
   };
 }
 
-export const CONDUCT_KEYWORDS =
-  "código de conducta HackSpain, normas hackathon Madrid, buena fe, respeto, plazos envío";
-
 export function conductSeo(): PageSeo {
   return {
     description:
@@ -139,9 +127,6 @@ export function conductSeo(): PageSeo {
   };
 }
 
-export const BRAND_KEYWORDS =
-  "marca HackSpain, logo HackSpain, identidad visual HackSpain, recursos de prensa HackSpain, brand assets HackSpain";
-
 export function brandSeo(): PageSeo {
   return {
     description:
@@ -149,28 +134,6 @@ export function brandSeo(): PageSeo {
     ogImageAlt: "HackSpain — guía de marca y recursos oficiales",
     title: "Marca y recursos — HackSpain",
   };
-}
-
-const KEYWORDS_BASE =
-  "HackSpain, Hack Spain, hackathon Madrid, hackathon España, builders jóvenes, UPM ETSIT, hackspain.com";
-
-const KEYWORDS_BY_SECTION = [
-  "MADRID 2026, 18 al 20 de Septiembre, 250 participantes",
-  "comunidad HackSpain, tweets HackSpain, historias del hackathon",
-  "España tiene talento, talento tech joven, 36 horas",
-  "tracks originales, compute gratis, startups España",
-  "infraestructura hackathon, créditos cloud, herramientas para builders, infra sponsors",
-  "gran premio, 5.000 euros, premio hackathon, fondos españoles, venture capital España",
-  "comida bebida charlas, fundadores España, mentores hackathon, networking startups",
-  "HackSpain 2026 finalizado, recap hackathon, comunidad HackSpain",
-];
-
-export function keywordsForSectionIndex(i: number): string {
-  const extra =
-    KEYWORDS_BY_SECTION[
-      Math.max(0, Math.min(KEYWORDS_BY_SECTION.length - 1, i))
-    ] ?? "";
-  return extra ? `${KEYWORDS_BASE}, ${extra}` : KEYWORDS_BASE;
 }
 
 export function jsonLdOrganization() {
@@ -222,13 +185,16 @@ export function jsonLdWebSite() {
   };
 }
 
-export function jsonLdWebPage(sectionIndex: number, pageUrl: string) {
-  const seo = seoForSectionIndex(sectionIndex);
+export function jsonLdWebPage(
+  pageUrl: string,
+  seo: Pick<PageSeo, "title" | "description">,
+  aboutEvent: boolean
+) {
   return {
     "@context": "https://schema.org",
     "@id": `${pageUrl}#webpage`,
     "@type": "WebPage",
-    about: { "@id": `${SITE}/#event` },
+    ...(aboutEvent ? { about: { "@id": `${SITE}/#event` } } : {}),
     description: seo.description,
     inLanguage: "es",
     isPartOf: { "@id": `${SITE}/#website` },
@@ -257,7 +223,8 @@ export function jsonLdEvent() {
     ],
     description:
       "HackSpain 2026: 36 horas, 250 builders menores de 30. 18 al 20 de Septiembre en UPM - ETSIT, Madrid.",
-    endDate: "2026-09-20",
+    endDate: "2026-09-20T15:00:00+02:00",
+    image: `${SITE}${SOCIAL_SHARE_IMAGE.path}`,
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     inLanguage: "es",
     keywords:
@@ -275,102 +242,5 @@ export function jsonLdEvent() {
     organizer: { "@id": `${SITE}/#organization` },
     startDate: "2026-09-18T17:00:00+02:00",
     url: SITE,
-  };
-}
-
-export function jsonLdFaq() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "HackSpain es el hackathon para unir a los mejores builders jóvenes de España. Edición 2026: 36 horas, 250 participantes, 18 al 20 de Septiembre en UPM - ETSIT (Madrid). Web oficial: hackspain.com.",
-        },
-        name: '¿Qué es HackSpain o "Hack Spain"?',
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "18 al 20 de Septiembre de 2026 en UPM - ETSIT, Madrid, España. Más detalles en hackspain.com.",
-        },
-        name: "¿Cuándo se celebró HackSpain 2026 y dónde?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Las solicitudes para HackSpain 2026 están cerradas. Puedes seguir @hackspain26 en X e Instagram para enterarte de próximas ediciones o escribir a contact@hackspain.com.",
-        },
-        name: "¿Cómo me apunto o me registro en HackSpain?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "El programa de embajadores de HackSpain 2026 está cerrado. Puedes consultar la información histórica en hackspain.com/ambassador y seguir @hackspain26 para futuras ediciones.",
-        },
-        name: "¿Cómo puedo ser embajador o embajadora de HackSpain?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Los cinco tracks de 2026 contaron con Maisa, HappyRobot, Prosper AI, Embat y THEKER Robotics. Los patrocinadores de infraestructura y del gran premio se conservan en hackspain.com/infra y hackspain.com/gran-premio.",
-        },
-        name: "¿Cuáles son los patrocinadores de HackSpain / Hack Spain?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "La edición 2026 contó con un gran premio de 5.000 €. La información del premio y su jurado se conserva en hackspain.com/gran-premio.",
-        },
-        name: "¿Qué premios hay en HackSpain?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Tracks originales con retos de las mejores startups de España, compute gratis para todos y un gran premio con jurado estrella. Detalles en hackspain.com/tracks.",
-        },
-        name: "¿Qué tracks tiene HackSpain?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "250 participantes en 36 horas. Cifras oficiales en hackspain.com.",
-        },
-        name: "¿Cuántas personas participan?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "En X (Twitter): @hackspain26. Instagram: @hackspain26 (instagram.com/hackspain26). Contacto: contact@hackspain.com.",
-        },
-        name: "¿Cómo seguir a HackSpain en redes?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "En https://hackspain.com/llms.txt hay un resumen en Markdown con hechos, FAQ y URLs canónicas para sistemas de respuesta.",
-        },
-        name: "¿Dónde está la información para modelos de IA (llms.txt)?",
-      },
-      {
-        "@type": "Question",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "https://hackspain.com",
-        },
-        name: "¿Cuál es el sitio web oficial?",
-      },
-    ],
   };
 }

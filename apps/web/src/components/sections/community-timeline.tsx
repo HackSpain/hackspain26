@@ -254,7 +254,7 @@ export function CommunityTimeline({
         ease: [0.22, 1, 0.36, 1],
       }}
     >
-      <TweetReel label="VUESTRAS HISTORIAS" posts={leftPosts} />
+      {isActive && <TweetReel label="VUESTRAS HISTORIAS" posts={leftPosts} />}
       <div className="cinema-center">
         <header className="cinema-heading">
           <span>MADRID · 18—20 SEPTIEMBRE 2026</span>
@@ -273,7 +273,7 @@ export function CommunityTimeline({
             onPlay={() => setBlocked(false)}
             playsInline
             poster="/recap/poster.jpg"
-            preload="metadata"
+            preload={isActive ? "metadata" : "none"}
             ref={videoRef}
           >
             <source src="/recap/hackspain-2026.mp4" type="video/mp4" />
@@ -288,7 +288,9 @@ export function CommunityTimeline({
           )}
         </div>
       </div>
-      <TweetReel label="LO QUE NOS LLEVAMOS" posts={rightPosts} reverse />
+      {isActive && (
+        <TweetReel label="LO QUE NOS LLEVAMOS" posts={rightPosts} reverse />
+      )}
       <nav aria-label="Secciones de HackSpain" className="cinema-nav">
         <button onClick={onPrevious} type="button">
           ↑ Volver al inicio

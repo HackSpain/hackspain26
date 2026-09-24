@@ -1,15 +1,10 @@
 ---
 export const prerender = false;
 
-import { LandingPage } from "../components/pages/landing-page";
+import LandingDocument from "../components/pages/landing-document.astro";
 import { SECTION_SLUGS } from "../data/section-routes";
-import Layout from "../layouts/layout.astro";
 
 const sectionIndex = SECTION_SLUGS.indexOf("tracks") + 1;
 ---
 
-<Layout sectionIndex={sectionIndex}>
-  <main id="main" class="contents">
-    <LandingPage client:load initialSection={sectionIndex} />
-  </main>
-</Layout>
+<LandingDocument sectionIndex={sectionIndex} />

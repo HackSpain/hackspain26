@@ -1,13 +1,8 @@
 ---
 export const prerender = false;
 
-import { LandingPage } from "../components/pages/landing-page";
+import LandingDocument from "../components/pages/landing-document.astro";
 import { COMMUNITY_SECTION_INDEX } from "../data/section-routes";
-import Layout from "../layouts/layout.astro";
 ---
 
-<Layout sectionIndex={COMMUNITY_SECTION_INDEX}>
-  <main id="main" class="contents">
-    <LandingPage client:load initialSection={COMMUNITY_SECTION_INDEX} />
-  </main>
-</Layout>
+<LandingDocument sectionIndex={COMMUNITY_SECTION_INDEX} />

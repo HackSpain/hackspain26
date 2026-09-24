@@ -693,7 +693,7 @@ export function SignupPage() {
         <div className="grid grid-cols-1 gap-0 border-hs-ink bg-hs-ink sm:border-[3px]">
           <div className="border-hs-ink border-b-[3px] bg-hs-orange px-4 py-5">
             <h1 className="font-bungee text-2xl text-hs-ink leading-tight sm:text-3xl">
-              {t.title}
+              {showClosed ? "Inscripción cerrada para HackSpain 2026" : t.title}
             </h1>
             <p className="mt-2 max-w-xl font-sans font-semibold text-base text-hs-ink leading-snug sm:text-lg">
               {showClosed ? t.signupsClosedSubtitle : t.subtitle}

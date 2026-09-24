@@ -2,15 +2,10 @@ import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  keywordsForSectionIndex,
-  seoForSectionIndex,
-} from "../../data/landing-meta";
-import {
   COMMUNITY_SECTION_INDEX,
   GRAND_PRIZE_SECTION_INDEX,
   INFRA_SECTION_INDEX,
   MENTORS_SECTION_INDEX,
-  parsePath,
   pathRootFromSectionIndex,
   TRACKS_SECTION_INDEX,
 } from "../../data/section-routes";
@@ -49,38 +44,6 @@ const SECTION_NAV = [
 const REGION_ARIA =
   "HackSpain 2026 — cambia de sección con la rueda del ratón, deslizamiento o flechas";
 
-function applySeoToDocument(sectionIdx: number) {
-  if (typeof document === "undefined") {
-    return;
-  }
-  const { title, description, ogImageAlt } = seoForSectionIndex(sectionIdx);
-  const keywords = keywordsForSectionIndex(sectionIdx);
-  document.title = title;
-  document.documentElement.lang = "es";
-  const setMeta = (sel: string, attr: string, val: string) => {
-    const el = document.querySelector(sel);
-    if (el) {
-      el.setAttribute(attr, val);
-    }
-  };
-  setMeta('meta[name="description"]', "content", description);
-  setMeta('meta[name="keywords"]', "content", keywords);
-  setMeta('meta[property="og:title"]', "content", title);
-  setMeta('meta[property="og:description"]', "content", description);
-  const path = pathRootFromSectionIndex(sectionIdx);
-  const pageUrl = `${window.location.origin}${path}`;
-  setMeta('meta[property="og:url"]', "content", pageUrl);
-  setMeta('meta[property="og:image:alt"]', "content", ogImageAlt);
-  setMeta('meta[property="og:locale"]', "content", "es_ES");
-  setMeta('meta[name="twitter:title"]', "content", title);
-  setMeta('meta[name="twitter:description"]', "content", description);
-  setMeta('meta[name="twitter:image:alt"]', "content", ogImageAlt);
-  const link = document.querySelector('link[rel="canonical"]');
-  if (link) {
-    link.setAttribute("href", pageUrl);
-  }
-}
-
 interface Props {
   initialSection?: number;
 }
@@ -90,6 +53,7 @@ export function LandingPage({ initialSection = 0 }: Props) {
   const [dir, setDir] = useState(1);
   const [reducedMotion, setReducedMotion] = useState(false);
   const locked = useRef(false);
+  const stageRef = useRef<HTMLElement>(null);
 
   const layoutProfile = useLayoutProfile();
 
@@ -127,10 +91,6 @@ export function LandingPage({ initialSection = 0 }: Props) {
   const partners = usePartnerRotation(PARTNER_CELL_COUNT, pinnedSponsors);
 
   useEffect(() => {
-    applySeoToDocument(initialSection);
-  }, [initialSection]);
-
-  useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(mq.matches);
     const fn = () => setReducedMotion(mq.matches);
@@ -158,11 +118,6 @@ export function LandingPage({ initialSection = 0 }: Props) {
       locked.current = true;
       setDir(d);
       setSection(next);
-      const path = pathRootFromSectionIndex(next);
-      if (typeof window !== "undefined" && window.location.pathname !== path) {
-        window.history.pushState({ section: next }, "", path);
-      }
-      applySeoToDocument(next);
       const unlockMs = opts?.unlockMs ?? 700;
       setTimeout(() => {
         locked.current = false;
@@ -173,7 +128,10 @@ export function LandingPage({ initialSection = 0 }: Props) {
 
   useEffect(() => {
     const onEnter = (event: MouseEvent) => {
-      if (event.target instanceof Element && event.target.closest("[data-enter-hackspain]")) {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-enter-hackspain]")
+      ) {
         goToSection(COMMUNITY_SECTION_INDEX, 1);
       }
     };
@@ -198,21 +156,34 @@ export function LandingPage({ initialSection = 0 }: Props) {
     // A full-screen overlay scrolls its own content, so section snapping — and
     // in particular the wheel preventDefault below — has to stand down.
     const onWheel = (e: WheelEvent) => {
-      if (isOverlayOpen()) {
+      if (isOverlayOpen() || !stageRef.current?.contains(e.target as Node)) {
         return;
       }
-      e.preventDefault();
       if (Math.abs(e.deltaY) <= 5) {
         return;
       }
+      if (section === NUM_SECTIONS - 1 && e.deltaY > 0) {
+        return;
+      }
+      e.preventDefault();
       advance(e.deltaY > 0 ? 1 : -1);
     };
     let touchY = 0;
     const onTouchStart = (e: TouchEvent) => {
       touchY = e.touches[0].clientY;
     };
+    const onTouchMove = (e: TouchEvent) => {
+      if (isOverlayOpen() || !stageRef.current?.contains(e.target as Node)) {
+        return;
+      }
+      const movingTowardContent =
+        section === NUM_SECTIONS - 1 && touchY > e.touches[0].clientY;
+      if (!movingTowardContent) {
+        e.preventDefault();
+      }
+    };
     const onTouchEnd = (e: TouchEvent) => {
-      if (isOverlayOpen()) {
+      if (isOverlayOpen() || !stageRef.current?.contains(e.target as Node)) {
         return;
       }
       const dy = touchY - e.changedTouches[0].clientY;
@@ -222,12 +193,17 @@ export function LandingPage({ initialSection = 0 }: Props) {
       advance(dy > 0 ? 1 : -1);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (isOverlayOpen()) {
+      if (
+        isOverlayOpen() ||
+        (stageRef.current?.getBoundingClientRect().bottom ?? 0) <= 0
+      ) {
         return;
       }
       if (
         e.target instanceof Element &&
-        e.target.closest("button, a, input, textarea, select, video, [contenteditable]")
+        e.target.closest(
+          "button, a, input, textarea, select, video, [contenteditable]"
+        )
       ) {
         return;
       }
@@ -242,52 +218,38 @@ export function LandingPage({ initialSection = 0 }: Props) {
     };
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("keydown", onKey);
     };
   }, [advance, section]);
 
-  useEffect(() => {
-    const onPop = () => {
-      locked.current = false;
-      const parsed = parsePath(window.location.pathname);
-      setDir(1);
-      setSection(parsed.sectionIndex);
-      applySeoToDocument(parsed.sectionIndex);
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-
-  // All hooks are above this line. Show a plain ink screen while the viewport
-  // size is being determined — avoids showing the desktop layout on mobile.
+  // Render a useful fallback until the viewport-specific mosaic can hydrate.
   if (layoutProfile === null) {
     return (
       <div
-        className="flex min-h-0 w-full flex-1 items-center justify-center"
+        className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5 px-6 text-center"
         style={{ background: INK }}
       >
-        <div className="flex items-end gap-1 font-bungee text-4xl text-hs-gold leading-none">
-          <span>LOADING</span>
-          <span style={{ animation: "hs-blink 1.2s ease-in-out 0ms infinite" }}>
-            .
-          </span>
-          <span
-            style={{ animation: "hs-blink 1.2s ease-in-out 400ms infinite" }}
-          >
-            .
-          </span>
-          <span
-            style={{ animation: "hs-blink 1.2s ease-in-out 800ms infinite" }}
-          >
-            .
-          </span>
-        </div>
+        <p className="font-bungee text-4xl text-hs-gold leading-none">
+          HackSpain 2026
+        </p>
+        <p className="max-w-lg font-bold font-sans text-hs-paper leading-relaxed">
+          El hackathon de jóvenes builders celebrado del 18 al 20 de septiembre
+          en Madrid.
+        </p>
+        <a
+          className="font-bold font-sans text-hs-paper underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-hs-gold"
+          href="#edicion-2026"
+        >
+          Explorar la edición ↓
+        </a>
       </div>
     );
   }
@@ -459,12 +421,19 @@ export function LandingPage({ initialSection = 0 }: Props) {
     <section
       aria-label={REGION_ARIA}
       className="relative min-h-0 w-full flex-1 font-sans"
+      ref={stageRef}
       style={{ background: INK }}
     >
       <p aria-atomic="true" aria-live="polite" className="sr-only">
         {liveLabel}
       </p>
       <div className="absolute inset-0 overflow-hidden">{stageContent}</div>
+      <a
+        className="absolute right-3 bottom-28 z-30 border border-hs-paper/30 bg-hs-ink px-4 py-3 font-extrabold font-sans text-hs-paper text-sm underline underline-offset-4 hover:text-hs-gold focus-visible:outline-2 focus-visible:outline-hs-gold focus-visible:outline-offset-2"
+        href={`${pathRootFromSectionIndex(section)}#edicion-2026`}
+      >
+        Leer sobre la edición ↓
+      </a>
       {section === 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[max(2.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center">
           <button
