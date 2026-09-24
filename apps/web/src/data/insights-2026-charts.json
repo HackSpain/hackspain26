@@ -1,0 +1,160 @@
+{
+  "modelLabels": [
+    "claude-opus-5",
+    "gpt-6-astra",
+    "gpt-5-6-sol",
+    "claude-fable-5-1",
+    "claude-sonnet-5",
+    "glm5-3",
+    "gpt-5-6-luna",
+    "deepseek-v4-1-flash",
+    "deepseek-v4-flash",
+    "gemini-3-8-flash",
+    "claude-opus-5-medium",
+    "gpt-6-astra-medium",
+    "Otros modelos",
+    "Sin identificar"
+  ],
+  "modelToolMatrix": [
+    {
+      "name": "claude-code",
+      "total": 164076,
+      "counts": [
+        101934,
+        0,
+        0,
+        28722,
+        23358,
+        14,
+        0,
+        0,
+        328,
+        0,
+        0,
+        0,
+        9720,
+        0
+      ]
+    },
+    {
+      "name": "codex",
+      "total": 93077,
+      "counts": [
+        0,
+        43081,
+        32971,
+        0,
+        0,
+        0,
+        8894,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8131,
+        0
+      ]
+    },
+    {
+      "name": "devin",
+      "total": 42254,
+      "counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5140,
+        5099,
+        22444,
+        9571
+      ]
+    },
+    {
+      "name": "opencode",
+      "total": 24283,
+      "counts": [
+        23,
+        770,
+        88,
+        0,
+        4000,
+        8417,
+        75,
+        806,
+        3951,
+        0,
+        0,
+        0,
+        6153,
+        0
+      ]
+    },
+    {
+      "name": "pi",
+      "total": 18138,
+      "counts": [
+        1,
+        3273,
+        271,
+        67,
+        0,
+        1426,
+        954,
+        4933,
+        2500,
+        0,
+        0,
+        0,
+        4713,
+        0
+      ]
+    },
+    {
+      "name": "omp",
+      "total": 7522,
+      "counts": [
+        0,
+        2819,
+        1087,
+        247,
+        0,
+        965,
+        49,
+        2355,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "antigravity",
+      "total": 5762,
+      "counts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5363,
+        0,
+        0,
+        399,
+        0
+      ]
+    }
+  ]
+}

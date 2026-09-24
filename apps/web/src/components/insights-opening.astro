@@ -1,0 +1,138 @@
+---
+const tiles = [
+  { area: "a", tone: "orange", shape: "triangle", col: 0 },
+  { area: "b", tone: "paper", col: 1 },
+  { area: "c", tone: "gold", col: 2 },
+  { area: "d", tone: "teal", col: 3 },
+  { area: "e", tone: "paper", col: 4 },
+  { area: "f", tone: "red", shape: "triangle reverse", col: 5 },
+  { area: "g", tone: "navy", col: 0 },
+  { area: "h", tone: "gold", shape: "sun", col: 5 },
+  { area: "i", tone: "orange", col: 0 },
+  { area: "j", tone: "teal", col: 5 },
+  { area: "k", tone: "red", shape: "sun", col: 0 },
+  { area: "l", tone: "sand", col: 5 },
+  { area: "m", tone: "gold", col: 0 },
+  { area: "n", tone: "paper", col: 1 },
+  { area: "o", tone: "teal", col: 2 },
+  { area: "p", tone: "orange", col: 3 },
+  { area: "q", tone: "paper", col: 4 },
+  { area: "r", tone: "red", col: 5 },
+];
+// Same gesture as the arrivals screen bands: one column-staggered rise, expo.out.
+const tileDelay = (tile: { col: number }) => 120 + tile.col * 60;
+const slats = ["gold", "orange", "red", "teal", "gold"];
+---
+
+<header class="opening" aria-label="HackSpain 2026: la crónica">
+  {tiles.map((tile) => <div class="tile-shell" style={`grid-area:${tile.area}`} aria-hidden="true">
+    <div class:list={["tile", tile.shape]} style={`background:var(--color-hs-${tile.tone});--d:${tileDelay(tile)}ms`} />
+  </div>)}
+
+  <div class="opening-stage">
+    <nav class="opening-topbar" aria-label="Navegación principal">
+      <a href="/">HackSpain<span aria-hidden="true"> ↗</span></a>
+      <a href="/comunidad">La comunidad<span aria-hidden="true"> ↗</span></a>
+    </nav>
+
+    <div class="opening-content">
+      <p class="opening-date">Madrid · 18—20 septiembre</p>
+      <h1>
+        <span class="stamp">
+          <span class="stamp-ghost ghost-red" aria-hidden="true" />
+          <span class="stamp-ghost ghost-teal" aria-hidden="true" />
+          <img src="/brand-assets/hackspain-wordmark-color.svg" alt="HackSpain" width="928" height="306" fetchpriority="high" />
+        </span>
+        <span class="opening-year">2026</span>
+        <span class="opening-epic">
+          <span class="epic-line"><span class="epic-word">El fin de semana</span></span>
+          <span class="epic-line"><span class="epic-word">que Madrid <em>no durmió</em></span></span>
+        </span>
+      </h1>
+    </div>
+
+    <a class="opening-scroll" href="#cronica">Volvemos al viernes <span aria-hidden="true">↓</span></a>
+  </div>
+
+  <div class="curtain" aria-hidden="true">
+    {slats.map((tone, index) => <div class="slat" style={`left:${index * 20}%;--lift:${1880 + index * 50}ms`}><span style={`background:var(--color-hs-${tone})`} /></div>)}
+    <p class="opening-prelude">Una idea.<br /><span>250 formas de<br />hacerla realidad.</span></p>
+  </div>
+</header>
+
+<style>
+  .opening { display: grid; grid-template-areas: "a b c d e f" "g s s s s h" "i s s s s j" "k s s s s l" "m n o p q r"; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(48px, 10svh) repeat(3, 1fr) minmax(48px, 10svh); min-height: 700px; height: 100svh; max-height: 1100px; gap: 3px; padding: 3px; background: var(--color-hs-ink); overflow: hidden; }
+  .tile-shell { overflow: hidden; min-width: 0; min-height: 0; }
+  .tile { position: relative; width: 100%; height: 100%; }
+  .triangle { clip-path: polygon(0 0, 100% 0, 0 100%); }
+  .triangle.reverse { clip-path: polygon(0 0, 100% 0, 100% 100%); }
+  .sun::after { content: ""; position: absolute; width: 76%; aspect-ratio: 1; border: 3px solid var(--color-hs-ink); border-radius: 50%; left: 12%; top: 50%; transform: translateY(-50%); }
+  .opening-stage { grid-area: s; position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; background: var(--color-hs-paper); padding: 72px 32px 64px; }
+  .opening-topbar { position: absolute; inset: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 26px; }
+  .opening-topbar a { display: inline-flex; align-items: center; min-height: 40px; font-size: 12px; font-weight: 900; }
+  .opening-topbar a span { margin-left: 5px; color: var(--color-hs-red); }
+  .opening-content { width: 100%; max-width: 520px; text-align: center; }
+  .opening-date { margin: 0 0 16px; font-size: 11px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+  h1 { margin: 0; }
+  .stamp { position: relative; display: block; width: min(100%, 380px); margin-inline: auto; }
+  .stamp img { display: block; width: 100%; height: auto; }
+  .stamp-ghost { display: none; position: absolute; inset: 0; mix-blend-mode: multiply; mask: url("/brand-assets/hackspain-wordmark-black.svg") center / contain no-repeat; -webkit-mask: url("/brand-assets/hackspain-wordmark-black.svg") center / contain no-repeat; }
+  .ghost-red { background: var(--color-hs-red); }
+  .ghost-teal { background: var(--color-hs-teal); }
+  .opening-year { display: block; margin-top: 8px; color: var(--color-hs-red); font: clamp(32px, 4vw, 42px)/1 var(--font-bungee); letter-spacing: .04em; }
+  .opening-epic { display: block; margin-top: 26px; font: clamp(26px, 3.6vw, 46px)/1.06 var(--font-bungee); letter-spacing: -.01em; text-transform: uppercase; text-wrap: balance; }
+  .epic-line { display: block; overflow: hidden; padding-bottom: .08em; }
+  .epic-word { display: block; }
+  .opening-epic em { font-style: normal; color: var(--color-hs-red); }
+  .opening-scroll { position: absolute; bottom: 14px; display: inline-flex; align-items: center; gap: 18px; min-height: 40px; font-size: 11px; font-weight: 800; }
+  .opening-scroll span { color: var(--color-hs-red); font-size: 18px; }
+  .curtain { display: none; grid-area: s; position: relative; z-index: 2; overflow: hidden; pointer-events: none; }
+  .slat { position: absolute; top: 0; bottom: 0; width: 20.4%; background: var(--color-hs-ink); }
+  .slat::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(180deg, color-mix(in srgb, var(--color-hs-paper) 6%, transparent) 0 1px, transparent 1px 4px); }
+  .slat span { position: absolute; inset: auto 0 0; z-index: 2; height: 6px; }
+  .opening-prelude { position: absolute; inset: 0; z-index: 2; margin: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; color: var(--color-hs-paper); font: clamp(24px, 3.5vw, 44px)/1.2 var(--font-bungee); }
+  .opening-prelude span { color: var(--color-hs-gold); }
+  a:focus-visible { outline: 3px solid var(--color-hs-navy); outline-offset: 4px; }
+  @media (hover: hover) and (pointer: fine) { .opening-topbar a:hover, .opening-scroll:hover { text-decoration: underline; text-underline-offset: 4px; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .curtain { display: block; }
+    .slat { animation: slat-lift 650ms cubic-bezier(.87, 0, .13, 1) both; animation-delay: var(--lift); }
+    .opening-prelude { animation: prelude 1440ms cubic-bezier(.16, 1, .3, 1) 560ms both; }
+    .tile { animation: band-rise 600ms cubic-bezier(.16, 1, .3, 1) both; animation-delay: var(--d); }
+    .sun::after { animation: ring-set 420ms cubic-bezier(.34, 1.56, .64, 1) both; animation-delay: calc(var(--d) + 300ms); }
+    .opening-content > *, .opening-scroll { animation-name: copy-arrive; animation-duration: 620ms; animation-timing-function: cubic-bezier(.16, 1, .3, 1); animation-fill-mode: both; }
+    .opening-date { animation-delay: 2260ms; }
+    .opening-content > h1 { animation-name: none; }
+    .stamp img { animation: stamp-set 520ms cubic-bezier(.16, 1, .3, 1) 2340ms both; }
+    .opening-year { animation-delay: 2460ms; }
+    .epic-word { animation: epic-rise 620ms cubic-bezier(.16, 1, .3, 1) both; }
+    .epic-line:first-child .epic-word { animation-delay: 2540ms; }
+    .epic-line:last-child .epic-word { animation-delay: 2620ms; }
+    .opening-scroll { animation-delay: 2840ms; }
+    @supports (mask: url("/brand-assets/hackspain-wordmark-black.svg") center / contain no-repeat) {
+      .stamp-ghost { display: block; animation-duration: 640ms; animation-timing-function: cubic-bezier(.16, 1, .3, 1); animation-delay: 2340ms; animation-fill-mode: both; }
+      .ghost-red { animation-name: ghost-red; }
+      .ghost-teal { animation-name: ghost-teal; }
+    }
+  }
+  @keyframes band-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes ring-set { from { transform: translateY(-50%) scale(.2); opacity: 0; } to { transform: translateY(-50%) scale(1); opacity: 1; } }
+  @keyframes slat-lift { from { transform: translateY(0); } to { transform: translateY(-101%); } }
+  @keyframes prelude { 0% { opacity: 0; transform: translateY(14px); } 22%, 78% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-14px); } }
+  @keyframes stamp-set { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: none; } }
+  @keyframes ghost-red { from { opacity: .85; transform: translate(-9px, 6px); } 60% { opacity: .45; } to { opacity: 0; transform: none; } }
+  @keyframes ghost-teal { from { opacity: .85; transform: translate(8px, -5px); } 60% { opacity: .45; } to { opacity: 0; transform: none; } }
+  @keyframes epic-rise { from { opacity: 0; transform: translateY(110%) skewY(4deg); } to { opacity: 1; transform: translateY(0) skewY(0); } }
+  @keyframes copy-arrive { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 700px) {
+    .opening { grid-template-columns: 22px repeat(4, minmax(0, 1fr)) 22px; grid-template-rows: 32px repeat(3, 1fr) 32px; min-height: 680px; max-height: 900px; }
+    .opening-stage { padding: 76px 22px 66px; }
+    .opening-topbar { padding: 12px 16px; }
+    .opening-topbar a { font-size: 11px; }
+    .opening-date { font-size: 9px; letter-spacing: .09em; }
+    .opening-year { margin-top: 16px; font-size: 38px; }
+    .opening-epic { margin-top: 24px; font-size: 26px; }
+    .slat span { height: 4px; }
+    .sun::after { display: none; }
+  }
+</style>

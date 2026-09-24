@@ -29,6 +29,21 @@ Search Console. Check raw HTTP HTML separately from the hydrated browser:
 metadata, sitemap presence and a working browser alone do not establish that
 content is available to crawlers.
 
+## 2026-09-24 — Token rankings in the 2026 recap are sensitive to outliers
+
+**Evidence and consequence.** A direct RawTree MCP query of `hackspain_otel_logs` for the
+18–20 September event window, using the same two-stage deduplication as
+`apps/app/src/app/api/tv/insights/usage.ts`, found 356,144 usage requests. Two records above
+one billion tokens contribute 13,235,128,102 of the 93,710,196,514 reported tokens. One
+model key has only 58 requests but ranks second by tokens. A token-ranked chart or model
+table would overstate how widely that model was used.
+
+**Prevention and verification.** For editorial comparisons of model or harness activity,
+rank deduplicated requests and describe token totals with the cache and outlier caveat.
+Keep named model keys separate from verified commercial model counts, and label telemetry
+participation as reporting users/teams rather than attendance. Recheck the event window and
+outlier distribution before reusing token-ranked data in another report.
+
 ## 2026-09-23: Astro 7 breaks the bare Tailwind import in the server build and drops inter-tag spaces
 
 **Symptom and evidence.** After moving `apps/web` to Astro 7.3.4 (Vite 8.3.0),

@@ -14,6 +14,7 @@ Contact: contact@hackspain.com. Official social profiles: @hackspain26 on X and 
 
 - [HackSpain 2026](https://hackspain.com): Post-event recap, video, community stories and access to the 2026 edition archive.
 - [Community](https://hackspain.com/comunidad): The 2026 recap video, framed by two looping community feeds. A curated selection of eight public posts highlights the experience, community and organization.
+- [2026 insights](https://hackspain.com/2026-insights): Story of the 2026 hackathon, from its founding and five optional startup tracks to mentoring, judging, track winners and the grand prize. Includes total token usage, GitHub activity rankings, and charts on AI models and technology stacks.
 - [Mission](https://hackspain.com/mission): Purpose of the event and its focus on young builders in Spain.
 - [Tracks](https://hackspain.com/tracks): Five official tracks, startup partners and available compute.
 - [Infrastructure](https://hackspain.com/infra): Infrastructure and builder-tool sponsors supporting every HackSpain team.

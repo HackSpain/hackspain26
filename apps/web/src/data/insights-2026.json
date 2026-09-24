@@ -1,0 +1,400 @@
+{
+  "snapshotAt": 1790254474962,
+  "window": {
+    "endsAt": 1789895100000,
+    "startsAt": 1789749900000
+  },
+  "teams": 60,
+  "teamMembers": 254,
+  "namedProjects": 58,
+  "stacksDetected": 58,
+  "stacksAutomatic": 58,
+  "totals": {
+    "tokens": 93710196514,
+    "cachedTokens": 81506619984,
+    "requests": 356144,
+    "sessions": 4675,
+    "pushes": 5935,
+    "pullRequests": 1658
+  },
+  "githubLeaders": {
+    "teams": [
+      { "name": "trace-it", "pushes": 488, "pullRequests": 227 },
+      { "name": "Vortex", "pushes": 246, "pullRequests": 91 },
+      { "name": "Zhivel", "pushes": 218, "pullRequests": 117 }
+    ],
+    "people": [
+      { "name": "Martín Hernández González", "pushes": 189, "pullRequests": 121 },
+      { "name": "Javier Saguar", "pushes": 210, "pullRequests": 35 },
+      { "name": "Taras aka 2pac", "pushes": 220, "pullRequests": 1 }
+    ]
+  },
+  "buckets": [
+    {
+      "tokens": 839580338,
+      "requests": 6737,
+      "pushes": 54,
+      "pullRequests": 7
+    },
+    {
+      "tokens": 1444637791,
+      "requests": 10161,
+      "pushes": 135,
+      "pullRequests": 29
+    },
+    {
+      "tokens": 1911917598,
+      "requests": 12387,
+      "pushes": 193,
+      "pullRequests": 57
+    },
+    {
+      "tokens": 4048331755,
+      "requests": 19886,
+      "pushes": 293,
+      "pullRequests": 108
+    },
+    {
+      "tokens": 10432176361,
+      "requests": 14728,
+      "pushes": 262,
+      "pullRequests": 82
+    },
+    {
+      "tokens": 1491607998,
+      "requests": 6032,
+      "pushes": 105,
+      "pullRequests": 38
+    },
+    {
+      "tokens": 831163540,
+      "requests": 3573,
+      "pushes": 30,
+      "pullRequests": 19
+    },
+    {
+      "tokens": 561174626,
+      "requests": 3987,
+      "pushes": 41,
+      "pullRequests": 5
+    },
+    {
+      "tokens": 2167225067,
+      "requests": 11495,
+      "pushes": 109,
+      "pullRequests": 31
+    },
+    {
+      "tokens": 4925698003,
+      "requests": 27587,
+      "pushes": 287,
+      "pullRequests": 91
+    },
+    {
+      "tokens": 18764171207,
+      "requests": 25372,
+      "pushes": 334,
+      "pullRequests": 103
+    },
+    {
+      "tokens": 5013063596,
+      "requests": 21967,
+      "pushes": 402,
+      "pullRequests": 116
+    },
+    {
+      "tokens": 5230805006,
+      "requests": 25512,
+      "pushes": 443,
+      "pullRequests": 121
+    },
+    {
+      "tokens": 5102179755,
+      "requests": 25863,
+      "pushes": 369,
+      "pullRequests": 104
+    },
+    {
+      "tokens": 5691363938,
+      "requests": 27971,
+      "pushes": 468,
+      "pullRequests": 146
+    },
+    {
+      "tokens": 4321581007,
+      "requests": 19377,
+      "pushes": 332,
+      "pullRequests": 122
+    },
+    {
+      "tokens": 2537041602,
+      "requests": 11294,
+      "pushes": 228,
+      "pullRequests": 67
+    },
+    {
+      "tokens": 3596897065,
+      "requests": 15481,
+      "pushes": 397,
+      "pullRequests": 81
+    },
+    {
+      "tokens": 3634860722,
+      "requests": 16395,
+      "pushes": 302,
+      "pullRequests": 87
+    },
+    {
+      "tokens": 2982280084,
+      "requests": 14587,
+      "pushes": 192,
+      "pullRequests": 45
+    },
+    {
+      "tokens": 2325543793,
+      "requests": 9416,
+      "pushes": 163,
+      "pullRequests": 33
+    },
+    {
+      "tokens": 1706657707,
+      "requests": 7087,
+      "pushes": 141,
+      "pullRequests": 9
+    },
+    {
+      "tokens": 2011593416,
+      "requests": 8928,
+      "pushes": 222,
+      "pullRequests": 45
+    },
+    {
+      "tokens": 2138644539,
+      "requests": 10321,
+      "pushes": 433,
+      "pullRequests": 112
+    }
+  ],
+  "harnesses": [
+    {
+      "name": "claude-code",
+      "tokens": 57995722647,
+      "requests": 164076,
+      "sessions": 2231
+    },
+    {
+      "name": "codex",
+      "tokens": 11229354564,
+      "requests": 93077,
+      "sessions": 749
+    },
+    {
+      "name": "cursor",
+      "tokens": 8873336194,
+      "requests": 902,
+      "sessions": 123
+    },
+    {
+      "name": "devin",
+      "tokens": 8788519941,
+      "requests": 42254,
+      "sessions": 358
+    },
+    {
+      "name": "opencode",
+      "tokens": 2634221142,
+      "requests": 24283,
+      "sessions": 528
+    },
+    {
+      "name": "pi",
+      "tokens": 1873464555,
+      "requests": 18138,
+      "sessions": 388
+    },
+    {
+      "name": "omp",
+      "tokens": 1287451081,
+      "requests": 7522,
+      "sessions": 77
+    },
+    {
+      "name": "antigravity",
+      "tokens": 515962408,
+      "requests": 5762,
+      "sessions": 115
+    },
+    {
+      "name": "copilot",
+      "tokens": 511785520,
+      "requests": 107,
+      "sessions": 100
+    },
+    {
+      "name": "gemini-cli",
+      "tokens": 378462,
+      "requests": 23,
+      "sessions": 6
+    }
+  ],
+  "stacks": [
+    {
+      "category": "Otras",
+      "count": 50,
+      "name": "Python"
+    },
+    {
+      "category": "Otras",
+      "count": 45,
+      "name": "TypeScript"
+    },
+    {
+      "category": "Frontend",
+      "count": 31,
+      "name": "Tailwind"
+    },
+    {
+      "category": "Frontend",
+      "count": 28,
+      "name": "Vite"
+    },
+    {
+      "category": "Backend",
+      "count": 26,
+      "name": "FastAPI"
+    },
+    {
+      "category": "Frontend",
+      "count": 23,
+      "name": "React"
+    },
+    {
+      "category": "Datos",
+      "count": 22,
+      "name": "NumPy"
+    },
+    {
+      "category": "Otras",
+      "count": 19,
+      "name": "Docker"
+    },
+    {
+      "category": "Frontend",
+      "count": 19,
+      "name": "Next.js"
+    },
+    {
+      "category": "Datos",
+      "count": 16,
+      "name": "Pandas"
+    }
+  ],
+  "models": [
+    {
+      "name": "claude-opus-5",
+      "family": "claude",
+      "requests": 101958,
+      "tokens": 29513813575
+    },
+    {
+      "name": "gpt-6-astra",
+      "family": "gpt",
+      "requests": 49946,
+      "tokens": 5973772056
+    },
+    {
+      "name": "gpt-5-6-sol",
+      "family": "gpt",
+      "requests": 34417,
+      "tokens": 4429587005
+    },
+    {
+      "name": "claude-fable-5-1",
+      "family": "claude",
+      "requests": 29036,
+      "tokens": 8478028887
+    },
+    {
+      "name": "claude-sonnet-5",
+      "family": "claude",
+      "requests": 27358,
+      "tokens": 6015092878
+    },
+    {
+      "name": "glm5-3",
+      "family": "other",
+      "requests": 10822,
+      "tokens": 856024306
+    },
+    {
+      "name": "gpt-5-6-luna",
+      "family": "gpt",
+      "requests": 10024,
+      "tokens": 1203627247
+    },
+    {
+      "name": "deepseek-v4-1-flash",
+      "family": "other",
+      "requests": 8094,
+      "tokens": 1075850458
+    },
+    {
+      "name": "deepseek-v4-flash",
+      "family": "other",
+      "requests": 6813,
+      "tokens": 1268507307
+    },
+    {
+      "name": "gemini-3-8-flash",
+      "family": "gemini",
+      "requests": 5363,
+      "tokens": 494954616
+    }
+  ],
+  "sources": {
+    "event": "Panel público de HackSpain (Convex)",
+    "telemetry": "Consulta directa a RawTree MCP: hackspain_otel_logs",
+    "poll": "Consulta directa a RawTree MCP: hackspain_harness_poll"
+  },
+  "telemetry": {
+    "reportingPeople": 152,
+    "reportingTeams": 51,
+    "namedModelKeys": 105,
+    "outlierRequestsOverOneBillionTokens": 2,
+    "outlierTokens": 13235128102
+  },
+  "poll": {
+    "responses": 170,
+    "window": "8–12 de septiembre de 2026",
+    "harnesses": [
+      {
+        "name": "Claude Code",
+        "responses": 118
+      },
+      {
+        "name": "Codex",
+        "responses": 99
+      },
+      {
+        "name": "Cursor",
+        "responses": 68
+      },
+      {
+        "name": "OpenCode",
+        "responses": 30
+      },
+      {
+        "name": "Gemini CLI",
+        "responses": 20
+      },
+      {
+        "name": "Copilot",
+        "responses": 19
+      },
+      {
+        "name": "Devin Desktop",
+        "responses": 3
+      }
+    ]
+  }
+}
