@@ -1,7 +1,12 @@
 ---
 export const prerender = false;
 
-import LandingDocument from "../components/pages/landing-document.astro";
+import { LandingPage } from "../components/pages/landing-page";
+import Layout from "../layouts/layout.astro";
 ---
 
-<LandingDocument sectionIndex={0} />
+<Layout sectionIndex={0}>
+  <main id="main" class="contents">
+    <LandingPage client:load initialSection={0} />
+  </main>
+</Layout>

@@ -187,9 +187,8 @@ Rules:
 ## Layout
 
 - Mobile first. The working breakpoint is 640 px. Two-column layouts start at 1024 px. Design at 390 px first, then 640, then 1024.
-- The landing mosaic is a 1440 by 900 artboard scaled to the first viewport, with a compact artboard for phones. Tiles sit in horizontal bands that never overlap.
-- Landing sections continue into a readable edition summary below the mosaic. The page grows with the content, and the legal footer is the last element in the flow.
-- Other pages scroll. The page fills at least the viewport height, the content grows, and the legal footer is the last element in the flow.
+- The home page is a fixed 1440 by 900 artboard scaled to the viewport, with a compact artboard for phones. Tiles sit in horizontal bands that never overlap.
+- Every other page scrolls. The page fills at least the viewport height, the content grows, and the legal footer is the last element in the flow.
 - The page background is always paper.
 
 ## Brand

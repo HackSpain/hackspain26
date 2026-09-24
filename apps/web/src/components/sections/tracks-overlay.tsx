@@ -115,8 +115,8 @@ export function TracksOverlay({ onClose }: { onClose: () => void }) {
         </h2>
         <p className="mx-auto mt-4 max-w-xl font-sans font-semibold text-[clamp(0.9rem,2.2vw,1.1rem)] text-hs-paper/80 leading-snug">
           Cada track lo trae una de las startups que están definiendo el
-          ecosistema español. Estos fueron los equipos que acompañaron a los participantes
-          de HackSpain 2026.
+          ecosistema español. Estos son los equipos con los que vas a construir
+          — y en los que puedes acabar trabajando.
         </p>
       </header>
 
@@ -127,7 +127,7 @@ export function TracksOverlay({ onClose }: { onClose: () => void }) {
       </div>
 
       <p className="mt-10 text-center font-sans font-semibold text-hs-paper/50 text-xs leading-snug sm:text-sm">
-        Conoce las startups y la edición de 2026 en la página de tracks.
+        Los retos concretos de cada track se anuncian antes del evento.
       </p>
     </OverlayDialog>
   );

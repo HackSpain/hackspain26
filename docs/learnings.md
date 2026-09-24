@@ -15,15 +15,15 @@ navigation uses buttons and `pushState`. Tracks, judges and mentor details are
 also conditionally mounted only after a click. The effect on Google's actual
 index remains unverified without Search Console.
 
-**Correction in this branch; verification.** Every landing route now renders a
-readable edition section and crawlable navigation in the initial HTML below the
-responsive mosaic. The initial mosaic placeholder describes the event and links
-to that section. Important details are visible without clicking; browsing the
-mosaic no longer mutates the URL without updating that HTML. The web build and a
-local raw-HTML crawl verify the change. Production indexing remains unverified
-until Search Console confirms it. Check raw HTTP HTML separately from the
-hydrated browser: metadata, sitemap presence and a working browser alone do
-not establish that the content is available to crawlers.
+**Correction in this branch; verification.** Each landing route's initial
+loading state now includes a route-specific heading, description and real links
+while the viewport-dependent mosaic is unavailable. This preserves the existing
+hydrated interface. The web build and a local raw-HTML crawl verify the initial
+response; the richer track, jury and mentor details remain interactive-only, so
+the SEO improvement is intentionally limited. Production indexing remains
+unverified until Search Console confirms it. Check raw HTTP HTML separately
+from the hydrated browser: metadata, sitemap presence and a working browser
+alone do not establish that the content is available to crawlers.
 
 ## 2026-09-23: Astro 7 breaks the bare Tailwind import in the server build and drops inter-tag spaces
 

@@ -21,7 +21,6 @@ Contact: contact@hackspain.com. Official social profiles: @hackspain26 on X and 
 - [Mentors](https://hackspain.com/mentores): Founders, operators and engineers who mentored the 2026 teams.
 - [Applications](https://hackspain.com/apuntate): Registration for the 2026 edition is closed; follow official channels for future announcements.
 - [Ambassador programme](https://hackspain.com/ambassador): Campus ambassador information for HackSpain 2026; applications are closed.
-- [Collaborate](https://hackspain.com/patrocina): How partners supported the 2026 edition and how to contact HackSpain about future collaborations.
 - [Brand resources](https://hackspain.com/brand): Official HackSpain logos, color palette, typography and usage guidelines, with downloadable SVG and PNG assets.
 
 ## Official references

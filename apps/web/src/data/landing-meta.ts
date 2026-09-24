@@ -29,7 +29,8 @@ const PAGES: PageSeo[] = [
     title: "HackSpain 2026: hackathon en Madrid, tracks y comunidad",
   },
   {
-    description: "Vídeo y publicaciones de quienes participaron en HackSpain 2026, el hackathon celebrado del 18 al 20 de septiembre en Madrid.",
+    description:
+      "Vídeo y publicaciones de quienes participaron en HackSpain 2026, el hackathon celebrado del 18 al 20 de septiembre en Madrid.",
     ogImageAlt: "HackSpain 2026 — vuestras historias",
     title: "Comunidad y vídeo de HackSpain 2026",
   },
@@ -103,9 +104,9 @@ export function signupSeo(): PageSeo {
 export function ambassadorSeo(): PageSeo {
   return {
     description:
-      "Así fue el programa de embajadores de HackSpain 2026, que dio a conocer el hackathon en campus y comunidades tecnológicas de España.",
+      "Junta builders, mueve el boca a boca y empuja hacia el registro — te mantenemos al día con fechas y enlaces oficiales, te aclaramos dudas si las tienes, y tienes contacto directo con el equipo para Madrid 2026.",
     ogImageAlt: "HackSpain 2026 — programa de embajadores",
-    title: "Programa de embajadores de HackSpain 2026",
+    title: "Sé la cara de HackSpain en tu campus | HackSpain 2026",
   };
 }
 

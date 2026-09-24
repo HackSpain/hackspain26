@@ -21,7 +21,6 @@ export function getAllSitemapPageUrls(): string[] {
     ...SECTION_SLUGS.map((s) => `${o}/${s}`),
     ...(areSignupsClosed() ? [] : [`${o}/signup`]),
     `${o}/ambassador`,
-    `${o}/patrocina`,
     `${o}/brand`,
     `${o}/privacy`,
     `${o}/conduct`,

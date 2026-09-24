@@ -1,13 +1,14 @@
 import { MosaicBackground } from "../mosaic/mosaic-background";
 import { useLayoutProfile } from "../mosaic/use-layout-profile";
+import { useReferralAwareHref } from "../referral/use-referral-href";
 import { ButtonLink } from "../ui/button";
 
 const panelBorder = "border-[3px] border-hs-ink bg-hs-ink";
 
 const DUTIES = [
-  "Compartir las fechas y los enlaces oficiales de la edición en las redes que usaba cada embajador o embajadora.",
-  "Dar a conocer HackSpain en su campus, asociaciones y comunidades de estudiantes.",
-  "Ayudar a difundir la apertura de plazas y las noticias del evento.",
+  "Hablar de HackSpain en las redes que ya usas. Te damos fechas, enlaces oficiales y lo imprescindible para no equivocarte, pero el post lo escribes y grabas tú, con tu rollo.",
+  "Comentarlo en la vida real: el grupo de la asignatura, el Discord del grado, la asociación, amig@s a los que les encaje. Si quieren saber más, que miren hackspain.com o el formulario de registro.",
+  "Cuando publiquemos algo gordo—abren plazas, fechas límite, noticias—compártelo o súbelo a historias para que no pase desapercibido.",
 ] as const;
 
 const PERKS = [
@@ -19,6 +20,7 @@ const PERKS = [
 
 export function AmbassadorPage() {
   const profile = useLayoutProfile();
+  const signupHref = useReferralAwareHref("/signup");
 
   return (
     <div className="relative z-0 min-h-dvh w-full">
@@ -44,20 +46,21 @@ export function AmbassadorPage() {
                 className="mt-2 font-bungee text-[clamp(1.35rem,4.5vw,2.35rem)] text-hs-paper leading-[1.12]"
                 id="ambassador-hero-title"
               >
-                Así fue el programa de embajadores de HackSpain 2026.
+                Sé la cara de HackSpain en tu campus.
               </h1>
               <p className="mt-3 max-w-2xl font-sans font-semibold text-base text-hs-paper/88 leading-snug sm:text-lg">
-                El programa ayudó a dar a conocer el hackathon entre estudiantes
-                y comunidades tecnológicas de toda España. La convocatoria
-                de 2026 ya está cerrada.
+                Junta builders, mueve el boca a boca y empuja hacia el registro
+                — te mantenemos al día con fechas y enlaces oficiales, te
+                aclaramos dudas si las tienes, y tienes contacto directo con el
+                equipo para Madrid 2026.
               </p>
               <ButtonLink
                 className="mt-5"
-                href="/comunidad"
+                href={signupHref}
                 size="hero"
                 variant="goldInverse"
               >
-                Ver la comunidad
+                Apúntate desde el registro
               </ButtonLink>
             </div>
           </div>
@@ -72,7 +75,7 @@ export function AmbassadorPage() {
               className="font-bungee text-hs-ink text-xl sm:text-2xl"
               id="ambassador-duties-title"
             >
-              Qué hacían los embajadores
+              Qué hacen l@s embajadores
             </h2>
           </div>
           <ul className="divide-y-[3px] divide-hs-ink bg-hs-paper">
@@ -101,12 +104,14 @@ export function AmbassadorPage() {
               className="font-bungee text-base text-hs-ink leading-tight sm:text-lg"
               id="ambassador-selection-note"
             >
-              Cómo se seleccionaba a los embajadores
+              El alcance cuenta en la selección
             </h2>
           </div>
           <p className="bg-hs-paper px-4 py-4 font-sans font-semibold text-base text-hs-ink leading-snug sm:px-5 sm:py-4 sm:text-[1.05rem]">
-            Se valoraba la capacidad de llegar a estudiantes y comunidades
-            tecnológicas, tanto en redes como dentro del campus.
+            Damos más peso a quien ya mueve cifras en alguna red — audiencia
+            sólida, publicación constante o un perfil que la gente sigue. Indica
+            qué red y un alcance aproximado en la solicitud para que veamos el
+            encaje.
           </p>
         </section>
 
@@ -119,10 +124,11 @@ export function AmbassadorPage() {
               className="font-bungee text-hs-paper text-xl sm:text-2xl"
               id="ambassador-perks-title"
             >
-              Lo que ofrecía el programa
+              Lo que recibe cada embajador/a
             </h2>
             <p className="mt-2 max-w-2xl font-sans font-semibold text-hs-paper/90 text-sm leading-snug sm:text-base">
-              La propuesta para quienes participaron en el programa de 2026.
+              El mismo paquete para tod@s l@s del programa — sin niveles ni
+              excepciones.
             </p>
           </div>
           <div className="flex flex-col bg-hs-paper lg:flex-row lg:items-stretch">
@@ -168,20 +174,21 @@ export function AmbassadorPage() {
                   className="font-bungee text-2xl text-hs-ink leading-tight sm:text-3xl"
                   id="ambassador-cta-title"
                 >
-                  La edición de 2026 ha terminado
+                  ¿List@ para representar a HackSpain?
                 </h2>
                 <p className="mt-2 max-w-2xl font-sans font-semibold text-base text-hs-ink leading-snug sm:text-lg">
-                  Ya no se admiten solicitudes para el programa de 2026. Sigue la
-                  comunidad para conocer las noticias de HackSpain.
+                  Hazlo desde el formulario de registro al hackathon y marca la
+                  opción de embajador/a — te pediremos por qué te interesa y
+                  dónde estudias.
                 </p>
               </div>
               <ButtonLink
                 className="shrink-0 self-stretch text-center sm:self-center"
-                href="/comunidad"
+                href={signupHref}
                 size="lg"
                 variant="gold"
               >
-                Ver la comunidad
+                Abrir formulario de registro
               </ButtonLink>
             </div>
           </div>
