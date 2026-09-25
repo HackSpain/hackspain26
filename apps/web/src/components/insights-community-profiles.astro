@@ -1,0 +1,74 @@
+---
+import data from "../data/insights-2026-community.json";
+const views = [
+  { id: "roles", label: "Perfiles", note: "El rol principal que eligió cada persona.", rows: data.roles },
+  { id: "skills", label: "Habilidades", note: "Lo que las personas ya sabían hacer al llegar. Una persona puede tener varias habilidades.", rows: data.skills },
+  { id: "interests", label: "Intereses", note: "Los temas que querían explorar. Una persona puede compartir varios intereses.", rows: data.interests },
+  { id: "universities", label: "Universidades", note: "La universidad declarada en el perfil. 22 personas no indicaron una universidad.", rows: data.universities },
+];
+---
+<figure class="community-profiles" aria-labelledby="profiles-heading">
+  <header><h3 id="profiles-heading">Lo que cada uno traía a la mesa.</h3><p>Perfiles, habilidades, intereses y universidades · {data.participants} personas con equipo</p></header>
+  <div class="profile-tabs" role="group" aria-label="Datos de los participantes" hidden>{views.map((view, index) => <button type="button" data-profile-tab={view.id} aria-pressed={index === 0} aria-controls={`profile-${view.id}`}>{view.label}</button>)}</div>
+  {views.map((view) => <section id={`profile-${view.id}`} data-profile-panel={view.id} aria-label={view.label}>
+    <h4>{view.label}</h4>
+    <p class="view-note">{view.note}</p>
+    <ol>{view.rows.map((row, index) => <li data-profile-row><span class="rank">{String(index + 1).padStart(2, "0")}</span><span class="name">{row.name}</span><span class="bar"><span style={`width:${row.count / data.participants * 100}%`}></span></span><strong>{row.count}</strong></li>)}</ol>
+  </section>)}
+  <nav class="profile-pagination" aria-label="Páginas de datos de participantes" hidden><button type="button" data-profile-prev aria-label="Página anterior de perfiles">← Anterior</button><span data-profile-page role="status" aria-live="polite"></span><button type="button" data-profile-next aria-label="Página siguiente de perfiles">Siguiente →</button></nav>
+  <figcaption>Número de personas que declararon cada opción. Las habilidades personales y las tecnologías utilizadas en los proyectos son dos medidas distintas.</figcaption>
+</figure>
+<script>
+  const root = document.querySelector<HTMLElement>(".community-profiles");
+  if (root) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>("[data-profile-tab]")];
+    const panels = [...root.querySelectorAll<HTMLElement>("[data-profile-panel]")];
+    const prev = root.querySelector<HTMLButtonElement>("[data-profile-prev]")!;
+    const next = root.querySelector<HTMLButtonElement>("[data-profile-next]")!;
+    const status = root.querySelector<HTMLElement>("[data-profile-page]")!;
+    let active = "roles", page = 0;
+    const render = () => {
+      const panel = panels.find(p => p.dataset.profilePanel === active)!;
+      panels.forEach(p => { p.hidden = p !== panel; });
+      tabs.forEach(t => t.setAttribute("aria-pressed", String(t.dataset.profileTab === active)));
+      const rows = [...panel.querySelectorAll<HTMLElement>("[data-profile-row]")];
+      rows.forEach((r,i) => { r.hidden = Math.floor(i / 10) !== page; });
+      const pages = Math.ceil(rows.length / 10);
+      prev.disabled = page === 0;
+      next.disabled = page === pages - 1;
+      status.textContent = `${page + 1} / ${pages}`;
+    };
+    tabs.forEach(tab => tab.addEventListener("click", () => { active = tab.dataset.profileTab!; page = 0; render(); }));
+    prev.addEventListener("click", () => { page--; render(); });
+    next.addEventListener("click", () => { page++; render(); });
+    render();
+    root.querySelector<HTMLElement>(".profile-tabs")!.hidden = false;
+    root.querySelector<HTMLElement>(".profile-pagination")!.hidden = false;
+    root.classList.add("enhanced");
+  }
+</script>
+<style>
+  .community-profiles { width: min(100% - 40px, 900px); margin: 40px auto 0; border: 3px solid var(--color-hs-ink); }
+  header { padding: 16px 20px; border-bottom: 3px solid var(--color-hs-ink); }
+  h3 { margin: 0; font: 800 18px/1.3 var(--font-sans); }
+  header p, .view-note, figcaption { margin: 8px 0 0; font: 600 14px/1.5 var(--font-sans); color: var(--color-hs-brown); }
+  .profile-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 0; }
+  button { min-height: 44px; padding: 8px 12px; border: 2px solid var(--color-hs-ink); background: var(--color-hs-paper); color: var(--color-hs-ink); font: 700 14px/1.3 var(--font-sans); cursor: pointer; }
+  button[aria-pressed="true"] { background: var(--color-hs-gold); }
+  button:disabled { opacity: .4; cursor: default; }
+  section { padding: 0 20px; }
+  section h4 { font-size: 18px; margin-bottom: 0; }
+  .enhanced section h4 { display: none; }
+  .view-note { margin: 12px 0; }
+  ol { margin: 0; padding: 0; list-style: none; }
+  li { display: grid; grid-template-columns: 30px minmax(140px, 1.4fr) minmax(100px, 2fr) 32px; align-items: center; gap: 14px; min-height: 36px; border-bottom: 1px solid var(--color-hs-ink); font: 700 14px/1.4 var(--font-sans); }
+  .rank { color: var(--color-hs-red); font-family: var(--font-bungee); }
+  .bar { height: 10px; background: var(--color-hs-sand); }
+  .bar span { display: block; height: 100%; background: var(--color-hs-teal); }
+  li strong { text-align: right; font-variant-numeric: tabular-nums; }
+  .profile-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; font: 700 14px var(--font-sans); }
+  figcaption { margin: 0; padding: 0 20px 16px; }
+  [hidden] { display: none !important; }
+  button:focus-visible { outline: 2px solid var(--color-hs-navy); outline-offset: 3px; }
+  @media(max-width:700px) { .community-profiles { width: calc(100% - 28px); } header { padding: 14px 16px; } h3 { font-size: 18px; } section, figcaption, .profile-tabs, .profile-pagination { padding-inline: 16px; } li { grid-template-columns: 24px minmax(110px,1.5fr) minmax(35px,1fr) 26px; gap: 8px; min-height: 40px; } .name { overflow-wrap: anywhere; } }
+</style>

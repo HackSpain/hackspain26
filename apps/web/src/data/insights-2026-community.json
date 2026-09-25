@@ -1,0 +1,3409 @@
+{
+  "event": "HackSpain 2026",
+  "eventDates": [
+    "2026-09-18",
+    "2026-09-20"
+  ],
+  "snapshotDate": "2026-09-24",
+  "participants": 254,
+  "teams": 60,
+  "regions": [
+    {
+      "id": "01",
+      "name": "Andalucía",
+      "count": 27,
+      "cities": [
+        {
+          "name": "Málaga",
+          "count": 12
+        },
+        {
+          "name": "Granada",
+          "count": 4
+        },
+        {
+          "name": "Sevilla",
+          "count": 4
+        },
+        {
+          "name": "Córdoba",
+          "count": 2
+        },
+        {
+          "name": "Huelva",
+          "count": 2
+        },
+        {
+          "name": "Almería",
+          "count": 1
+        },
+        {
+          "name": "Cádiz",
+          "count": 1
+        },
+        {
+          "name": "Jaén",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Aragón",
+      "count": 3,
+      "cities": [
+        {
+          "name": "Zaragoza",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Asturias",
+      "count": 4,
+      "cities": [
+        {
+          "name": "Gijón",
+          "count": 3
+        },
+        {
+          "name": "Oviedo",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Illes Balears",
+      "count": 1,
+      "cities": [
+        {
+          "name": "Palma",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "name": "Canarias",
+      "count": 2,
+      "cities": [
+        {
+          "name": "Las Palmas de Gran Canaria",
+          "count": 1
+        },
+        {
+          "name": "Santa Cruz de Tenerife",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "06",
+      "name": "Cantabria",
+      "count": 1,
+      "cities": [
+        {
+          "name": "Santander",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "name": "Castilla y León",
+      "count": 4,
+      "cities": [
+        {
+          "name": "Salamanca",
+          "count": 2
+        },
+        {
+          "name": "Ponferrada",
+          "count": 1
+        },
+        {
+          "name": "Segovia",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "08",
+      "name": "Castilla-La Mancha",
+      "count": 1,
+      "cities": [
+        {
+          "name": "Ciudad Real",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "09",
+      "name": "Cataluña",
+      "count": 28,
+      "cities": [
+        {
+          "name": "Barcelona",
+          "count": 28
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "name": "Comunitat Valenciana",
+      "count": 12,
+      "cities": [
+        {
+          "name": "Valencia",
+          "count": 11
+        },
+        {
+          "name": "Alicante",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "name": "Extremadura",
+      "count": 4,
+      "cities": [
+        {
+          "name": "Badajoz",
+          "count": 2
+        },
+        {
+          "name": "Cáceres",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "name": "Galicia",
+      "count": 13,
+      "cities": [
+        {
+          "name": "A Coruña",
+          "count": 6
+        },
+        {
+          "name": "Santiago de Compostela",
+          "count": 3
+        },
+        {
+          "name": "Ourense",
+          "count": 2
+        },
+        {
+          "name": "Lugo",
+          "count": 1
+        },
+        {
+          "name": "Vigo",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "13",
+      "name": "Comunidad de Madrid",
+      "count": 132,
+      "cities": [
+        {
+          "name": "Madrid",
+          "count": 131
+        },
+        {
+          "name": "Alcalá de Henares",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "14",
+      "name": "Región de Murcia",
+      "count": 6,
+      "cities": [
+        {
+          "name": "Murcia",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "15",
+      "name": "Navarra",
+      "count": 6,
+      "cities": [
+        {
+          "name": "Pamplona",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "16",
+      "name": "País Vasco",
+      "count": 6,
+      "cities": [
+        {
+          "name": "Bilbao",
+          "count": 4
+        },
+        {
+          "name": "Donostia / San Sebastián",
+          "count": 1
+        },
+        {
+          "name": "Markina-Xemein",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "17",
+      "name": "La Rioja",
+      "count": 0,
+      "cities": []
+    },
+    {
+      "id": "18",
+      "name": "Ceuta",
+      "count": 0,
+      "cities": []
+    },
+    {
+      "id": "19",
+      "name": "Melilla",
+      "count": 0,
+      "cities": []
+    }
+  ],
+  "externalCities": [
+    {
+      "name": "Andorra",
+      "count": 1
+    },
+    {
+      "name": "Berna",
+      "count": 1
+    },
+    {
+      "name": "Paris",
+      "count": 1
+    }
+  ],
+  "unmappedCities": [
+    {
+      "name": "Cabanillas",
+      "count": 1
+    }
+  ],
+  "cities": [
+    {
+      "name": "Madrid",
+      "count": 131
+    },
+    {
+      "name": "Barcelona",
+      "count": 28
+    },
+    {
+      "name": "Málaga",
+      "count": 12
+    },
+    {
+      "name": "Valencia",
+      "count": 11
+    },
+    {
+      "name": "A Coruña",
+      "count": 6
+    },
+    {
+      "name": "Murcia",
+      "count": 6
+    },
+    {
+      "name": "Pamplona",
+      "count": 6
+    },
+    {
+      "name": "Bilbao",
+      "count": 4
+    },
+    {
+      "name": "Granada",
+      "count": 4
+    },
+    {
+      "name": "Sevilla",
+      "count": 4
+    },
+    {
+      "name": "Gijón",
+      "count": 3
+    },
+    {
+      "name": "Santiago de Compostela",
+      "count": 3
+    },
+    {
+      "name": "Zaragoza",
+      "count": 3
+    },
+    {
+      "name": "Badajoz",
+      "count": 2
+    },
+    {
+      "name": "Cáceres",
+      "count": 2
+    },
+    {
+      "name": "Córdoba",
+      "count": 2
+    },
+    {
+      "name": "Huelva",
+      "count": 2
+    },
+    {
+      "name": "Ourense",
+      "count": 2
+    },
+    {
+      "name": "Salamanca",
+      "count": 2
+    },
+    {
+      "name": "Alcalá de Henares",
+      "count": 1
+    },
+    {
+      "name": "Alicante",
+      "count": 1
+    },
+    {
+      "name": "Almería",
+      "count": 1
+    },
+    {
+      "name": "Andorra",
+      "count": 1
+    },
+    {
+      "name": "Berna",
+      "count": 1
+    },
+    {
+      "name": "Cabanillas",
+      "count": 1
+    },
+    {
+      "name": "Ciudad Real",
+      "count": 1
+    },
+    {
+      "name": "Cádiz",
+      "count": 1
+    },
+    {
+      "name": "Donostia / San Sebastián",
+      "count": 1
+    },
+    {
+      "name": "Jaén",
+      "count": 1
+    },
+    {
+      "name": "Las Palmas de Gran Canaria",
+      "count": 1
+    },
+    {
+      "name": "Lugo",
+      "count": 1
+    },
+    {
+      "name": "Markina-Xemein",
+      "count": 1
+    },
+    {
+      "name": "Oviedo",
+      "count": 1
+    },
+    {
+      "name": "Palma",
+      "count": 1
+    },
+    {
+      "name": "Paris",
+      "count": 1
+    },
+    {
+      "name": "Ponferrada",
+      "count": 1
+    },
+    {
+      "name": "Santa Cruz de Tenerife",
+      "count": 1
+    },
+    {
+      "name": "Santander",
+      "count": 1
+    },
+    {
+      "name": "Segovia",
+      "count": 1
+    },
+    {
+      "name": "Vigo",
+      "count": 1
+    }
+  ],
+  "roles": [
+    {
+      "name": "AI Engineer",
+      "count": 65
+    },
+    {
+      "name": "Estudiante",
+      "count": 41
+    },
+    {
+      "name": "Full-stack Developer",
+      "count": 39
+    },
+    {
+      "name": "Founder",
+      "count": 22
+    },
+    {
+      "name": "Data Scientist",
+      "count": 17
+    },
+    {
+      "name": "ML Engineer",
+      "count": 13
+    },
+    {
+      "name": "Backend Developer",
+      "count": 12
+    },
+    {
+      "name": "Data Engineer",
+      "count": 12
+    },
+    {
+      "name": "Researcher",
+      "count": 9
+    },
+    {
+      "name": "Otro",
+      "count": 6
+    },
+    {
+      "name": "Product Manager",
+      "count": 6
+    },
+    {
+      "name": "DevOps / Platform",
+      "count": 5
+    },
+    {
+      "name": "Frontend Developer",
+      "count": 4
+    },
+    {
+      "name": "Product Designer",
+      "count": 3
+    }
+  ],
+  "universities": [
+    {
+      "name": "Universidad Politécnica de Madrid",
+      "count": 43
+    },
+    {
+      "name": "Universidad Carlos III de Madrid",
+      "count": 21
+    },
+    {
+      "name": "Universitat Politècnica de Catalunya",
+      "count": 17
+    },
+    {
+      "name": "Universidad de Málaga",
+      "count": 12
+    },
+    {
+      "name": "Universidad Complutense de Madrid",
+      "count": 10
+    },
+    {
+      "name": "IE University",
+      "count": 9
+    },
+    {
+      "name": "Universidad Autónoma de Madrid",
+      "count": 9
+    },
+    {
+      "name": "Universidad Pontificia Comillas",
+      "count": 9
+    },
+    {
+      "name": "Universidad de Granada",
+      "count": 9
+    },
+    {
+      "name": "Universitat Politècnica de València",
+      "count": 8
+    },
+    {
+      "name": "Universidad Rey Juan Carlos",
+      "count": 5
+    },
+    {
+      "name": "Universidade da Coruña",
+      "count": 5
+    },
+    {
+      "name": "Universidade de Santiago de Compostela",
+      "count": 5
+    },
+    {
+      "name": "Mondragon Unibertsitatea",
+      "count": 4
+    },
+    {
+      "name": "Universidad Pablo de Olavide",
+      "count": 4
+    },
+    {
+      "name": "Universidad Pública de Navarra",
+      "count": 4
+    },
+    {
+      "name": "Universidad de Murcia",
+      "count": 4
+    },
+    {
+      "name": "Universidade de Vigo",
+      "count": 4
+    },
+    {
+      "name": "Universidad de Deusto",
+      "count": 3
+    },
+    {
+      "name": "Universidad de Sevilla",
+      "count": 3
+    },
+    {
+      "name": "Universidad CEU San Pablo",
+      "count": 2
+    },
+    {
+      "name": "Universidad Politécnica de Cartagena",
+      "count": 2
+    },
+    {
+      "name": "Universidad de La Laguna",
+      "count": 2
+    },
+    {
+      "name": "Universidad de Oviedo",
+      "count": 2
+    },
+    {
+      "name": "Universidad del País Vasco",
+      "count": 2
+    },
+    {
+      "name": "Universitat Oberta de Catalunya",
+      "count": 2
+    },
+    {
+      "name": "Universitat de Barcelona",
+      "count": 2
+    },
+    {
+      "name": "Universitat de València",
+      "count": 2
+    },
+    {
+      "name": "CentraleSupéléc & ESSEC",
+      "count": 1
+    },
+    {
+      "name": "ESTIA",
+      "count": 1
+    },
+    {
+      "name": "Kharkiv National University of Radioelectronics",
+      "count": 1
+    },
+    {
+      "name": "LTU",
+      "count": 1
+    },
+    {
+      "name": "Politecnico di Torino",
+      "count": 1
+    },
+    {
+      "name": "Radboud University",
+      "count": 1
+    },
+    {
+      "name": "TU Delft",
+      "count": 1
+    },
+    {
+      "name": "The Core School",
+      "count": 1
+    },
+    {
+      "name": "UCL",
+      "count": 1
+    },
+    {
+      "name": "Universidad Europea de Madrid",
+      "count": 1
+    },
+    {
+      "name": "Universidad Francisco de Vitoria",
+      "count": 1
+    },
+    {
+      "name": "Universidad ORT",
+      "count": 1
+    },
+    {
+      "name": "Universidad Pontificia de Salamanca",
+      "count": 1
+    },
+    {
+      "name": "Universidad Técnica de Berlín",
+      "count": 1
+    },
+    {
+      "name": "Universidad de Cantabria",
+      "count": 1
+    },
+    {
+      "name": "Universidad de Castilla-La Mancha",
+      "count": 1
+    },
+    {
+      "name": "Universidad de Extremadura",
+      "count": 1
+    },
+    {
+      "name": "Universidad de Huelva",
+      "count": 1
+    },
+    {
+      "name": "Universidad de Jaén",
+      "count": 1
+    },
+    {
+      "name": "Universidad de Navarra",
+      "count": 1
+    },
+    {
+      "name": "Universidad de Oxford",
+      "count": 1
+    },
+    {
+      "name": "Universidad de Salamanca",
+      "count": 1
+    },
+    {
+      "name": "Universitat Autònoma de Barcelona",
+      "count": 1
+    },
+    {
+      "name": "Universitat Pompeu Fabra",
+      "count": 1
+    },
+    {
+      "name": "Universitat Ramon Llull",
+      "count": 1
+    },
+    {
+      "name": "University of Bern",
+      "count": 1
+    },
+    {
+      "name": "University of Trento",
+      "count": 1
+    },
+    {
+      "name": "Utah State University, Universidad Alfonso X el Sabio",
+      "count": 1
+    }
+  ],
+  "skills": [
+    {
+      "name": "Python",
+      "count": 207
+    },
+    {
+      "name": "Agentes IA",
+      "count": 157
+    },
+    {
+      "name": "LLMs",
+      "count": 143
+    },
+    {
+      "name": "TypeScript",
+      "count": 95
+    },
+    {
+      "name": "Machine Learning",
+      "count": 89
+    },
+    {
+      "name": "React",
+      "count": 89
+    },
+    {
+      "name": "SQL",
+      "count": 86
+    },
+    {
+      "name": "Docker",
+      "count": 75
+    },
+    {
+      "name": "RAG",
+      "count": 70
+    },
+    {
+      "name": "Deep Learning",
+      "count": 61
+    },
+    {
+      "name": "Data science",
+      "count": 59
+    },
+    {
+      "name": "JavaScript",
+      "count": 59
+    },
+    {
+      "name": "C++",
+      "count": 58
+    },
+    {
+      "name": "IA generativa",
+      "count": 58
+    },
+    {
+      "name": "Java",
+      "count": 58
+    },
+    {
+      "name": "Next.js",
+      "count": 56
+    },
+    {
+      "name": "Prompt engineering",
+      "count": 56
+    },
+    {
+      "name": "PyTorch",
+      "count": 52
+    },
+    {
+      "name": "Node.js",
+      "count": 50
+    },
+    {
+      "name": "PostgreSQL",
+      "count": 45
+    },
+    {
+      "name": "Data engineering",
+      "count": 44
+    },
+    {
+      "name": "Computer Vision",
+      "count": 36
+    },
+    {
+      "name": "AWS",
+      "count": 33
+    },
+    {
+      "name": "React Native",
+      "count": 30
+    },
+    {
+      "name": "MongoDB",
+      "count": 26
+    },
+    {
+      "name": "NLP",
+      "count": 26
+    },
+    {
+      "name": "UX",
+      "count": 25
+    },
+    {
+      "name": "Voz y audio",
+      "count": 25
+    },
+    {
+      "name": "Product management",
+      "count": 24
+    },
+    {
+      "name": "Supabase",
+      "count": 23
+    },
+    {
+      "name": "Fine-tuning",
+      "count": 22
+    },
+    {
+      "name": "Kubernetes",
+      "count": 22
+    },
+    {
+      "name": "UI",
+      "count": 22
+    },
+    {
+      "name": "TensorFlow",
+      "count": 21
+    },
+    {
+      "name": "Ciberseguridad",
+      "count": 20
+    },
+    {
+      "name": "DevOps",
+      "count": 20
+    },
+    {
+      "name": "Go",
+      "count": 20
+    },
+    {
+      "name": "Rust",
+      "count": 19
+    },
+    {
+      "name": "Analítica",
+      "count": 16
+    },
+    {
+      "name": "GCP",
+      "count": 16
+    },
+    {
+      "name": "Pitching",
+      "count": 16
+    },
+    {
+      "name": "Tailwind",
+      "count": 16
+    },
+    {
+      "name": "Azure",
+      "count": 15
+    },
+    {
+      "name": "Kotlin",
+      "count": 15
+    },
+    {
+      "name": "iOS",
+      "count": 14
+    },
+    {
+      "name": "Android",
+      "count": 13
+    },
+    {
+      "name": "Growth",
+      "count": 13
+    },
+    {
+      "name": "Robótica",
+      "count": 12
+    },
+    {
+      "name": "C#",
+      "count": 11
+    },
+    {
+      "name": "Figma",
+      "count": 10
+    },
+    {
+      "name": "Blockchain",
+      "count": 9
+    },
+    {
+      "name": "Hardware",
+      "count": 9
+    },
+    {
+      "name": "Spark",
+      "count": 9
+    },
+    {
+      "name": "Angular",
+      "count": 8
+    },
+    {
+      "name": "Swift",
+      "count": 8
+    },
+    {
+      "name": "Flutter",
+      "count": 7
+    },
+    {
+      "name": "Vue",
+      "count": 6
+    },
+    {
+      "name": "Game dev",
+      "count": 5
+    },
+    {
+      "name": "Serverless",
+      "count": 5
+    },
+    {
+      "name": "Firebase",
+      "count": 4
+    },
+    {
+      "name": "ROS 2",
+      "count": 4
+    },
+    {
+      "name": "Convex",
+      "count": 3
+    },
+    {
+      "name": "Svelte",
+      "count": 3
+    }
+  ],
+  "interests": [
+    {
+      "name": "Agentes IA",
+      "count": 204
+    },
+    {
+      "name": "Startups",
+      "count": 171
+    },
+    {
+      "name": "IA generativa",
+      "count": 156
+    },
+    {
+      "name": "Open source",
+      "count": 106
+    },
+    {
+      "name": "Fintech",
+      "count": 89
+    },
+    {
+      "name": "Herramientas dev",
+      "count": 75
+    },
+    {
+      "name": "Deporte",
+      "count": 66
+    },
+    {
+      "name": "Ciencia",
+      "count": 57
+    },
+    {
+      "name": "Robótica",
+      "count": 57
+    },
+    {
+      "name": "Creatividad",
+      "count": 48
+    },
+    {
+      "name": "Salud",
+      "count": 48
+    },
+    {
+      "name": "Ciberseguridad",
+      "count": 45
+    },
+    {
+      "name": "Hardware",
+      "count": 43
+    },
+    {
+      "name": "Música",
+      "count": 38
+    },
+    {
+      "name": "Espacio",
+      "count": 36
+    },
+    {
+      "name": "Impacto social",
+      "count": 33
+    },
+    {
+      "name": "Educación",
+      "count": 30
+    },
+    {
+      "name": "Videojuegos",
+      "count": 24
+    },
+    {
+      "name": "Diseño accesible",
+      "count": 13
+    },
+    {
+      "name": "Legaltech",
+      "count": 12
+    },
+    {
+      "name": "Agro y alimentación",
+      "count": 10
+    },
+    {
+      "name": "Sector público",
+      "count": 8
+    },
+    {
+      "name": "Sostenibilidad",
+      "count": 7
+    },
+    {
+      "name": "Turismo",
+      "count": 4
+    },
+    {
+      "name": "Movilidad",
+      "count": 3
+    }
+  ],
+  "teamSizes": [
+    {
+      "name": "5",
+      "count": 29
+    },
+    {
+      "name": "4",
+      "count": 20
+    },
+    {
+      "name": "3",
+      "count": 9
+    },
+    {
+      "name": "1",
+      "count": 2
+    }
+  ],
+  "network": {
+    "teams": [
+      {
+        "id": 0,
+        "name": "'; DROP TABLE Hackers; /*",
+        "members": 4,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 1,
+        "name": "540",
+        "members": 3,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 2,
+        "name": ":)",
+        "members": 4,
+        "tracks": [
+          "theker"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "abrollo",
+        "members": 3,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 4,
+        "name": "airbenders",
+        "members": 4,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 5,
+        "name": "Bacon queso",
+        "members": 5,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 6,
+        "name": "Betis",
+        "members": 5,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 7,
+        "name": "Blaubeere",
+        "members": 4,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 8,
+        "name": "burn-rate",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 9,
+        "name": "Byte_Me",
+        "members": 4,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 10,
+        "name": "CabraLabs",
+        "members": 3,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 11,
+        "name": "cachopo",
+        "members": 3,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 12,
+        "name": "casa pepe",
+        "members": 5,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 13,
+        "name": "claudios",
+        "members": 5,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 14,
+        "name": "De Despeñaperros Pabajo",
+        "members": 5,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 15,
+        "name": "DreamTeamV2",
+        "members": 5,
+        "tracks": [
+          "theker"
+        ]
+      },
+      {
+        "id": 16,
+        "name": "el_depor",
+        "members": 5,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 17,
+        "name": "Elequipo",
+        "members": 3,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 18,
+        "name": "Elkano",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 19,
+        "name": "every.",
+        "members": 4,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 20,
+        "name": "FABAT",
+        "members": 5,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 21,
+        "name": "finhackers",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 22,
+        "name": "gallegosytal",
+        "members": 5,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 23,
+        "name": "Gamma",
+        "members": 4,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 24,
+        "name": "ging",
+        "members": 3,
+        "tracks": [
+          "prosper-ai",
+          "theker"
+        ]
+      },
+      {
+        "id": 25,
+        "name": "goldiggers",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 26,
+        "name": "growth",
+        "members": 3,
+        "tracks": [
+          "theker"
+        ]
+      },
+      {
+        "id": 27,
+        "name": "guluc3m",
+        "members": 4,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 28,
+        "name": "HackAndalus",
+        "members": 5,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 29,
+        "name": "hackers la l",
+        "members": 3,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 30,
+        "name": "HACPAQ",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 31,
+        "name": "hash",
+        "members": 4,
+        "tracks": [
+          "maisa",
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 32,
+        "name": "hsdatos",
+        "members": 5,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 33,
+        "name": "hUMAnos",
+        "members": 5,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 34,
+        "name": "KermitPanic",
+        "members": 5,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 35,
+        "name": "kivof",
+        "members": 1,
+        "tracks": [
+          "theker"
+        ]
+      },
+      {
+        "id": 36,
+        "name": "la_interseccion",
+        "members": 4,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 37,
+        "name": "lateflight",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 38,
+        "name": "Los Joses",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 39,
+        "name": "Los_Panaderos",
+        "members": 4,
+        "tracks": []
+      },
+      {
+        "id": 40,
+        "name": "maferai",
+        "members": 4,
+        "tracks": [
+          "theker"
+        ]
+      },
+      {
+        "id": 41,
+        "name": "nextgen_ai",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 42,
+        "name": "QUANTICOW",
+        "members": 4,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 43,
+        "name": "Quantum Churros",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 44,
+        "name": "refugia2",
+        "members": 4,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 45,
+        "name": "RG4L",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 46,
+        "name": "router123",
+        "members": 5,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 47,
+        "name": "stokes",
+        "members": 5,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 48,
+        "name": "sucara",
+        "members": 4,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 49,
+        "name": "tbd",
+        "members": 4,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 50,
+        "name": "Team Socket",
+        "members": 4,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 51,
+        "name": "test",
+        "members": 1,
+        "tracks": []
+      },
+      {
+        "id": 52,
+        "name": "Thekenyos",
+        "members": 4,
+        "tracks": [
+          "theker"
+        ]
+      },
+      {
+        "id": 53,
+        "name": "Tokenham Hotspur",
+        "members": 5,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 54,
+        "name": "Universe Computing",
+        "members": 3,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 55,
+        "name": "UPISTAS",
+        "members": 4,
+        "tracks": [
+          "maisa"
+        ]
+      },
+      {
+        "id": 56,
+        "name": "valte",
+        "members": 4,
+        "tracks": [
+          "happyrobot"
+        ]
+      },
+      {
+        "id": 57,
+        "name": "vortex",
+        "members": 5,
+        "tracks": [
+          "prosper-ai"
+        ]
+      },
+      {
+        "id": 58,
+        "name": "xakal",
+        "members": 5,
+        "tracks": [
+          "embat"
+        ]
+      },
+      {
+        "id": 59,
+        "name": "zhivel",
+        "members": 5,
+        "tracks": [
+          "happyrobot"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "source": 0,
+        "target": 44,
+        "skills": 15,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 0,
+        "target": 6,
+        "skills": 16,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 0,
+        "target": 22,
+        "skills": 15,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 0,
+        "target": 28,
+        "skills": 15,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 0,
+        "target": 37,
+        "skills": 14,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 1,
+        "target": 12,
+        "skills": 15,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 1,
+        "target": 19,
+        "skills": 9,
+        "interests": 4,
+        "universities": 1
+      },
+      {
+        "source": 1,
+        "target": 34,
+        "skills": 18,
+        "interests": 11,
+        "universities": 0
+      },
+      {
+        "source": 1,
+        "target": 23,
+        "skills": 17,
+        "interests": 11,
+        "universities": 0
+      },
+      {
+        "source": 1,
+        "target": 2,
+        "skills": 16,
+        "interests": 11,
+        "universities": 0
+      },
+      {
+        "source": 2,
+        "target": 9,
+        "skills": 19,
+        "interests": 13,
+        "universities": 2
+      },
+      {
+        "source": 2,
+        "target": 8,
+        "skills": 19,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 2,
+        "target": 43,
+        "skills": 18,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 2,
+        "target": 49,
+        "skills": 16,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 2,
+        "target": 5,
+        "skills": 15,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 3,
+        "target": 23,
+        "skills": 14,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 3,
+        "target": 38,
+        "skills": 16,
+        "interests": 6,
+        "universities": 0
+      },
+      {
+        "source": 3,
+        "target": 6,
+        "skills": 14,
+        "interests": 7,
+        "universities": 0
+      },
+      {
+        "source": 3,
+        "target": 9,
+        "skills": 13,
+        "interests": 8,
+        "universities": 0
+      },
+      {
+        "source": 3,
+        "target": 20,
+        "skills": 13,
+        "interests": 8,
+        "universities": 0
+      },
+      {
+        "source": 4,
+        "target": 43,
+        "skills": 18,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 4,
+        "target": 9,
+        "skills": 17,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 4,
+        "target": 49,
+        "skills": 19,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 4,
+        "target": 56,
+        "skills": 19,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 4,
+        "target": 20,
+        "skills": 18,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 5,
+        "target": 20,
+        "skills": 17,
+        "interests": 12,
+        "universities": 2
+      },
+      {
+        "source": 5,
+        "target": 47,
+        "skills": 15,
+        "interests": 14,
+        "universities": 1
+      },
+      {
+        "source": 5,
+        "target": 37,
+        "skills": 15,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 5,
+        "target": 49,
+        "skills": 15,
+        "interests": 12,
+        "universities": 2
+      },
+      {
+        "source": 6,
+        "target": 13,
+        "skills": 19,
+        "interests": 10,
+        "universities": 2
+      },
+      {
+        "source": 6,
+        "target": 37,
+        "skills": 17,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 6,
+        "target": 20,
+        "skills": 17,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 6,
+        "target": 25,
+        "skills": 17,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 6,
+        "target": 28,
+        "skills": 19,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 7,
+        "target": 57,
+        "skills": 20,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 7,
+        "target": 30,
+        "skills": 15,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 5,
+        "target": 7,
+        "skills": 15,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 7,
+        "target": 39,
+        "skills": 10,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 7,
+        "target": 17,
+        "skills": 10,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 28,
+        "skills": 22,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 15,
+        "skills": 21,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 53,
+        "skills": 20,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 34,
+        "skills": 20,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 9,
+        "skills": 17,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 9,
+        "target": 43,
+        "skills": 15,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 9,
+        "target": 20,
+        "skills": 14,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 10,
+        "target": 13,
+        "skills": 13,
+        "interests": 3,
+        "universities": 1
+      },
+      {
+        "source": 10,
+        "target": 58,
+        "skills": 12,
+        "interests": 3,
+        "universities": 1
+      },
+      {
+        "source": 10,
+        "target": 54,
+        "skills": 11,
+        "interests": 3,
+        "universities": 1
+      },
+      {
+        "source": 10,
+        "target": 41,
+        "skills": 11,
+        "interests": 2,
+        "universities": 1
+      },
+      {
+        "source": 10,
+        "target": 23,
+        "skills": 9,
+        "interests": 3,
+        "universities": 1
+      },
+      {
+        "source": 11,
+        "target": 20,
+        "skills": 17,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 11,
+        "skills": 15,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 11,
+        "target": 28,
+        "skills": 15,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 11,
+        "target": 53,
+        "skills": 13,
+        "interests": 9,
+        "universities": 2
+      },
+      {
+        "source": 11,
+        "target": 13,
+        "skills": 15,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 9,
+        "target": 12,
+        "skills": 17,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 12,
+        "target": 31,
+        "skills": 16,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 12,
+        "target": 19,
+        "skills": 10,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 12,
+        "skills": 19,
+        "interests": 8,
+        "universities": 0
+      },
+      {
+        "source": 13,
+        "target": 28,
+        "skills": 20,
+        "interests": 10,
+        "universities": 2
+      },
+      {
+        "source": 13,
+        "target": 34,
+        "skills": 20,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 13,
+        "skills": 20,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 13,
+        "target": 40,
+        "skills": 18,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 14,
+        "target": 28,
+        "skills": 14,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 14,
+        "target": 37,
+        "skills": 12,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 14,
+        "target": 33,
+        "skills": 12,
+        "interests": 5,
+        "universities": 1
+      },
+      {
+        "source": 14,
+        "target": 39,
+        "skills": 7,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 0,
+        "target": 14,
+        "skills": 18,
+        "interests": 7,
+        "universities": 0
+      },
+      {
+        "source": 15,
+        "target": 37,
+        "skills": 17,
+        "interests": 14,
+        "universities": 1
+      },
+      {
+        "source": 15,
+        "target": 53,
+        "skills": 19,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 15,
+        "target": 20,
+        "skills": 16,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 15,
+        "target": 22,
+        "skills": 16,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 16,
+        "target": 37,
+        "skills": 18,
+        "interests": 14,
+        "universities": 1
+      },
+      {
+        "source": 16,
+        "target": 49,
+        "skills": 15,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 6,
+        "target": 16,
+        "skills": 13,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 16,
+        "target": 41,
+        "skills": 14,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 16,
+        "target": 18,
+        "skills": 12,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 17,
+        "target": 30,
+        "skills": 11,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 5,
+        "target": 17,
+        "skills": 11,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 17,
+        "target": 57,
+        "skills": 12,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 17,
+        "target": 39,
+        "skills": 8,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 6,
+        "target": 18,
+        "skills": 13,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 18,
+        "target": 20,
+        "skills": 18,
+        "interests": 10,
+        "universities": 0
+      },
+      {
+        "source": 18,
+        "target": 28,
+        "skills": 19,
+        "interests": 9,
+        "universities": 0
+      },
+      {
+        "source": 18,
+        "target": 34,
+        "skills": 15,
+        "interests": 12,
+        "universities": 0
+      },
+      {
+        "source": 19,
+        "target": 34,
+        "skills": 15,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 19,
+        "skills": 14,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 13,
+        "target": 19,
+        "skills": 14,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 19,
+        "target": 41,
+        "skills": 14,
+        "interests": 5,
+        "universities": 2
+      },
+      {
+        "source": 19,
+        "target": 46,
+        "skills": 14,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 28,
+        "skills": 21,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 56,
+        "skills": 20,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 37,
+        "skills": 16,
+        "interests": 16,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 38,
+        "skills": 19,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 44,
+        "skills": 17,
+        "interests": 15,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 21,
+        "skills": 13,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 11,
+        "target": 21,
+        "skills": 11,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 4,
+        "target": 21,
+        "skills": 10,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 21,
+        "target": 38,
+        "skills": 11,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 21,
+        "target": 47,
+        "skills": 10,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 22,
+        "target": 23,
+        "skills": 15,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 22,
+        "target": 47,
+        "skills": 12,
+        "interests": 14,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 22,
+        "skills": 18,
+        "interests": 14,
+        "universities": 0
+      },
+      {
+        "source": 23,
+        "target": 58,
+        "skills": 18,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 13,
+        "target": 23,
+        "skills": 16,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 23,
+        "target": 54,
+        "skills": 15,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 23,
+        "target": 41,
+        "skills": 14,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 24,
+        "target": 31,
+        "skills": 18,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 24,
+        "target": 37,
+        "skills": 18,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 6,
+        "target": 24,
+        "skills": 16,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 15,
+        "target": 24,
+        "skills": 15,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 24,
+        "target": 38,
+        "skills": 16,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 25,
+        "target": 56,
+        "skills": 15,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 4,
+        "target": 25,
+        "skills": 14,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 25,
+        "target": 38,
+        "skills": 13,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 25,
+        "target": 54,
+        "skills": 11,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 26,
+        "target": 58,
+        "skills": 18,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 26,
+        "skills": 17,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 2,
+        "target": 26,
+        "skills": 15,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 9,
+        "target": 26,
+        "skills": 14,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 23,
+        "target": 26,
+        "skills": 14,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 9,
+        "target": 27,
+        "skills": 11,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 2,
+        "target": 27,
+        "skills": 10,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 27,
+        "skills": 10,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 27,
+        "target": 53,
+        "skills": 7,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 27,
+        "target": 57,
+        "skills": 8,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 44,
+        "skills": 20,
+        "interests": 15,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 34,
+        "skills": 21,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 56,
+        "skills": 20,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 29,
+        "target": 40,
+        "skills": 12,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 13,
+        "target": 29,
+        "skills": 12,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 23,
+        "target": 29,
+        "skills": 8,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 29,
+        "target": 54,
+        "skills": 9,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 29,
+        "target": 58,
+        "skills": 11,
+        "interests": 5,
+        "universities": 1
+      },
+      {
+        "source": 30,
+        "target": 57,
+        "skills": 19,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 30,
+        "skills": 17,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 5,
+        "target": 30,
+        "skills": 14,
+        "interests": 11,
+        "universities": 2
+      },
+      {
+        "source": 15,
+        "target": 30,
+        "skills": 15,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 6,
+        "target": 31,
+        "skills": 18,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 31,
+        "target": 37,
+        "skills": 15,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 31,
+        "target": 44,
+        "skills": 15,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 9,
+        "target": 31,
+        "skills": 15,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 32,
+        "target": 37,
+        "skills": 17,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 32,
+        "skills": 18,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 32,
+        "skills": 17,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 32,
+        "target": 38,
+        "skills": 17,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 15,
+        "target": 32,
+        "skills": 15,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 33,
+        "skills": 22,
+        "interests": 5,
+        "universities": 1
+      },
+      {
+        "source": 33,
+        "target": 37,
+        "skills": 21,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 33,
+        "skills": 20,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 33,
+        "target": 57,
+        "skills": 20,
+        "interests": 5,
+        "universities": 1
+      },
+      {
+        "source": 9,
+        "target": 33,
+        "skills": 18,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 34,
+        "target": 43,
+        "skills": 20,
+        "interests": 15,
+        "universities": 1
+      },
+      {
+        "source": 34,
+        "target": 41,
+        "skills": 19,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 35,
+        "target": 39,
+        "skills": 8,
+        "interests": 2,
+        "universities": 1
+      },
+      {
+        "source": 7,
+        "target": 35,
+        "skills": 7,
+        "interests": 2,
+        "universities": 1
+      },
+      {
+        "source": 5,
+        "target": 35,
+        "skills": 7,
+        "interests": 1,
+        "universities": 1
+      },
+      {
+        "source": 30,
+        "target": 35,
+        "skills": 6,
+        "interests": 2,
+        "universities": 1
+      },
+      {
+        "source": 17,
+        "target": 35,
+        "skills": 4,
+        "interests": 1,
+        "universities": 1
+      },
+      {
+        "source": 15,
+        "target": 36,
+        "skills": 14,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 36,
+        "skills": 16,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 36,
+        "target": 58,
+        "skills": 16,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 36,
+        "skills": 13,
+        "interests": 9,
+        "universities": 2
+      },
+      {
+        "source": 36,
+        "target": 37,
+        "skills": 12,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 37,
+        "target": 38,
+        "skills": 19,
+        "interests": 14,
+        "universities": 1
+      },
+      {
+        "source": 37,
+        "target": 44,
+        "skills": 17,
+        "interests": 16,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 38,
+        "skills": 18,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 38,
+        "target": 49,
+        "skills": 18,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 38,
+        "target": 44,
+        "skills": 15,
+        "interests": 14,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 39,
+        "skills": 16,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 39,
+        "skills": 15,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 37,
+        "target": 39,
+        "skills": 12,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 39,
+        "target": 53,
+        "skills": 12,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 39,
+        "target": 57,
+        "skills": 14,
+        "interests": 9,
+        "universities": 2
+      },
+      {
+        "source": 40,
+        "target": 58,
+        "skills": 19,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 40,
+        "target": 41,
+        "skills": 14,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 40,
+        "target": 54,
+        "skills": 15,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 23,
+        "target": 40,
+        "skills": 12,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 37,
+        "target": 41,
+        "skills": 17,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 41,
+        "skills": 20,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 41,
+        "target": 58,
+        "skills": 18,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 41,
+        "skills": 18,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 42,
+        "target": 59,
+        "skills": 13,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 42,
+        "target": 46,
+        "skills": 13,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 42,
+        "target": 53,
+        "skills": 11,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 42,
+        "target": 45,
+        "skills": 12,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 32,
+        "target": 42,
+        "skills": 15,
+        "interests": 11,
+        "universities": 0
+      },
+      {
+        "source": 20,
+        "target": 43,
+        "skills": 16,
+        "interests": 14,
+        "universities": 1
+      },
+      {
+        "source": 44,
+        "target": 56,
+        "skills": 17,
+        "interests": 15,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 45,
+        "skills": 16,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 45,
+        "target": 50,
+        "skills": 15,
+        "interests": 6,
+        "universities": 2
+      },
+      {
+        "source": 45,
+        "target": 59,
+        "skills": 15,
+        "interests": 6,
+        "universities": 2
+      },
+      {
+        "source": 6,
+        "target": 45,
+        "skills": 16,
+        "interests": 5,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 45,
+        "skills": 14,
+        "interests": 6,
+        "universities": 1
+      },
+      {
+        "source": 37,
+        "target": 46,
+        "skills": 17,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 46,
+        "target": 53,
+        "skills": 16,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 46,
+        "target": 49,
+        "skills": 16,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 41,
+        "target": 46,
+        "skills": 16,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 46,
+        "target": 59,
+        "skills": 16,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 37,
+        "target": 47,
+        "skills": 12,
+        "interests": 17,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 47,
+        "skills": 13,
+        "interests": 15,
+        "universities": 1
+      },
+      {
+        "source": 43,
+        "target": 47,
+        "skills": 12,
+        "interests": 16,
+        "universities": 1
+      },
+      {
+        "source": 44,
+        "target": 47,
+        "skills": 12,
+        "interests": 16,
+        "universities": 1
+      },
+      {
+        "source": 37,
+        "target": 48,
+        "skills": 12,
+        "interests": 12,
+        "universities": 2
+      },
+      {
+        "source": 20,
+        "target": 48,
+        "skills": 12,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 48,
+        "skills": 13,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 44,
+        "target": 48,
+        "skills": 11,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 48,
+        "target": 56,
+        "skills": 10,
+        "interests": 12,
+        "universities": 2
+      },
+      {
+        "source": 20,
+        "target": 49,
+        "skills": 19,
+        "interests": 12,
+        "universities": 2
+      },
+      {
+        "source": 37,
+        "target": 49,
+        "skills": 16,
+        "interests": 14,
+        "universities": 2
+      },
+      {
+        "source": 20,
+        "target": 50,
+        "skills": 20,
+        "interests": 11,
+        "universities": 1
+      },
+      {
+        "source": 38,
+        "target": 50,
+        "skills": 17,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 50,
+        "target": 56,
+        "skills": 16,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 8,
+        "target": 50,
+        "skills": 16,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 13,
+        "target": 50,
+        "skills": 16,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 1,
+        "target": 51,
+        "skills": 4,
+        "interests": 3,
+        "universities": 0
+      },
+      {
+        "source": 2,
+        "target": 51,
+        "skills": 4,
+        "interests": 3,
+        "universities": 0
+      },
+      {
+        "source": 4,
+        "target": 51,
+        "skills": 4,
+        "interests": 3,
+        "universities": 0
+      },
+      {
+        "source": 6,
+        "target": 51,
+        "skills": 4,
+        "interests": 3,
+        "universities": 0
+      },
+      {
+        "source": 7,
+        "target": 51,
+        "skills": 4,
+        "interests": 3,
+        "universities": 0
+      },
+      {
+        "source": 20,
+        "target": 52,
+        "skills": 19,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 13,
+        "target": 52,
+        "skills": 16,
+        "interests": 8,
+        "universities": 2
+      },
+      {
+        "source": 15,
+        "target": 52,
+        "skills": 17,
+        "interests": 8,
+        "universities": 1
+      },
+      {
+        "source": 38,
+        "target": 52,
+        "skills": 15,
+        "interests": 9,
+        "universities": 2
+      },
+      {
+        "source": 28,
+        "target": 52,
+        "skills": 17,
+        "interests": 7,
+        "universities": 1
+      },
+      {
+        "source": 28,
+        "target": 53,
+        "skills": 17,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 53,
+        "skills": 16,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 38,
+        "target": 53,
+        "skills": 16,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 54,
+        "target": 56,
+        "skills": 18,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 54,
+        "target": 58,
+        "skills": 18,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 13,
+        "target": 54,
+        "skills": 17,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 34,
+        "target": 55,
+        "skills": 20,
+        "interests": 13,
+        "universities": 0
+      },
+      {
+        "source": 9,
+        "target": 55,
+        "skills": 17,
+        "interests": 12,
+        "universities": 0
+      },
+      {
+        "source": 22,
+        "target": 55,
+        "skills": 16,
+        "interests": 12,
+        "universities": 0
+      },
+      {
+        "source": 41,
+        "target": 55,
+        "skills": 17,
+        "interests": 11,
+        "universities": 0
+      },
+      {
+        "source": 55,
+        "target": 56,
+        "skills": 15,
+        "interests": 13,
+        "universities": 0
+      },
+      {
+        "source": 8,
+        "target": 57,
+        "skills": 20,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 53,
+        "target": 57,
+        "skills": 19,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 2,
+        "target": 57,
+        "skills": 18,
+        "interests": 9,
+        "universities": 1
+      },
+      {
+        "source": 13,
+        "target": 58,
+        "skills": 19,
+        "interests": 10,
+        "universities": 1
+      },
+      {
+        "source": 20,
+        "target": 59,
+        "skills": 16,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 53,
+        "target": 59,
+        "skills": 15,
+        "interests": 12,
+        "universities": 2
+      },
+      {
+        "source": 34,
+        "target": 59,
+        "skills": 14,
+        "interests": 13,
+        "universities": 1
+      },
+      {
+        "source": 37,
+        "target": 59,
+        "skills": 15,
+        "interests": 12,
+        "universities": 1
+      },
+      {
+        "source": 38,
+        "target": 59,
+        "skills": 16,
+        "interests": 11,
+        "universities": 1
+      }
+    ]
+  },
+  "tracks": [
+    {
+      "name": "THEKER Robotics",
+      "slug": "theker",
+      "count": 7
+    },
+    {
+      "name": "Embat",
+      "slug": "embat",
+      "count": 16
+    },
+    {
+      "name": "Prosper AI",
+      "slug": "prosper-ai",
+      "count": 11
+    },
+    {
+      "name": "HappyRobot",
+      "slug": "happyrobot",
+      "count": 14
+    },
+    {
+      "name": "Maisa",
+      "slug": "maisa",
+      "count": 12
+    }
+  ],
+  "submissions": {
+    "total": 58,
+    "multiTrack": 2,
+    "timeline": [
+      {
+        "time": "09:30",
+        "count": 1
+      },
+      {
+        "time": "09:40",
+        "count": 0
+      },
+      {
+        "time": "09:50",
+        "count": 1
+      },
+      {
+        "time": "10:00",
+        "count": 4
+      },
+      {
+        "time": "10:10",
+        "count": 0
+      },
+      {
+        "time": "10:20",
+        "count": 2
+      },
+      {
+        "time": "10:30",
+        "count": 3
+      },
+      {
+        "time": "10:40",
+        "count": 6
+      },
+      {
+        "time": "10:50",
+        "count": 37
+      },
+      {
+        "time": "11:00",
+        "count": 3
+      },
+      {
+        "time": "11:10",
+        "count": 1
+      }
+    ]
+  }
+}
