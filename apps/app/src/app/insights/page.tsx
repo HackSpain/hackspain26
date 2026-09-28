@@ -58,7 +58,6 @@ import {
   PERIODS,
   sumSamples,
   teamRows,
-  TRACKS,
 } from "./mock-data";
 import { NO_TEAM_ID, useLiveInsights } from "./use-live-insights";
 import type { LiveInsightData } from "./use-live-insights";
@@ -460,8 +459,7 @@ function Leaderboard({
                         {team.name}
                       </span>
                       <span className="mt-0.5 block text-[11px] text-hs-brown">
-                        {team.project} <span className="px-1">·</span>{" "}
-                        {team.track}
+                        {[team.project, team.track].filter(Boolean).join(" · ")}
                       </span>
                     </span>
                   </button>
@@ -577,12 +575,16 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
         </p>
         <DialogTitle>{team.name}</DialogTitle>
         <DialogDescription>
-          {team.project} · {team.track} · {team.members} personas
+          {[team.project, team.track, `${team.members} personas`]
+            .filter(Boolean)
+            .join(" · ")}
         </DialogDescription>
       </DialogHeader>
-      <p className="border-y border-hs-ink/15 py-4 leading-relaxed">
-        {team.description}
-      </p>
+      {team.description.trim() ? (
+        <p className="border-y border-hs-ink/15 py-4 leading-relaxed">
+          {team.description}
+        </p>
+      ) : null}
       <div className="grid grid-cols-3 gap-3">
         {METRICS.map((metric) => (
           <div
@@ -654,7 +656,6 @@ export function InsightsView() {
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const leaderboardTabRef = useRef<HTMLButtonElement | null>(null);
   const [period, setPeriod] = useState<Period>("event");
-  const [track, setTrack] = useState("all");
   const [chartMetric, setChartMetric] = useState<Metric>("tokens");
   const [harness, setHarness] = useState("all");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -672,12 +673,12 @@ export function InsightsView() {
 
   const allSamples = live.samples;
   const samples = useMemo(
-    () => filterSamples(allSamples, period, track, live.teams, timeline),
-    [allSamples, period, track, live.teams, timeline],
+    () => filterSamples(allSamples, period, "all", live.teams, timeline),
+    [allSamples, period, live.teams, timeline],
   );
   const eventSamples = useMemo(
-    () => filterSamples(allSamples, "event", track, live.teams, timeline),
-    [allSamples, track, live.teams, timeline],
+    () => filterSamples(allSamples, "event", "all", live.teams, timeline),
+    [allSamples, live.teams, timeline],
   );
   // People without a team count in every total and never in a team list.
   const ranked = (rows: Sample[]) =>
@@ -759,22 +760,6 @@ export function InsightsView() {
             ))}
           </Tabs.List>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Select value={track} onValueChange={setTrack}>
-              <SelectTrigger
-                aria-label="Filtrar insights por reto"
-                className="min-h-11 border text-xs sm:min-h-10 sm:w-36"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los retos</SelectItem>
-                {TRACKS.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             {activeTab === "overview" || activeTab === "leaderboard" ? (
               <Select
                 value={period}
