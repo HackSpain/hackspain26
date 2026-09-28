@@ -8,6 +8,7 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "oxlint.config.mjs"
       - ".github/workflows/ci.yml"
   push:
     branches: [master]
@@ -17,6 +18,7 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "oxlint.config.mjs"
       - ".github/workflows/ci.yml"
 
 permissions:
@@ -46,6 +48,7 @@ jobs:
               - "package.json"
               - "pnpm-lock.yaml"
               - "pnpm-workspace.yaml"
+              - "oxlint.config.mjs"
               - ".github/workflows/ci.yml"
             app:
               - *shared
@@ -53,6 +56,56 @@ jobs:
             web:
               - *shared
               - "apps/web/**"
+
+  changed-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.1.1"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check changed files
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+
+          app_files=()
+          while IFS= read -r -d '' file; do
+            app_files+=("${file#apps/app/}")
+          done < <(git diff --name-only --diff-filter=ACMR -z "$BASE_SHA"...HEAD -- apps/app)
+          if (( ${#app_files[@]} )); then
+            (
+              cd apps/app
+              pnpm exec oxlint -c oxlint.config.mjs --report-unused-disable-directives-severity=error --no-error-on-unmatched-pattern "${app_files[@]}"
+              pnpm exec biome format --no-errors-on-unmatched "${app_files[@]}"
+            )
+          fi
+
+          web_files=()
+          while IFS= read -r -d '' file; do
+            web_files+=("${file#apps/web/}")
+          done < <(git diff --name-only --diff-filter=ACMR -z "$BASE_SHA"...HEAD -- apps/web)
+          if (( ${#web_files[@]} )); then
+            (
+              cd apps/web
+              pnpm exec oxlint -c oxlint.config.mjs --report-unused-disable-directives-severity=error --no-error-on-unmatched-pattern "${web_files[@]}"
+              pnpm exec biome check --no-errors-on-unmatched "${web_files[@]}"
+            )
+          fi
+
+          if ! git diff --quiet "$BASE_SHA"...HEAD -- oxlint.config.mjs; then
+            pnpm exec oxlint -c oxlint.config.mjs oxlint.config.mjs
+          fi
 
   app:
     needs: changes
@@ -103,5 +156,10 @@ jobs:
       - name: "Lint (advisory until #235)"
         continue-on-error: true
         run: pnpm --filter web lint
+      - name: Declared binaries
+        run: pnpm --filter web knip:check
+      - name: "Unused code report (advisory)"
+        continue-on-error: true
+        run: pnpm --filter web knip
       - name: Build
         run: pnpm --filter web build

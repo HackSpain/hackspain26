@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "tags": ["-lintignore"],
-  "ignoreDependencies": ["@biomejs/biome"]
+  "treatConfigHintsAsErrors": true,
+  "ignoreBinaries": ["oxlint", "ultracite"]
 }
