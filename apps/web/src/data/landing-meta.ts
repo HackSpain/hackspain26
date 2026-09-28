@@ -104,9 +104,9 @@ export function signupSeo(): PageSeo {
 export function ambassadorSeo(): PageSeo {
   return {
     description:
-      "Junta builders, mueve el boca a boca y empuja hacia el registro — te mantenemos al día con fechas y enlaces oficiales, te aclaramos dudas si las tienes, y tienes contacto directo con el equipo para Madrid 2026.",
+      "Conoce el programa de embajadores de HackSpain 2026 en los campus. La edición de Madrid ya terminó y las solicitudes están cerradas.",
     ogImageAlt: "HackSpain 2026 — programa de embajadores",
-    title: "Sé la cara de HackSpain en tu campus | HackSpain 2026",
+    title: "Programa de embajadores de HackSpain 2026 | Edición cerrada",
   };
 }
 

@@ -2,6 +2,7 @@ import type { JsonObject } from "@rawtree/sdk";
 import { RawTree } from "@rawtree/sdk";
 import type { APIRoute } from "astro";
 import { checkBotId } from "botid/server";
+import { hasEventEnded } from "../../data/signup-deadline";
 import { isHarnessId } from "../../lib/harness-poll";
 import { envFromRuntime } from "../../lib/runtime-env";
 
@@ -40,6 +41,10 @@ function parseBody(value: unknown): PollBody | null {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  if (hasEventEnded()) {
+    return Response.json({ error: "event_closed" }, { status: 410 });
+  }
+
   if (!import.meta.env.DEV) {
     try {
       const verification = await checkBotId();
