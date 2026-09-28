@@ -1,12 +1,20 @@
 import { api } from "@convex/_generated/api";
 import { fetchMutation } from "convex/nextjs";
-import { fail, fromError, ok, readJson } from "../../../_lib/respond";
+import { ConvexError } from "convex/values";
+import { signStart, startIdentityKey } from "@convex/lib/cliAuthStart";
+import {
+  fail,
+  failCoded,
+  fromError,
+  ok,
+  readJson,
+} from "../../../_lib/respond";
 
 const SECRET_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
 
 /**
  * POST { secret } → { code, expiresAt }. Starts a browser login: the CLI
- * keeps the secret, shows /cli-auth?code=<code> to the user, and polls
+ * keeps the secret, shows /cli-auth#hs-code=<code> to the user, and polls
  * /api/cli/auth/device/poll with both until someone signed in approves it.
  */
 export async function POST(request: Request) {
@@ -15,12 +23,35 @@ export async function POST(request: Request) {
   if (!SECRET_PATTERN.test(secret)) {
     return fail("Missing or malformed secret", 400);
   }
+  const bridgeSecret = process.env.CLI_AUTH_BRIDGE_SECRET;
+  if (!bridgeSecret || bridgeSecret.length < 32) {
+    return fail("Device login is not configured", 503);
+  }
+  // Vercel sets this from the connecting client and prevents spoofing. Refuse
+  // production requests without it instead of falling back to a client header.
+  const ip =
+    request.headers.get("x-vercel-forwarded-for")?.trim() ||
+    (process.env.NODE_ENV !== "production" ? "local-development" : "");
+  if (!ip || ip.includes(",")) {
+    return fail("Client address unavailable", 503);
+  }
+  const identityKey = startIdentityKey(bridgeSecret, ip);
+  const issuedAt = Date.now();
   try {
     const { code, expiresAt } = await fetchMutation(api.cliAuth.start, {
       secret,
+      identityKey,
+      issuedAt,
+      signature: signStart(bridgeSecret, secret, identityKey, issuedAt),
     });
     return ok({ code, expiresAt });
-  } catch (err) {
-    return fromError(err);
+  } catch (error) {
+    if (error instanceof ConvexError) {
+      const data = error.data as { code?: string; message?: string };
+      if (data.code === "TOO_MANY_ATTEMPTS" && data.message) {
+        return failCoded(data.code, data.message, 429);
+      }
+    }
+    return fromError(error);
   }
 }

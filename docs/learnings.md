@@ -487,3 +487,19 @@ credential; a sanitizer cannot reach the recording's Meta event. When a new
 telemetry field is added, run `pnpm --filter web test` and check the four
 places above, not only `event.request`. Old events already stored in Better
 Stack are unaffected by this change.
+
+## 2026-09-28 - The CLI device-login mutation is reachable outside Next
+
+**Evidence and consequence.** `/api/cli/auth/device/start` is the CLI's normal
+entry point, but `cliAuth.start` is a public Convex mutation and can also be
+called directly. An IP check in the Next route alone would leave its row inserts
+unrestricted. The mutation context has no trustworthy client IP, and the
+client-generated device secret cannot identify a caller.
+
+**Prevention and verification.** The route derives an opaque key from Vercel's
+`x-vercel-forwarded-for` and signs each start with `CLI_AUTH_BRIDGE_SECRET`; the
+same secret must be set on Next and Convex. The mutation verifies that proof
+before any database read or write and applies an atomic per-key quota. Keep it
+failing closed when either deployment lacks the secret. Run
+`bun test convex/cliAuth.test.ts` after changing the bridge or quota, including
+the test that rejects direct unsigned calls.
