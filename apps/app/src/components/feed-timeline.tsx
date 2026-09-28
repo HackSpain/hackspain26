@@ -163,7 +163,11 @@ function PostCard({ post, fresh, meId }: { post: FeedPost; fresh: boolean; meId:
             <img
               src={post.imagePath}
               alt=""
-              className="max-h-96 w-auto border-[3px] border-hs-ink object-contain outline outline-1 outline-black/10"
+              width={640}
+              height={384}
+              loading="lazy"
+              decoding="async"
+              className="aspect-[5/3] max-h-96 w-full max-w-2xl border-[3px] border-hs-ink bg-hs-sand object-contain outline outline-1 outline-black/10"
             />
           </a>
         ) : null}
