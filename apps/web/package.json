@@ -19,7 +19,10 @@
     "test": "node --test telemetry-sanitize.test.js",
     "lint": "oxlint -c oxlint.config.mjs . && ultracite check",
     "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix",
-    "knip": "DATABASE_URL=postgresql://localhost/knip knip"
+    "format:check": "biome format .",
+    "format:fix": "biome format --write .",
+    "knip": "DATABASE_URL=postgresql://localhost/knip knip",
+    "knip:check": "DATABASE_URL=postgresql://localhost/knip knip --include binaries"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.6",

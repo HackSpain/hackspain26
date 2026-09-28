@@ -14,10 +14,10 @@
   "scripts": {
     "dev": "bun src/index.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint -c oxlint.config.mjs . && ultracite check",
+    "lint": "oxlint -c oxlint.config.mjs --report-unused-disable-directives-severity=error . && ultracite check",
     "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix",
     "test": "bun test",
-    "check": "tsc --noEmit && oxlint -c oxlint.config.mjs . && ultracite check && bun test",
+    "check": "tsc --noEmit && oxlint -c oxlint.config.mjs --report-unused-disable-directives-severity=error . && ultracite check && bun test",
     "build:bin:host": "bash scripts/build-all.sh --host",
     "build:bin": "bash scripts/build-all.sh"
   },

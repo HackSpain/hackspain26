@@ -2,18 +2,16 @@ name: cli-ci
 
 on:
   pull_request:
+  push:
+    branches: [master]
     paths:
       - "apps/cli/**"
       - "apps/app/convex/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "oxlint.config.mjs"
       - ".github/workflows/cli-ci.yml"
-  push:
-    branches: [master]
-    paths:
-      - "apps/cli/**"
-      - "apps/app/convex/**"
 
 concurrency:
   group: cli-ci-${{ github.ref }}
