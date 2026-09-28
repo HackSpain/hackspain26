@@ -47,8 +47,15 @@ export async function POST(request: Request) {
     return ok({ code, expiresAt });
   } catch (error) {
     if (error instanceof ConvexError) {
-      const data = error.data as { code?: string; message?: string };
-      if (data.code === "TOO_MANY_ATTEMPTS" && data.message) {
+      const data = error.data;
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "code" in data &&
+        data.code === "TOO_MANY_ATTEMPTS" &&
+        "message" in data &&
+        typeof data.message === "string"
+      ) {
         return failCoded(data.code, data.message, 429);
       }
     }

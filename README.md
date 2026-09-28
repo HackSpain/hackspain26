@@ -217,9 +217,6 @@ Do not run `convex deploy` for local validation. Production Convex deploys only 
 pnpm exec convex env set SITE_URL http://localhost:3000
 pnpm exec convex env set ADMIN_EMAILS you@example.com
 pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
-# Generate one separate 32-byte secret for CLI device login. Set the same
-# CLI_AUTH_BRIDGE_SECRET in apps/app/.env.local (see apps/app/.env.example).
-pnpm exec convex env set CLI_AUTH_BRIDGE_SECRET "<the same generated secret>"
 # Email delivery. Without a key, sign-in refuses to send codes unless the stub below is on.
 pnpm exec convex env set RESEND_API_KEY re_...
 pnpm exec convex env set RESEND_FROM "HackSpain <onboarding@resend.dev>"
@@ -236,7 +233,7 @@ pnpm exec convex env set GITHUB_TOKEN ghp_...
 `AUTH_RESEND_KEY` and `AUTH_EMAIL` still work as fallbacks for the two Resend variables.
 
 3. Copy the printed `CONVEX_URL` into `apps/app/.env.local` as `NEXT_PUBLIC_CONVEX_URL`.
-For browser-assisted CLI login, generate `openssl rand -hex 32` once, put its output in `CLI_AUTH_BRIDGE_SECRET` in `apps/app/.env.local`, and set the same value in the Convex dev deployment. The Next route returns 503 until both sides are configured; direct calls to the public Convex mutation cannot bypass the signed bridge.
+For browser-assisted CLI login, generate `openssl rand -hex 32` once, put its output in `CLI_AUTH_BRIDGE_SECRET` in `apps/app/.env.local`, and run `pnpm exec convex env set CLI_AUTH_BRIDGE_SECRET "<same value>"` from `apps/app` for the Convex dev deployment. The Next route returns 503 until both sides are configured; direct calls to the public Convex mutation cannot bypass the signed bridge.
 4. Generate the Convex Auth JWT keys once, from `apps/app`: `pnpm dlx @convex-dev/auth`.
 5. Sign in at `/login` with an email that exists in the Convex `signups` table. An organizer must mark that signup **accepted** in `/admin` before the person can confirm details.
 
@@ -292,14 +289,13 @@ pnpm exec convex env set ADMIN_EMAILS you@example.com
 pnpm exec convex env set RESEND_API_KEY re_...
 pnpm exec convex env set RESEND_FROM "HackSpain <noreply@updates.hackspain.com>"
 pnpm exec convex env set MIGRATION_SECRET "$(openssl rand -hex 24)"
-pnpm exec convex env set CLI_AUTH_BRIDGE_SECRET "<the same 32-byte secret configured on Vercel>"
 pnpm exec convex env set GITHUB_CLIENT_ID ...
 pnpm exec convex env set GITHUB_CLIENT_SECRET ...
 pnpm exec convex env set GITHUB_TOKEN ...
 ```
 
 5. In the production deployment's settings, add and verify `api.hackspain.com` as a custom domain, then make it the default HTTP Actions domain by overriding `CONVEX_SITE_URL`.
-Before merging a deployment with this change, generate one `openssl rand -hex 32` secret and configure `CLI_AUTH_BRIDGE_SECRET` with the **same value** in the dashboard Vercel project's Production environment and the production Convex deployment. Configure a separate matching pair for each Preview deployment that should support CLI device login. The route uses Vercel's trusted `x-vercel-forwarded-for` header and fails closed when it is unavailable in production. Never use `MIGRATION_SECRET` for this bridge.
+Before merging a deployment with this change, generate one `openssl rand -hex 32` secret and configure `CLI_AUTH_BRIDGE_SECRET` with the **same value** in the dashboard Vercel project's Production environment and the production Convex deployment (`pnpm exec convex env set CLI_AUTH_BRIDGE_SECRET "<same value>"`). Configure a separate matching pair for each Preview deployment that should support CLI device login. The route uses Vercel's trusted `x-vercel-forwarded-for` header and fails closed when it is unavailable in production. Never use `MIGRATION_SECRET` for this bridge.
 6. Set the production GitHub OAuth App callback URL to `https://api.hackspain.com/github/callback`. GitHub calls the Convex HTTP action directly. After linking, Convex sends the browser back to the dashboard URL in `SITE_URL`.
 
 Do **not** set `ALLOW_EMAIL_OTP_STUB` on production. Do **not** commit `.env` or `.env.local`.
