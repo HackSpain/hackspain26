@@ -73,6 +73,7 @@ import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
 import type * as stack from "../stack.js";
 import type * as stackDetect from "../stackDetect.js";
+import type * as storageCleanup from "../storageCleanup.js";
 import type * as submissions from "../submissions.js";
 import type * as teams from "../teams.js";
 import type * as tracks from "../tracks.js";
@@ -153,6 +154,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   stack: typeof stack;
   stackDetect: typeof stackDetect;
+  storageCleanup: typeof storageCleanup;
   submissions: typeof submissions;
   teams: typeof teams;
   tracks: typeof tracks;

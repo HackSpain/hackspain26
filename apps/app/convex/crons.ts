@@ -12,4 +12,11 @@ crons.interval(
   {}
 );
 
+crons.daily(
+  "remove abandoned uploads",
+  { hourUTC: 4 },
+  internal.storageCleanup.sweep,
+  {}
+);
+
 export default crons;

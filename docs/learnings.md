@@ -487,3 +487,20 @@ credential; a sanitizer cannot reach the recording's Meta event. When a new
 telemetry field is added, run `pnpm --filter web test` and check the four
 places above, not only `event.request`. Old events already stored in Better
 Stack are unaffected by this change.
+
+## 2026-09-28 - Failed upload attachment leaves a Convex storage file
+
+**Evidence and consequence.** Profile, team-logo and feed uploads POST to a
+generated Convex URL before a separate mutation attaches the storage ID. Their
+validation can reject that ID, and the browser can abandon the flow without
+calling the mutation. Calling `ctx.storage.delete` before throwing inside the
+attachment mutation does not reclaim it: Convex rolls back the mutation's
+writes. The persisted image references are `posts.imageId`, `teams.logoId`,
+`users.avatarId` and `users.avatarThumbId`, all with lookup indexes in the
+schema.
+
+**Prevention and verification.** `storageCleanup.sweep` pages through the
+`_storage` system table daily, skips files newer than seven days and checks all
+four indexes before deletion. When adding another persisted storage reference,
+add its lookup to the sweep in the same change. Keep deletion in a successful
+mutation and retain a grace period for an upload still waiting to be attached.
