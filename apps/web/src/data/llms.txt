@@ -2,7 +2,7 @@
 
 > HackSpain 2026 was an in-person, 36-hour hackathon for 250 builders under 30, held at UPM–ETSIT in Madrid, Spain, from 18 to 20 September 2026. The official website and event communications are primarily in Spanish.
 
-HackSpain brought together young technical talent to build projects across five startup-led tracks. Participants had free compute, and the edition featured a €5,000 grand prize judged by leading Spanish venture capital firms. The canonical website is https://hackspain.com.
+HackSpain was founded by Leonardo Ollero and Samuel Cordero Sánchez. The Exponential Fellowship collaborated with them to make the first edition happen. HackSpain brought together young technical talent to build projects across five startup-led tracks. Participants had free compute, and the edition featured a €5,000 grand prize judged by leading Spanish venture capital firms. The canonical website is https://hackspain.com.
 
 HackSpain 2026 has concluded. The homepage presents the event video, eight official embedded X posts from the community and the preserved edition information. Applications for HackSpain 2026 are closed. HackSpain is not a school, job board, online course, or an unrelated event named “Hack Spain.”
 
