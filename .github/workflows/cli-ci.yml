@@ -6,6 +6,7 @@ on:
     branches: [master]
     paths:
       - "apps/cli/**"
+      - "apps/app/src/app/api/cli/**"
       - "apps/app/convex/**"
       - "package.json"
       - "pnpm-lock.yaml"
