@@ -16,6 +16,8 @@ import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 export const CURSOR = "cursor" as const;
 const SCRIPT_EXTENSION = /\.[cm]?[jt]s$/;
 const RECORDER_COMMAND = /(?:^|\s)['"]?_cursor-hook['"]?(?:\s|$)/;
+const HACKSPAIN_BINARY_COMMAND =
+  /(?:^|[/\\])hackspain(?:\.exe)?['"]?\s+['"]?_cursor-hook(?:['"]|\s|$)/;
 const USAGE_HOOKS = ["afterAgentResponse", "stop"] as const;
 let cursorHookReady = false;
 
@@ -39,6 +41,25 @@ type HooksConfig = {
 };
 
 type CursorCollectionWindow = { since: number; until: number };
+
+function isRecorder(entry: unknown): boolean {
+  if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+    return false;
+  }
+  const candidate = (entry as { command?: unknown }).command;
+  return typeof candidate === "string" && RECORDER_COMMAND.test(candidate);
+}
+
+function isInstalledRecorder(entry: unknown): boolean {
+  if (!isRecorder(entry)) {
+    return false;
+  }
+  const command = (entry as { command: string }).command;
+  return (
+    HACKSPAIN_BINARY_COMMAND.test(command) ||
+    (command.includes("--event-log") && command.includes("--window-file"))
+  );
+}
 
 function nonEmpty(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -319,13 +340,6 @@ export function installCursorHook(
       throw new Error(`cannot update ${path}: ${name} must be an array`);
     }
     const entries = (current ?? []) as unknown[];
-    const isRecorder = (entry: unknown): boolean => {
-      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-        return false;
-      }
-      const candidate = (entry as { command?: unknown }).command;
-      return typeof candidate === "string" && RECORDER_COMMAND.test(candidate);
-    };
     const owned = entries.filter(isRecorder);
     if (
       owned.length === 1 &&
@@ -351,6 +365,71 @@ export function installCursorHook(
   };
   writeFileAtomic(path, `${JSON.stringify(next, null, 2)}\n`, 0o600);
   return "installed";
+}
+
+/** Remove only HackSpain recorder entries, including commands from older installs. */
+export function uninstallCursorHook(root = cursorHome()): "removed" | "absent" {
+  const path = join(root, "hooks.json");
+  if (!existsSync(path)) {
+    return "absent";
+  }
+  let config: HooksConfig;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
+      throw new Error("root must be an object");
+    }
+    config = parsed as HooksConfig;
+  } catch (error) {
+    throw new Error(`cannot update ${path}: invalid JSON (${String(error)})`, {
+      cause: error,
+    });
+  }
+  if (
+    config.hooks !== undefined &&
+    (typeof config.hooks !== "object" ||
+      config.hooks === null ||
+      Array.isArray(config.hooks))
+  ) {
+    throw new Error(`cannot update ${path}: hooks must be an object`);
+  }
+  const hooks = (config.hooks ?? {}) as Record<string, unknown>;
+  let nextHooks = { ...hooks };
+  let changed = false;
+  for (const name of USAGE_HOOKS) {
+    const entries = hooks[name];
+    if (entries !== undefined && !Array.isArray(entries)) {
+      throw new Error(`cannot update ${path}: ${name} must be an array`);
+    }
+    if (!entries) {
+      continue;
+    }
+    const kept = entries.filter((entry) => !isInstalledRecorder(entry));
+    if (kept.length === entries.length) {
+      continue;
+    }
+    if (kept.length === 0) {
+      nextHooks = Object.fromEntries(
+        Object.entries(nextHooks).filter(([key]) => key !== name)
+      );
+    } else {
+      nextHooks[name] = kept;
+    }
+    changed = true;
+  }
+  if (!changed) {
+    return "absent";
+  }
+  writeFileAtomic(
+    path,
+    `${JSON.stringify({ ...config, hooks: nextHooks }, null, 2)}\n`,
+    0o600
+  );
+  return "removed";
 }
 
 export const cursorCollector: Collector = {

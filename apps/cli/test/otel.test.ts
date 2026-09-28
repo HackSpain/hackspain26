@@ -16,6 +16,7 @@ import { createBatcher } from "../src/watcher/batcher";
 import {
   createClaudeOtelCollector,
   installClaudeOtel,
+  uninstallClaudeOtel,
 } from "../src/watcher/collectors/claude-otel";
 import { memoryCursorStore } from "../src/watcher/cursor-store";
 import { scanOnce, stamp } from "../src/watcher/index";
@@ -251,6 +252,62 @@ describe("native Claude OTLP", () => {
     writeFileSync(path, "{broken");
     expect(() => installClaudeOtel(path, config, {})).toThrow();
     expect(readFileSync(path, "utf8")).toBe("{broken");
+  });
+
+  test("uninstall removes only values owned by the saved receiver", () => {
+    const path = join(dir, "settings.json");
+    const configPath = join(dir, "claude-otel.json");
+    const config = { version: 1 as const, port: 4318, token: TOKEN };
+    writeFileSync(configPath, JSON.stringify(config));
+    writeFileSync(
+      path,
+      JSON.stringify({
+        env: { EDITOR: "vim" },
+        permissions: { allow: ["Read"] },
+      })
+    );
+    expect(installClaudeOtel(path, config, {})).toBe("installed");
+    const installed = JSON.parse(readFileSync(path, "utf8"));
+    installed.env.OTEL_LOG_USER_PROMPTS = "1";
+    writeFileSync(path, JSON.stringify(installed));
+    expect(uninstallClaudeOtel(path, configPath)).toBe("removed");
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
+      env: { EDITOR: "vim", OTEL_LOG_USER_PROMPTS: "1" },
+      permissions: { allow: ["Read"] },
+    });
+    const cleaned = readFileSync(path, "utf8");
+    expect(uninstallClaudeOtel(path, configPath)).toBe("absent");
+    expect(readFileSync(path, "utf8")).toBe(cleaned);
+  });
+
+  test("uninstall preserves settings when ownership cannot be verified", () => {
+    const path = join(dir, "settings.json");
+    const configPath = join(dir, "claude-otel.json");
+    const config = { version: 1 as const, port: 4318, token: TOKEN };
+    writeFileSync(
+      path,
+      JSON.stringify({
+        env: {
+          EDITOR: "vim",
+          OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "http://127.0.0.1:4318/v1/logs",
+        },
+      })
+    );
+    expect(uninstallClaudeOtel(path, configPath)).toBe("unverified");
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
+      env: {
+        EDITOR: "vim",
+        OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "http://127.0.0.1:4318/v1/logs",
+      },
+    });
+    writeFileSync(path, JSON.stringify({ env: { EDITOR: "vim" } }));
+    writeFileSync(configPath, JSON.stringify(config));
+    expect(installClaudeOtel(path, config, {})).toBe("installed");
+    const changed = JSON.parse(readFileSync(path, "utf8"));
+    changed.env.OTEL_EXPORTER_OTLP_LOGS_HEADERS = "Authorization=Bearer user";
+    writeFileSync(path, JSON.stringify(changed));
+    expect(uninstallClaudeOtel(path, configPath)).toBe("unverified");
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual(changed);
   });
 
   test("native/transcript aliases count once in either order, scoped to each participant", () => {
