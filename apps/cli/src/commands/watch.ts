@@ -138,6 +138,11 @@ export function registerWatch(program: Command): void {
       };
       let updatedVersion: string | undefined;
       const checkForUpdate = async (): Promise<boolean> => {
+        // The JSON result belongs to this invocation; restarting here would
+        // exit before it is written and may create a second result document.
+        if (ctx.json) {
+          return false;
+        }
         updatedVersion = await autoUpdate(process.argv.slice(2), {
           silent: true,
         });
