@@ -8,6 +8,8 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "oxlint.config.mjs"
+      - "scripts/check-changed-quality.mjs"
       - ".github/workflows/ci.yml"
   push:
     branches: [master]
@@ -17,6 +19,8 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "oxlint.config.mjs"
+      - "scripts/check-changed-quality.mjs"
       - ".github/workflows/ci.yml"
 
 permissions:
@@ -46,6 +50,8 @@ jobs:
               - "package.json"
               - "pnpm-lock.yaml"
               - "pnpm-workspace.yaml"
+              - "oxlint.config.mjs"
+              - "scripts/check-changed-quality.mjs"
               - ".github/workflows/ci.yml"
             app:
               - *shared
@@ -53,6 +59,28 @@ jobs:
             web:
               - *shared
               - "apps/web/**"
+
+  changed-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.1.1"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node --check scripts/check-changed-quality.mjs
+      - run: pnpm exec oxlint -c oxlint.config.mjs scripts/check-changed-quality.mjs
+      - name: Check changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/check-changed-quality.mjs "$BASE_SHA"
 
   app:
     needs: changes
@@ -103,5 +131,10 @@ jobs:
       - name: "Lint (advisory until #235)"
         continue-on-error: true
         run: pnpm --filter web lint
+      - name: Declared binaries
+        run: pnpm --filter web knip:check
+      - name: "Unused code report (advisory)"
+        continue-on-error: true
+        run: pnpm --filter web knip
       - name: Build
         run: pnpm --filter web build
