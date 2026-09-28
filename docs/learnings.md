@@ -2,6 +2,20 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-28 — OpenCode SQLite can fail after a read-only open succeeds
+
+**Evidence and consequence.** On macOS with Bun 1.4.0, a closed SQLite database in
+WAL mode whose `-wal` and `-shm` sidecars were removed allowed
+`new Database(path, { readonly: true })`, but the first query failed with
+`unable to open database file`. The OpenCode reader caught that query error and
+silently skipped usage; Kilo shares the same reader.
+
+**Correction and verification.** Use the shared `openReadOnly` helper, which probes
+the schema before returning the connection and retries as immutable only when
+the WAL sidecar is absent. A focused collector test recreates the sidecar-free
+WAL database and verifies that usage is read. Keep the early query probe when
+adding SQLite collectors; a successful constructor does not prove readability.
+
 ## 2026-09-24 — Landing viewport detection suppresses its server-rendered content
 
 **Evidence and consequence.** An HTTP audit of all 13 production sitemap URLs

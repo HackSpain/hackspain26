@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   appendFileSync,
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -385,8 +386,11 @@ describe("cline", () => {
 });
 
 describe("opencode", () => {
-  function makeDb(path: string): void {
+  function makeDb(path: string, wal = false): void {
     const db = new Database(path);
+    if (wal) {
+      db.query("PRAGMA journal_mode=WAL").get();
+    }
     db.run(
       "CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT)"
     );
@@ -426,6 +430,9 @@ describe("opencode", () => {
     );
     assistant("msg_a", 2000, 1999);
     assistant("msg_streaming", 3000);
+    if (wal) {
+      db.query("PRAGMA wal_checkpoint(TRUNCATE)").get();
+    }
     db.close();
   }
 
@@ -466,6 +473,24 @@ describe("opencode", () => {
     const later = await drain(collectOpenCode([path], ctx({ cursors })));
     expect(later.map((e) => e.eventId)).toEqual([
       "opencode:ses_1:msg_streaming",
+    ]);
+  });
+
+  test("reads a WAL database after its sidecars are removed", async () => {
+    const path = join(dir, "opencode-wal.db");
+    makeDb(path, true);
+    rmSync(`${path}-wal`, { force: true });
+    rmSync(`${path}-shm`, { force: true });
+    expect(existsSync(`${path}-wal`)).toBe(false);
+
+    const logs: string[] = [];
+    const events = await drain(
+      collectOpenCode([path], ctx({ log: (message) => logs.push(message) }))
+    );
+    expect(logs).toEqual([]);
+    expect(events.map((event) => event.eventId)).toEqual([
+      "opencode:ses_1:start",
+      "opencode:ses_1:msg_a",
     ]);
   });
 });

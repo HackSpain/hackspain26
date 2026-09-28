@@ -1,4 +1,4 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +6,7 @@ import { projectRef } from "../project";
 import type { HarnessId, RawEvent } from "../schema";
 import { eventId, modelFamily, outputWithReasoning } from "../schema";
 import type { Collector, CollectorContext } from "../types";
+import { openReadOnly } from "./sqlite";
 
 export const OPENCODE = "opencode" as const;
 
@@ -116,7 +117,7 @@ export async function* collectOpenCode(
     const announced = new Set(previous?.seenSessions);
     let db: Database;
     try {
-      db = new Database(path, { readonly: true });
+      db = openReadOnly(path);
     } catch (error) {
       ctx.log(`${harness}: cannot open ${path}: ${String(error)}`);
       continue;
