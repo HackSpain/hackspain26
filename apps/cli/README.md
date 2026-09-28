@@ -96,6 +96,12 @@ draw them and links elsewhere; `↑`/`↓` scroll it, `g` returns to live), and 
 next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
 `--plain` use the line-by-line mode instead.
 
+`hackspain --json watch --once` writes one result object to stdout after its scan.
+Continuous `hackspain --json watch` keeps progress and organiser messages on stderr,
+then writes one result object to stdout when stopped. The result includes the exit
+status and totals for scans, events by harness, skipped events and notifications;
+an incomplete one-shot upload reports `status: "pending"` and exits 5.
+
 Every 30 s it reads the local session logs of the
 AI coding harnesses it finds (Claude Code, Codex, Cursor, GitHub Copilot CLI, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin), normalises them into one
 schema ([docs/telemetry-schema.md](docs/telemetry-schema.md)), writes them to a local spool
