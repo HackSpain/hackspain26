@@ -1,12 +1,33 @@
 import { describe, expect, test } from "bun:test";
 import {
   assetName,
+  installWriteError,
   isNewer,
   shouldAutoUpdate,
   tagFromReleaseAssetUrl,
 } from "../src/commands/update";
+import { EXIT, explainError } from "../src/lib/errors";
 
 describe("update", () => {
+  test("installation permission failures give a writable-directory hint", () => {
+    for (const code of ["EACCES", "EPERM", "EROFS"]) {
+      const error = Object.assign(new Error("permission denied"), { code });
+      expect(
+        explainError(installWriteError(error, "/usr/local/bin/hackspain"))
+      ).toMatchObject({
+        code: "UPDATE_NOT_WRITABLE",
+        exitCode: EXIT.ERROR,
+        message: "Cannot update the binary in /usr/local/bin.",
+        hint: expect.stringContaining("HACKSPAIN_INSTALL_DIR"),
+      });
+    }
+  });
+
+  test("other installation failures keep their original error", () => {
+    const error = Object.assign(new Error("disk full"), { code: "ENOSPC" });
+    expect(installWriteError(error, "/usr/local/bin/hackspain")).toBe(error);
+  });
+
   test("asset names match the release matrix", () => {
     expect(assetName("linux", "x64")).toBe("hackspain-linux-x64");
     expect(assetName("darwin", "arm64")).toBe("hackspain-darwin-arm64");
