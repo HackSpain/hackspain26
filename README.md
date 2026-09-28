@@ -306,9 +306,9 @@ Never deploy a branch to production by hand. Its functions vanish on the next Ve
 
 Two GitHub Actions workflows run on pull requests:
 
-- `ci.yml` runs on every pull request. Its `changed-quality` job blocks new Oxlint violations, stale disable comments, and formatting issues in modified dashboard or landing files. The dashboard and landing jobs run when their own or shared files change; the landing's Knip binary check also blocks. Full lint, the full unused-code report, and `astro check` remain advisory as existing findings are resolved under [#235](https://github.com/HackSpain/hackspain26/issues/235) and [#236](https://github.com/HackSpain/hackspain26/issues/236).
+- `ci.yml` runs on every pull request. Its `gate-lint` job blocks new Oxlint violations, stale disable comments, and formatting issues in modified dashboard or landing files. The dashboard and landing jobs run when their own or shared files change; the landing's Knip binary check also blocks. Full lint, the full unused-code report, and `astro check` remain advisory as existing findings are resolved under [#235](https://github.com/HackSpain/hackspain26/issues/235) and [#236](https://github.com/HackSpain/hackspain26/issues/236).
 - `cli-ci.yml` runs on every pull request and typechecks, lints, tests and compiles the CLI.
-- GitHub requires the `changes`, `changed-quality`, `app`, `web` and `check` jobs to pass before merging into `master`. Jobs skipped because their app was not changed count as successful checks.
+- GitHub requires the `changes`, `gate-lint`, `app`, `web` and `check` jobs to pass before merging into `master`. Jobs skipped because their app was not changed count as successful checks.
 - `cli-release.yml` cross-compiles the CLI for macOS, Linux and Windows, writes `SHA256SUMS` and publishes a GitHub release when a `cli-vX.Y.Z` tag is pushed. `install.sh` and `hackspain update` read that release.
 
 To release the CLI, bump `apps/cli/package.json`, tag `master` with the matching `cli-vX.Y.Z` and push the tag.
