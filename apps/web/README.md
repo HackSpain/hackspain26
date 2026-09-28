@@ -19,14 +19,17 @@ Public marketing site for [HackSpain](https://hackspain.com) — Hack Spain 2026
 ## Requirements
 
 - [Node.js](https://nodejs.org/) **≥ 22.12**
-- [pnpm](https://pnpm.io/) **10.x** (see `packageManager` in `package.json`)
+- [pnpm](https://pnpm.io/) **11.1.1** (see `packageManager` in the repository root `package.json`)
 
 ## Getting started
 
 ```sh
 pnpm install
+cd apps/web
 cp .env.example .env
 ```
+
+Run the commands below from `apps/web`.
 
 Apply the schema when working with the database (see [Database](#database)).
 
@@ -43,7 +46,7 @@ Development server: [http://localhost:4321](http://localhost:4321).
 | `pnpm dev` | Development server |
 | `pnpm build` | Production build (`./dist/`) |
 | `pnpm preview` | Preview production build locally |
-| `pnpm astro check` | Astro and TypeScript checks |
+| `pnpm check` | Astro and TypeScript checks |
 | `pnpm lint` | Check lint and formatting (Oxlint + Ultracite / Biome) |
 | `pnpm fix` | Auto-fix lint and format issues |
 | `pnpm knip` | Find unused exports, dependencies, and files |
@@ -57,6 +60,20 @@ Schema and client live in `src/db/`. Drizzle Kit is configured in `drizzle.confi
 | `pnpm db:generate` | Generate migrations from schema changes |
 | `pnpm db:migrate` | Run migrations |
 | `pnpm db:push` | Push schema (useful in development) |
+
+## Routes
+
+| Route | Purpose |
+| :---- | :------ |
+| `/`, `/apuntate`, `/mission`, `/tracks`, `/gran-premio`, `/infra`, `/mentores`, `/comunidad` | Landing sections |
+| `/signup`, `/cancelacion`, `/confirmacion` | Application and attendance confirmation |
+| `/comparte` | Participant badge sharing |
+| `/asistencia`, `/poll-harness` | Mentor and sponsor attendance, and the harness survey |
+| `/cronica` | 2026 event recap |
+| `/ambassador`, `/brand`, `/conduct`, `/privacy` | Community, brand and policy information |
+| `/design.md`, `/llms.txt`, `/sitemap.xml` | Public design, crawler and sitemap documents |
+
+API endpoints live under `src/pages/api/`.
 
 ## Signup flow
 
