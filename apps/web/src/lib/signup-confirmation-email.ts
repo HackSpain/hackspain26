@@ -214,8 +214,8 @@ function emailLogoUrl(): string {
 }
 
 /**
- * Sent when a place is granted. The confirm link is the confirmation: opening it
- * moves the signup from accepted to confirmed. The cancel link points at the
+ * Sent when a place is granted. The confirm link opens a page where the
+ * participant explicitly confirms their place. The cancel link points at the
  * ordinary management page, so someone who cannot come can free the place
  * without writing in.
  */

@@ -158,6 +158,7 @@ export function acceptanceEmailHtml(content: AcceptanceEmailContent): string {
 
           <tr>
             <td align="center" bgcolor="${PALETTE.paper}" style="background:${PALETTE.paper};border:3px solid ${PALETTE.ink};border-top:0;border-bottom:0;padding:26px 26px 38px;">
+              <p style="margin:0 0 16px;font-family:${SANS};font-size:14px;line-height:1.6;color:${PALETTE.brown};">Abre el enlace y pulsa «Confirmar plaza» en la página.</p>
               ${button({ background: PALETTE.teal, border: PALETTE.ink, foreground: "#ffffff", href: content.confirmUrl, label: "Confirmar asistencia" })}
             </td>
           </tr>
@@ -228,6 +229,7 @@ SIGUIENTES PASOS
 2. Comparte tu acreditación. En la misma pantalla te espera tu acreditación. Publícala en LinkedIn o X: cuanta más gente la vea, más cracks se animan a venir — y eso hace mejor el hackathon para todos.
 
 CONFIRMA TU ASISTENCIA
+Abre este enlace y pulsa «Confirmar plaza» en la página:
 ${content.confirmUrl}
 
 ANTES DE CONFIRMAR, LEE ESTO
