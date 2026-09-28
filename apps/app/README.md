@@ -9,7 +9,19 @@ pnpm convex:dev   # development only
 
 Production Convex deploys from the Vercel build (`pnpm vercel-build`), not from a laptop. See the root [README](../../README.md#deploy).
 
-Import Neon signups with `pnpm migrate:convex` from the repo root.
+## Scripts and checks
+
+Run these from `apps/app` unless noted otherwise:
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm lint` | Check the dashboard with Oxlint. |
+| `pnpm format:check` | Check formatting with Biome. |
+| `pnpm typecheck` | Check TypeScript without emitting files. |
+| `pnpm test` | Run the dashboard's Bun tests. |
+| `pnpm migrate` | Import Neon signups into Convex (`pnpm migrate:convex` from the repo root). |
+| `pnpm backfill:avatars` | Generate missing profile photo thumbnails. |
+| `pnpm icons:tv` | Regenerate TV technology and harness icons after changing the catalog or icon sources. |
 
 ## Dashboard firewall
 
