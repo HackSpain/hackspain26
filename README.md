@@ -37,19 +37,26 @@
 
 ## What is HackSpain?
 
-HackSpain was an in-person hackathon for 250 selected builders under 30. The 2026 edition took place at UPM-ETSIT in Madrid from 18 to 20 September. Teams had 36 hours to build a project for one of five tracks set by Maisa, HappyRobot, Prosper AI, Embat and THEKER Robotics.
+HackSpain is an in-person hackathon where young builders spend a weekend creating projects for challenges proposed by startups. Infrastructure sponsors provide compute and AI coding tools, and a jury selects the winners.
 
-Infrastructure sponsors provided compute and AI coding tools. A venture capital jury chose the winner of the €5,000 grand prize; the event offered more than €10,000 in prizes overall. It was organized by Asociación Exponential Fellowship.
+| | |
+| --- | --- |
+| **When** | Friday 18 to Sunday 20 September 2026. 36 hours of building. |
+| **Where** | UPM-ETSIT (Escuela Técnica Superior de Ingenieros de Telecomunicación), Madrid. |
+| **Who** | 250 builders under 30, chosen from the applications. |
+| **Tracks** | Five, set by Maisa, HappyRobot, Prosper AI, Embat and THEKER Robotics. |
+| **Prizes** | A 5,000 € grand prize judged by JME Ventures, Kfund, Kibo Ventures, Enzo Ventures and Acurio Ventures. More than 10,000 € in prizes overall. |
+| **Infrastructure** | Convex, Vercel, QuiverAI, Cloudflare, Tinybird, Cognition, Exa, fal.ai, Cursor and Helmcode. |
+| **Organizer** | Asociación Exponential Fellowship. |
+| **Language** | The event and the websites are in Spanish. The code and this documentation are in English. |
 
 The event is over. This repository contains the public site, participant dashboard and terminal client that ran the 2026 edition, published for other hackathons to reuse.
 
-## Apps
+## In this repository
 
-| | App | Purpose |
-| --- | --- | --- |
-| <img src="docs/readme/illustration-landing.webp" alt="" width="120"> | [`apps/web`](apps/web) · Astro, Neon, Drizzle | Public site and signup |
-| <img src="docs/readme/illustration-dashboard.webp" alt="" width="120"> | [`apps/app`](apps/app) · Next.js, Convex | Participant dashboard, admin and venue screens |
-| <img src="docs/readme/illustration-cli.webp" alt="" width="120"> | [`apps/cli`](apps/cli) · Bun | Participant terminal client |
+- [`apps/web`](apps/web): Astro public site and signup, backed by Neon and Drizzle.
+- [`apps/app`](apps/app): Next.js participant dashboard, admin and venue screens, backed by Convex.
+- [`apps/cli`](apps/cli): Bun terminal client for participants.
 
 Public signup writes to Neon. Dashboard data lives in Convex. The CLI reaches Convex through authenticated dashboard `/api/cli/*` routes.
 
