@@ -191,6 +191,13 @@ from successfully checkpointed recent ids; keep the board's local deduplication 
 restart with the actual spool and a failed sink, not an empty injected history. When adding a
 new Insights aggregate, use the same request correlation for people, models and team totals.
 
+**2026-09-28 follow-up.** A saved Claude OTLP port can belong to another process after a
+restart. Bun reports `EADDRINUSE` in that case; retrying the saved port on each scan leaves
+native logs unavailable. Bind an ephemeral loopback port, persist it atomically, and update
+Claude settings only when their endpoint and bearer token still match this installation's
+previous config. A pre-bound-port test verifies the new listener and preserves unrelated
+settings; transcripts remain the fallback if ownership cannot be verified.
+
 ## 2026-09-19 — Watcher discovery and checkpoints can fail independently
 
 **Evidence and consequence.** Discovery and hook-window writes ran outside collector error
