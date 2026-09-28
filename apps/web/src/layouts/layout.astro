@@ -2,6 +2,8 @@
 import "../styles/global.css";
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
+import bungeeLatinUrl from "../assets/fonts/bungee-latin-400-normal.woff2?url";
+import dmSansLatinUrl from "../assets/fonts/dm-sans-latin-variable-normal.woff2?url";
 import CookieConsent from "../components/cookie-consent.astro";
 import LegalFooter from "../components/legal-footer.astro";
 import { ANALYTICS_CONSENT_STORAGE_KEY } from "../data/cookie-consent";
@@ -128,11 +130,19 @@ const webPageJson = JSON.stringify(
     {bingVerify && <meta content={bingVerify} name="msvalidate.01" />}
     {yandexVerify && <meta content={yandexVerify} name="yandex-verification" />}
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-      href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Sans:ital,opsz,wght@0,9..40,100..900;1,9..40,100..900&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href={dmSansLatinUrl}
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    >
+    <link
+      rel="preload"
+      href={bungeeLatinUrl}
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
     >
     <meta name="generator" content={Astro.generator}>
     <title>{title}</title>

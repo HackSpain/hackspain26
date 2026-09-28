@@ -2,6 +2,24 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-28 — The landing needs variable DM Sans in the browser
+
+**Evidence and consequence.** The former Google Fonts request supplied DM Sans
+with weights 100–900 and optical sizes 9–40. Landing styles use intermediate
+weights such as 600 and 800. The three existing local WOFF files are static
+Bungee 400 and DM Sans 700/900 assets used by OG image rendering. Reusing those
+DM Sans files as the browser faces would synthesize intermediate weights and
+lose optical sizing, changing the typography while appearing to remove the
+Google Fonts request.
+
+**Correction and verification.** The landing now serves the matching Bungee and
+variable DM Sans WOFF2 subsets locally, including DM Sans italic. The original
+static WOFF files remain for OG rendering. The web build emits six local font
+faces and two Latin font preloads with matching hashed URLs; the brand page
+loads the 600, 700, 800 and 900 weights in a browser. When changing font
+delivery, compare the requested axes with the actual files and inspect the
+built CSS and browser fonts, not just the network host list.
+
 ## 2026-09-24 — Landing viewport detection suppresses its server-rendered content
 
 **Evidence and consequence.** An HTTP audit of all 13 production sitemap URLs
