@@ -31,17 +31,34 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 echo "Downloading $asset ($version)…"
-curl -fsSL "$base/$asset" -o "$tmp/hackspain"
-curl -fsSL "$base/SHA256SUMS" -o "$tmp/SHA256SUMS"
+download() {
+  file="$1"
+  destination="$2"
+  if status="$(curl -fsSL -w '%{http_code}' "$base/$file" -o "$destination" 2>/dev/null)"; then
+    return
+  fi
+  if [ "$status" = "404" ]; then
+    echo "hackspain: $file was not found (HTTP 404). Check the release and HACKSPAIN_VERSION at https://github.com/$repo/releases" >&2
+  else
+    echo "hackspain: could not download $file (HTTP ${status:-unknown})." >&2
+  fi
+  exit 1
+}
 
-expected="$(grep " $asset\$" "$tmp/SHA256SUMS" | cut -d' ' -f1)"
+download "$asset" "$tmp/hackspain"
+download SHA256SUMS "$tmp/SHA256SUMS"
+
+expected="$(awk -v asset="$asset" '$2 == asset { print $1; exit }' "$tmp/SHA256SUMS")"
 if [ -z "$expected" ]; then
   echo "hackspain: $asset not listed in SHA256SUMS" >&2; exit 1
 fi
 if command -v sha256sum >/dev/null 2>&1; then
   actual="$(sha256sum "$tmp/hackspain" | cut -d' ' -f1)"
-else
+elif command -v shasum >/dev/null 2>&1; then
   actual="$(shasum -a 256 "$tmp/hackspain" | cut -d' ' -f1)"
+else
+  echo "hackspain: SHA-256 verification needs sha256sum or shasum; install one and retry." >&2
+  exit 1
 fi
 if [ "$expected" != "$actual" ]; then
   echo "hackspain: checksum mismatch for $asset" >&2; exit 1
@@ -54,6 +71,21 @@ echo "Installed $install_dir/hackspain ($("$install_dir/hackspain" --version))"
 
 case ":$PATH:" in
   *":$install_dir:"*) ;;
-  *) echo "Add it to your PATH, e.g.:  export PATH=\"$install_dir:\$PATH\"" ;;
+  *)
+    case "${SHELL:-}" in
+      */zsh) rc_file="$HOME/.zshrc" ;;
+      */bash)
+        if [ "$os" = "darwin" ]; then rc_file="$HOME/.bash_profile"
+        else rc_file="$HOME/.bashrc"; fi
+        ;;
+      */fish) rc_file="$HOME/.config/fish/config.fish" ;;
+      *) rc_file="$HOME/.profile" ;;
+    esac
+    echo "Add $install_dir to your PATH in $rc_file:"
+    case "${SHELL:-}" in
+      */fish) echo "  fish_add_path \"$install_dir\"" ;;
+      *) echo "  export PATH=\"$install_dir:\$PATH\"" ;;
+    esac
+    ;;
 esac
 echo "Next: hackspain auth login"

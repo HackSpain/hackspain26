@@ -133,6 +133,10 @@ hackspain auth login                                # approve from a signed-in d
 hackspain                                           # where you stand, then a menu
 ```
 
+The installer uses the latest release and `~/.local/bin` by default. Set
+`HACKSPAIN_VERSION` for a specific release or `HACKSPAIN_INSTALL_DIR` for another
+destination on the `sh` command (see the [CLI install guide](apps/cli/README.md#install)).
+
 - Log in from the browser or with an email code. `hackspain open feed` signs your browser in from the CLI with a single-use token, so nobody types a second code.
 - Manage your profile, team, tracks and milestones, read the feed and post to it. Pictures render inline in terminals that support the Kitty or iTerm2 image protocols.
 - `hackspain watch` stays open all weekend. It shows your team, the AI tools it found, organizer announcements as desktop notifications, and the feed. Every 30 seconds it reads the local session logs of thirteen AI coding tools (Claude Code, Codex, Cursor, GitHub Copilot CLI, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity and Devin), normalizes them to [one schema](apps/cli/docs/telemetry-schema.md) and uploads them for the insights and the TV.

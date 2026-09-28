@@ -11,6 +11,14 @@ curl -fsSL https://hackspain.com/install.sh | sh      # macOS and Linux, into ~/
 hackspain update                                      # later, to get the newest release
 ```
 
+Set `HACKSPAIN_VERSION` to a release number (for example, `1.2.3`) to install a
+specific version instead of the latest. Set `HACKSPAIN_INSTALL_DIR` to change the
+destination from `~/.local/bin`. Pass them to the installer shell, for example:
+
+```sh
+curl -fsSL https://hackspain.com/install.sh | HACKSPAIN_VERSION=1.2.3 HACKSPAIN_INSTALL_DIR="$HOME/bin" sh
+```
+
 Windows: download `hackspain-windows-x64.exe` from the
 [releases page](https://github.com/HackSpain/hackspain26/releases) and rename it `hackspain.exe`.
 Binaries are self-contained; nothing else to install.
