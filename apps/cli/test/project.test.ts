@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { Submission, Track } from "../src/lib/participant";
-import { planTracks, projectArgsFrom } from "../src/lib/project";
+import {
+  planTracks,
+  projectArgsFrom,
+  unregisterSelection,
+} from "../src/lib/project";
 
 type Id = Track["_id"];
 const id = (s: string) => s as Id;
@@ -52,7 +56,7 @@ const tracks: Track[] = [
 
 describe("planTracks", () => {
   test("register keeps THEKER when adding another track", () => {
-    const plan = planTracks([id("t3")], tracks, { add: ["MAISA", "embat"] });
+    const plan = planTracks([id("t3")], tracks, { add: "MAISA" });
     expect(plan.next).toEqual([id("t1"), id("t3")]);
     expect(plan.added.map((t) => t.slug)).toEqual(["maisa"]);
     expect(plan.removed).toEqual([]);
@@ -60,14 +64,14 @@ describe("planTracks", () => {
   });
 
   test("register adds THEKER alongside the current track", () => {
-    const plan = planTracks([id("t1")], tracks, { add: ["theker"] });
+    const plan = planTracks([id("t1")], tracks, { add: "theker" });
     expect(plan.next).toEqual([id("t1"), id("t3")]);
     expect(plan.added.map((t) => t.slug)).toEqual(["theker"]);
     expect(plan.removed).toEqual([]);
   });
 
   test("register replaces a regular track while preserving THEKER", () => {
-    const plan = planTracks([id("t1"), id("t3")], tracks, { add: ["embat"] });
+    const plan = planTracks([id("t1"), id("t3")], tracks, { add: "embat" });
     expect(plan.next).toEqual([id("t2"), id("t3")]);
     expect(plan.added.map((t) => t.slug)).toEqual(["embat"]);
     expect(plan.removed.map((t) => t.slug)).toEqual(["maisa"]);
@@ -75,7 +79,7 @@ describe("planTracks", () => {
 
   test("unregister removes only the requested track", () => {
     const plan = planTracks([id("t1"), id("t3")], tracks, {
-      remove: ["theker"],
+      remove: "theker",
     });
     expect(plan.next).toEqual([id("t1")]);
     expect(plan.removed.map((t) => t.slug)).toEqual(["theker"]);
@@ -83,10 +87,23 @@ describe("planTracks", () => {
 
   test("reports unknown slugs instead of dropping them", () => {
     const plan = planTracks([id("t1"), id("t3")], tracks, {
-      add: ["nope", "maisa"],
+      add: "nope",
     });
     expect(plan.unknown).toEqual(["nope"]);
     expect(plan.next).toEqual([id("t1"), id("t3")]);
+  });
+});
+
+describe("unregisterSelection", () => {
+  test("defaults only when exactly one track is entered", () => {
+    expect(unregisterSelection([id("t1")], tracks)).toMatchObject({
+      defaultSlug: "maisa",
+      choices: [tracks[0]],
+    });
+    expect(unregisterSelection([id("t1"), id("t3")], tracks)).toMatchObject({
+      defaultSlug: undefined,
+      choices: [tracks[0], tracks[2]],
+    });
   });
 });
 
