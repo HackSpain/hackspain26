@@ -89,10 +89,7 @@ function nextSteps(
       steps.push(["hackspain track list", "pick a track"]);
     }
     if (submission?.status !== "submitted") {
-      steps.push([
-        "app.hackspain.com/submit",
-        "submit the video and public repo",
-      ]);
+      steps.push(["hackspain open submit", "submit the video and public repo"]);
     }
     steps.push(["hackspain watch", "keep this running in a spare terminal"]);
   } else {
