@@ -9,6 +9,7 @@ import {
 } from "@convex/lib/linkedinProfile";
 import { errorMessage, LoadingText, MetaLink, MetaRow } from "@/components/page";
 import type { DirectoryParticipant } from "./types";
+import type { Id } from "@convex/_generated/dataModel";
 
 export function linkedinSlugOf(person: DirectoryParticipant): string | null {
   const url = person.urls?.find((entry) => entry.kind === "linkedin")?.url;
@@ -30,7 +31,7 @@ export function LinkedinPanel({ person }: { person: DirectoryParticipant }) {
       return;
     }
     let cancelled = false;
-    void refresh({ slug }).catch((error: unknown) => {
+    void refresh({ participantId: person.id as Id<"users">, slug }).catch((error: unknown) => {
       if (!cancelled) {
         setLoadError(errorMessage(error, "LinkedIn no responde."));
       }
@@ -38,7 +39,7 @@ export function LinkedinPanel({ person }: { person: DirectoryParticipant }) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, refresh, slug]);
+  }, [enabled, person.id, refresh, slug]);
 
   if (!slug) {
     return null;

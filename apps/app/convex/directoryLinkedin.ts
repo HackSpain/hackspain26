@@ -95,13 +95,17 @@ async function enrich(slug: string, fetchedAt: number): Promise<LinkedinProfile>
 }
 
 export const refresh = action({
-  args: { slug: v.string() },
+  args: { participantId: v.id("users"), slug: v.string() },
   handler: async (ctx, args): Promise<LinkedinProfile> => {
-    await ctx.runQuery(internal.directory.assertViewer, {});
     const slug = normalizeLinkedinSlug(args.slug);
     if (!slug) {
       throw new Error("Esa URL de LinkedIn no vale.");
     }
+    await ctx.runQuery(internal.directoryProfileSource.assert, {
+      kind: "linkedin",
+      participantId: args.participantId,
+      value: slug,
+    });
     const existing: LinkedinProfile | null = await ctx.runQuery(
       internal.directory.linkedinCached,
       { slug },

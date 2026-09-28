@@ -11,6 +11,7 @@ import {
 import { errorMessage, LoadingText, MetaLink, MetaRow } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import type { DirectoryParticipant } from "./types";
+import type { Id } from "@convex/_generated/dataModel";
 
 const EVENT_LABELS: Record<string, string> = {
   pull_request: "PRs",
@@ -62,7 +63,7 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
       return;
     }
     let cancelled = false;
-    void refresh({ username }).catch((error: unknown) => {
+    void refresh({ participantId: person.id as Id<"users">, username }).catch((error: unknown) => {
       if (!cancelled) {
         setErrorFor({
           message: errorMessage(error, "GitHub no responde."),
@@ -73,7 +74,7 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
     return () => {
       cancelled = true;
     };
-  }, [refresh, username]);
+  }, [person.id, refresh, username]);
 
   if (!username) {
     return (
