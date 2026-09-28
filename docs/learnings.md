@@ -373,6 +373,8 @@ The same rule applies to the authenticated image proxy. A burst of 154 upstream 
 
 **Prevention.** Inspect checks for the current commit and identify failed steps before recommending a merge. Do not report inherited failures as new regressions or claim all checks passed. Do not add unrelated formatting or harness changes to make an incident PR green. Run tests with the correct runner (`bun:test` needs Bun).
 
+**Quality-gate follow-up (2026-09-28).** PR #392 added a changed-file check, but `master` had no branch protection or repository ruleset, so GitHub would still allow a merge with a failed check. The CI workflows also used pull-request path filters, which omit a required check entirely on some PRs. Keep required workflows triggered for every pull request, use job-level conditions for unrelated apps, and verify the required check names and branch protection in GitHub after changing CI.
+
 **Deployment verification.** The dashboard's [Vercel configuration](../apps/app/vercel.json) runs `pnpm vercel-build`, which deploys Convex and builds Next.js using the configured deployment key. Production keys belong only to the Production environment; previews need separate preview configuration. Do not run an extra laptop production deploy merely because a dependency changed. Verify the production deployment and user-facing behavior after merge. PRs #153–#156 were present in `master` at `5bec539` when this document was written; that establishes merge status, not production recovery. Firewall publication and code deployment are separate operations.
 
 ## 2026-09-18 — Team listing latency came from sequential reads
