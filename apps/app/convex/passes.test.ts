@@ -5,16 +5,13 @@ import type { MutationCtx } from "./_generated/server";
 import {
   arrivals,
   checkInParticipantRecord,
-  staffScan,
-  staffStatus,
-  staffUndoCheckIn,
 } from "./passes";
 import { dropCheckInMetadata } from "./migrations";
 import { reconcileArrivals } from "../src/lib/arrival-queue";
 
 type Row = Record<string, unknown> & { _id: string; table: string };
 
-function reception(t: TestContext) {
+function passesContext(t: TestContext) {
   let now = Date.parse("2026-09-18T12:00:00Z");
   t.mock.method(Date, "now", () => now);
   const rows = new Map<string, Row>([
@@ -37,7 +34,7 @@ function reception(t: TestContext) {
       signupId: `signup${suffix}`, status: "active", code, createdAt: now - 1000, updatedAt: now - 1000,
     });
   }
-  // Only the DB operations used by reception and its public TV projection.
+  // Only the DB operations used by admin check-in and its public TV projection.
   const ctx = {
     db: {
       query(table: string) {
@@ -71,12 +68,12 @@ function reception(t: TestContext) {
   return { ctx, rows, tick: () => { now += 1000; } };
 }
 
-test("validating a reception code persists check-in and supplies the real TV profile", async (t) => {
-  const { ctx, rows, tick } = reception(t);
+test("admin check-in persists and supplies the real TV profile", async (t) => {
+  const { ctx, rows, tick } = passesContext(t);
   const baseline = await arrivals._handler(ctx, {});
   assert.deepEqual(baseline.entries, []);
   tick();
-  const result = await staffScan._handler(ctx, { value: " ab7k " });
+  const result = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
   assert.equal(result.status, "checked_in");
   const pass = rows.get("pass0");
   assert.equal(pass?.checkedInAt, result.checkedInAt);
@@ -94,36 +91,25 @@ test("validating a reception code persists check-in and supplies the real TV pro
   assert.equal(reconcileArrivals({ pending: [], seen: new Set() }, snapshot.entries).pending[0].id, person.id);
 });
 
-test("two reception desks queue both arrivals and a repeated code never replays", async (t) => {
-  const { ctx, tick } = reception(t);
+test("two admin check-ins queue both arrivals and a repeated check-in never replays", async (t) => {
+  const { ctx, tick } = passesContext(t);
   const { serverTime: since } = await arrivals._handler(ctx, {});
   tick();
-  await staffScan._handler(ctx, { value: "AB7K" });
-  await staffScan._handler(ctx, { value: "CD8M" });
+  await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
+  await checkInParticipantRecord(ctx, { signupId: "signup1" as never });
   const first = await arrivals._handler(ctx, { since });
   const queue = reconcileArrivals({ pending: [], seen: new Set() }, first.entries);
   assert.deepEqual(queue.pending.map((person) => person.name), ["Persona 0", "Persona 1"]);
   tick();
-  assert.equal((await staffScan._handler(ctx, { value: "AB7K" })).status, "already_checked_in");
+  assert.equal((await checkInParticipantRecord(ctx, { signupId: "signup0" as never })).status, "already_checked_in");
   const next = await arrivals._handler(ctx, { since });
   assert.equal(next.checkedIn, 2);
   assert.deepEqual(reconcileArrivals({ ...queue, pending: queue.pending.slice(1) }, next.entries).pending, queue.pending.slice(1));
 });
 
-test("unknown codes do not reach the screen and undo withdraws an arrival", async (t) => {
-  const { ctx, tick } = reception(t);
-  const { serverTime: since } = await arrivals._handler(ctx, {});
-  tick();
-  await assert.rejects(staffScan._handler(ctx, { value: "ZZZZ" }), /desconocida/);
-  assert.deepEqual((await arrivals._handler(ctx, { since })).entries, []);
-  const result = await staffScan._handler(ctx, { value: "AB7K" });
-  await staffUndoCheckIn._handler(ctx, { passId: result.passId });
-  assert.deepEqual((await arrivals._handler(ctx, { since })).entries, []);
-});
-
 test("legacy cleanup removes only operator metadata and can run twice", async (t) => {
-  const { ctx, rows } = reception(t);
-  await staffScan._handler(ctx, { value: "AB7K" });
+  const { ctx, rows } = passesContext(t);
+  await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
   const pass = rows.get("pass0");
   assert.ok(pass);
   const checkedInAt = pass.checkedInAt;
@@ -139,21 +125,8 @@ test("legacy cleanup removes only operator metadata and can run twice", async (t
   assert.equal(await dropCheckInMetadata._handler(ctx, {}), 0);
 });
 
-
-test("reception accepts codes before and after the event without an opening time", async (t) => {
-  const { ctx, rows } = reception(t);
-  t.mock.method(Date, "now", () => Date.parse("2026-09-01T08:00:00Z"));
-  const settings = rows.get("settings");
-  assert.ok(settings);
-  settings.phase = "pre_event";
-  assert.equal((await staffScan._handler(ctx, { value: "AB7K" })).status, "checked_in");
-  settings.phase = "ended";
-  assert.equal((await staffScan._handler(ctx, { value: "CD8M" })).status, "checked_in");
-  assert.equal((await staffStatus._handler(ctx, {})).checkedIn, 2);
-});
-
 test("admin ficha check-in marks the existing pass and can run twice", async (t) => {
-  const { ctx, rows } = reception(t);
+  const { ctx, rows } = passesContext(t);
   const result = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
   assert.equal(result.status, "checked_in");
   assert.equal(rows.get("pass0")?.checkedInAt, result.checkedInAt);
@@ -163,7 +136,7 @@ test("admin ficha check-in marks the existing pass and can run twice", async (t)
 });
 
 test("admin ficha check-in issues a pass when the person has none", async (t) => {
-  const { ctx, rows } = reception(t);
+  const { ctx, rows } = passesContext(t);
   rows.delete("pass0");
   const result = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
   assert.equal(result.status, "checked_in");
@@ -176,7 +149,7 @@ test("admin ficha check-in issues a pass when the person has none", async (t) =>
 });
 
 test("admin ficha check-in can recover a cancelled attendee", async (t) => {
-  const { ctx, rows } = reception(t);
+  const { ctx, rows } = passesContext(t);
   const user = rows.get("user0");
   assert.ok(user);
   user.attendanceStatus = "cancelled";

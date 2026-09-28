@@ -166,9 +166,7 @@ nombre, rol, ciudad, empresa, universidad y hasta tres especialidades según su 
 Los campos vacíos no se muestran; sin foto aparecen sus iniciales. Las franjas cubren
 el cambio y siguen en bucle si no hay entradas pendientes. Respeta movimiento reducido.
 
-La antigua estación web de recepción está retirada: su página responde 404 y
-`/api/reception` responde 410. Sus operaciones de Convex son internas. Los admins
-siguen activando códigos desde `/admin/check-in` con `passes.scan`. La proyección
+Los admins activan códigos desde `/admin/check-in` con `passes.scan`. La proyección
 `passes.arrivals` se conserva para la pantalla de entradas y no publica emails,
 teléfonos ni códigos de acreditación.
 

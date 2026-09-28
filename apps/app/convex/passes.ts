@@ -3,7 +3,7 @@ import { Resend as ResendAPI } from "resend";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
+import { internalAction, internalMutation, query } from "./_generated/server";
 import {
   ACCESS_CODE_EMAIL_SUBJECT,
   accessCodeEmailHtml,
@@ -32,19 +32,6 @@ const scanReturn = v.object({
   passId: v.id("eventPasses"),
   status: v.union(v.literal("checked_in"), v.literal("already_checked_in")),
 });
-
-const staffStatusReturn = v.object({
-  checkedIn: v.number(),
-  issued: v.number(),
-});
-
-function maskedEmail(email: string): string {
-  const [local = "", domain = ""] = email.split("@");
-  if (!domain) {
-    return "";
-  }
-  return `${local.slice(0, 2)}•••@${domain}`;
-}
 
 function randomCode(): string {
   const bytes = new Uint8Array(PASS_CODE_LENGTH);
@@ -255,19 +242,6 @@ export const checkInParticipant = adminMutation({
   returns: scanReturn,
 });
 
-export const staffStatus = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    const passes = await ctx.db.query("eventPasses").collect();
-    return {
-      checkedIn: passes.filter((pass) => pass.status === "active" && pass.checkedInAt !== undefined)
-        .length,
-      issued: passes.filter((pass) => pass.status === "active").length,
-    };
-  },
-  returns: staffStatusReturn,
-});
-
 // Public venue projection: deliberately excludes email, access codes and contact details.
 // The first response establishes a server-clock baseline so opening a screen never
 // replays the day's arrivals. Subsequent subscriptions also catch up after reconnects.
@@ -325,31 +299,6 @@ export const arrivals = query({
     }));
     return { serverTime: Date.now(), checkedIn: passes.length, entries };
   },
-});
-
-export const staffScan = internalMutation({
-  args: { value: v.string() },
-  handler: async (ctx, args) => {
-    const result = await checkIn(ctx, args.value);
-    return { ...result, email: maskedEmail(result.email) };
-  },
-  returns: scanReturn,
-});
-
-export const staffUndoCheckIn = internalMutation({
-  args: { passId: v.id("eventPasses") },
-  handler: async (ctx, args) => {
-    const pass = await ctx.db.get(args.passId);
-    if (!pass) {
-      throw new Error("Acreditación no encontrada");
-    }
-    await ctx.db.patch(pass._id, {
-      checkedInAt: undefined,
-      updatedAt: Date.now(),
-    });
-    return null;
-  },
-  returns: v.null(),
 });
 
 export const undoCheckIn = adminMutation({
