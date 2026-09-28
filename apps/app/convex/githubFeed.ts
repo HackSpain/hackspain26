@@ -6,6 +6,7 @@ import {
   internalQuery,
 } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import type { EventWindow } from "./lib/eventWindow";
 import {
   GITHUB_FEED_EVENTS,
   githubAuthHeader,
@@ -13,6 +14,7 @@ import {
   repoSlug,
 } from "./lib/github";
 import { urlOf } from "./lib/urls";
+import { getEventWindow } from "./lib/eventWindow";
 import { teamRepoList } from "./stack";
 import { removePostSocial } from "./feedSocial";
 
@@ -30,6 +32,37 @@ import { removePostSocial } from "./feedSocial";
  */
 const EVENTS_PER_REPO = 30;
 const MAX_TEXT = 200;
+// GitHub documents up to six hours of Events API latency. One more cron
+// interval ensures a final poll after that delay without running indefinitely.
+const GITHUB_FEED_GRACE_MS = (6 * 60 + 3) * 60 * 1000;
+
+type PollWindow = { startsAt: number; endsAt: number };
+
+export function githubFeedPollWindow(
+  window: EventWindow,
+  now: number
+): PollWindow | null {
+  const { startsAt, endsAt } = window;
+  if (
+    startsAt === undefined ||
+    endsAt === undefined ||
+    !Number.isFinite(startsAt) ||
+    !Number.isFinite(endsAt) ||
+    endsAt <= startsAt ||
+    now < startsAt ||
+    now >= endsAt + GITHUB_FEED_GRACE_MS
+  ) {
+    return null;
+  }
+  return { startsAt, endsAt };
+}
+
+export function githubEventInWindow(
+  createdAt: number,
+  window: PollWindow
+): boolean {
+  return createdAt >= window.startsAt && createdAt < window.endsAt;
+}
 
 const eventInput = v.object({
   actor: v.optional(v.string()),
@@ -81,6 +114,10 @@ export function pollTargetsForTeam(
 export const reposToPoll = internalQuery({
   args: {},
   handler: async (ctx) => {
+    const window = githubFeedPollWindow(await getEventWindow(ctx), Date.now());
+    if (!window) {
+      return null;
+    }
     const [teams, submissions] = await Promise.all([
       ctx.db.query("teams").collect(),
       ctx.db.query("submissions").collect(),
@@ -102,13 +139,20 @@ export const reposToPoll = internalQuery({
     for (const team of teams) {
       out.push(...pollTargetsForTeam(team, submissionRepos.get(team._id)));
     }
-    return out;
+    return { ...window, repos: out };
   },
-  returns: v.array(
+  returns: v.union(
+    v.null(),
     v.object({
-      teamId: v.id("teams"),
-      repo: v.string(),
-      etag: v.optional(v.string()),
+      startsAt: v.number(),
+      endsAt: v.number(),
+      repos: v.array(
+        v.object({
+          teamId: v.id("teams"),
+          repo: v.string(),
+          etag: v.optional(v.string()),
+        })
+      ),
     })
   ),
 });
@@ -360,10 +404,13 @@ export async function enrichPullRequest(
 export const pollRepos = internalAction({
   args: {},
   handler: async (ctx) => {
-    const repos = await ctx.runQuery(internal.githubFeed.reposToPoll, {});
+    const plan = await ctx.runQuery(internal.githubFeed.reposToPoll, {});
     let polled = 0;
     let inserted = 0;
-    for (const { teamId, repo, etag } of repos) {
+    if (!plan) {
+      return { polled, inserted };
+    }
+    for (const { teamId, repo, etag } of plan.repos) {
       const response = await fetch(
         `https://api.github.com/repos/${repo}/events?per_page=${EVENTS_PER_REPO}`,
         { headers: feedHeaders(etag) }
@@ -390,6 +437,10 @@ export const pollRepos = internalAction({
       const events = (await response.json()) as GitHubEvent[];
       const candidates = [];
       for (const event of events) {
+        const createdAt = Date.parse(event.created_at);
+        if (!githubEventInWindow(createdAt, plan)) {
+          continue;
+        }
         const described = describeEvent(repo, event);
         if (!described) {
           continue;
@@ -398,7 +449,7 @@ export const pollRepos = internalAction({
           externalId: `github:${event.id}`,
           described,
           actor: event.actor?.login,
-          createdAt: Date.parse(event.created_at) || Date.now(),
+          createdAt,
         });
       }
       const fresh = new Set(

@@ -2,6 +2,23 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-28 — GitHub feed polling must use the scheduled event window
+
+**Evidence and consequence.** The three-minute GitHub feed cron was active
+regardless of the admin-set start/end times, so it could fetch and store
+post-event repository activity indefinitely. The UI's manually set
+`eventSettings.phase` is separate from the scheduled `settings` window used by
+CLI telemetry and TV playback. GitHub [documents up to six hours of latency](https://docs.github.com/en/rest/activity/events#list-repository-events)
+for repository events, so stopping exactly at the scheduled end could miss
+activity that occurred during the hackathon.
+
+**Correction and verification.** The feed poller now requires a valid schedule,
+starts at `eventStartsAt`, and stops six hours plus one three-minute poll
+interval after `eventEndsAt`. It stores only events whose `created_at` falls
+inside the half-open event window, including during the late poll period.
+Check the scheduled bounds and stored event timestamp together when changing
+feed collection; limiting poll time alone does not prevent post-event posts.
+
 ## 2026-09-24 — Landing viewport detection suppresses its server-rendered content
 
 **Evidence and consequence.** An HTTP audit of all 13 production sitemap URLs
