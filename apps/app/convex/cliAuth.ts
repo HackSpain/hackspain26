@@ -6,7 +6,8 @@ import { fail } from "./lib/errors";
 /**
  * Device-code login for the CLI. `hackspain auth login` calls
  * /api/cli/auth/device/start with a locally generated secret, opens
- * /cli-auth?hs-code=… in a browser, and polls /api/cli/auth/device/poll.
+ * /cli-auth#hs-code=… in a browser, and polls /api/cli/auth/device/poll.
+ * The approval page also accepts legacy ?hs-code= links.
  * A signed-in dashboard user approves the code; the poll route then redeems
  * it through the `cli-device` credentials provider (convex/auth.ts), which
  * mints the same Convex Auth tokens the email OTP flow produces.
@@ -138,9 +139,10 @@ export const redeem = internalMutation({
 /**
  * Browser handoff, the device flow in reverse. A CLI that already holds a
  * session calls `startWebHandoff` (through /api/cli/rpc), opens
- * /cli-auth/handoff?hs-token=… in the browser, and that page signs in with
+ * /cli-auth/handoff#hs-token=… in the browser, and that page signs in with
  * the `cli-handoff` credentials provider (convex/auth.ts), which redeems the
- * token here. The Next.js auth proxy sets the ordinary dashboard cookies, so
+ * token here. The page also accepts legacy ?hs-token= links. The Next.js
+ * auth proxy sets the ordinary dashboard cookies, so
  * logging in on the CLI is enough to be logged in on the web.
  *
  * Tokens are random, single-use, bound to the CLI user, and live two

@@ -11,8 +11,9 @@ import { RECEPTION_PATH } from "@/lib/reception";
 // the CLI work in a browser.
 // / is the unauthenticated splash. /tv is the public venue screen.
 // /final/cancelar is a token-gated cancel page for finalists; no login.
-// /cli-auth is public at the middleware level so ?hs-code= survives a
-// server-side redirect; AuthGate stashes it and routes visitors via /login.
+// /cli-auth is public at the middleware level. Current #hs-code= links keep
+// the code in the browser; legacy ?hs-code= links must avoid a server-side
+// redirect. AuthGate stashes either form and routes visitors via /login.
 // /cli-auth/handoff signs the browser in from a CLI session, so it must be
 // reachable without one.
 const isPublicRoute = createRouteMatcher([
