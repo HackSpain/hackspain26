@@ -201,6 +201,7 @@ Do not run `convex deploy` for local validation. Production Convex deploys only 
 | `pnpm preview` | Preview the landing build |
 | `pnpm check` | Astro and TypeScript checks for the landing |
 | `pnpm lint` / `pnpm fix` | Check or fix the monorepo with Oxlint and Ultracite |
+| `pnpm --filter app format:check` / `format:fix` | Check or apply dashboard formatting with Biome |
 | `pnpm test:app` / `pnpm test:cli` | Dashboard and CLI unit tests (Bun) |
 | `pnpm dev:cli -- <args>` / `pnpm build:cli` | Run the CLI from source, or compile the binaries |
 | `pnpm migrate:convex` | Import Neon signups and ambassadors into Convex |
@@ -303,10 +304,11 @@ Never deploy a branch to production by hand. Its functions vanish on the next Ve
 
 ## CI and releases
 
-Three GitHub Actions workflows run on pull requests:
+Two GitHub Actions workflows run on pull requests:
 
-- `ci.yml` typechecks, tests and builds the dashboard, and builds the landing. Lint and `astro check` report but do not block until [#235](https://github.com/HackSpain/hackspain26/issues/235) and [#236](https://github.com/HackSpain/hackspain26/issues/236) land.
-- `cli-ci.yml` typechecks, lints, tests and compiles the CLI on every change to `apps/cli` or the Convex functions.
+- `ci.yml` runs on every pull request. Its `gate-lint` job blocks new Oxlint violations, stale disable comments, and formatting issues in modified dashboard or landing files. The dashboard and landing jobs run when their own or shared files change; the landing's Knip binary check also blocks. Full lint, the full unused-code report, and `astro check` remain advisory as existing findings are resolved under [#235](https://github.com/HackSpain/hackspain26/issues/235) and [#236](https://github.com/HackSpain/hackspain26/issues/236).
+- `cli-ci.yml` runs on every pull request and typechecks, lints, tests and compiles the CLI.
+- GitHub requires the `changes`, `gate-lint`, `app`, `web` and `check` jobs to pass before merging into `master`. Jobs skipped because their app was not changed count as successful checks.
 - `cli-release.yml` cross-compiles the CLI for macOS, Linux and Windows, writes `SHA256SUMS` and publishes a GitHub release when a `cli-vX.Y.Z` tag is pushed. `install.sh` and `hackspain update` read that release.
 
 To release the CLI, bump `apps/cli/package.json`, tag `master` with the matching `cli-vX.Y.Z` and push the tag.
@@ -348,6 +350,8 @@ Issues and pull requests are welcome. Before you open one:
 2. Run `pnpm lint`, `pnpm check`, `pnpm test:app` and `pnpm test:cli`.
 3. Keep the design tokens, `llms.txt` and the telemetry schema in sync with your change when it affects them.
 4. Never run `convex deploy` against production from your machine.
+
+Before requesting review, read the full diff for incorrect behavior, authorization and event-window mistakes, duplicated contracts, and unused code. Verify changed behavior at its owning boundary and avoid broad lint suppressions that hide later mistakes.
 
 Changes reach `master` through pull requests. Release binaries only come from tags.
 
