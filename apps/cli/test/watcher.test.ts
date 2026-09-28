@@ -6,6 +6,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -176,6 +177,67 @@ describe("http sink", () => {
 
     expect(messages[0]).toContain("1 telemetry event was rejected");
     expect(readFileSync(rejectionsPath, "utf8")).toContain("invalid_event");
+  });
+
+  test("bounds the rejection log while keeping recent complete entries", async () => {
+    const rejectionsPath = join(dir, "rejections.ndjson");
+    const oldEntry = `${JSON.stringify({ at: "old", rejections: [{ line: 1, reason: "invalid_event" }] })}\n`;
+    writeFileSync(rejectionsPath, oldEntry.repeat(20_000));
+    const sink = httpSink(
+      "https://ingest.example/v1",
+      async () => "tok",
+      (async () =>
+        Response.json({
+          ok: true,
+          value: {
+            accepted: 0,
+            rejected: 1,
+            rejections: [
+              { eventId: event(1).eventId, line: 1, reason: "invalid_event" },
+            ],
+            stored: true,
+          },
+        })) as unknown as typeof fetch,
+      { pendingPath: join(dir, "pending.json"), rejectionsPath }
+    );
+
+    await sink.write([event(1)]);
+
+    expect(statSync(rejectionsPath).size).toBeLessThanOrEqual(1024 * 1024);
+    const entries = readFileSync(rejectionsPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { at: string });
+    expect(entries[0]?.at).toBe("old");
+    expect(entries.at(-1)?.at).not.toBe("old");
+    expect(entries.length).toBeLessThan(20_001);
+  });
+
+  test("records a bounded summary for an oversized rejection receipt", async () => {
+    const rejectionsPath = join(dir, "rejections.ndjson");
+    const sink = httpSink(
+      "https://ingest.example/v1",
+      async () => "tok",
+      (async () =>
+        Response.json({
+          ok: true,
+          value: {
+            accepted: 0,
+            rejected: 1,
+            rejections: [{ line: 1, reason: "x".repeat(1024 * 1024) }],
+            stored: true,
+          },
+        })) as unknown as typeof fetch,
+      { pendingPath: join(dir, "pending.json"), rejectionsPath }
+    );
+
+    await sink.write([event(1)]);
+
+    expect(statSync(rejectionsPath).size).toBeLessThanOrEqual(1024 * 1024);
+    expect(JSON.parse(readFileSync(rejectionsPath, "utf8"))).toMatchObject({
+      omitted: 1,
+      rejections: [],
+    });
   });
 });
 

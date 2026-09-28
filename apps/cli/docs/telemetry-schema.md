@@ -30,7 +30,9 @@ Keep both rules, including for historical v1/v2 rows; session starts retain thei
 The dashboard receipt accounts for every input line as accepted or rejected. Rejections include a
 bounded event id, line number, and reason; the CLI records them in
 `~/.local/state/hackspain/telemetry-upload-rejections.ndjson` and leaves the original event in the
-local spool. Batches contain at most 200 events, and each event is limited to 32 KiB.
+local spool. This diagnostic log retains complete recent entries up to 1 MiB, dropping the oldest
+entries when full; an oversized receipt is recorded as a count instead of an incomplete line.
+Batches contain at most 200 events, and each event is limited to 32 KiB.
 
 ## Event
 

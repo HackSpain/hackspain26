@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, unlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  closeSync,
+  existsSync,
+  openSync,
+  readSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import {
   ensureDir,
@@ -30,6 +38,8 @@ type IngestReceipt = {
   rejections: IngestRejection[];
   stored: true;
 };
+
+const REJECTIONS_CAP_BYTES = 1024 * 1024;
 
 export type HttpSinkOptions = {
   pendingPath?: string;
@@ -132,16 +142,52 @@ export function httpSink(
       return;
     }
     ensureDir(dirname(rejectionsPath), 0o700);
-    appendFileSync(
-      rejectionsPath,
-      `${JSON.stringify({ at: new Date().toISOString(), rejections: receipt.rejections })}\n`,
-      { mode: 0o600 }
-    );
+    const at = new Date().toISOString();
+    let entry = `${JSON.stringify({ at, rejections: receipt.rejections })}\n`;
+    const detailsKept = Buffer.byteLength(entry) < REJECTIONS_CAP_BYTES;
+    if (!detailsKept) {
+      entry = `${JSON.stringify({ at, omitted: receipt.rejected, rejections: [] })}\n`;
+    }
+    appendFileSync(rejectionsPath, entry, { mode: 0o600 });
+    const size = statSync(rejectionsPath).size;
+    if (size > REJECTIONS_CAP_BYTES) {
+      const tail = Buffer.alloc(REJECTIONS_CAP_BYTES);
+      const fd = openSync(rejectionsPath, "r");
+      try {
+        let offset = 0;
+        while (offset < tail.length) {
+          const read = readSync(
+            fd,
+            tail,
+            offset,
+            tail.length - offset,
+            size - tail.length + offset
+          );
+          if (read === 0) {
+            throw new Error(
+              "The telemetry rejection log changed while trimming it."
+            );
+          }
+          offset += read;
+        }
+      } finally {
+        closeSync(fd);
+      }
+      const firstNewline = tail.indexOf(10);
+      writeFileAtomic(
+        rejectionsPath,
+        firstNewline === tail.length - 1
+          ? entry
+          : tail.subarray(firstNewline + 1).toString(),
+        0o600
+      );
+    }
     const reasons = [
       ...new Set(receipt.rejections.map(({ reason }) => reason)),
     ];
+    const kept = detailsKept ? "details were" : "the rejection count was";
     options.onRejected?.(
-      `${receipt.rejected} telemetry event${receipt.rejected === 1 ? " was" : "s were"} rejected (${reasons.join(", ")}); details were kept locally.`
+      `${receipt.rejected} telemetry event${receipt.rejected === 1 ? " was" : "s were"} rejected (${reasons.join(", ")}); ${kept} kept locally.`
     );
   };
 
