@@ -37,7 +37,10 @@ describe("detectImageProtocol", () => {
       detectImageProtocol({ KITTY_WINDOW_ID: "1", STY: "1234.pts-0" }, true)
     ).toBeNull();
     expect(
-      detectImageProtocol({ TERM_PROGRAM: "iTerm.app", STY: "1234.pts-0" }, true)
+      detectImageProtocol(
+        { TERM_PROGRAM: "iTerm.app", STY: "1234.pts-0" },
+        true
+      )
     ).toBeNull();
     expect(
       detectImageProtocol(
