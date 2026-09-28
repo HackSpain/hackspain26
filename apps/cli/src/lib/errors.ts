@@ -89,6 +89,9 @@ export const EVENT_CLOSED_HINT =
 export const ONBOARDING_HINT =
   "Run `hackspain open onboarding` to finish it in the dashboard, then retry.";
 
+export const UNREGISTERED_HINT =
+  "Log in with the email you applied with. Signups are closed; if your application is missing, contact the organisers.";
+
 /**
  * The backend's gate helpers throw plain `Error` with Spanish copy (the web
  * renders `err.message` directly). Convex wraps them as
@@ -121,7 +124,7 @@ const GATE_MESSAGES: {
     explained: {
       code: "NOT_REGISTERED",
       exitCode: EXIT.INELIGIBLE,
-      hint: "Log in with the email you applied with. Signups are closed; if your application is missing, contact the organisers.",
+      hint: UNREGISTERED_HINT,
       message: "This email has no HackSpain signup.",
     },
     needle: "No hay inscripción a la hackathon con este email",
@@ -198,8 +201,7 @@ const CODED_HINT: Record<string, string> = {
     "Try again in a minute. If it keeps failing, tell the organisers.",
   TOO_MANY_ATTEMPTS:
     "Wait a few minutes, then run `hackspain auth login` for a new code.",
-  UNREGISTERED:
-    "Log in with the email you applied with. Signups are closed; if your application is missing, contact the organisers.",
+  UNREGISTERED: UNREGISTERED_HINT,
 };
 
 /**

@@ -6,6 +6,7 @@ import {
   RemoteError,
   serverMessage,
   terminalExplained,
+  UNREGISTERED_HINT,
   usageError,
 } from "../src/lib/errors";
 
@@ -36,7 +37,11 @@ describe("explainError", () => {
       explainError(
         convexWrapped("No hay inscripción a la hackathon con este email")
       )
-    ).toMatchObject({ code: "NOT_REGISTERED", exitCode: EXIT.INELIGIBLE });
+    ).toMatchObject({
+      code: "NOT_REGISTERED",
+      exitCode: EXIT.INELIGIBLE,
+      hint: UNREGISTERED_HINT,
+    });
     expect(explainError(convexWrapped("Aún no te han aceptado"))).toMatchObject(
       {
         code: "NOT_ACCEPTED",
@@ -105,7 +110,7 @@ describe("explainError", () => {
     );
     expect(unregistered.exitCode).toBe(EXIT.INELIGIBLE);
     expect(unregistered.message).toBe("This email has no HackSpain signup.");
-    expect(unregistered.hint).toContain("contact the organisers");
+    expect(unregistered.hint).toBe(UNREGISTERED_HINT);
 
     for (const code of [
       "BAD_OTP",
