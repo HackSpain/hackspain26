@@ -28,10 +28,16 @@ function fakePng(width: number, height: number, padding = 0): Uint8Array {
 }
 
 describe("detectImageProtocol", () => {
-  test("never draws when there is no TTY, in tmux, or when opted out", () => {
+  test("never draws when there is no TTY, in a multiplexer, or when opted out", () => {
     expect(detectImageProtocol({ KITTY_WINDOW_ID: "1" }, false)).toBeNull();
     expect(
       detectImageProtocol({ KITTY_WINDOW_ID: "1", TMUX: "/tmp/x" }, true)
+    ).toBeNull();
+    expect(
+      detectImageProtocol({ KITTY_WINDOW_ID: "1", STY: "1234.pts-0" }, true)
+    ).toBeNull();
+    expect(
+      detectImageProtocol({ TERM_PROGRAM: "iTerm.app", STY: "1234.pts-0" }, true)
     ).toBeNull();
     expect(
       detectImageProtocol(
