@@ -2,6 +2,19 @@
 
 Add an entry only for an evidenced, non-obvious project fact that helps prevent a recurring or costly mistake. Skip routine debugging, generic advice, and unverified theories. Each entry should explain the symptom, evidence/cause, corrective action, and prevention/verification. Separate a confirmed cause from a hypothesis, a mitigation from a fix, and a merged change from a verified production result. Update related entries instead of appending duplicates. Do not include credentials, raw request bodies, OTPs, or participant data.
 
+## 2026-09-29 — Biome's React key rule misfires on Astro templates
+
+**Evidence and consequence.** `gate-lint` checks whole changed files. After the
+chronicle copy changed, Biome 2.4.12 reported `useJsxKeyInIterable` for Astro
+`map` expressions. Adding React `key` attributes satisfied Biome but failed
+`astro check`: Astro's HTML and SVG attribute types do not accept `key`.
+
+**Correction and prevention.** The web Biome configuration disables only
+`useJsxKeyInIterable` for `src/pages/cronica.astro`; formatting and other lint
+rules remain active. Do not add React keys to Astro HTML to appease this rule.
+When touching the chronicle, run the changed-file oxlint and Biome commands
+from the CI gate, plus the web build.
+
 ## 2026-09-24 — Landing viewport detection suppresses its server-rendered content
 
 **Evidence and consequence.** An HTTP audit of all 13 production sitemap URLs

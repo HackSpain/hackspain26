@@ -5,6 +5,18 @@
     "ultracite/biome/astro",
     "ultracite/biome/react"
   ],
+  "overrides": [
+    {
+      "includes": ["src/pages/cronica.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useJsxKeyInIterable": "off"
+          }
+        }
+      }
+    }
+  ],
   "files": {
     "includes": ["!!drizzle/meta", "!!src/pages/brand.astro"]
   },
