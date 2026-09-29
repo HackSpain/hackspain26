@@ -34,14 +34,12 @@ const isPublicRoute = createRouteMatcher([
   "/final/cancelar",
 ]);
 
-export default convexAuthNextjsMiddleware(
-  async (request, { convexAuth }) => {
-    const authenticated = await convexAuth.isAuthenticated();
-    if (!isPublicRoute(request) && !authenticated) {
-      return nextjsMiddlewareRedirect(request, "/login");
-    }
+export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
+  const authenticated = await convexAuth.isAuthenticated();
+  if (!isPublicRoute(request) && !authenticated) {
+    return nextjsMiddlewareRedirect(request, "/login");
   }
-);
+});
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
