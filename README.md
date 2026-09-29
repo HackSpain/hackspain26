@@ -83,11 +83,20 @@ pnpm dev:all    # public site, dashboard and Convex
 
 See [`package.json`](package.json) for the other scripts and the [CLI README](apps/cli/README.md) for CLI usage and releases.
 
+`pnpm check` checks the Astro site only. For the dashboard and CLI TypeScript
+checks, run `pnpm --filter app typecheck` and `pnpm --filter cli typecheck`.
+
 ## Deploy
 
 <img src="docs/readme/illustration-deploy.webp" alt="" width="140" align="right">
 
 The public site and dashboard run as separate Vercel projects. The dashboard's Vercel build also deploys Convex. Do not deploy a branch to production by hand: the next build replaces its functions, and incompatible rows can block the schema push.
+
+Set their Vercel Root Directories to `apps/web` and `apps/app`. The dashboard's
+install, build and ignored-build commands are in [`apps/app/vercel.json`](apps/app/vercel.json).
+The landing's [`apps/web/vercel.json`](apps/web/vercel.json) contains headers and
+rewrites only; any install, build or ignored-build overrides belong in that
+Vercel project's settings.
 
 ## Project docs
 
