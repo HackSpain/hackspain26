@@ -1,6 +1,10 @@
 import { isHttpUrl } from "@convex/lib/perkInputs";
 
-export type { PerkAnswer, PerkInput, PerkInputType } from "@convex/lib/perkInputs";
+export type {
+  PerkAnswer,
+  PerkInput,
+  PerkInputType,
+} from "@convex/lib/perkInputs";
 export {
   MAX_PERK_INPUTS,
   answerFor,
@@ -12,7 +16,9 @@ export {
 } from "@convex/lib/perkInputs";
 
 function csvCell(value: string): string {
-  if (/[",;\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  if (/[",;\n\r]/.test(value)) {
+    return `"${value.replaceAll('"', '""')}"`;
+  }
   return value;
 }
 
@@ -36,10 +42,10 @@ export function fileSlug(text: string): string {
   return (
     text
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
+      .replaceAll(/[\u0300-\u036F]/g, "")
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
+      .replaceAll(/[^a-z0-9]+/g, "-")
+      .replaceAll(/^-+|-+$/g, "")
       .slice(0, 60) || "perk"
   );
 }

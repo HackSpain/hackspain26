@@ -76,32 +76,6 @@ export const OCCUPATION_STATUS_OPTIONS: readonly {
   { id: "working", label: "Trabajo" },
 ] as const;
 
-export function formatOccupationStatuses(statuses: readonly string[]): string {
-  return statuses
-    .map(
-      (status) =>
-        OCCUPATION_STATUS_OPTIONS.find(({ id }) => id === status)?.label ??
-        status
-    )
-    .join(", ");
-}
-
-export function formatHeardFromStored(storedValues: readonly string[]): string {
-  return storedValues
-    .map((stored) => {
-      if (stored.startsWith("other:")) {
-        const detail = stored.slice(6).trim();
-        return detail.length > 0 ? `Otro: ${detail}` : "Otro";
-      }
-      if (stored === "instagram") {
-        return "Instagram";
-      }
-      const row = HEARD_FROM_OPTIONS.find((option) => option.id === stored);
-      return row?.label ?? stored;
-    })
-    .join(", ");
-}
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

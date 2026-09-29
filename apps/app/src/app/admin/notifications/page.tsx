@@ -16,6 +16,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -94,13 +103,13 @@ function RecipientCount({
         "flex items-baseline gap-2 border-[3px] px-3 py-2.5 motion-safe:transition-[border-color,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
         empty && !needsEmail
           ? "border-hs-orange bg-hs-orange/10"
-          : "border-hs-ink bg-hs-paper",
+          : "border-hs-ink bg-hs-paper"
       )}
     >
       <span
         className={cn(
           "font-bungee text-2xl leading-none tabular-nums",
-          (counting || needsEmail) && "text-hs-ink/40",
+          (counting || needsEmail) && "text-hs-ink/40"
         )}
       >
         {counting || needsEmail ? "—" : count}
@@ -163,7 +172,10 @@ function DeliveryBar({ item }: { item: HistoryItem }) {
       >
         <div className="flex h-full origin-left scale-x-100 motion-safe:transition-transform motion-safe:duration-[280ms] motion-safe:ease-[var(--ease-out)] starting:scale-x-0">
           <div className="h-full bg-hs-teal" style={{ width: `${sentPct}%` }} />
-          <div className="h-full bg-hs-red" style={{ width: `${failedPct}%` }} />
+          <div
+            className="h-full bg-hs-red"
+            style={{ width: `${failedPct}%` }}
+          />
         </div>
       </div>
       <p className="text-xs tabular-nums text-hs-ink/70">
@@ -193,7 +205,9 @@ function HistoryBody({ body }: { body: string }) {
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || expanded) return;
+    if (!el || expanded) {
+      return;
+    }
     const measure = () => setOverflows(el.scrollHeight > el.clientHeight + 1);
     measure();
     const observer = new ResizeObserver(measure);
@@ -207,7 +221,7 @@ function HistoryBody({ body }: { body: string }) {
         ref={ref}
         className={cn(
           "whitespace-pre-wrap break-words text-sm leading-relaxed text-pretty",
-          !expanded && "line-clamp-2",
+          !expanded && "line-clamp-2"
         )}
       >
         {body}
@@ -239,7 +253,7 @@ function HistoryRow({ item }: { item: HistoryItem }) {
           variant={item.status === "sent" ? "gold" : "default"}
           className={cn(
             "whitespace-nowrap",
-            item.status === "failed" && "bg-hs-red text-hs-paper",
+            item.status === "failed" && "bg-hs-red text-hs-paper"
           )}
         >
           {statusLabel(item.status)}
@@ -293,6 +307,7 @@ export default function AdminNotificationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const count = useQuery(api.notifications.recipientCount, {
     audience,
@@ -307,13 +322,12 @@ export default function AdminNotificationsPage() {
     subjectLength > 0 && bodyLength > 0 && count !== undefined && count > 0;
 
   async function submit() {
-    if (pending || !ready) return;
+    if (pending || !ready) {
+      return;
+    }
     setError(null);
     setNotice(null);
-    const ok = window.confirm(
-      `¿Enviar «${subject.trim()}» a ${count} ${plural(count, "destinatario", "destinatarios")}?`,
-    );
-    if (!ok) return;
+    setConfirming(false);
     setPending(true);
     try {
       await send({
@@ -323,12 +337,12 @@ export default function AdminNotificationsPage() {
         recipientEmail: audience === "user" ? recipientEmail : undefined,
       });
       setNotice(
-        `En cola para ${count} ${plural(count, "destinatario", "destinatarios")}.`,
+        `En cola para ${count} ${plural(count, "destinatario", "destinatarios")}.`
       );
       setSubject("");
       setBody("");
-    } catch (err) {
-      setError(errorMessage(err, "No se ha podido enviar el aviso"));
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No se ha podido enviar el aviso"));
     } finally {
       setPending(false);
     }
@@ -337,8 +351,12 @@ export default function AdminNotificationsPage() {
   function edit(setter: (value: string) => void) {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setter(event.target.value);
-      if (notice) setNotice(null);
-      if (error) setError(null);
+      if (notice) {
+        setNotice(null);
+      }
+      if (error) {
+        setError(null);
+      }
     };
   }
 
@@ -347,133 +365,161 @@ export default function AdminNotificationsPage() {
       title="Avisos"
       description="Email a quien ha dado consentimiento para avisos operativos."
     >
-      <Card className="hs-enter">
-        <CardHeader>
-          <CardTitle>Redactar</CardTitle>
-          <CardDescription className="max-w-[60ch] text-pretty">
-            Email en texto plano desde la dirección de HackSpain. Solo llega a
-            quien ha dado consentimiento.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)] lg:gap-6">
-          <div className="min-w-0 max-w-[64ch] space-y-4">
-            <ComposeField
-              label="Asunto"
-              htmlFor={`${ids}-subject`}
-              meta={
-                subjectLength > SUBJECT_SOFT_LIMIT - 10 ? (
-                  <span
-                    className={cn(
-                      "text-xs tabular-nums",
-                      subjectLength > SUBJECT_SOFT_LIMIT
-                        ? "text-hs-orange"
-                        : "text-hs-brown",
-                    )}
-                  >
-                    {subjectLength} caracteres
-                    {subjectLength > SUBJECT_SOFT_LIMIT
-                      ? " · se cortará en el buzón"
-                      : ""}
-                  </span>
-                ) : null
-              }
-            >
-              <Input
-                id={`${ids}-subject`}
-                className="max-w-[48ch]"
-                autoComplete="off"
-                placeholder="Cambio de sala para la charla de las 10:00"
-                value={subject}
-                onChange={edit(setSubject)}
-              />
-            </ComposeField>
-            <ComposeField
-              label="Mensaje"
-              htmlFor={`${ids}-body`}
-              meta={
-                bodyLength > 0 ? (
-                  <span className="text-xs tabular-nums text-hs-brown">
-                    {bodyLength} {plural(bodyLength, "carácter", "caracteres")}
-                  </span>
-                ) : null
-              }
-            >
-              <Textarea
-                id={`${ids}-body`}
-                rows={8}
-                className="min-h-48 max-h-[60vh] field-sizing-content leading-relaxed"
-                placeholder="Texto plano. Los saltos de línea se respetan."
-                value={body}
-                onChange={edit(setBody)}
-              />
-            </ComposeField>
-          </div>
-
-          <aside className="min-w-0 space-y-4 bg-hs-sand p-4 lg:sticky lg:top-4">
-            <ComposeField label="Destinatarios" htmlFor={`${ids}-audience`}>
-              <Select
-                value={audience}
-                onValueChange={(next) => setAudience(next as Audience)}
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        <Card className="hs-enter">
+          <CardHeader>
+            <CardTitle>Redactar</CardTitle>
+            <CardDescription className="max-w-[60ch] text-pretty">
+              Email en texto plano desde la dirección de HackSpain. Solo llega a
+              quien ha dado consentimiento.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)] lg:gap-6">
+            <div className="min-w-0 max-w-[64ch] space-y-4">
+              <ComposeField
+                label="Asunto"
+                htmlFor={`${ids}-subject`}
+                meta={
+                  subjectLength > SUBJECT_SOFT_LIMIT - 10 ? (
+                    <span
+                      className={cn(
+                        "text-xs tabular-nums",
+                        subjectLength > SUBJECT_SOFT_LIMIT
+                          ? "text-hs-orange"
+                          : "text-hs-brown"
+                      )}
+                    >
+                      {subjectLength} caracteres
+                      {subjectLength > SUBJECT_SOFT_LIMIT
+                        ? " · se cortará en el buzón"
+                        : ""}
+                    </span>
+                  ) : null
+                }
               >
-                <SelectTrigger id={`${ids}-audience`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AUDIENCES.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {AUDIENCE_LABEL[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </ComposeField>
-            {audience === "user" ? (
-              <ComposeField label="Email del usuario" htmlFor={`${ids}-email`}>
                 <Input
-                  id={`${ids}-email`}
-                  type="email"
+                  id={`${ids}-subject`}
+                  className="max-w-[48ch]"
                   autoComplete="off"
-                  spellCheck={false}
-                  placeholder="nombre@dominio.com"
-                  value={recipientEmail}
-                  onChange={edit(setRecipientEmail)}
+                  placeholder="Cambio de sala para la charla de las 10:00"
+                  value={subject}
+                  onChange={edit(setSubject)}
                 />
               </ComposeField>
-            ) : null}
-
-            <RecipientCount
-              count={count}
-              single={audience === "user"}
-              needsEmail={audience === "user" && !recipientEmail.trim()}
-            />
-
-            <Button
-              className="w-full focus-visible:ring-[3px] focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-sand aria-busy:cursor-progress"
-              disabled={!ready}
-              aria-busy={pending}
-              onClick={() => void submit()}
-            >
-              {pending ? (
-                <Loader2 className="animate-spin" aria-hidden />
-              ) : (
-                <Send aria-hidden />
-              )}
-              {pending ? "Enviando…" : "Enviar"}
-            </Button>
-
-            {notice ? (
-              <p
-                role="status"
-                className="flex items-start gap-2 text-sm text-hs-teal"
+              <ComposeField
+                label="Mensaje"
+                htmlFor={`${ids}-body`}
+                meta={
+                  bodyLength > 0 ? (
+                    <span className="text-xs tabular-nums text-hs-brown">
+                      {bodyLength}{" "}
+                      {plural(bodyLength, "carácter", "caracteres")}
+                    </span>
+                  ) : null
+                }
               >
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
-                {notice}
-              </p>
-            ) : null}
-            <FormError message={error} />
-          </aside>
-        </CardContent>
-      </Card>
+                <Textarea
+                  id={`${ids}-body`}
+                  rows={8}
+                  className="min-h-48 max-h-[60vh] field-sizing-content leading-relaxed"
+                  placeholder="Texto plano. Los saltos de línea se respetan."
+                  value={body}
+                  onChange={edit(setBody)}
+                />
+              </ComposeField>
+            </div>
+
+            <aside className="min-w-0 space-y-4 bg-hs-sand p-4 lg:sticky lg:top-4">
+              <ComposeField label="Destinatarios" htmlFor={`${ids}-audience`}>
+                <Select
+                  value={audience}
+                  onValueChange={(next) => setAudience(next as Audience)}
+                >
+                  <SelectTrigger id={`${ids}-audience`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AUDIENCES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {AUDIENCE_LABEL[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </ComposeField>
+              {audience === "user" ? (
+                <ComposeField
+                  label="Email del usuario"
+                  htmlFor={`${ids}-email`}
+                >
+                  <Input
+                    id={`${ids}-email`}
+                    type="email"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="nombre@dominio.com"
+                    value={recipientEmail}
+                    onChange={edit(setRecipientEmail)}
+                  />
+                </ComposeField>
+              ) : null}
+
+              <RecipientCount
+                count={count}
+                single={audience === "user"}
+                needsEmail={audience === "user" && !recipientEmail.trim()}
+              />
+
+              <DialogTrigger asChild>
+                <Button
+                  className="w-full focus-visible:ring-[3px] focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-sand aria-busy:cursor-progress"
+                  disabled={!ready || pending}
+                  aria-busy={pending}
+                >
+                  {pending ? (
+                    <Loader2 className="animate-spin" aria-hidden />
+                  ) : (
+                    <Send aria-hidden />
+                  )}
+                  {pending ? "Enviando…" : "Enviar"}
+                </Button>
+              </DialogTrigger>
+
+              {notice ? (
+                <p
+                  role="status"
+                  className="flex items-start gap-2 text-sm text-hs-teal"
+                >
+                  <CheckCircle2
+                    className="mt-0.5 size-4 shrink-0"
+                    aria-hidden
+                  />
+                  {notice}
+                </p>
+              ) : null}
+              <FormError message={error} />
+            </aside>
+          </CardContent>
+        </Card>
+
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar envío</DialogTitle>
+            <DialogDescription>
+              ¿Enviar «{subject.trim()}» a {count ?? 0}{" "}
+              {plural(count ?? 0, "destinatario", "destinatarios")}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirming(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={!ready || pending} onClick={() => void submit()}>
+              Enviar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <section aria-labelledby={`${ids}-history`} className="grid gap-3">
         <h2

@@ -10,7 +10,7 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "oxlint -c oxlint.config.mjs .",
+    "lint": "oxlint -c oxlint.config.mjs --deny-warnings --report-unused-disable-directives-severity=error .",
     "fix": "oxlint -c oxlint.config.mjs --fix .",
     "format:check": "biome format .",
     "format:fix": "biome format --write .",

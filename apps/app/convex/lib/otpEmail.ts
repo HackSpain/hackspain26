@@ -1,14 +1,13 @@
 // HackSpain dashboard OTP email — HTML plus a plain-text alternative.
 //
-// Same vocabulary as `apps/web/src/lib/acceptance-email-template.ts`. Mail
-// clients are not browsers:
+// Mail clients are not browsers:
 //   - tables for layout, never flex/grid
 //   - every style inline; a <style> block does not survive Gmail reliably
 //   - no webfonts (Bungee will not load in Outlook/Gmail) — a bold system stack
 //     with letter-spacing echoes the brand's condensed display type instead
 //   - explicit background AND text colour on every block, so forced dark mode
 //     cannot leave dark text on a dark panel
-//   - the logo is the same raster PNG as the landing acceptance mail
+//   - the logo is the shared raster PNG
 //     (`https://hackspain.com/hs-email-logo.png`). Email clients cannot resolve
 //     relative paths, and a data: URI would be stripped by Gmail.
 

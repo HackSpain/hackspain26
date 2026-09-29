@@ -1,14 +1,20 @@
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
-import { convexAuth, type Tokens } from "@convex-dev/auth/server";
+import { convexAuth } from "@convex-dev/auth/server";
+import type { Tokens } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
-import { action, type ActionCtx } from "./_generated/server";
+import { action } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
 import { ResendOTP } from "./ResendOTP";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
 import { fail } from "./lib/errors";
 import { adminEmailAllowlist, normalizeEmail } from "./lib/normalize";
-import { findSignupByEmail, findUserByEmail, resolvedLoginRole } from "./lib/auth";
+import {
+  findSignupByEmail,
+  findUserByEmail,
+  resolvedLoginRole,
+} from "./lib/auth";
 
 // Redeems an approved CLI device code (convex/cliAuth.ts) for a session.
 // Only /api/cli/auth/device/poll calls this, with the code plus the secret
@@ -16,8 +22,7 @@ import { findSignupByEmail, findUserByEmail, resolvedLoginRole } from "./lib/aut
 const CliDevice = ConvexCredentials<DataModel>({
   id: "cli-device",
   authorize: async (credentials, ctx) => {
-    const code =
-      typeof credentials.code === "string" ? credentials.code : "";
+    const code = typeof credentials.code === "string" ? credentials.code : "";
     const secret =
       typeof credentials.secret === "string" ? credentials.secret : "";
     if (!code || !secret) {
@@ -135,11 +140,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function resolveStubCode(
   ctx: ActionCtx,
   provider: string | undefined,
-  params: unknown,
+  params: unknown
 ): Promise<unknown> {
-  if (!emailOtpStubEnabled() || !isRecord(params)) return params;
-  if (provider !== ResendOTP.id) return params;
-  if (params.code !== STUB_CODE || typeof params.email !== "string") return params;
+  if (!emailOtpStubEnabled() || !isRecord(params)) {
+    return params;
+  }
+  if (provider !== ResendOTP.id) {
+    return params;
+  }
+  if (params.code !== STUB_CODE || typeof params.email !== "string") {
+    return params;
+  }
   const email = params.email;
   await ctx.runAction(api.auth.signInWithProvider, {
     provider: ResendOTP.id,
@@ -166,7 +177,9 @@ const VERIFY_COPY = {
 } as const;
 
 function isCouldNotVerify(error: unknown): boolean {
-  return error instanceof Error && error.message.includes("Could not verify code");
+  return (
+    error instanceof Error && error.message.includes("Could not verify code")
+  );
 }
 
 /**
@@ -181,7 +194,7 @@ async function signInWithEmailOtp(
   ctx: ActionCtx,
   args: Record<string, unknown>,
   params: Record<string, unknown>,
-  email: string,
+  email: string
 ): Promise<SignInResult> {
   const forwarded = { ...args, params };
   if (params.code === undefined) {
@@ -193,9 +206,9 @@ async function signInWithEmailOtp(
   }
   try {
     return await ctx.runAction(api.auth.signInWithProvider, forwarded);
-  } catch (error) {
-    if (error instanceof ConvexError || !isCouldNotVerify(error)) {
-      throw error;
+  } catch (caughtError) {
+    if (caughtError instanceof ConvexError || !isCouldNotVerify(caughtError)) {
+      throw caughtError;
     }
     const reason = await ctx.runQuery(internal.login.verifyFailure, { email });
     return fail(reason, VERIFY_COPY[reason]);
@@ -211,7 +224,11 @@ export const signIn = action({
     calledBy: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<SignInResult> => {
-    const params: unknown = await resolveStubCode(ctx, args.provider, args.params);
+    const params: unknown = await resolveStubCode(
+      ctx,
+      args.provider,
+      args.params
+    );
     if (
       args.provider === ResendOTP.id &&
       isRecord(params) &&
@@ -220,6 +237,9 @@ export const signIn = action({
       const email = normalizeEmail(params.email);
       return await signInWithEmailOtp(ctx, args, { ...params, email }, email);
     }
-    return await ctx.runAction(api.auth.signInWithProvider, { ...args, params });
+    return await ctx.runAction(api.auth.signInWithProvider, {
+      ...args,
+      params,
+    });
   },
 });

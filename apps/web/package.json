@@ -15,14 +15,14 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "astro": "astro",
-    "check": "astro check",
+    "check": "astro check --minimumFailingSeverity warning",
     "test": "node --test telemetry-sanitize.test.js",
-    "lint": "oxlint -c oxlint.config.mjs . && ultracite check",
+    "lint": "oxlint -c oxlint.config.mjs --deny-warnings --report-unused-disable-directives-severity=error . && ultracite check --error-on-warnings",
     "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix",
     "format:check": "biome format .",
     "format:fix": "biome format --write .",
-    "knip": "DATABASE_URL=postgresql://localhost/knip knip",
-    "knip:check": "DATABASE_URL=postgresql://localhost/knip knip --include binaries"
+    "knip": "DATABASE_URL=postgresql://localhost/knip knip --directory ../.. --workspace apps/web --config apps/web/knip.json",
+    "knip:check": "pnpm knip"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.6",

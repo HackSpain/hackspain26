@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       secret,
     });
     return ok({ code, expiresAt });
-  } catch (err) {
-    return fromError(err);
+  } catch (caughtError) {
+    return fromError(caughtError);
   }
 }

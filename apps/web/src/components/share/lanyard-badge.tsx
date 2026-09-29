@@ -76,10 +76,6 @@ const PHOTO_TARGET_Y =
   CARD_HEIGHT;
 const PHOTO_TARGET_Z = CARD_DEPTH / 2 + 0.002;
 const BAND_WIDTH = 0.52;
-// Keep constructor args stable; the resolution prop below tracks canvas size.
-const MESH_LINE_MATERIAL_ARGS: ConstructorParameters<typeof MeshLineMaterial> =
-  [{ resolution: new Vector2(1, 1) }];
-
 /**
  * The metal clip between band and card: a slim crimp on top that takes the
  * band's end, and under it the ring it holds, threading the punched slot.
@@ -392,12 +388,13 @@ function TiltGravity({ tilt }: { tilt: RefObject<number | null> }) {
 
 function Badge({ content, onPhotoClick, wind }: BadgeProps) {
   const band = useRef<Mesh>(null);
-  const fixed = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
-  const j1 = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
-  const j2 = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
-  const j3 = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
-  const card = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
+  const fixed = useRef<RapierRigidBody>(null);
+  const j1 = useRef<RapierRigidBody>(null);
+  const j2 = useRef<RapierRigidBody>(null);
+  const j3 = useRef<RapierRigidBody>(null);
+  const card = useRef<RapierRigidBody>(null);
 
+  const lineParameters = useMemo(() => ({ resolution: new Vector2(1, 1) }), []);
   const vec = useMemo(() => new Vector3(), []);
   const dir = useMemo(() => new Vector3(), []);
   const ang = useMemo(() => new Vector3(), []);
@@ -441,13 +438,30 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
   );
   const lanyardTexture = useLanyardTexture();
 
-  useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]);
-  useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]);
-  useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]);
-  useSphericalJoint(j3, card, [
-    [0, 0, 0],
-    [0, JOINT_ANCHOR_Y, 0],
-  ]);
+  // Rapier guards nullable refs at runtime; its declarations still use the React 18 RefObject shape.
+  useRopeJoint(
+    fixed as RefObject<RapierRigidBody>,
+    j1 as RefObject<RapierRigidBody>,
+    [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]
+  );
+  useRopeJoint(
+    j1 as RefObject<RapierRigidBody>,
+    j2 as RefObject<RapierRigidBody>,
+    [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]
+  );
+  useRopeJoint(
+    j2 as RefObject<RapierRigidBody>,
+    j3 as RefObject<RapierRigidBody>,
+    [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]
+  );
+  useSphericalJoint(
+    j3 as RefObject<RapierRigidBody>,
+    card as RefObject<RapierRigidBody>,
+    [
+      [0, 0, 0],
+      [0, JOINT_ANCHOR_Y, 0],
+    ]
+  );
 
   useEffect(() => {
     if (!hovered) {
@@ -765,7 +779,7 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
       <mesh frustumCulled={false} ref={band}>
         <meshLineGeometry />
         <meshLineMaterial
-          args={MESH_LINE_MATERIAL_ARGS}
+          args={[lineParameters]}
           color="#ffffff"
           lineWidth={BAND_WIDTH}
           map={lanyardTexture}

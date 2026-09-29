@@ -495,7 +495,7 @@ export function SignupPage() {
         pulseAttention("heard");
         requestAnimationFrame(() => {
           document
-            .querySelector<HTMLElement>("#signup-heard-from-other")
+            .querySelector<HTMLInputElement>("#signup-heard-from-other")
             ?.focus();
         });
         return;
@@ -631,7 +631,7 @@ export function SignupPage() {
         pulseAttention("heard");
         requestAnimationFrame(() => {
           document
-            .querySelector<HTMLElement>("#signup-heard-from-other")
+            .querySelector<HTMLInputElement>("#signup-heard-from-other")
             ?.focus();
         });
         return;
