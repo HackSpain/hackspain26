@@ -345,15 +345,8 @@ export function SignupPage() {
   const ambassadorPageHref = "/ambassador";
   const privacyHref = "/privacy";
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    setValue,
-    watch,
-    reset,
-    formState,
-  } = useForm<StoredFields>({ defaultValues: { ...EMPTY_FIELDS } });
+  const { register, handleSubmit, control, setValue, watch, reset, formState } =
+    useForm<StoredFields>({ defaultValues: { ...EMPTY_FIELDS } });
   const { isSubmitting } = formState;
   const heardFromSources = watch("heardFromSources");
   const occupationStatuses = watch("occupationStatuses");
