@@ -4,7 +4,13 @@ import { Check, KeyRound, Monitor, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoadingText, Page, errorMessage } from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 type CheckInResult = {
@@ -55,17 +61,20 @@ export function CheckInStation() {
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const loadStatus = useCallback(async () => {
-    try {
-      const next = await receptionRequest<StaffStatus>();
-      setStaffStatus(next);
-      setStatusError(null);
-    } catch (caughtError) {
-      setStatusError(
-        errorMessage(caughtError, "No se ha podido cargar el check-in")
-      );
-    }
-  }, []);
+  const loadStatus = useCallback(
+    () =>
+      receptionRequest<StaffStatus>()
+        .then((status) => {
+          setStaffStatus(status);
+          setStatusError(null);
+        })
+        .catch((caughtError) => {
+          setStatusError(
+            errorMessage(caughtError, "No se ha podido cargar el check-in")
+          );
+        }),
+    []
+  );
 
   useEffect(() => {
     void loadStatus();
@@ -119,7 +128,9 @@ export function CheckInStation() {
       void loadStatus();
       inputRef.current?.focus();
     } catch (caughtError) {
-      setError(errorMessage(caughtError, "No se ha podido deshacer el check-in"));
+      setError(
+        errorMessage(caughtError, "No se ha podido deshacer el check-in")
+      );
     } finally {
       setPending(false);
     }
@@ -195,7 +206,7 @@ export function CheckInStation() {
                   event.target.value
                     .toUpperCase()
                     .replaceAll(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ]/g, "")
-                    .slice(0, 4),
+                    .slice(0, 4)
                 )
               }
               placeholder="AB7K"
@@ -240,7 +251,9 @@ export function CheckInStation() {
                 <Check className="size-7" strokeWidth={2} aria-hidden />
               </div>
               <CardTitle>
-                {result.status === "checked_in" ? "Check-in completado" : "Ya estaba dentro"}
+                {result.status === "checked_in"
+                  ? "Check-in completado"
+                  : "Ya estaba dentro"}
               </CardTitle>
               <CardDescription>
                 <span className="font-semibold text-hs-ink">{result.name}</span>
@@ -279,7 +292,9 @@ export function CheckInStation() {
                 <X className="size-7" strokeWidth={2} aria-hidden />
               </div>
               <CardTitle>Código rechazado</CardTitle>
-              <CardDescription className="text-pretty text-hs-ink">{error}</CardDescription>
+              <CardDescription className="text-pretty text-hs-ink">
+                {error}
+              </CardDescription>
             </CardHeader>
           </Card>
         ) : null}

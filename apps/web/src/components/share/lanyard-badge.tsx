@@ -24,6 +24,7 @@ import {
   Quaternion,
   RepeatWrapping,
   SRGBColorSpace,
+  Vector2,
   Vector3,
 } from "three";
 import { BADGE_PALETTE } from "./badge-roles";
@@ -393,6 +394,7 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
   const j3 = useRef<RapierRigidBody>(null);
   const card = useRef<RapierRigidBody>(null);
 
+  const lineParameters = useMemo(() => ({ resolution: new Vector2(1, 1) }), []);
   const vec = useMemo(() => new Vector3(), []);
   const dir = useMemo(() => new Vector3(), []);
   const ang = useMemo(() => new Vector3(), []);
@@ -436,13 +438,30 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
   );
   const lanyardTexture = useLanyardTexture();
 
-  useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]);
-  useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]);
-  useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]);
-  useSphericalJoint(j3, card, [
-    [0, 0, 0],
-    [0, JOINT_ANCHOR_Y, 0],
-  ]);
+  // Rapier guards nullable refs at runtime; its declarations still use the React 18 RefObject shape.
+  useRopeJoint(
+    fixed as RefObject<RapierRigidBody>,
+    j1 as RefObject<RapierRigidBody>,
+    [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]
+  );
+  useRopeJoint(
+    j1 as RefObject<RapierRigidBody>,
+    j2 as RefObject<RapierRigidBody>,
+    [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]
+  );
+  useRopeJoint(
+    j2 as RefObject<RapierRigidBody>,
+    j3 as RefObject<RapierRigidBody>,
+    [[0, 0, 0], [0, 0, 0], ROPE_SEGMENT_LENGTH]
+  );
+  useSphericalJoint(
+    j3 as RefObject<RapierRigidBody>,
+    card as RefObject<RapierRigidBody>,
+    [
+      [0, 0, 0],
+      [0, JOINT_ANCHOR_Y, 0],
+    ]
+  );
 
   useEffect(() => {
     if (!hovered) {
@@ -607,7 +626,7 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
      * letters one size the whole way down. The table it reads is rebuilt each
      * frame because the points move under it.
      */
-    curve.needsUpdate = true;
+    curve.updateArcLengths();
     bandGeometry?.setPoints?.(curve.getSpacedPoints(CURVE_SEGMENTS));
 
     const angular = card.current.angvel();
@@ -760,6 +779,7 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
       <mesh frustumCulled={false} ref={band}>
         <meshLineGeometry />
         <meshLineMaterial
+          args={[lineParameters]}
           color="#ffffff"
           lineWidth={BAND_WIDTH}
           map={lanyardTexture}

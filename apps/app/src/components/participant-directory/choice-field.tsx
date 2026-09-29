@@ -12,7 +12,9 @@ import { cn } from "@/lib/utils";
 
 const MAX_VISIBLE = 40;
 
-type Item = { kind: "option"; value: string } | { kind: "custom"; text: string };
+type Item =
+  | { kind: "option"; value: string }
+  | { kind: "custom"; text: string };
 
 /** Prefix matches first, then anything containing the query (value or alias). */
 function filterOptions(options: readonly Option[], query: string): Option[] {
@@ -80,7 +82,9 @@ export function ChoiceField({
       : null;
   const items: Item[] = [
     ...(custom ? [{ kind: "custom", text: custom } as const] : []),
-    ...matches.map((option) => ({ kind: "option", value: option.value }) as const),
+    ...matches.map(
+      (option) => ({ kind: "option", value: option.value }) as const
+    ),
   ];
   const activeIndex = Math.min(active, Math.max(items.length - 1, 0));
 
@@ -130,7 +134,10 @@ export function ChoiceField({
 
   return (
     <Field label={label} htmlFor={id} hint={hint} meta={meta}>
-      <Popover.Root open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
+      <Popover.Root
+        open={open}
+        onOpenChange={(next) => (next ? setOpen(true) : close())}
+      >
         <Popover.Anchor asChild>
           <div className="relative">
             <Input
@@ -141,7 +148,9 @@ export function ChoiceField({
               aria-controls={listId}
               aria-autocomplete="list"
               aria-activedescendant={
-                open && items[activeIndex] ? `${listId}-${activeIndex}` : undefined
+                open && items[activeIndex]
+                  ? `${listId}-${activeIndex}`
+                  : undefined
               }
               autoComplete="off"
               spellCheck={false}
@@ -180,7 +189,9 @@ export function ChoiceField({
                   }
                   const step = event.key === "ArrowDown" ? 1 : -1;
                   setActive((index) =>
-                    items.length === 0 ? 0 : (index + step + items.length) % items.length,
+                    items.length === 0
+                      ? 0
+                      : (index + step + items.length) % items.length
                   );
                 } else if (event.key === "Enter") {
                   if (!open) {
@@ -220,7 +231,7 @@ export function ChoiceField({
               <ChevronDown
                 className={cn(
                   "size-4 motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
-                  open && "rotate-180",
+                  open && "rotate-180"
                 )}
                 aria-hidden
               />
@@ -244,7 +255,8 @@ export function ChoiceField({
               </p>
             ) : (
               items.map((item, index) => {
-                const key = item.kind === "option" ? item.value : `custom:${item.text}`;
+                const key =
+                  item.kind === "option" ? item.value : `custom:${item.text}`;
                 const selected = item.kind === "option" && item.value === value;
                 return (
                   <div
@@ -256,11 +268,17 @@ export function ChoiceField({
                     data-active={index === activeIndex ? "" : undefined}
                     className={cn(
                       "flex min-h-10 cursor-default items-center gap-1.5 px-2 py-2 text-sm select-none data-active:bg-hs-sand",
-                      selected && "font-semibold",
+                      selected && "font-semibold"
                     )}
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseMove={() => setActive(index)}
                     onClick={() => pick(item)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        pick(item);
+                      }
+                    }}
                   >
                     {item.kind === "option" ? (
                       item.value

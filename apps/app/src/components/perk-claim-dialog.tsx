@@ -22,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { type PerkAnswer, type PerkInput, validateAnswers } from "@/lib/perks";
+import { validateAnswers } from "@/lib/perks";
+import type { PerkAnswer, PerkInput } from "@/lib/perks";
 import { perkName } from "@/lib/utils";
 
 export function claimErrorMessage(err: unknown, fallback: string): string {
@@ -84,11 +85,11 @@ function ClaimForm({
   function setValue(key: string, value: string) {
     setValues((current) => ({ ...current, [key]: value }));
     if (fieldErrors[key]) {
-      setFieldErrors((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
+      setFieldErrors((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([field]) => field !== key)
+        )
+      );
     }
   }
 
@@ -100,7 +101,9 @@ function ClaimForm({
     const errors: Record<string, string> = {};
     for (const input of perk.inputs) {
       const result = validateAnswers([input], answers);
-      if (!result.ok) errors[input.key] = result.fieldMessage;
+      if (!result.ok) {
+        errors[input.key] = result.fieldMessage;
+      }
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -109,9 +112,13 @@ function ClaimForm({
     setServerError(null);
     setSubmitting(true);
     try {
-      await onSubmit(answers.filter((answer) => answer.value.trim().length > 0));
-    } catch (err: unknown) {
-      setServerError(claimErrorMessage(err, "No se ha podido reclamar"));
+      await onSubmit(
+        answers.filter((answer) => answer.value.trim().length > 0)
+      );
+    } catch (caughtError: unknown) {
+      setServerError(
+        claimErrorMessage(caughtError, "No se ha podido reclamar")
+      );
     } finally {
       setSubmitting(false);
     }
@@ -148,7 +155,12 @@ function ClaimForm({
         ))}
       </div>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={submitting}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={submitting}>
@@ -205,7 +217,13 @@ function InputField({
         <Input
           id={id}
           type={input.type === "text" ? "text" : input.type}
-          inputMode={input.type === "email" ? "email" : input.type === "url" ? "url" : undefined}
+          inputMode={
+            input.type === "email"
+              ? "email"
+              : input.type === "url"
+                ? "url"
+                : undefined
+          }
           autoComplete={input.type === "email" ? "email" : "off"}
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -213,7 +231,11 @@ function InputField({
           aria-describedby={error ? errorId : undefined}
           className={error ? "border-hs-red" : undefined}
           placeholder={
-            input.type === "url" ? "https://" : input.type === "email" ? "tu@email.com" : undefined
+            input.type === "url"
+              ? "https://"
+              : input.type === "email"
+                ? "tu@email.com"
+                : undefined
           }
         />
       )}

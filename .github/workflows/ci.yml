@@ -78,7 +78,7 @@ jobs:
           if (( ${#app_files[@]} )); then
             (
               cd apps/app
-              pnpm exec oxlint -c oxlint.config.mjs --report-unused-disable-directives-severity=error --no-error-on-unmatched-pattern "${app_files[@]}"
+              pnpm exec oxlint -c oxlint.config.mjs --deny-warnings --report-unused-disable-directives-severity=error --no-error-on-unmatched-pattern "${app_files[@]}"
               pnpm exec biome format --no-errors-on-unmatched "${app_files[@]}"
             )
           fi
@@ -90,13 +90,13 @@ jobs:
           if (( ${#web_files[@]} )); then
             (
               cd apps/web
-              pnpm exec oxlint -c oxlint.config.mjs --report-unused-disable-directives-severity=error --no-error-on-unmatched-pattern "${web_files[@]}"
-              pnpm exec biome check --no-errors-on-unmatched "${web_files[@]}"
+              pnpm exec oxlint -c oxlint.config.mjs --deny-warnings --report-unused-disable-directives-severity=error --no-error-on-unmatched-pattern "${web_files[@]}"
+              pnpm exec biome check --error-on-warnings --no-errors-on-unmatched "${web_files[@]}"
             )
           fi
 
           if ! git diff --quiet "$BASE_SHA"...HEAD -- oxlint.config.mjs; then
-            pnpm exec oxlint -c oxlint.config.mjs oxlint.config.mjs
+            pnpm exec oxlint -c oxlint.config.mjs --deny-warnings --report-unused-disable-directives-severity=error oxlint.config.mjs
           fi
 
   app:
@@ -119,8 +119,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Typecheck
         run: pnpm --filter app typecheck
-      - name: "Lint (advisory until #235)"
-        continue-on-error: true
+      - name: Lint
         run: pnpm --filter app lint
       - name: Test
         run: pnpm --filter app test
@@ -142,16 +141,13 @@ jobs:
           node-version: "22.13"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: "Astro check (advisory until #236)"
-        continue-on-error: true
+      - name: Astro check
         run: pnpm --filter web check
-      - name: "Lint (advisory until #235)"
-        continue-on-error: true
+      - name: Lint
         run: pnpm --filter web lint
-      - name: Declared binaries
+      - name: Unused code and dependencies
         run: pnpm --filter web knip:check
-      - name: "Unused code report (advisory)"
-        continue-on-error: true
-        run: pnpm --filter web knip
+      - name: Test
+        run: pnpm --filter web test
       - name: Build
         run: pnpm --filter web build

@@ -5,9 +5,8 @@ import {
   TICKER_DURATION,
   resolveTvSponsors,
   sponsorLogoSources,
-  type TvSponsor,
-  type TvTickerSpeed,
 } from "@/lib/tv";
+import type { TvSponsor, TvTickerSpeed } from "@/lib/tv";
 import { cn } from "@/lib/utils";
 import { usePageVisible, usePrefersReducedMotion } from "./motion";
 
@@ -43,7 +42,7 @@ function SponsorLogo({
           "h-8 w-auto max-w-24 object-contain outline outline-1 -outline-offset-1 outline-black/10",
           src.startsWith("/sponsors/") && "brightness-0",
           editor &&
-            "grayscale motion-safe:transition-[filter] motion-safe:duration-150 group-hover:grayscale-0",
+            "grayscale motion-safe:transition-[filter] motion-safe:duration-150 group-hover:grayscale-0"
         )}
         onError={() => setFailed((count) => count + 1)}
       />
@@ -89,7 +88,9 @@ export function SponsorGridBox({
           <SponsorMark sponsor={sponsor} editor={editor} />
           <p className="mt-1 text-[10px] text-hs-brown">
             {TIER_LABEL[sponsor.tier]}
-            {sponsor.href ? ` · ${sponsor.href.replace(/^https?:\/\//, "")}` : ""}
+            {sponsor.href
+              ? ` · ${sponsor.href.replace(/^https?:\/\//, "")}`
+              : ""}
           </p>
         </div>
       ))}
@@ -132,7 +133,9 @@ function SponsorLogoStrip({
       </p>
       <div className="flex min-w-0 overflow-hidden bg-hs-paper">
         {reduced ? (
-          <div className="flex h-full w-full items-center justify-around">{logos(0)}</div>
+          <div className="flex h-full w-full items-center justify-around">
+            {logos(0)}
+          </div>
         ) : (
           <div
             className="tv-ticker flex h-full w-max"
@@ -142,7 +145,11 @@ function SponsorLogoStrip({
             }}
           >
             {[0, 1].map((copy) => (
-              <div key={copy} aria-hidden={copy === 1} className="flex h-full shrink-0">
+              <div
+                key={copy}
+                aria-hidden={copy === 1}
+                className="flex h-full shrink-0"
+              >
                 {logos(copy)}
               </div>
             ))}
@@ -153,7 +160,9 @@ function SponsorLogoStrip({
         <span className="text-[clamp(0.45rem,0.6cqw,0.8rem)] font-bold tracking-[0.12em] uppercase">
           Powered by
         </span>
-        <span className="mt-[0.3cqw] font-bungee text-[clamp(0.7rem,1.1cqw,1.5rem)]">RawTree</span>
+        <span className="mt-[0.3cqw] font-bungee text-[clamp(0.7rem,1.1cqw,1.5rem)]">
+          RawTree
+        </span>
       </p>
     </div>
   );
@@ -174,7 +183,14 @@ export function SponsorTickerBox({
   const reduced = usePrefersReducedMotion();
   const visible = usePageVisible();
   if (logosOnly) {
-    return <SponsorLogoStrip items={items} speed={speed} reduced={reduced} visible={visible} />;
+    return (
+      <SponsorLogoStrip
+        items={items}
+        speed={speed}
+        reduced={reduced}
+        visible={visible}
+      />
+    );
   }
   if (reduced) {
     return (
@@ -189,7 +205,7 @@ export function SponsorTickerBox({
     <div
       className={cn(
         "flex h-full items-center overflow-hidden bg-hs-gold",
-        editor && "group",
+        editor && "group"
       )}
     >
       <div
@@ -206,7 +222,10 @@ export function SponsorTickerBox({
             className="flex shrink-0 items-center whitespace-nowrap font-bungee text-[clamp(0.9rem,2.4cqw,1.8rem)] text-hs-ink uppercase"
           >
             {items.map((sponsor) => (
-              <span key={`${copy}-${sponsor.name}`} className="inline-flex items-center px-8">
+              <span
+                key={`${copy}-${sponsor.name}`}
+                className="inline-flex items-center px-8"
+              >
                 <SponsorMark sponsor={sponsor} editor={editor} />
                 <span aria-hidden className="ml-3">
                   ✦

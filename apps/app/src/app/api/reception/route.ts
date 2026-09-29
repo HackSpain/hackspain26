@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export function GET() {
   return new Response(null, { status: 410 });
 }
 
-export async function POST() {
+export function POST() {
   return new Response(null, { status: 410 });
 }

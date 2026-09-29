@@ -7,7 +7,9 @@
   ],
   "overrides": [
     {
-      "includes": ["src/pages/cronica.astro"],
+      // Astro renders templates once and has no React reconciliation keys.
+      // https://docs.astro.build/en/reference/astro-syntax/#differences-between-astro-and-jsx
+      "includes": ["**/*.astro"],
       "linter": {
         "rules": {
           "correctness": {
