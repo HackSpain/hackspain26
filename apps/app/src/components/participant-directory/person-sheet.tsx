@@ -41,12 +41,12 @@ export function usePersonPicker() {
   const openPerson = (id: string, from: HTMLElement | null = null) => {
     triggerRef.current = from;
     const alreadyOpen = new URLSearchParams(window.location.search).has(
-      PERSON_PARAM,
+      PERSON_PARAM
     );
     writeParams(
       pathname,
       (params) => params.set(PERSON_PARAM, id),
-      alreadyOpen ? "replace" : "push",
+      alreadyOpen ? "replace" : "push"
     );
     if (!alreadyOpen) {
       pushed.current = true;
@@ -151,17 +151,17 @@ export function PersonSheet({
       return [];
     }
     return participants.filter(
-      (item) => item.team?.id === person.team?.id && item.id !== person.id,
+      (item) => item.team?.id === person.team?.id && item.id !== person.id
     );
   }, [participants, person]);
   const links = person ? linksFor(person, participants) : [];
   const facts = person
     ? [person.city, person.university, person.company, person.degree].filter(
-        Boolean,
+        Boolean
       )
     : [];
   const personLinks = (person?.urls ?? []).filter((entry) =>
-    EXTRA_URL_KINDS.includes(entry.kind as (typeof EXTRA_URL_KINDS)[number]),
+    EXTRA_URL_KINDS.includes(entry.kind as (typeof EXTRA_URL_KINDS)[number])
   );
   const swap = reduceMotion
     ? {
@@ -234,8 +234,9 @@ export function PersonSheet({
                       {person.displayName}
                     </SheetTitle>
                     <SheetDescription>
-                      {[person.role, person.team?.name].filter(Boolean).join(" · ") ||
-                        "Participante"}
+                      {[person.role, person.team?.name]
+                        .filter(Boolean)
+                        .join(" · ") || "Participante"}
                     </SheetDescription>
                   </div>
                 </div>
@@ -333,7 +334,7 @@ export function PersonSheet({
                           })),
                           description: person.project.description,
                           members: [person, ...teammates].map(
-                            (item) => item.displayName,
+                            (item) => item.displayName
                           ),
                           perks: [],
                           teamName: person.team?.name,
