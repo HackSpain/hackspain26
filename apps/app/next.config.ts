@@ -5,15 +5,6 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 const nextConfig: NextConfig = {
   agentRules: false,
   allowedDevOrigins: ["127.0.2.2", "127.0.0.1", "localhost"],
-  redirects() {
-    return Promise.resolve([
-      {
-        source: "/admin/applications",
-        destination: "/admin/perks",
-        permanent: false,
-      },
-    ]);
-  },
 };
 
 const configuredApp = withBetterStack(nextConfig);

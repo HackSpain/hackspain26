@@ -3,14 +3,22 @@ import { Resend as ResendAPI } from "resend";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
+import { internalAction, internalMutation, query } from "./_generated/server";
 import {
   ACCESS_CODE_EMAIL_SUBJECT,
   accessCodeEmailHtml,
   accessCodeEmailText,
 } from "./lib/accessCodeEmail";
-import { adminMutation, adminQuery, onboardedQuery } from "./lib/customFunctions";
-import { findUserByEmail, getSignupForUser, signupIsAccepted } from "./lib/auth";
+import {
+  adminMutation,
+  adminQuery,
+  onboardedQuery,
+} from "./lib/customFunctions";
+import {
+  findUserByEmail,
+  getSignupForUser,
+  signupIsAccepted,
+} from "./lib/auth";
 import { resendApiKey, resendFrom } from "./lib/resend";
 const PASS_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const PASS_CODE_LENGTH = 4;
@@ -33,23 +41,13 @@ const scanReturn = v.object({
   status: v.union(v.literal("checked_in"), v.literal("already_checked_in")),
 });
 
-const staffStatusReturn = v.object({
-  checkedIn: v.number(),
-  issued: v.number(),
-});
-
-function maskedEmail(email: string): string {
-  const [local = "", domain = ""] = email.split("@");
-  if (!domain) {
-    return "";
-  }
-  return `${local.slice(0, 2)}•••@${domain}`;
-}
-
 function randomCode(): string {
   const bytes = new Uint8Array(PASS_CODE_LENGTH);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => PASS_CODE_ALPHABET[byte % PASS_CODE_ALPHABET.length]).join("");
+  return Array.from(
+    bytes,
+    (byte) => PASS_CODE_ALPHABET[byte % PASS_CODE_ALPHABET.length]
+  ).join("");
 }
 
 async function uniqueCode(ctx: MutationCtx): Promise<string> {
@@ -70,7 +68,7 @@ async function passDetails(
   ctx: QueryCtx | MutationCtx,
   pass: Doc<"eventPasses">,
   user: Doc<"users"> | null,
-  knownSignup?: Doc<"signups"> | null,
+  knownSignup?: Doc<"signups"> | null
 ) {
   const signup =
     knownSignup ??
@@ -113,7 +111,7 @@ export const mine = onboardedQuery({
 export async function findEventPass(
   ctx: QueryCtx | MutationCtx,
   signup: Doc<"signups"> | null,
-  user: Doc<"users"> | null,
+  user: Doc<"users"> | null
 ) {
   if (signup) {
     const bySignup = await ctx.db
@@ -138,7 +136,7 @@ async function completeCheckIn(
   pass: Doc<"eventPasses">,
   user: Doc<"users"> | null,
   resolvedSignup: Doc<"signups"> | null,
-  options: { allowCancelled?: boolean } = {},
+  options: { allowCancelled?: boolean } = {}
 ) {
   if (pass.status !== "active") {
     throw new Error("Esta acreditación está revocada");
@@ -146,7 +144,11 @@ async function completeCheckIn(
   if (!signupIsAccepted(resolvedSignup)) {
     throw new Error("Este participante ya no está aceptado");
   }
-  if (user && user.attendanceStatus !== "attending" && !options.allowCancelled) {
+  if (
+    user &&
+    user.attendanceStatus !== "attending" &&
+    !options.allowCancelled
+  ) {
     throw new Error("Este participante ha cancelado su asistencia");
   }
   const name = user?.name ?? resolvedSignup?.fullName ?? "Hacker";
@@ -198,20 +200,22 @@ async function checkIn(ctx: MutationCtx, value: string) {
   } else if (signup) {
     user = await findUserByEmail(ctx, signup.email);
   }
-  const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
+  const resolvedSignup =
+    signup ?? (user ? await getSignupForUser(ctx, user) : null);
   return await completeCheckIn(ctx, pass, user, resolvedSignup);
 }
 
 export async function checkInParticipantRecord(
   ctx: MutationCtx,
-  args: { signupId?: Id<"signups">; userId?: Id<"users"> },
+  args: { signupId?: Id<"signups">; userId?: Id<"users"> }
 ) {
   const signup = args.signupId ? await ctx.db.get(args.signupId) : null;
   let user = args.userId ? await ctx.db.get(args.userId) : null;
   if (!user && signup) {
     user = await findUserByEmail(ctx, signup.email);
   }
-  const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
+  const resolvedSignup =
+    signup ?? (user ? await getSignupForUser(ctx, user) : null);
   if (!resolvedSignup) {
     throw new Error("No hay solicitud para hacer el check-in");
   }
@@ -237,7 +241,9 @@ export async function checkInParticipantRecord(
       throw new Error("No se ha podido crear la acreditación");
     }
   }
-  return await completeCheckIn(ctx, pass, user, resolvedSignup, { allowCancelled: true });
+  return await completeCheckIn(ctx, pass, user, resolvedSignup, {
+    allowCancelled: true,
+  });
 }
 
 export const scan = adminMutation({
@@ -255,19 +261,6 @@ export const checkInParticipant = adminMutation({
   returns: scanReturn,
 });
 
-export const staffStatus = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    const passes = await ctx.db.query("eventPasses").collect();
-    return {
-      checkedIn: passes.filter((pass) => pass.status === "active" && pass.checkedInAt !== undefined)
-        .length,
-      issued: passes.filter((pass) => pass.status === "active").length,
-    };
-  },
-  returns: staffStatusReturn,
-});
-
 // Public venue projection: deliberately excludes email, access codes and contact details.
 // The first response establishes a server-clock baseline so opening a screen never
 // replays the day's arrivals. Subsequent subscriptions also catch up after reconnects.
@@ -276,80 +269,67 @@ export const arrivals = query({
   returns: v.object({
     serverTime: v.number(),
     checkedIn: v.number(),
-    entries: v.array(v.object({
-      id: v.string(),
-      checkedInAt: v.number(),
-      number: v.number(),
-      name: v.string(),
-      image: v.union(v.string(), v.null()),
-      role: v.string(),
-      city: v.string(),
-      company: v.string(),
-      university: v.string(),
-      skills: v.array(v.string()),
-    })),
+    entries: v.array(
+      v.object({
+        id: v.string(),
+        checkedInAt: v.number(),
+        number: v.number(),
+        name: v.string(),
+        image: v.union(v.string(), v.null()),
+        role: v.string(),
+        city: v.string(),
+        company: v.string(),
+        university: v.string(),
+        skills: v.array(v.string()),
+      })
+    ),
   }),
   handler: async (ctx, { since }) => {
     const passes = (await ctx.db.query("eventPasses").collect())
-      .filter((pass): pass is Doc<"eventPasses"> & { checkedInAt: number } =>
-        pass.status === "active" && pass.checkedInAt !== undefined)
-      .toSorted((a, b) => (a.checkedInAt - b.checkedInAt) || a._id.localeCompare(b._id));
-    const entries = await Promise.all(passes.flatMap((pass, index) => {
-      if (since === undefined || pass.checkedInAt < since) {
-        return [];
-      }
-      return [(async () => {
-        const signup = pass.signupId ? await ctx.db.get(pass.signupId) : null;
-        let user: Doc<"users"> | null = null;
-        if (pass.userId) {
-          user = await ctx.db.get(pass.userId);
-        } else if (signup) {
-          user = await findUserByEmail(ctx, signup.email);
+      .filter(
+        (pass): pass is Doc<"eventPasses"> & { checkedInAt: number } =>
+          pass.status === "active" && pass.checkedInAt !== undefined
+      )
+      .toSorted(
+        (a, b) => a.checkedInAt - b.checkedInAt || a._id.localeCompare(b._id)
+      );
+    const entries = await Promise.all(
+      passes.flatMap((pass, index) => {
+        if (since === undefined || pass.checkedInAt < since) {
+          return [];
         }
-        const card = user?.directory;
-        return {
-          id: `${pass._id}:${pass.checkedInAt}`,
-          checkedInAt: pass.checkedInAt,
-          number: index + 1,
-          name: user?.name?.trim() || signup?.fullName || "Hacker",
-          image: user?.avatarId
-            ? await ctx.storage.getUrl(user.avatarId)
-            : user?.image || null,
-          role: card?.role || "Hacker",
-          city: card?.city || "",
-          company: card?.company || "",
-          university: card?.university || "",
-          skills: card?.skills.slice(0, 4) || [],
-        };
-      })()];
-    }));
+        return [
+          (async () => {
+            const signup = pass.signupId
+              ? await ctx.db.get(pass.signupId)
+              : null;
+            let user: Doc<"users"> | null = null;
+            if (pass.userId) {
+              user = await ctx.db.get(pass.userId);
+            } else if (signup) {
+              user = await findUserByEmail(ctx, signup.email);
+            }
+            const card = user?.directory;
+            return {
+              id: `${pass._id}:${pass.checkedInAt}`,
+              checkedInAt: pass.checkedInAt,
+              number: index + 1,
+              name: user?.name?.trim() || signup?.fullName || "Hacker",
+              image: user?.avatarId
+                ? await ctx.storage.getUrl(user.avatarId)
+                : user?.image || null,
+              role: card?.role || "Hacker",
+              city: card?.city || "",
+              company: card?.company || "",
+              university: card?.university || "",
+              skills: card?.skills.slice(0, 4) || [],
+            };
+          })(),
+        ];
+      })
+    );
     return { serverTime: Date.now(), checkedIn: passes.length, entries };
   },
-});
-
-export const staffScan = internalMutation({
-  args: { value: v.string() },
-  handler: async (ctx, args) => {
-    const result = await checkIn(ctx, args.value);
-    return { ...result, email: maskedEmail(result.email) };
-  },
-  returns: scanReturn,
-});
-
-export const staffUndoCheckIn = internalMutation({
-  args: { passId: v.id("eventPasses") },
-  handler: async (ctx, args) => {
-    const pass = await ctx.db.get(args.passId);
-    if (!pass) {
-      throw new Error("Acreditación no encontrada");
-    }
-    await ctx.db.patch(pass._id, {
-      checkedInAt: undefined,
-      updatedAt: Date.now(),
-    });
-    return null;
-  },
-  returns: v.null(),
 });
 
 export const undoCheckIn = adminMutation({
@@ -388,9 +368,10 @@ export const stats = adminQuery({
       expected,
       sent: activePasses.filter((pass) => pass.codeSentAt !== undefined).length,
       checkInTimes: activePasses.flatMap((pass) =>
-        pass.checkedInAt === undefined ? [] : [pass.checkedInAt],
+        pass.checkedInAt === undefined ? [] : [pass.checkedInAt]
       ),
-      checkedIn: activePasses.filter((pass) => pass.checkedInAt !== undefined).length,
+      checkedIn: activePasses.filter((pass) => pass.checkedInAt !== undefined)
+        .length,
       issued: activePasses.length,
       withCode: activePasses.length,
     };
@@ -415,8 +396,12 @@ export const issueAndEmailAccepted = adminMutation({
       .query("signups")
       .withIndex("by_accepted", (q) => q.eq("accepted", true))
       .collect();
-    const recipients: { passId: Id<"eventPasses">; code: string; email: string; name: string }[] =
-      [];
+    const recipients: {
+      passId: Id<"eventPasses">;
+      code: string;
+      email: string;
+      name: string;
+    }[] = [];
     let issued = 0;
 
     for (const signup of signups) {
@@ -491,13 +476,15 @@ export const deliverAccessCodes = internalAction({
         code: v.string(),
         email: v.string(),
         name: v.string(),
-      }),
+      })
     ),
   },
   handler: async (ctx, args) => {
     const apiKey = resendApiKey();
     if (!apiKey) {
-      throw new Error("Resend is not configured; access codes were not emailed");
+      throw new Error(
+        "Resend is not configured; access codes were not emailed"
+      );
     }
     const resend = new ResendAPI(apiKey);
     const from = resendFrom();
@@ -510,7 +497,7 @@ export const deliverAccessCodes = internalAction({
           subject: ACCESS_CODE_EMAIL_SUBJECT,
           text: accessCodeEmailText(recipient),
           to: [recipient.email],
-        })),
+        }))
       );
       if (error) {
         throw new Error(error.message);
