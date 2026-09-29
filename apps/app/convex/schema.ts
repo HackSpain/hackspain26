@@ -20,16 +20,29 @@ import { githubProfileFields } from "./lib/githubProfile";
 import { linkedinProfileFields } from "./lib/linkedinProfile";
 
 export default defineSchema({
-  tvPlaybackControl: defineTable({ key: v.string(), reloadVersion: v.number() }).index("by_key", ["key"]),
+  tvPlaybackControl: defineTable({
+    key: v.string(),
+    reloadVersion: v.number(),
+  }).index("by_key", ["key"]),
   tvScreens: defineTable({
-    key: v.string(), preset: screenPresetValidator, message: v.string(),
-    revision: v.number(), reloadVersion: v.number(),
+    key: v.string(),
+    preset: screenPresetValidator,
+    message: v.string(),
+    revision: v.number(),
+    reloadVersion: v.number(),
   }).index("by_key", ["key"]),
   tvScreenConnections: defineTable({
-    screenId: v.id("tvScreens"), clientId: v.string(), url: v.string(),
-    width: v.number(), height: v.number(), lastSeenAt: v.number(),
-    receivedRevision: v.number(), receivedReloadVersion: v.number(),
-  }).index("by_client", ["clientId"]).index("by_screen", ["screenId"])
+    screenId: v.id("tvScreens"),
+    clientId: v.string(),
+    url: v.string(),
+    width: v.number(),
+    height: v.number(),
+    lastSeenAt: v.number(),
+    receivedRevision: v.number(),
+    receivedReloadVersion: v.number(),
+  })
+    .index("by_client", ["clientId"])
+    .index("by_screen", ["screenId"])
     .index("by_screen_last_seen", ["screenId", "lastSeenAt"]),
   ...authTables,
   ambassadorApplications: defineTable({
@@ -549,7 +562,11 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_submission_context", ["submissionId", "contextKind", "contextKey"])
+    .index("by_submission_context", [
+      "submissionId",
+      "contextKind",
+      "contextKey",
+    ])
     .index("by_judge_context", ["judgeId", "contextKind", "contextKey"])
     .index("by_judge_submission", ["judgeId", "submissionId"])
     .index("by_context", ["contextKind", "contextKey"]),

@@ -30,10 +30,9 @@ const EXPIRED_SWEEP_LIMIT = 20;
 function randomCode(): string {
   const bytes = new Uint8Array(CODE_LENGTH);
   crypto.getRandomValues(bytes);
-  return Array.from(
-    bytes,
-    (b) => CODE_ALPHABET[b % CODE_ALPHABET.length],
-  ).join("");
+  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join(
+    ""
+  );
 }
 
 export const start = mutation({
@@ -72,7 +71,10 @@ export const start = mutation({
       .unique();
     if (limit && now - limit.windowStartedAt < START_WINDOW_MS) {
       if (limit.count >= START_LIMIT_PER_IP) {
-        fail("TOO_MANY_ATTEMPTS", "Demasiados inicios de sesión. Espera un minuto.");
+        fail(
+          "TOO_MANY_ATTEMPTS",
+          "Demasiados inicios de sesión. Espera un minuto."
+        );
       }
       await ctx.db.patch(limit._id, { count: limit.count + 1 });
     } else if (limit) {
@@ -123,7 +125,7 @@ export const status = query({
   returns: v.union(
     v.literal("pending"),
     v.literal("approved"),
-    v.literal("expired"),
+    v.literal("expired")
   ),
   handler: async (ctx, args) => {
     const row = await ctx.db
