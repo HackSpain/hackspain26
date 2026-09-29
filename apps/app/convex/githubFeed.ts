@@ -91,9 +91,8 @@ export function pollTargetsForTeam(
   const official = [submissionRepo, ...teamRepoList(team)].filter(
     (url): url is string => Boolean(repoSlug(url))
   );
-  const candidates = official.length > 0
-    ? official
-    : (team.observedRepoUrls ?? []);
+  const candidates =
+    official.length > 0 ? official : (team.observedRepoUrls ?? []);
   const seen = new Set<string>();
   return candidates.flatMap((url) => {
     const repo = repoSlug(url);
@@ -101,13 +100,15 @@ export function pollTargetsForTeam(
       return [];
     }
     seen.add(repo);
-    return [{
-      teamId: team._id,
-      repo,
-      etag:
-        team.githubEtags?.[repo] ??
-        (repo === primaryRepo ? team.githubEtag : undefined),
-    }];
+    return [
+      {
+        teamId: team._id,
+        repo,
+        etag:
+          team.githubEtags?.[repo] ??
+          (repo === primaryRepo ? team.githubEtag : undefined),
+      },
+    ];
   });
 }
 
