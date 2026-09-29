@@ -8,6 +8,8 @@
   "overrides": [
     {
       "includes": ["src/pages/cronica.astro"],
+      "formatter": { "enabled": false },
+      "assist": { "enabled": false },
       "linter": {
         "rules": {
           "correctness": {
