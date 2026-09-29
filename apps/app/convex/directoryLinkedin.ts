@@ -33,7 +33,7 @@ type NyneEnvelope = {
 async function nyneFetch(
   url: string,
   headers: Record<string, string>,
-  init?: RequestInit,
+  init?: RequestInit
 ): Promise<NyneEnvelope> {
   const response = await fetch(url, { ...init, headers });
   if (response.status === 429) {
@@ -51,7 +51,10 @@ async function nyneFetch(
   return (await response.json()) as NyneEnvelope;
 }
 
-async function enrich(slug: string, fetchedAt: number): Promise<LinkedinProfile> {
+async function enrich(
+  slug: string,
+  fetchedAt: number
+): Promise<LinkedinProfile> {
   const headers = nyneHeaders();
   if (!headers) {
     throw new Error("Falta configurar Nyne.");
@@ -108,7 +111,7 @@ export const refresh = action({
     });
     const existing: LinkedinProfile | null = await ctx.runQuery(
       internal.directory.linkedinCached,
-      { slug },
+      { slug }
     );
     const now = Date.now();
     if (existing && !linkedinProfileIsStale(existing, now)) {

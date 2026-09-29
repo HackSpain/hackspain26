@@ -86,7 +86,7 @@ function githubWait(status: number): boolean {
 
 async function loadGraphql(
   username: string,
-  fetchedAt: number,
+  fetchedAt: number
 ): Promise<GithubProfile | null> {
   if (!process.env.GITHUB_TOKEN) {
     return null;
@@ -98,7 +98,10 @@ async function loadGraphql(
       accept: "application/json",
       "content-type": "application/json",
     },
-    body: JSON.stringify({ query: PROFILE_QUERY, variables: { login: username } }),
+    body: JSON.stringify({
+      query: PROFILE_QUERY,
+      variables: { login: username },
+    }),
   });
   if (githubWait(response.status)) {
     throw new Error("GitHub pide esperar.");
@@ -108,7 +111,9 @@ async function loadGraphql(
   }
   const body = (await response.json()) as GraphqlBody;
   const notFound = body.errors?.some(
-    (error) => error.type === "NOT_FOUND" || /could not resolve/i.test(error.message ?? ""),
+    (error) =>
+      error.type === "NOT_FOUND" ||
+      /could not resolve/i.test(error.message ?? "")
   );
   if (!body.data?.user || notFound) {
     return missingGithubProfile(username, fetchedAt);
@@ -118,7 +123,7 @@ async function loadGraphql(
 
 async function loadRest(
   username: string,
-  fetchedAt: number,
+  fetchedAt: number
 ): Promise<GithubProfile> {
   const headers = githubHeaders({ userAgent: "hackspain-directory" });
   const userResponse = await fetch(`https://api.github.com/users/${username}`, {
@@ -137,7 +142,7 @@ async function loadRest(
   const [reposResponse, orgsResponse] = await Promise.all([
     fetch(
       `https://api.github.com/users/${username}/repos?sort=pushed&per_page=6&type=owner`,
-      { headers },
+      { headers }
     ),
     fetch(`https://api.github.com/users/${username}/orgs?per_page=8`, {
       headers,
@@ -146,19 +151,27 @@ async function loadRest(
   if (githubWait(reposResponse.status) || githubWait(orgsResponse.status)) {
     throw new Error("GitHub pide esperar.");
   }
-  const repos = reposResponse.ok ? ((await reposResponse.json()) as unknown) : [];
+  const repos = reposResponse.ok
+    ? ((await reposResponse.json()) as unknown)
+    : [];
   const orgs = orgsResponse.ok ? ((await orgsResponse.json()) as unknown) : [];
   return profileFromRest(
     user,
     Array.isArray(repos) ? repos : [],
     Array.isArray(orgs) ? orgs : [],
     username,
-    fetchedAt,
+    fetchedAt
   );
 }
 
-async function loadProfile(username: string, fetchedAt: number): Promise<GithubProfile> {
-  return (await loadGraphql(username, fetchedAt)) ?? (await loadRest(username, fetchedAt));
+async function loadProfile(
+  username: string,
+  fetchedAt: number
+): Promise<GithubProfile> {
+  return (
+    (await loadGraphql(username, fetchedAt)) ??
+    (await loadRest(username, fetchedAt))
+  );
 }
 
 export const refresh = action({
@@ -175,7 +188,7 @@ export const refresh = action({
     });
     const existing: GithubProfile | null = await ctx.runQuery(
       internal.directory.githubCached,
-      { username },
+      { username }
     );
     const now = Date.now();
     if (existing && !githubProfileIsStale(existing, now)) {
