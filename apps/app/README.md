@@ -35,6 +35,3 @@ staged changes and Git deployments do not activate them.
 Inspect challenge decisions in Vercel Firewall; edge rejections do not execute
 the app's error-reporting code. Avoid synthetic errors or OTP sends to real users
 when checking production.
-
-See [the incident learnings](../../docs/learnings.md#2026-09-18--backend-routes-must-not-receive-browser-bot-challenges)
-for the observed failure, correction, and verification steps.
