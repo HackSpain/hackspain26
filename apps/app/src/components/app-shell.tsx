@@ -9,8 +9,14 @@ import { Suspense } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { api } from "@convex/_generated/api";
-import { EventClosedBanner, isEventOpen } from "@/components/event-closed-banner";
-import { GithubLinkBanner, GithubLinkResult } from "@/components/github-link-banner";
+import {
+  EventClosedBanner,
+  isEventOpen,
+} from "@/components/event-closed-banner";
+import {
+  GithubLinkBanner,
+  GithubLinkResult,
+} from "@/components/github-link-banner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -67,7 +73,8 @@ function AccountMenu({
   isAdmin: boolean;
 }) {
   const { signOut } = useAuthActions();
-  const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
+  const profileActive =
+    pathname === "/profile" || pathname.startsWith("/profile/");
 
   return (
     <DropdownMenu>
@@ -106,7 +113,7 @@ function AccountMenu({
               href="/admin"
               className={cn(
                 "font-bungee uppercase",
-                pathname.startsWith("/admin") && "bg-hs-gold text-hs-ink",
+                pathname.startsWith("/admin") && "bg-hs-gold text-hs-ink"
               )}
             >
               Admin panel
@@ -118,7 +125,7 @@ function AccountMenu({
             href="/profile"
             className={cn(
               "font-bungee uppercase",
-              profileActive && "bg-hs-gold text-hs-ink",
+              profileActive && "bg-hs-gold text-hs-ink"
             )}
           >
             Perfil
@@ -147,10 +154,7 @@ function BackToHome({
 }) {
   const toTracks = pathname.startsWith("/tracks/");
   return (
-    <Link
-      href={toTracks ? "/tracks" : homeHref}
-      className={BACK_LINK_CLASS}
-    >
+    <Link href={toTracks ? "/tracks" : homeHref} className={BACK_LINK_CLASS}>
       <ArrowLeft className="size-4" aria-hidden />
       {toTracks ? "Volver a retos" : "Volver al inicio"}
     </Link>
@@ -190,8 +194,16 @@ function SectionShortcuts({
 
 function AdminStrip({ pathname }: { pathname: string }) {
   return (
-    <nav aria-label="Admin" className="border-b-[3px] border-hs-ink bg-hs-paper">
-      <div className={cn(contentWidth(pathname), "flex flex-wrap items-center gap-x-4 gap-y-1")}>
+    <nav
+      aria-label="Admin"
+      className="border-b-[3px] border-hs-ink bg-hs-paper"
+    >
+      <div
+        className={cn(
+          contentWidth(pathname),
+          "flex flex-wrap items-center gap-x-4 gap-y-1"
+        )}
+      >
         {ADMIN_NAV.map((item) => {
           const active = adminNavActive(pathname, item.href);
           return (
@@ -200,7 +212,9 @@ function AdminStrip({ pathname }: { pathname: string }) {
               href={item.href}
               className={cn(
                 "inline-flex min-h-11 items-center font-bungee text-xs uppercase",
-                active ? "text-hs-ink underline decoration-2 underline-offset-4" : "text-hs-brown",
+                active
+                  ? "text-hs-ink underline decoration-2 underline-offset-4"
+                  : "text-hs-brown"
               )}
             >
               {item.label}
@@ -254,8 +268,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         accountMenu={
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <Button asChild variant="outline" className={cn("hidden text-xs sm:inline-flex", pathname.startsWith("/admin") && "bg-hs-gold")}>
-                <Link href="/admin" aria-current={pathname === "/admin" ? "page" : undefined}>Admin panel</Link>
+              <Button
+                asChild
+                variant="outline"
+                className={cn(
+                  "hidden text-xs sm:inline-flex",
+                  pathname.startsWith("/admin") && "bg-hs-gold"
+                )}
+              >
+                <Link
+                  href="/admin"
+                  aria-current={pathname === "/admin" ? "page" : undefined}
+                >
+                  Admin panel
+                </Link>
               </Button>
             )}
             <AccountMenu
@@ -268,7 +294,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         }
       />
-      {isAdmin && (pathname.startsWith("/admin") || pathname.startsWith("/judging")) ? (
+      {isAdmin &&
+      (pathname.startsWith("/admin") || pathname.startsWith("/judging")) ? (
         <AdminStrip pathname={pathname} />
       ) : null}
       {me?.event && !isEventOpen(me.event) ? (
@@ -277,7 +304,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {askGithub ? <GithubLinkBanner /> : null}
       <main
         className={cn(
-          bleed ? "w-full pt-6 sm:pt-8" : cn(contentWidth(pathname), "min-w-0 py-6 sm:py-8"),
+          bleed
+            ? "w-full pt-6 sm:pt-8"
+            : cn(contentWidth(pathname), "min-w-0 py-6 sm:py-8")
         )}
       >
         <div className={cn(bleed && contentWidth(pathname))}>
