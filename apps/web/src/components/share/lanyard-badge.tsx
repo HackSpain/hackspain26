@@ -24,6 +24,7 @@ import {
   Quaternion,
   RepeatWrapping,
   SRGBColorSpace,
+  Vector2,
   Vector3,
 } from "three";
 import { BADGE_PALETTE } from "./badge-roles";
@@ -75,6 +76,10 @@ const PHOTO_TARGET_Y =
   CARD_HEIGHT;
 const PHOTO_TARGET_Z = CARD_DEPTH / 2 + 0.002;
 const BAND_WIDTH = 0.52;
+// Keep constructor args stable; the resolution prop below tracks canvas size.
+const MESH_LINE_MATERIAL_ARGS: ConstructorParameters<typeof MeshLineMaterial> =
+  [{ resolution: new Vector2(1, 1) }];
+
 /**
  * The metal clip between band and card: a slim crimp on top that takes the
  * band's end, and under it the ring it holds, threading the punched slot.
@@ -387,11 +392,11 @@ function TiltGravity({ tilt }: { tilt: RefObject<number | null> }) {
 
 function Badge({ content, onPhotoClick, wind }: BadgeProps) {
   const band = useRef<Mesh>(null);
-  const fixed = useRef<RapierRigidBody>(null);
-  const j1 = useRef<RapierRigidBody>(null);
-  const j2 = useRef<RapierRigidBody>(null);
-  const j3 = useRef<RapierRigidBody>(null);
-  const card = useRef<RapierRigidBody>(null);
+  const fixed = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
+  const j1 = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
+  const j2 = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
+  const j3 = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
+  const card = useRef<RapierRigidBody>(null) as RefObject<RapierRigidBody>;
 
   const vec = useMemo(() => new Vector3(), []);
   const dir = useMemo(() => new Vector3(), []);
@@ -607,7 +612,7 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
      * letters one size the whole way down. The table it reads is rebuilt each
      * frame because the points move under it.
      */
-    curve.needsUpdate = true;
+    curve.updateArcLengths();
     bandGeometry?.setPoints?.(curve.getSpacedPoints(CURVE_SEGMENTS));
 
     const angular = card.current.angvel();
@@ -760,6 +765,7 @@ function Badge({ content, onPhotoClick, wind }: BadgeProps) {
       <mesh frustumCulled={false} ref={band}>
         <meshLineGeometry />
         <meshLineMaterial
+          args={MESH_LINE_MATERIAL_ARGS}
           color="#ffffff"
           lineWidth={BAND_WIDTH}
           map={lanyardTexture}
