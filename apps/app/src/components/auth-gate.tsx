@@ -137,7 +137,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     const deadline = transition.startedAt + (unauthenticated ? 1500 : 12_000);
     const timer = setTimeout(
       () => setTransition(null),
-      Math.max(0, deadline - Date.now()),
+      Math.max(0, deadline - Date.now())
     );
     return () => clearTimeout(timer);
   }, [isAuthenticated, isLoading, transition]);
