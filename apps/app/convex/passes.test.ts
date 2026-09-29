@@ -5,46 +5,75 @@ import type { MutationCtx } from "./_generated/server";
 import {
   arrivals,
   checkInParticipantRecord,
-  staffScan,
-  staffStatus,
-  staffUndoCheckIn,
+  scan,
+  undoCheckIn,
 } from "./passes";
 import { dropCheckInMetadata } from "./migrations";
 import { reconcileArrivals } from "../src/lib/arrival-queue";
 
 type Row = Record<string, unknown> & { _id: string; table: string };
 
-function reception(t: TestContext) {
+function passesContext(t: TestContext) {
   let now = Date.parse("2026-09-18T12:00:00Z");
   t.mock.method(Date, "now", () => now);
   const rows = new Map<string, Row>([
-    ["settings", { _id: "settings", table: "eventSettings", key: "main", phase: "live" }],
+    [
+      "settings",
+      { _id: "settings", table: "eventSettings", key: "main", phase: "live" },
+    ],
+    ["operator", { _id: "operator", table: "users", role: "admin" }],
   ]);
   for (const [index, code] of ["AB7K", "CD8M"].entries()) {
     const suffix = String(index);
     rows.set(`signup${suffix}`, {
-      _id: `signup${suffix}`, table: "signups", accepted: true,
-      fullName: `Persona ${suffix}`, email: `person${suffix}@example.com`,
+      _id: `signup${suffix}`,
+      table: "signups",
+      accepted: true,
+      fullName: `Persona ${suffix}`,
+      email: `person${suffix}@example.com`,
     });
     rows.set(`user${suffix}`, {
-      _id: `user${suffix}`, table: "users", name: `Persona ${suffix}`,
-      email: `person${suffix}@example.com`, attendanceStatus: "attending",
+      _id: `user${suffix}`,
+      table: "users",
+      name: `Persona ${suffix}`,
+      email: `person${suffix}@example.com`,
+      attendanceStatus: "attending",
       image: "https://example.com/avatar.png",
-      directory: { role: "Developer", city: "Madrid", company: "Acme", university: "", skills: ["React"] },
+      directory: {
+        role: "Developer",
+        city: "Madrid",
+        company: "Acme",
+        university: "",
+        skills: ["React"],
+      },
     });
     rows.set(`pass${suffix}`, {
-      _id: `pass${suffix}`, table: "eventPasses", userId: `user${suffix}`,
-      signupId: `signup${suffix}`, status: "active", code, createdAt: now - 1000, updatedAt: now - 1000,
+      _id: `pass${suffix}`,
+      table: "eventPasses",
+      userId: `user${suffix}`,
+      signupId: `signup${suffix}`,
+      status: "active",
+      code,
+      createdAt: now - 1000,
+      updatedAt: now - 1000,
     });
   }
-  // Only the DB operations used by reception and its public TV projection.
+  // Only the DB operations used by admin check-in and its public TV projection.
   const ctx = {
+    auth: { getUserIdentity: async () => ({ subject: "operator" }) },
     db: {
       query(table: string) {
         let matches = [...rows.values()].filter((row) => row.table === table);
         return {
-          withIndex(_name: string, filter: (q: { eq: (field: string, value: unknown) => void }) => void) {
-            filter({ eq(field, value) { matches = matches.filter((row) => row[field] === value); } });
+          withIndex(
+            _name: string,
+            filter: (q: { eq: (field: string, value: unknown) => void }) => void
+          ) {
+            filter({
+              eq(field, value) {
+                matches = matches.filter((row) => row[field] === value);
+              },
+            });
             return { unique: async () => matches[0] ?? null };
           },
           collect: async () => matches,
@@ -68,15 +97,21 @@ function reception(t: TestContext) {
       },
     },
   } as unknown as MutationCtx;
-  return { ctx, rows, tick: () => { now += 1000; } };
+  return {
+    ctx,
+    rows,
+    tick: () => {
+      now += 1000;
+    },
+  };
 }
 
-test("validating a reception code persists check-in and supplies the real TV profile", async (t) => {
-  const { ctx, rows, tick } = reception(t);
+test("admin code scan persists check-in and supplies the real TV profile", async (t) => {
+  const { ctx, rows, tick } = passesContext(t);
   const baseline = await arrivals._handler(ctx, {});
   assert.deepEqual(baseline.entries, []);
   tick();
-  const result = await staffScan._handler(ctx, { value: " ab7k " });
+  const result = await scan._handler(ctx, { value: " ab7k " });
   assert.equal(result.status, "checked_in");
   const pass = rows.get("pass0");
   assert.equal(pass?.checkedInAt, result.checkedInAt);
@@ -91,39 +126,58 @@ test("validating a reception code persists check-in and supplies the real TV pro
   assert.equal(person.image, "https://example.com/avatar.png");
   assert.equal("code" in person, false);
   assert.equal("email" in person, false);
-  assert.equal(reconcileArrivals({ pending: [], seen: new Set() }, snapshot.entries).pending[0].id, person.id);
+  assert.equal(
+    reconcileArrivals({ pending: [], seen: new Set() }, snapshot.entries)
+      .pending[0].id,
+    person.id
+  );
 });
 
-test("two reception desks queue both arrivals and a repeated code never replays", async (t) => {
-  const { ctx, tick } = reception(t);
+test("two admin scans queue both arrivals and a repeated code never replays", async (t) => {
+  const { ctx, tick } = passesContext(t);
   const { serverTime: since } = await arrivals._handler(ctx, {});
   tick();
-  await staffScan._handler(ctx, { value: "AB7K" });
-  await staffScan._handler(ctx, { value: "CD8M" });
+  await scan._handler(ctx, { value: "AB7K" });
+  await scan._handler(ctx, { value: "CD8M" });
   const first = await arrivals._handler(ctx, { since });
-  const queue = reconcileArrivals({ pending: [], seen: new Set() }, first.entries);
-  assert.deepEqual(queue.pending.map((person) => person.name), ["Persona 0", "Persona 1"]);
+  const queue = reconcileArrivals(
+    { pending: [], seen: new Set() },
+    first.entries
+  );
+  assert.deepEqual(
+    queue.pending.map((person) => person.name),
+    ["Persona 0", "Persona 1"]
+  );
   tick();
-  assert.equal((await staffScan._handler(ctx, { value: "AB7K" })).status, "already_checked_in");
+  assert.equal(
+    (await scan._handler(ctx, { value: "AB7K" })).status,
+    "already_checked_in"
+  );
   const next = await arrivals._handler(ctx, { since });
   assert.equal(next.checkedIn, 2);
-  assert.deepEqual(reconcileArrivals({ ...queue, pending: queue.pending.slice(1) }, next.entries).pending, queue.pending.slice(1));
+  assert.deepEqual(
+    reconcileArrivals(
+      { ...queue, pending: queue.pending.slice(1) },
+      next.entries
+    ).pending,
+    queue.pending.slice(1)
+  );
 });
 
-test("unknown codes do not reach the screen and undo withdraws an arrival", async (t) => {
-  const { ctx, tick } = reception(t);
+test("unknown codes do not reach the screen and admin undo withdraws an arrival", async (t) => {
+  const { ctx, tick } = passesContext(t);
   const { serverTime: since } = await arrivals._handler(ctx, {});
   tick();
-  await assert.rejects(staffScan._handler(ctx, { value: "ZZZZ" }), /desconocida/);
+  await assert.rejects(scan._handler(ctx, { value: "ZZZZ" }), /desconocida/);
   assert.deepEqual((await arrivals._handler(ctx, { since })).entries, []);
-  const result = await staffScan._handler(ctx, { value: "AB7K" });
-  await staffUndoCheckIn._handler(ctx, { passId: result.passId });
+  const result = await scan._handler(ctx, { value: "AB7K" });
+  await undoCheckIn._handler(ctx, { passId: result.passId });
   assert.deepEqual((await arrivals._handler(ctx, { since })).entries, []);
 });
 
 test("legacy cleanup removes only operator metadata and can run twice", async (t) => {
-  const { ctx, rows } = reception(t);
-  await staffScan._handler(ctx, { value: "AB7K" });
+  const { ctx, rows } = passesContext(t);
+  await scan._handler(ctx, { value: "AB7K" });
   const pass = rows.get("pass0");
   assert.ok(pass);
   const checkedInAt = pass.checkedInAt;
@@ -139,36 +193,29 @@ test("legacy cleanup removes only operator metadata and can run twice", async (t
   assert.equal(await dropCheckInMetadata._handler(ctx, {}), 0);
 });
 
-
-test("reception accepts codes before and after the event without an opening time", async (t) => {
-  const { ctx, rows } = reception(t);
-  t.mock.method(Date, "now", () => Date.parse("2026-09-01T08:00:00Z"));
-  const settings = rows.get("settings");
-  assert.ok(settings);
-  settings.phase = "pre_event";
-  assert.equal((await staffScan._handler(ctx, { value: "AB7K" })).status, "checked_in");
-  settings.phase = "ended";
-  assert.equal((await staffScan._handler(ctx, { value: "CD8M" })).status, "checked_in");
-  assert.equal((await staffStatus._handler(ctx, {})).checkedIn, 2);
-});
-
 test("admin ficha check-in marks the existing pass and can run twice", async (t) => {
-  const { ctx, rows } = reception(t);
-  const result = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
+  const { ctx, rows } = passesContext(t);
+  const result = await checkInParticipantRecord(ctx, {
+    signupId: "signup0" as never,
+  });
   assert.equal(result.status, "checked_in");
   assert.equal(rows.get("pass0")?.checkedInAt, result.checkedInAt);
-  const again = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
+  const again = await checkInParticipantRecord(ctx, {
+    signupId: "signup0" as never,
+  });
   assert.equal(again.status, "already_checked_in");
   assert.equal(again.checkedInAt, result.checkedInAt);
 });
 
 test("admin ficha check-in issues a pass when the person has none", async (t) => {
-  const { ctx, rows } = reception(t);
+  const { ctx, rows } = passesContext(t);
   rows.delete("pass0");
-  const result = await checkInParticipantRecord(ctx, { signupId: "signup0" as never });
+  const result = await checkInParticipantRecord(ctx, {
+    signupId: "signup0" as never,
+  });
   assert.equal(result.status, "checked_in");
   const created = [...rows.values()].find(
-    (row) => row.table === "eventPasses" && row.signupId === "signup0",
+    (row) => row.table === "eventPasses" && row.signupId === "signup0"
   );
   assert.ok(created);
   assert.equal(created.checkedInAt, result.checkedInAt);
@@ -176,11 +223,13 @@ test("admin ficha check-in issues a pass when the person has none", async (t) =>
 });
 
 test("admin ficha check-in can recover a cancelled attendee", async (t) => {
-  const { ctx, rows } = reception(t);
+  const { ctx, rows } = passesContext(t);
   const user = rows.get("user0");
   assert.ok(user);
   user.attendanceStatus = "cancelled";
-  const result = await checkInParticipantRecord(ctx, { userId: "user0" as never });
+  const result = await checkInParticipantRecord(ctx, {
+    userId: "user0" as never,
+  });
   assert.equal(result.status, "checked_in");
   assert.equal(rows.get("user0")?.attendanceStatus, "attending");
 });
