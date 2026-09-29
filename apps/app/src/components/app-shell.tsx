@@ -35,7 +35,7 @@ const ADMIN_NAV = [
   { href: "/admin/check-in", label: "Accesos" },
   { href: "/admin/types", label: "Tipos" },
   { href: "/admin/perks", label: "Perks" },
-  { href: "/admin/applications", label: "Solicitudes" },
+  { href: "/admin/perks#solicitudes", label: "Solicitudes" },
   { href: "/admin/tracks", label: "Retos" },
   { href: "/admin/equipos", label: "Equipos" },
   { href: "/admin/submit", label: "Entregas" },
