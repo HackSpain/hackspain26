@@ -272,3 +272,7 @@ functions.
 | 4 | Not eligible (no signup, not accepted, onboarding incomplete, or the hackathon is not running: `EVENT_CLOSED`) |
 | 5 | Could not reach the backend |
 | 130 | Interrupted |
+
+For `--json`, eligibility failures use `NOT_REGISTERED`, `NOT_ACCEPTED`,
+`NOT_ONBOARDED`, or `EVENT_CLOSED` whether the CLI catches the gate before a
+prompt or the server rejects the command.
