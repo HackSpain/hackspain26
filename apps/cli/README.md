@@ -71,7 +71,7 @@ hackspain --json <command>      # one JSON object on stdout, prompts disabled
 Both directions are covered. `hackspain auth login` (browser flow) approves the CLI from a
 signed-in dashboard tab. `hackspain open` goes the other way: the CLI's session mints a
 single-use token (`cliAuth.startWebHandoff` over `/api/cli/rpc`), opens
-`/cli-auth/handoff?hs-token=…&next=/feed`, and that page signs the browser in with the
+`/cli-auth/handoff?next=/feed#hs-token=…`, and that page signs the browser in with the
 `cli-handoff` credentials provider, which sets the ordinary dashboard cookies. Tokens live two
 minutes and die on first use; `--print` shows the link instead of launching a browser, and
 `--json` returns `{ url, path, expiresAt }`. Menu entries and post-login hints point at it, so

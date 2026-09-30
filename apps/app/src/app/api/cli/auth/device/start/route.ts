@@ -6,8 +6,9 @@ const SECRET_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
 
 /**
  * POST { secret } → { code, expiresAt }. Starts a browser login: the CLI
- * keeps the secret, shows /cli-auth?code=<code> to the user, and polls
+ * keeps the secret, opens /cli-auth#hs-code=<code> for the user, and polls
  * /api/cli/auth/device/poll with both until someone signed in approves it.
+ * The approval page also accepts ?hs-code= links from older CLI versions.
  */
 export async function POST(request: Request) {
   const body = await readJson(request);
