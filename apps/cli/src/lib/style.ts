@@ -3,10 +3,27 @@
  * No dependency: a handful of ANSI wrappers that turn into plain text when
  * colour is off (NO_COLOR, --json, or no TTY), so tests and pipes stay clean.
  */
-export const colorEnabled: boolean =
-  !process.env.NO_COLOR &&
-  process.env.TERM !== "dumb" &&
-  (Boolean(process.env.FORCE_COLOR) || Boolean(process.stdout.isTTY));
+export function shouldUseColor(
+  forceColor: string | undefined,
+  isTTY: boolean,
+  noColor?: string,
+  term?: string
+): boolean {
+  if (noColor || term === "dumb") {
+    return false;
+  }
+  if (forceColor === "0" || forceColor?.toLowerCase() === "false") {
+    return false;
+  }
+  return Boolean(forceColor) || isTTY;
+}
+
+export const colorEnabled = shouldUseColor(
+  process.env.FORCE_COLOR,
+  Boolean(process.stdout.isTTY),
+  process.env.NO_COLOR,
+  process.env.TERM
+);
 
 function wrap(open: string, close = "\x1B[39m") {
   return (text: string): string =>
