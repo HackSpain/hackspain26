@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { Font } from "astro:assets";
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
 import CookieConsent from "../components/cookie-consent.astro";
@@ -130,12 +131,14 @@ const webPageJson = JSON.stringify(
     {bingVerify && <meta content={bingVerify} name="msvalidate.01" />}
     {yandexVerify && <meta content={yandexVerify} name="yandex-verification" />}
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Sans:ital,opsz,wght@0,9..40,100..900;1,9..40,100..900&display=swap"
-      rel="stylesheet"
-    >
+    <Font
+      cssVariable="--hs-dm-sans"
+      preload={[{ subset: "latin", style: "normal" }]}
+    />
+    <Font
+      cssVariable="--hs-bungee"
+      preload={[{ subset: "latin", style: "normal" }]}
+    />
     <meta name="generator" content={Astro.generator}>
     <title>{title}</title>
     {includeStructuredData && (
