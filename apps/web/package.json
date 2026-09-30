@@ -16,7 +16,7 @@
     "db:push": "drizzle-kit push",
     "astro": "astro",
     "check": "astro check --minimumFailingSeverity warning",
-    "test": "node --test telemetry-sanitize.test.js",
+    "test": "node --test *.test.js",
     "lint": "oxlint -c oxlint.config.mjs --deny-warnings --report-unused-disable-directives-severity=error . && ultracite check --error-on-warnings",
     "fix": "oxlint -c oxlint.config.mjs --fix . && ultracite fix",
     "format:check": "biome format .",

@@ -1,6 +1,7 @@
 ---
 export const prerender = true;
 
+import { HS_PALETTE } from "../components/theme/palette";
 import { brandSeo } from "../data/landing-meta";
 import Layout from "../layouts/layout.astro";
 
@@ -69,10 +70,10 @@ const logoColors = [
 ] as const;
 
 const supportColors = [
-  { hex: "#F4ECD8", name: "Papel", text: "ink" },
-  { hex: "#2A170F", name: "Tinta", text: "white" },
-  { hex: "#EAB619", name: "Oro", text: "ink" },
-  { hex: "#35858A", name: "Turquesa", text: "white" },
+  { hex: HS_PALETTE.paper.toUpperCase(), name: "Papel", text: "ink" },
+  { hex: HS_PALETTE.ink.toUpperCase(), name: "Tinta", text: "white" },
+  { hex: HS_PALETTE.gold.toUpperCase(), name: "Oro", text: "ink" },
+  { hex: HS_PALETTE.teal.toUpperCase(), name: "Turquesa", text: "white" },
 ] as const;
 
 const navItems = [
