@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useMutation, useQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -50,7 +52,7 @@ function CancelCard({
           aria-label="Ir a la página de inicio de HackSpain"
           className="inline-block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hs-navy"
         >
-          <img src="/logo.svg" width="176" height="56" alt="HackSpain" />
+          <Image src="/logo.svg" width="176" height="56" alt="HackSpain" />
         </a>
         <h1
           id="cancel-title"
@@ -66,7 +68,7 @@ function CancelCard({
 
 function viewFrom(
   done: View | null,
-  lookup: { firstName: string; status: "in" | "canceled" } | null | undefined,
+  lookup: { firstName: string; status: "in" | "canceled" } | null | undefined
 ): View {
   if (done) {
     return done;
@@ -121,8 +123,8 @@ function CancelFlow() {
     try {
       const result = await cancel({ token });
       setDone(result === "invalid" ? "invalid" : result);
-    } catch (error) {
-      setFormError(errorMessage(error, "No se ha podido cancelar"));
+    } catch (caughtError) {
+      setFormError(errorMessage(caughtError, "No se ha podido cancelar"));
     } finally {
       setPending(false);
     }

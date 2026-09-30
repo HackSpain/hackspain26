@@ -54,7 +54,9 @@ async function thumbnailOf(file: File): Promise<File | undefined> {
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob(resolve, "image/webp", 0.85);
   });
-  return blob ? new File([blob], "avatar-thumb", { type: blob.type }) : undefined;
+  return blob
+    ? new File([blob], "avatar-thumb", { type: blob.type })
+    : undefined;
 }
 
 /** Uploads a picture to Convex storage and makes it the profile photo. */
@@ -114,10 +116,18 @@ export function AvatarPicker({
       />
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm" className="min-h-8 cursor-pointer px-3 text-xs">
+          <Button
+            asChild
+            size="sm"
+            className="min-h-8 cursor-pointer px-3 text-xs"
+          >
             <label>
               <ImagePlus className="size-3.5" aria-hidden />
-              {action.pending ? "Subiendo…" : avatarUrl ? "Cambiar foto" : "Subir foto"}
+              {action.pending
+                ? "Subiendo…"
+                : avatarUrl
+                  ? "Cambiar foto"
+                  : "Subir foto"}
               <input
                 ref={fileInput}
                 type="file"
@@ -162,7 +172,9 @@ export function AvatarPicker({
           ) : null}
           {children}
         </div>
-        <p className="text-xs text-hs-brown">JPG, PNG, WebP o GIF de hasta 2 MB.</p>
+        <p className="text-xs text-hs-brown">
+          JPG, PNG, WebP o GIF de hasta 2 MB.
+        </p>
       </div>
     </div>
   );

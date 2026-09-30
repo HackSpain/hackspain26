@@ -37,6 +37,12 @@ function HandoffCard() {
     queryToken
   );
 
+  const displayedError =
+    error ??
+    (credentialsReady && !isLoading && !isAuthenticated && !token
+      ? "Falta el token. Ejecuta hackspain open en tu terminal y abre el enlace que imprime."
+      : null);
+
   useEffect(() => {
     if (!credentialsReady || isLoading || started.current) {
       return;
@@ -49,9 +55,6 @@ function HandoffCard() {
       return;
     }
     if (!token) {
-      setError(
-        "Falta el token. Ejecuta hackspain open en tu terminal y abre el enlace que imprime.",
-      );
       return;
     }
     async function redeem() {
@@ -67,28 +70,35 @@ function HandoffCard() {
       setError(EXPIRED_MESSAGE);
     }
     void redeem();
-  }, [credentialsReady, isAuthenticated, isLoading, next, router, signIn, token]);
+  }, [
+    credentialsReady,
+    isAuthenticated,
+    isLoading,
+    next,
+    router,
+    signIn,
+    token,
+  ]);
 
   return (
     <Card className="hs-enter w-full max-w-md">
       <CardHeader>
         <p className="font-bungee text-xs text-hs-brown">HackSpain 2026</p>
         <CardTitle className="text-2xl sm:text-3xl">
-          {error ? "Enlace no válido" : "Entrando desde la CLI"}
+          {displayedError ? "Enlace no válido" : "Entrando desde la CLI"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error ? (
+        {displayedError ? (
           <>
-            <FormError message={error} />
+            <FormError message={displayedError} />
             <Button asChild variant="outline" className="w-full">
               <Link href="/login">Entrar con el email</Link>
             </Button>
           </>
         ) : (
           <p className="text-sm text-hs-brown" role="status">
-            Un momento: estamos abriendo tu sesión con la cuenta de la
-            terminal.
+            Un momento: estamos abriendo tu sesión con la cuenta de la terminal.
           </p>
         )}
       </CardContent>

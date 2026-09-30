@@ -57,7 +57,10 @@ function Counter({ count, max }: { count: number; max: number }) {
 }
 
 /** Keep only tags the picker can show; old free text would be unselectable. */
-function knownTags(options: typeof SKILL_OPTIONS, tags: readonly string[]): string[] {
+function knownTags(
+  options: typeof SKILL_OPTIONS,
+  tags: readonly string[]
+): string[] {
   return canonicalTags(options, tags).filter((tag) => isOption(options, tag));
 }
 
@@ -101,16 +104,19 @@ export function DirectoryForm({
     card?.city ??
       canonical(CITY_OPTIONS, me.suggestions.city) ??
       me.suggestions.city ??
-      "",
+      ""
   );
   const [university, setUniversity] = useState(card?.university ?? "");
   const [company, setCompany] = useState(card?.company ?? "");
   const [degree, setDegree] = useState(card?.degree ?? "");
   const [skills, setSkills] = useState(() =>
-    knownTags(SKILL_OPTIONS, card?.skills.length ? card.skills : me.suggestions.skills),
+    knownTags(
+      SKILL_OPTIONS,
+      card?.skills.length ? card.skills : me.suggestions.skills
+    )
   );
   const [interests, setInterests] = useState(() =>
-    knownTags(INTEREST_OPTIONS, card?.interests ?? []),
+    knownTags(INTEREST_OPTIONS, card?.interests ?? [])
   );
   const [bio, setBio] = useState(card?.bio ?? "");
   const [pending, setPending] = useState(false);
@@ -125,7 +131,9 @@ export function DirectoryForm({
   const missingAbout = [
     role === "" ? "rol" : null,
     city.trim() === "" ? "ciudad" : null,
-    university.trim() === "" && company.trim() === "" ? "universidad o empresa" : null,
+    university.trim() === "" && company.trim() === ""
+      ? "universidad o empresa"
+      : null,
   ].filter((item): item is string => item !== null);
   const missingTags = [
     skills.length === 0 ? "habilidades" : null,
@@ -157,7 +165,9 @@ export function DirectoryForm({
         })
           .then(() => onSaved?.())
           .catch((caughtError: unknown) =>
-            toast.error(errorMessage(caughtError, "No se pudo guardar la ficha")),
+            toast.error(
+              errorMessage(caughtError, "No se pudo guardar la ficha")
+            )
           )
           .finally(() => setPending(false));
       }}
@@ -193,7 +203,11 @@ export function DirectoryForm({
                 onChange={setUniversity}
                 placeholder="Escribe o elige"
               />
-              <Field label="Empresa" htmlFor="dir-company" meta="Al menos una de las dos">
+              <Field
+                label="Empresa"
+                htmlFor="dir-company"
+                meta="Al menos una de las dos"
+              >
                 <Input
                   id="dir-company"
                   maxLength={80}
@@ -278,13 +292,23 @@ export function DirectoryForm({
         )}
         <div className="flex items-center justify-between gap-3">
           {onBack ? (
-            <Button type="button" variant="outline" disabled={pending} onClick={onBack}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={onBack}
+            >
               <ArrowLeft aria-hidden />
               Atrás
             </Button>
           ) : null}
           {!onBack && onCancel ? (
-            <Button type="button" variant="outline" disabled={pending} onClick={onCancel}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={onCancel}
+            >
               Cancelar
             </Button>
           ) : null}
@@ -313,7 +337,9 @@ export function DirectoryForm({
   return (
     <Card className="mx-auto w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>{gate ? "Tu ficha para el grafo" : "Editar mi ficha"}</CardTitle>
+        <CardTitle>
+          {gate ? "Tu ficha para el grafo" : "Editar mi ficha"}
+        </CardTitle>
         <CardDescription>
           {gate
             ? `El grafo conecta a la gente por ciudad, universidad o empresa, habilidades e intereses. Nos falta ${

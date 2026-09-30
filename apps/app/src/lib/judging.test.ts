@@ -36,7 +36,10 @@ const PROJECTS_PER_JUDGE = 8;
 const JUDGES = Array.from({ length: JUDGE_COUNT }, (_, i) => `j${i}`);
 
 function judgeGraph(pairs: Pair[]): Set<number>[] {
-  const adjacency = Array.from({ length: JUDGE_COUNT }, () => new Set<number>());
+  const adjacency = Array.from(
+    { length: JUDGE_COUNT },
+    () => new Set<number>()
+  );
   for (const pair of pairs) {
     adjacency[pair.judges[0]]?.add(pair.judges[1]);
     adjacency[pair.judges[1]]?.add(pair.judges[0]);
@@ -86,7 +89,10 @@ describe("assignment", () => {
 
   test("validatePairs reports broken guarantees", () => {
     const pairs = pairProjects(JUDGE_COUNT, PROJECT_COUNT);
-    const broken = pairs.map((pair) => ({ ...pair, judges: [...pair.judges] as [number, number] }));
+    const broken = pairs.map((pair) => ({
+      ...pair,
+      judges: [...pair.judges] as [number, number],
+    }));
     must(broken[0]).judges[1] = must(broken[0]).judges[0];
     const problems = validatePairs(broken, JUDGE_COUNT, PROJECT_COUNT);
     assert.ok(problems.length > 0);
@@ -138,10 +144,18 @@ describe("conflicts of interest", () => {
       { judge: must(pairs[0]).judges[0], project: 0 },
       { judge: must(pairs[20]).judges[1], project: 20 },
     ];
-    const result = resolveConflicts(pairs, conflicts, JUDGE_COUNT, PROJECT_COUNT);
+    const result = resolveConflicts(
+      pairs,
+      conflicts,
+      JUDGE_COUNT,
+      PROJECT_COUNT
+    );
     assert.deepEqual(result.unresolved, []);
     assert.ok(result.swaps >= 2);
-    assert.deepEqual(validatePairs(result.pairs, JUDGE_COUNT, PROJECT_COUNT), []);
+    assert.deepEqual(
+      validatePairs(result.pairs, JUDGE_COUNT, PROJECT_COUNT),
+      []
+    );
     for (const conflict of conflicts) {
       const pair = result.pairs.find((row) => row.project === conflict.project);
       assert.ok(pair);
@@ -160,10 +174,18 @@ describe("conflicts of interest", () => {
       { length: PROJECT_COUNT },
       (_, project) => ({ judge: 0, project })
     );
-    const result = resolveConflicts(pairs, conflicts, JUDGE_COUNT, PROJECT_COUNT);
+    const result = resolveConflicts(
+      pairs,
+      conflicts,
+      JUDGE_COUNT,
+      PROJECT_COUNT
+    );
     assert.ok(result.unresolved.length > 0);
     assert.ok(result.unresolved.every((conflict) => conflict.judge === 0));
-    assert.deepEqual(validatePairs(result.pairs, JUDGE_COUNT, PROJECT_COUNT), []);
+    assert.deepEqual(
+      validatePairs(result.pairs, JUDGE_COUNT, PROJECT_COUNT),
+      []
+    );
   });
 });
 
@@ -179,22 +201,41 @@ describe("scores", () => {
 
   test("raw score is the equal-weight mean of the four criteria", () => {
     approx(
-      rawScore({ craftsmanship: 5, creativity: 2, overall: 1, problemSolving: 4 }),
+      rawScore({
+        craftsmanship: 5,
+        creativity: 2,
+        overall: 1,
+        problemSolving: 4,
+      }),
       3
     );
     approx(
-      rawScore({ craftsmanship: 5, creativity: 5, overall: 4, problemSolving: 4 }),
+      rawScore({
+        craftsmanship: 5,
+        creativity: 5,
+        overall: 4,
+        problemSolving: 4,
+      }),
       4.5
     );
   });
 
   test("submission requires all four scores and rejects 3", () => {
-    const scores = { craftsmanship: 5 as const, creativity: 4 as const, overall: 2 as const, problemSolving: 1 as const };
+    const scores = {
+      craftsmanship: 5 as const,
+      creativity: 4 as const,
+      overall: 2 as const,
+      problemSolving: 1 as const,
+    };
     const ok = prepareSubmission({ ownCriteriaComment: "  una nota ", scores });
     assert.equal(ok.status, "submitted");
     assert.equal(ok.ownCriteriaComment, "una nota");
     assert.throws(
-      () => prepareSubmission({ ownCriteriaComment: "", scores: { ...scores, creativity: undefined } }),
+      () =>
+        prepareSubmission({
+          ownCriteriaComment: "",
+          scores: { ...scores, creativity: undefined },
+        }),
       /1, 2, 4 o 5/
     );
     assert.throws(
@@ -205,21 +246,35 @@ describe("scores", () => {
         }),
       /1, 2, 4 o 5/
     );
-    const withoutNote = prepareSubmission({ ownCriteriaComment: "   ", scores });
+    const withoutNote = prepareSubmission({
+      ownCriteriaComment: "   ",
+      scores,
+    });
     assert.equal(withoutNote.ownCriteriaComment, "");
     assert.equal(completeScores({ ...scores, overall: undefined }), null);
   });
 
   test("drafts accept gaps but not invalid values or submitted rows", () => {
-    const draft = prepareDraft(null, { ownCriteriaComment: "", scores: { craftsmanship: 4 } });
+    const draft = prepareDraft(null, {
+      ownCriteriaComment: "",
+      scores: { craftsmanship: 4 },
+    });
     assert.equal(draft.status, "draft");
     assert.deepEqual(draft.scores, { craftsmanship: 4 });
     assert.throws(
-      () => prepareDraft(null, { ownCriteriaComment: "", scores: { craftsmanship: 3 as unknown as 4 } }),
+      () =>
+        prepareDraft(null, {
+          ownCriteriaComment: "",
+          scores: { craftsmanship: 3 as unknown as 4 },
+        }),
       /1, 2, 4 o 5/
     );
     assert.throws(
-      () => prepareDraft({ status: "submitted" }, { ownCriteriaComment: "", scores: {} }),
+      () =>
+        prepareDraft(
+          { status: "submitted" },
+          { ownCriteriaComment: "", scores: {} }
+        ),
       /ya está enviada/
     );
   });
@@ -227,7 +282,10 @@ describe("scores", () => {
   test("judges only write their own assigned assessments", () => {
     assert.doesNotThrow(() => requireAssignedJudge({ judgeId: "j1" }, "j1"));
     assert.throws(() => requireAssignedJudge(null, "j1"), /No tienes asignado/);
-    assert.throws(() => requireAssignedJudge({ judgeId: "j2" }, "j1"), /No tienes asignado/);
+    assert.throws(
+      () => requireAssignedJudge({ judgeId: "j2" }, "j1"),
+      /No tienes asignado/
+    );
   });
 
   test("a second write for the same (project, judge) replaces instead of inserting", () => {
@@ -236,9 +294,17 @@ describe("scores", () => {
   });
 
   test("drafts and incomplete assessments never produce a score", () => {
-    const full = { craftsmanship: 4 as const, creativity: 4 as const, overall: 4 as const, problemSolving: 4 as const };
+    const full = {
+      craftsmanship: 4 as const,
+      creativity: 4 as const,
+      overall: 4 as const,
+      problemSolving: 4 as const,
+    };
     assert.equal(assessmentScore({ ...full, status: "draft" }), null);
-    assert.equal(assessmentScore({ ...full, overall: undefined, status: "submitted" }), null);
+    assert.equal(
+      assessmentScore({ ...full, overall: undefined, status: "submitted" }),
+      null
+    );
     approx(assessmentScore({ ...full, status: "submitted" }) ?? Number.NaN, 4);
   });
 });
@@ -280,9 +346,24 @@ describe("calibration", () => {
     const x = solveLinearSystem(L, d);
     for (let i = 0; i < 3; i += 1) {
       const row = must(L[i]);
-      approx(must(row[0]) * must(x[0]) + must(row[1]) * must(x[1]) + must(row[2]) * must(x[2]), must(d[i]));
+      approx(
+        must(row[0]) * must(x[0]) +
+          must(row[1]) * must(x[1]) +
+          must(row[2]) * must(x[2]),
+        must(d[i])
+      );
     }
-    assert.throws(() => solveLinearSystem([[1, 1], [1, 1]], [1, 1]), /singular/);
+    assert.throws(
+      () =>
+        solveLinearSystem(
+          [
+            [1, 1],
+            [1, 1],
+          ],
+          [1, 1]
+        ),
+      /singular/
+    );
   });
 
   test("agreement on every project gives zero generosity for everyone", () => {
@@ -304,7 +385,10 @@ describe("calibration", () => {
     for (const judge of JUDGES.slice(1)) {
       const other = generosity.get(judge) ?? Number.NaN;
       assert.ok(other < lenient);
-      assert.ok(other <= 1e-9, `partners drift slightly negative, got ${other}`);
+      assert.ok(
+        other <= 1e-9,
+        `partners drift slightly negative, got ${other}`
+      );
     }
   });
 
@@ -325,10 +409,19 @@ describe("calibration", () => {
 
   test("missing assessments leave the calibration network disconnected", () => {
     const all = pairProjects(JUDGE_COUNT, PROJECT_COUNT);
-    assert.equal(calibrationConnected(JUDGES, pairedObservations(() => 4, all)), true);
+    assert.equal(
+      calibrationConnected(
+        JUDGES,
+        pairedObservations(() => 4, all)
+      ),
+      true
+    );
     const firstFive = all.filter((pair) => pair.project < 5);
     assert.equal(
-      calibrationConnected(JUDGES, pairedObservations(() => 4, firstFive)),
+      calibrationConnected(
+        JUDGES,
+        pairedObservations(() => 4, firstFive)
+      ),
       false
     );
     assert.equal(calibrationConnected(JUDGES, []), false);
@@ -402,14 +495,39 @@ describe("ranking", () => {
   test("exact ties share a rank and the next rank skips", () => {
     const results = rankProjects(
       [
-        { project: "a", assessments: [{ judge: "j2", score: 4 }, { judge: "j2", score: 4 }] },
-        { project: "b", assessments: [{ judge: "j2", score: 4 }, { judge: "j2", score: 4 }] },
-        { project: "c", assessments: [{ judge: "j2", score: 5 }, { judge: "j2", score: 5 }] },
-        { project: "d", assessments: [{ judge: "j2", score: 1 }, { judge: "j2", score: 2 }] },
+        {
+          project: "a",
+          assessments: [
+            { judge: "j2", score: 4 },
+            { judge: "j2", score: 4 },
+          ],
+        },
+        {
+          project: "b",
+          assessments: [
+            { judge: "j2", score: 4 },
+            { judge: "j2", score: 4 },
+          ],
+        },
+        {
+          project: "c",
+          assessments: [
+            { judge: "j2", score: 5 },
+            { judge: "j2", score: 5 },
+          ],
+        },
+        {
+          project: "d",
+          assessments: [
+            { judge: "j2", score: 1 },
+            { judge: "j2", score: 2 },
+          ],
+        },
       ],
       new Map()
     );
-    const rankOf = (project: string) => must(results.find((row) => row.project === project)).rank;
+    const rankOf = (project: string) =>
+      must(results.find((row) => row.project === project)).rank;
     assert.equal(rankOf("c"), 1);
     assert.equal(rankOf("a"), 2);
     assert.equal(rankOf("b"), 2);

@@ -42,11 +42,21 @@ export type TrackPlan = {
   unknown: string[];
 };
 
-function resolveFirst(
-  slugs: string[] | undefined,
+export function unregisterSelection(
+  current: Submission["challengeIds"],
+  tracks: Track[]
+): { choices: Track[]; defaultSlug: string | undefined } {
+  const choices = tracks.filter((track) => current.includes(track._id));
+  return {
+    choices,
+    defaultSlug: choices.length === 1 ? choices[0]?.slug : undefined,
+  };
+}
+
+function resolveTrack(
+  slug: string | undefined,
   tracks: Track[]
 ): { track: Track | null; unknown: string[] } {
-  const slug = slugs?.[0];
   if (!slug) {
     return { track: null, unknown: [] };
   }
@@ -60,11 +70,11 @@ function resolveFirst(
 export function planTracks(
   current: Submission["challengeIds"],
   tracks: Track[],
-  ops: { add?: string[]; remove?: string[] }
+  ops: { add?: string; remove?: string }
 ): TrackPlan {
   const held = tracks.filter((t) => current.includes(t._id));
-  if (ops.add?.length) {
-    const { track, unknown } = resolveFirst(ops.add, tracks);
+  if (ops.add) {
+    const { track, unknown } = resolveTrack(ops.add, tracks);
     if (!track) {
       return { added: [], next: current, removed: [], unknown };
     }
@@ -87,8 +97,8 @@ export function planTracks(
       unknown,
     };
   }
-  if (ops.remove?.length) {
-    const { track, unknown } = resolveFirst(ops.remove, tracks);
+  if (ops.remove) {
+    const { track, unknown } = resolveTrack(ops.remove, tracks);
     if (!track) {
       return { added: [], next: current, removed: [], unknown };
     }

@@ -17,7 +17,10 @@ export async function GET(
   }
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!url) {
-    return NextResponse.json({ error: "Convex is not configured" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Convex is not configured" },
+      { status: 503 }
+    );
   }
   try {
     const [insights, totals] = await Promise.all([
@@ -25,7 +28,9 @@ export async function GET(
       new ConvexHttpClient(url).query(api.closing.stats, {}),
     ]);
     const data: ClosingData = { generatedAt: Date.now(), insights, totals };
-    return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch {
     return NextResponse.json(
       { error: "Closing data temporarily unavailable" },

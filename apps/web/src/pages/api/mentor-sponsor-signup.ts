@@ -1,6 +1,7 @@
 import { captureException, captureMessage, withScope } from "@sentry/astro";
 import type { APIRoute } from "astro";
 import { checkBotId } from "botid/server";
+import { hasEventEnded } from "../../data/signup-deadline";
 import { getDb } from "../../db";
 import { mentorSponsorSignups } from "../../db/schema";
 import {
@@ -63,6 +64,10 @@ function isPostgresUniqueViolation(e: unknown): boolean {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  if (hasEventEnded()) {
+    return Response.json({ error: "event_closed" }, { status: 410 });
+  }
+
   // `vercel.json` Bot Protection rewrites only run on Vercel / `vercel dev`, not `astro dev`.
   // Without them, client scripts 404 and BotID checks misbehave; skip locally.
   if (!import.meta.env.DEV) {

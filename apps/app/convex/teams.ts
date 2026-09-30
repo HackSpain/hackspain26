@@ -62,7 +62,9 @@ async function uniqueJoinCode(ctx: MutationCtx): Promise<string> {
 }
 
 function normalizeRepoUrls(raw: string[]): string[] {
-  const out = [...new Set(raw.map(canonicalRepoUrl).filter((url) => url !== null))];
+  const out = [
+    ...new Set(raw.map(canonicalRepoUrl).filter((url) => url !== null)),
+  ];
   if (out.length > MAX_REPOS) {
     fail("VALIDATION", `Máximo ${MAX_REPOS} repositorios`);
   }
@@ -140,7 +142,11 @@ const teamSummaryReturn = v.object({
   ),
   techStack: v.array(v.string()),
   tracks: v.array(
-    v.object({ label: v.string(), logoUrl: v.optional(v.string()), slug: v.string() })
+    v.object({
+      label: v.string(),
+      logoUrl: v.optional(v.string()),
+      slug: v.string(),
+    })
   ),
 });
 
@@ -315,9 +321,7 @@ export const list = onboardedQuery({
             .first(),
         ]);
         const tracks = (
-          await Promise.all(
-            (submission?.challengeIds ?? []).map(getTrack)
-          )
+          await Promise.all((submission?.challengeIds ?? []).map(getTrack))
         )
           .filter((track) => track !== null)
           .map(({ label, logoUrl, slug }) => ({ label, logoUrl, slug }));
@@ -325,11 +329,15 @@ export const list = onboardedQuery({
           members
             .filter((member) => member.status === "member")
             .map(async (member) => {
-              const user = member.userId ? await ctx.db.get(member.userId) : null;
-              // Signup is only a name fallback; onboarded users already have one.
-              const signup = (user?.name === undefined || user.name === null) && member.signupId
-                ? await ctx.db.get(member.signupId)
+              const user = member.userId
+                ? await ctx.db.get(member.userId)
                 : null;
+              // Signup is only a name fallback; onboarded users already have one.
+              const signup =
+                (user?.name === undefined || user.name === null) &&
+                member.signupId
+                  ? await ctx.db.get(member.signupId)
+                  : null;
               return {
                 _id: member._id,
                 avatarUrl: user ? avatarUrlFor(user) : undefined,
@@ -365,7 +373,10 @@ export const list = onboardedQuery({
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
-async function ownedTeam(ctx: MutationCtx, userId: Id<"users">): Promise<Doc<"teams">> {
+async function ownedTeam(
+  ctx: MutationCtx,
+  userId: Id<"users">
+): Promise<Doc<"teams">> {
   const membership = await membershipForUser(ctx, userId);
   const team = membership ? await ctx.db.get(membership.teamId) : null;
   if (!team) {
@@ -402,7 +413,10 @@ export const setLogo = onboardedMutation({
       fail("VALIDATION", "El logo no puede superar 2 MB");
     }
     const previous = team.logoId;
-    await ctx.db.patch(team._id, { logoId: args.imageId, updatedAt: Date.now() });
+    await ctx.db.patch(team._id, {
+      logoId: args.imageId,
+      updatedAt: Date.now(),
+    });
     if (previous && previous !== args.imageId) {
       await ctx.storage.delete(previous);
     }
@@ -742,10 +756,7 @@ export const setRepoUrls = onboardedMutation({
     const team = await requireMemberTeam(ctx);
     const urls = normalizeRepoUrls(args.urls);
     if (args.urls.length > 0 && urls.length === 0) {
-      fail(
-        "VALIDATION",
-        "Introduce URLs de GitHub o slugs org/repo"
-      );
+      fail("VALIDATION", "Introduce URLs de GitHub o slugs org/repo");
     }
     if (urls.length === 0) {
       await ctx.db.patch(team._id, {
@@ -937,7 +948,9 @@ function memberEmails(
   if (member.identifierType === "email") {
     emails.push(member.identifier);
   }
-  return [...new Set(emails.filter((email): email is string => Boolean(email)))];
+  return [
+    ...new Set(emails.filter((email): email is string => Boolean(email))),
+  ];
 }
 
 export const adminDirectory = adminQuery({
@@ -960,7 +973,7 @@ export const adminDirectory = adminQuery({
         .withIndex("by_team", (q) => q.eq("teamId", team._id))
         .first();
       const entered = [];
-      for (const trackId of [...new Set(submission?.challengeIds ?? [])]) {
+      for (const trackId of new Set(submission?.challengeIds)) {
         const track = await ctx.db.get(trackId);
         if (!track) {
           continue;
@@ -975,7 +988,9 @@ export const adminDirectory = adminQuery({
           continue;
         }
         const user = member.userId ? await ctx.db.get(member.userId) : null;
-        const signup = member.signupId ? await ctx.db.get(member.signupId) : null;
+        const signup = member.signupId
+          ? await ctx.db.get(member.signupId)
+          : null;
         const found = memberEmails(user, signup, member);
         emails.push(...found);
         people.push({
@@ -987,7 +1002,9 @@ export const adminDirectory = adminQuery({
       rows.push({
         _id: team._id,
         emails: [...new Set(emails)],
-        members: people.toSorted((a, b) => Number(b.isOwner) - Number(a.isOwner)),
+        members: people.toSorted(
+          (a, b) => Number(b.isOwner) - Number(a.isOwner)
+        ),
         entered,
         name: team.name,
         submitted: submission?.status === "submitted",
@@ -1161,7 +1178,8 @@ async function loadAdminParticipant(
         .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
         .unique()) ?? (await findUserByEmail(ctx, signup.email));
   }
-  const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
+  const resolvedSignup =
+    signup ?? (user ? await getSignupForUser(ctx, user) : null);
   if (!user && !resolvedSignup) {
     throw new Error("Participante no encontrado");
   }
@@ -1256,7 +1274,9 @@ export const adminAssignMember = adminMutation({
       throw new Error("Este participante no tiene email para asignarlo");
     }
     const existing = await membershipsForPerson(ctx, user, signup);
-    if (existing.some((row) => row.teamId === team._id && row.status === "member")) {
+    if (
+      existing.some((row) => row.teamId === team._id && row.status === "member")
+    ) {
       return null;
     }
     await dropMemberships(

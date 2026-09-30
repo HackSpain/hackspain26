@@ -40,11 +40,16 @@ export function pickPeople(
 ): { userIds: string[]; logins: string[] } {
   return {
     logins: actors
-      .toSorted((a, b) => gitActivity(b) - gitActivity(a) || a.login.localeCompare(b.login))
+      .toSorted(
+        (a, b) =>
+          gitActivity(b) - gitActivity(a) || a.login.localeCompare(b.login)
+      )
       .slice(0, limit)
       .map((actor) => actor.login),
     userIds: usage
-      .toSorted((a, b) => b.tokens - a.tokens || a.userId.localeCompare(b.userId))
+      .toSorted(
+        (a, b) => b.tokens - a.tokens || a.userId.localeCompare(b.userId)
+      )
       .slice(0, limit)
       .map((row) => row.userId),
   };

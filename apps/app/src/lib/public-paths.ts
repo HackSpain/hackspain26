@@ -1,11 +1,12 @@
 import { CLOSING_PATH } from "@/lib/closing";
-import { RECEPTION_PATH } from "@/lib/reception";
+
+export const PUBLIC_APP_PATHS = [
+  "/tv",
+  "/cli-auth/handoff",
+  "/final/cancelar",
+  CLOSING_PATH,
+] as const;
 
 export function isPublicAppPath(pathname: string): boolean {
-  return (
-    pathname === "/tv" ||
-    pathname === "/final/cancelar" ||
-    pathname === RECEPTION_PATH ||
-    pathname === CLOSING_PATH
-  );
+  return PUBLIC_APP_PATHS.some((path) => path === pathname);
 }

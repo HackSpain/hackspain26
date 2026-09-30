@@ -51,16 +51,21 @@ El catálogo compartido está en `convex/lib/tvScreens.ts` y el render en
 
 | Vista | Contenido |
 | --- | --- |
+| `countdown` | Aviso de tiempo terminado y ayuda para problemas de envío |
 | `entradas` | Presentaciones de participantes a partir de check-ins reales |
 | `avisos` | Un mensaje propio de esa pantalla, hasta 500 caracteres |
 | `actividad` | Las últimas publicaciones y eventos de GitHub del feed real |
 | `patrocinadores` | Logos del catálogo de patrocinadores existente |
 | `espera` | Franjas animadas y marca HackSpain |
 | `panel` | Todo el hackathon en una pantalla: cifras, equipos, feed y patrocinadores |
+| `panel-mini` | Tokens, pushes, clasificación alterna de equipos y personas y última actividad |
+| `panelv2` | Tokens, equipos, agentes, modelos, feed y patrocinadores en un panel animado |
 | `equipos` | El mapa de participantes por equipo, en vivo, para la fase de formación |
+| `memes` | Memes del feed con muro y aviso cuando llega uno nuevo |
+| `memes-mini` | Un meme cada vez, con letra grande para pantallas pequeñas |
 
-No hay coordenadas, tamaños de cajas ni métricas simuladas en estas vistas
-(salvo la demo del panel, que lo indica en pantalla).
+Estas vistas no permiten editar coordenadas ni tamaños de cajas. Fuera de las
+previsualizaciones con `demo=1`, no utilizan métricas simuladas.
 Sólo las funciones admin pueden cambiar contenido y emitir recargas; el heartbeat
 público únicamente registra presencia y lee la configuración correspondiente.
 Las URLs guardadas sólo incluyen el identificador y la vista, nunca otros parámetros.
@@ -101,6 +106,24 @@ ejecutarlo al ampliar el catálogo de stacks o los harness. Lo que no tiene logo
 enseña sus iniciales. La rotación se detiene con la pestaña
 en segundo plano y respeta movimiento reducido. `/tv?view=panel&demo=1` usa equipos
 y cifras inventados (`src/lib/tv-market.ts`), nunca mezclados con los reales.
+
+## Panel mini y Panel v2
+
+`/tv?screen=hall&view=panel-mini` muestra tokens procesados y pushes a GitHub
+con cifras grandes. Alterna cada 5 segundos entre los tres primeros equipos y
+las tres primeras personas por tokens, y enseña la actividad más reciente del
+feed. Está adaptado a pantallas pequeñas con margen de seguridad.
+
+`/tv?screen=hall&view=panelv2` distribuye en celdas los tokens, la clasificación
+de equipos, los agentes activos, los modelos, el feed y los patrocinadores. Usa
+datos en vivo de Insights y del feed; `demo=1` muestra métricas y publicaciones
+inventadas en ambas variantes.
+
+## Tiempo terminado
+
+`/tv?screen=auditorio&view=countdown` muestra la hora de Madrid y el aviso de
+que se ha terminado el tiempo de trabajo. Indica que no se permiten más commits
+ni cambios en el proyecto y remite a la organización si hay problemas de envío.
 
 ## Equipos
 
@@ -166,9 +189,7 @@ nombre, rol, ciudad, empresa, universidad y hasta tres especialidades según su 
 Los campos vacíos no se muestran; sin foto aparecen sus iniciales. Las franjas cubren
 el cambio y siguen en bucle si no hay entradas pendientes. Respeta movimiento reducido.
 
-La antigua estación web de recepción está retirada: su página responde 404 y
-`/api/reception` responde 410. Sus operaciones de Convex son internas. Los admins
-siguen activando códigos desde `/admin/check-in` con `passes.scan`. La proyección
+Los admins activan códigos desde `/admin/check-in` con `passes.scan`. La proyección
 `passes.arrivals` se conserva para la pantalla de entradas y no publica emails,
 teléfonos ni códigos de acreditación.
 

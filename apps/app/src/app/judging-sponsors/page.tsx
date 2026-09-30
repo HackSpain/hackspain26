@@ -34,14 +34,19 @@ export default function SponsorJudgingPage() {
 function SponsorPanel() {
   const me = useQuery(api.users.me);
   const allowed =
-    me?.role === "admin" ||
-    (me?.sections.includes("judgingSponsors") ?? false);
-  const { pathname, projectId, searchParams, triggerRef, openProject, closeProject } =
-    useProjectPicker();
+    me?.role === "admin" || (me?.sections.includes("judgingSponsors") ?? false);
+  const {
+    pathname,
+    projectId,
+    searchParams,
+    triggerRef,
+    openProject,
+    closeProject,
+  } = useProjectPicker();
   const trackSlug = searchParams.get(TRACK_PARAM) ?? undefined;
   const live = useQuery(
     api.judging.trackCatalog,
-    allowed ? { trackSlug } : "skip",
+    allowed ? { trackSlug } : "skip"
   );
   // Keep the last catalog while a new track loads so the select stays mounted.
   const [shown, setShown] = useState(live);
@@ -71,8 +76,7 @@ function SponsorPanel() {
   const selectedTrack =
     catalog.tracks.find((track) => track._id === catalog.selectedTrackId) ??
     null;
-  const selected =
-    catalog.items.find((item) => item._id === projectId) ?? null;
+  const selected = catalog.items.find((item) => item._id === projectId) ?? null;
 
   return (
     <Page
@@ -101,7 +105,7 @@ function SponsorPanel() {
                     params.set(TRACK_PARAM, slug);
                     params.delete(PROJECT_PARAM);
                   },
-                  "replace",
+                  "replace"
                 );
               }}
             >
@@ -128,7 +132,7 @@ function SponsorPanel() {
             aria-busy={loading}
             className={cn(
               "motion-safe:transition-opacity motion-safe:duration-[var(--duration-exit)] motion-safe:ease-[var(--ease-out)]",
-              loading && "pointer-events-none opacity-50",
+              loading && "pointer-events-none opacity-50"
             )}
           >
             {catalog.items.length === 0 ? (

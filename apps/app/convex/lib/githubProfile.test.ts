@@ -14,10 +14,7 @@ import {
 test("github logins come from handles, urls, or the bare name", () => {
   assert.equal(normalizeGithubLogin("mrloldev"), "mrloldev");
   assert.equal(normalizeGithubLogin("@MrlolDev"), "mrloldev");
-  assert.equal(
-    normalizeGithubLogin("https://github.com/mrloldev"),
-    "mrloldev",
-  );
+  assert.equal(normalizeGithubLogin("https://github.com/mrloldev"), "mrloldev");
   assert.equal(normalizeGithubLogin("github.com/mrloldev/"), "mrloldev");
   assert.equal(normalizeGithubLogin("-bad"), null);
   assert.equal(normalizeGithubLogin("not a user"), null);
@@ -37,7 +34,7 @@ test("language bytes from several repos add up", () => {
     [
       { bytes: 15, name: "TypeScript" },
       { bytes: 4, name: "CSS" },
-    ],
+    ]
   );
 });
 
@@ -45,16 +42,25 @@ test("missing profiles stay cached longer than found ones", () => {
   const now = 1_000_000;
   assert.equal(githubProfileIsStale(null, now), true);
   assert.equal(
-    githubProfileIsStale({ fetchedAt: now - GITHUB_PROFILE_FRESH_MS + 1, missing: false }, now),
-    false,
+    githubProfileIsStale(
+      { fetchedAt: now - GITHUB_PROFILE_FRESH_MS + 1, missing: false },
+      now
+    ),
+    false
   );
   assert.equal(
-    githubProfileIsStale({ fetchedAt: now - GITHUB_PROFILE_FRESH_MS, missing: false }, now),
-    true,
+    githubProfileIsStale(
+      { fetchedAt: now - GITHUB_PROFILE_FRESH_MS, missing: false },
+      now
+    ),
+    true
   );
   assert.equal(
-    githubProfileIsStale({ fetchedAt: now - GITHUB_PROFILE_FRESH_MS, missing: true }, now),
-    false,
+    githubProfileIsStale(
+      { fetchedAt: now - GITHUB_PROFILE_FRESH_MS, missing: true },
+      now
+    ),
+    false
   );
 });
 
@@ -67,9 +73,7 @@ test("the GraphQL user payload becomes a directory profile", () => {
           totalContributions: 40,
           weeks: [
             {
-              contributionDays: [
-                { contributionCount: 2, date: "2026-01-01" },
-              ],
+              contributionDays: [{ contributionCount: 2, date: "2026-01-01" }],
             },
           ],
         },
@@ -84,7 +88,9 @@ test("the GraphQL user payload becomes a directory profile", () => {
       isHireable: true,
       login: "Ada",
       name: "Ada",
-      organizations: { nodes: [{ login: "hackspain", url: "https://github.com/hackspain" }] },
+      organizations: {
+        nodes: [{ login: "hackspain", url: "https://github.com/hackspain" }],
+      },
       pinnedItems: {
         nodes: [
           {
@@ -123,7 +129,7 @@ test("the GraphQL user payload becomes a directory profile", () => {
       url: "https://github.com/Ada",
     },
     "ada",
-    50,
+    50
   );
   assert.equal(profile.login, "Ada");
   assert.equal(profile.bio, "hola");
@@ -174,7 +180,7 @@ test("the REST user payload becomes a directory profile", () => {
     ],
     [{ html_url: "https://github.com/hackspain", login: "hackspain" }],
     "ada",
-    50,
+    50
   );
   assert.equal(profile.login, "Ada");
   assert.equal(profile.followers, 9);

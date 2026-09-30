@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
+import type { Session } from "../src/lib/api";
 import {
   api,
+  authSignOut,
+  authStart,
   authVerify,
   createClient,
   devicePoll,
   deviceStart,
   functionName,
   makeRefresh,
+  uploadImage,
 } from "../src/lib/api";
 import { RemoteError } from "../src/lib/errors";
 
@@ -157,9 +161,47 @@ describe("createClient", () => {
       exitCode: 5,
     });
   });
+
+  test("rejects malformed envelopes and a success body on an error status", async () => {
+    const responses = [
+      { status: 200, body: { ok: true } },
+      { status: 400, body: { ok: false, error: { kind: "error" } } },
+      {
+        status: 200,
+        body: { ok: false, error: { kind: "error", message: "bad" } },
+      },
+      { status: 500, body: { ok: true, value: "wrong status" } },
+      { status: 200, body: { ok: "true", value: "wrong type" } },
+    ];
+    for (const response of responses) {
+      const { fetch } = fakeFetch(() => response);
+      const client = createClient("https://app.test", async () => "tok", fetch);
+      await expect(client.query(api.users.me, {})).rejects.toMatchObject({
+        code: "SERVER",
+      });
+    }
+  });
 });
 
 describe("auth endpoints", () => {
+  test("accepts the documented start and signout responses", async () => {
+    const start = fakeFetch(() => ({
+      status: 200,
+      body: { ok: true, value: { started: true } },
+    }));
+    expect(await authStart("https://app.test", "a@b.c", start.fetch)).toBe(
+      true
+    );
+
+    const signout = fakeFetch(() => ({
+      status: 200,
+      body: { ok: true, value: { signedOut: true } },
+    }));
+    await expect(
+      authSignOut("https://app.test", "tok", signout.fetch)
+    ).resolves.toBeUndefined();
+  });
+
   test("verify returns tokens, refresh rotates them", async () => {
     const { fetch, calls } = fakeFetch((call) => ({
       body: {
@@ -228,4 +270,84 @@ describe("auth endpoints", () => {
       email: "a@b.c",
     });
   });
+
+  test("rejects malformed auth values before accepting or storing tokens", async () => {
+    const malformed = (value: unknown) =>
+      fakeFetch(() => ({ status: 200, body: { ok: true, value } })).fetch;
+
+    await expect(
+      authStart("https://app.test", "a@b.c", malformed({ started: "yes" }))
+    ).rejects.toMatchObject({ code: "SERVER" });
+    await expect(
+      authVerify(
+        "https://app.test",
+        "a@b.c",
+        "00000000",
+        malformed({
+          tokens: { token: "", refreshToken: "r1" },
+        })
+      )
+    ).rejects.toMatchObject({ code: "SERVER" });
+    await expect(
+      makeRefresh("https://app.test", malformed({}))("r1")
+    ).rejects.toMatchObject({ code: "SERVER" });
+    await expect(
+      deviceStart(
+        "https://app.test",
+        "secret",
+        malformed({
+          code: "abc",
+          expiresAt: "tomorrow",
+        })
+      )
+    ).rejects.toMatchObject({ code: "SERVER" });
+    await expect(
+      devicePoll(
+        "https://app.test",
+        "abc",
+        "secret",
+        malformed({
+          status: "approved",
+          email: null,
+        })
+      )
+    ).rejects.toMatchObject({ code: "SERVER" });
+    await expect(
+      authSignOut(
+        "https://app.test",
+        "tok",
+        malformed({
+          signedOut: false,
+        })
+      )
+    ).rejects.toMatchObject({ code: "SERVER" });
+  });
+});
+
+test("upload returns a valid image id and rejects an invalid one", async () => {
+  const session: Session = {
+    authenticated: true,
+    client: createClient("https://app.test", async () => "tok"),
+    token: async () => "tok",
+    url: "https://app.test",
+    urlSource: "flag",
+  };
+  const validFetch = (async () =>
+    Response.json({
+      ok: true,
+      value: { imageId: "image-123" },
+    })) as unknown as typeof fetch;
+  expect(
+    await uploadImage(session, new Uint8Array([1]), "image/png", validFetch)
+  ).toBe("image-123");
+
+  const invalidFetch = (async () =>
+    Response.json({
+      ok: true,
+      value: { imageId: 42 },
+    })) as unknown as typeof fetch;
+
+  await expect(
+    uploadImage(session, new Uint8Array([1]), "image/png", invalidFetch)
+  ).rejects.toMatchObject({ code: "SERVER" });
 });

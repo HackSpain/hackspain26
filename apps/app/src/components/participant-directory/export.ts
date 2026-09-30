@@ -32,9 +32,7 @@ function join(values: readonly string[] | undefined): string {
   return (values ?? []).filter(Boolean).join("; ");
 }
 
-export function directoryCsv(
-  people: readonly DirectoryParticipant[],
-): string {
+export function directoryCsv(people: readonly DirectoryParticipant[]): string {
   return toCsv(
     [...HEADER],
     people.map((person) => [
@@ -61,7 +59,7 @@ export function directoryCsv(
       urlOf(person.project?.urls, "repo") ?? urlOf(person.urls, "repo"),
       urlOf(person.project?.urls, "demo"),
       urlOf(person.project?.urls, "video"),
-    ]),
+    ])
   );
 }
 

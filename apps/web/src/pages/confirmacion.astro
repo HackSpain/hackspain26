@@ -13,13 +13,22 @@ import {
   sharedLinkOriginFromRuntime,
 } from "../lib/runtime-env";
 
-type PageState = "confirmed" | "invalid" | "not_accepted";
+type PageState = "confirm" | "confirmed" | "invalid" | "not_accepted";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const token =
-  new URL(Astro.request.url).searchParams.get("token")?.trim() ?? "";
+const isPost = Astro.request.method === "POST";
+let token = new URL(Astro.request.url).searchParams.get("token")?.trim() ?? "";
+let action = "";
+
+if (isPost) {
+  const formData = await Astro.request.formData();
+  const submittedToken = formData.get("token");
+  const submittedAction = formData.get("action");
+  token = typeof submittedToken === "string" ? submittedToken.trim() : "";
+  action = typeof submittedAction === "string" ? submittedAction : "";
+}
 
 let state: PageState = "invalid";
 let fullName = "";
@@ -30,18 +39,19 @@ let photoVersion: number | null = null;
 if (token && UUID_PATTERN.test(token)) {
   const db = getDb();
 
-  // Opening the link is the confirmation, so the accepted -> confirmed move
-  // happens here. Scoping the update to 'accepted' makes it idempotent: a
-  // second visit updates nothing and still lands on the badge below.
-  await db
-    .update(hackathonSignups)
-    .set({ approvalStatus: "confirmed" })
-    .where(
-      and(
-        eq(hackathonSignups.managementToken, token),
-        eq(hackathonSignups.approvalStatus, "accepted")
-      )
-    );
+  if (isPost && action === "confirm") {
+    // Only an explicit submission can confirm a place. The accepted guard also
+    // keeps retries from changing a signup that was already confirmed or cancelled.
+    await db
+      .update(hackathonSignups)
+      .set({ approvalStatus: "confirmed" })
+      .where(
+        and(
+          eq(hackathonSignups.managementToken, token),
+          eq(hackathonSignups.approvalStatus, "accepted")
+        )
+      );
+  }
 
   const [signup] = await db
     .select({
@@ -62,9 +72,20 @@ if (token && UUID_PATTERN.test(token)) {
     // their avatar as if they had never set one.
     photoDataUri = signup.badgePhoto;
     photoVersion = signup.badgePhotoUpdatedAt?.getTime() ?? null;
-    state =
-      signup.approvalStatus === "confirmed" ? "confirmed" : "not_accepted";
+    if (signup.approvalStatus === "confirmed") {
+      state = "confirmed";
+    } else if (signup.approvalStatus === "accepted") {
+      state = "confirm";
+    } else {
+      state = "not_accepted";
+    }
   }
+}
+
+if (isPost && action === "confirm" && state === "confirmed") {
+  const confirmedUrl = new URL("/confirmacion", Astro.url);
+  confirmedUrl.searchParams.set("token", token);
+  return Astro.redirect(confirmedUrl.toString(), 303);
 }
 
 const whatsappUrl = envFromRuntime("PUBLIC_WHATSAPP_GROUP_URL") ?? null;
@@ -92,6 +113,7 @@ const badgeProps = {
 };
 
 const PAGE_TITLES: Record<PageState, string> = {
+  confirm: "Confirma tu plaza",
   confirmed: "Plaza confirmada",
   invalid: "Enlace no válido",
   not_accepted: "Plaza no disponible",
@@ -120,19 +142,39 @@ const PAGE_TITLES: Record<PageState, string> = {
           <h1 class="font-bungee text-2xl text-hs-ink leading-none">
             {PAGE_TITLES[state]}
           </h1>
-          <p class="mt-3 font-sans text-hs-brown text-sm">
-            {
-              state === "invalid"
-                ? "Este enlace no es válido o ha caducado. Revisa el correo que te enviamos con tu enlace personal."
-                : "Este enlace todavía no tiene una plaza que confirmar. Si crees que es un error, respóndenos al correo de tu solicitud."
-            }
-          </p>
-          <a
-            class="mt-5 inline-flex items-center justify-center border-[3px] border-hs-ink bg-hs-gold px-6 py-2.5 font-bungee text-hs-ink text-sm"
-            href="/"
-          >
-            Ir a HackSpain
-          </a>
+          {state === "confirm" ? (
+            <>
+              <p class="mt-3 font-sans text-hs-brown text-sm">
+                {`Hola ${fullName.trim().split(/\s+/)[0]}. Tienes una plaza reservada. Confirma que asistirás para ver tu acreditación y el enlace al grupo de WhatsApp.`}
+              </p>
+              <form action="/confirmacion" class="mt-5" method="post">
+                <input name="action" type="hidden" value="confirm" />
+                <input name="token" type="hidden" value={token} />
+                <button
+                  class="inline-flex min-h-12 items-center justify-center border-[3px] border-hs-ink bg-hs-gold px-6 py-2.5 font-bungee text-hs-ink text-sm transition-[filter] hover:brightness-95 focus-visible:outline-2 focus-visible:outline-hs-navy focus-visible:outline-offset-2"
+                  type="submit"
+                >
+                  Confirmar plaza
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <p class="mt-3 font-sans text-hs-brown text-sm">
+                {
+                  state === "invalid"
+                    ? "Este enlace no es válido o ha caducado. Revisa el correo que te enviamos con tu enlace personal."
+                    : "Este enlace todavía no tiene una plaza que confirmar. Si crees que es un error, respóndenos al correo de tu solicitud."
+                }
+              </p>
+              <a
+                class="mt-5 inline-flex items-center justify-center border-[3px] border-hs-ink bg-hs-gold px-6 py-2.5 font-bungee text-hs-ink text-sm"
+                href="/"
+              >
+                Ir a HackSpain
+              </a>
+            </>
+          )}
         </div>
       </main>
     )}

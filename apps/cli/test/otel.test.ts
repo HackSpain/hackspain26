@@ -238,6 +238,17 @@ describe("native Claude OTLP", () => {
         OTEL_EXPORTER_OTLP_ENDPOINT: "https://company.test",
       })
     ).toBe("conflict");
+    const previousConfig = { ...config, port: 4319 };
+    writeFileSync(path, JSON.stringify({ env: {} }));
+    expect(installClaudeOtel(path, previousConfig, {})).toBe("installed");
+    const edited = JSON.parse(readFileSync(path, "utf8"));
+    edited.env.OTEL_EXPORTER_OTLP_LOGS_HEADERS = "Authorization=Bearer custom";
+    writeFileSync(path, JSON.stringify(edited));
+    const preserved = readFileSync(path, "utf8");
+    expect(installClaudeOtel(path, config, {}, previousConfig)).toBe(
+      "conflict"
+    );
+    expect(readFileSync(path, "utf8")).toBe(preserved);
     for (const settings of [
       { env: { OTEL_EXPORTER_OTLP_ENDPOINT: "https://company.test" } },
       { env: { CLAUDE_CODE_ENABLE_TELEMETRY: "0" } },
@@ -356,8 +367,6 @@ test("native collector prioritizes OTLP, falls back to transcripts, and recovers
       ""
     );
     restarted = createClaudeOtelCollector(options);
-    await restarted.collector.prepare?.(ctx.log);
-    expect(logs.at(-1)).toContain("OpenTelemetry setup unavailable");
     await native.stop();
     await restarted.collector.prepare?.(ctx.log);
     expect(JSON.parse(readFileSync(configPath, "utf8"))).toEqual(config);
@@ -385,6 +394,75 @@ test("native collector prioritizes OTLP, falls back to transcripts, and recovers
   } finally {
     await native.stop();
     await restarted?.stop();
+    for (const key of keys) {
+      if (previous[key] === undefined) {
+        Reflect.deleteProperty(process.env, key);
+      } else {
+        process.env[key] = previous[key];
+      }
+    }
+  }
+});
+
+test("Claude OTLP moves to a free port when its saved port is occupied", async () => {
+  const keys = ["XDG_STATE_HOME", "LOCALAPPDATA", "CLAUDE_CONFIG_DIR"] as const;
+  const previous = Object.fromEntries(
+    keys.map((key) => [key, process.env[key]])
+  );
+  process.env.XDG_STATE_HOME = dir;
+  process.env.LOCALAPPDATA = dir;
+  process.env.CLAUDE_CONFIG_DIR = join(dir, "claude");
+  mkdirSync(process.env.CLAUDE_CONFIG_DIR, { recursive: true });
+  const occupied = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => new Response("other service"),
+  });
+  if (!occupied.port) {
+    throw new Error("Test server did not bind a TCP port");
+  }
+  const oldConfig = { version: 1 as const, port: occupied.port, token: TOKEN };
+  const configPath = join(stateDir(), "claude-otel.json");
+  const settingsPath = join(process.env.CLAUDE_CONFIG_DIR, "settings.json");
+  mkdirSync(stateDir(), { recursive: true });
+  writeFileSync(configPath, `${JSON.stringify(oldConfig)}\n`);
+  writeFileSync(
+    settingsPath,
+    JSON.stringify({ permissions: { allow: ["Read"] }, env: { EDITOR: "vim" } })
+  );
+  expect(installClaudeOtel(settingsPath, oldConfig, {})).toBe("installed");
+  const native = createClaudeOtelCollector({
+    userId: IDENTITY.userId,
+    listen: true,
+    window: () => WINDOW,
+    paused: () => false,
+  });
+  try {
+    await native.collector.prepare?.(() => undefined);
+    const config = JSON.parse(readFileSync(configPath, "utf8"));
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    expect(config).toMatchObject({ version: 1, token: TOKEN });
+    expect(config.port).not.toBe(oldConfig.port);
+    expect(settings.permissions).toEqual({ allow: ["Read"] });
+    expect(settings.env.EDITOR).toBe("vim");
+    expect(settings.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT).toBe(
+      `http://127.0.0.1:${config.port}/v1/logs`
+    );
+    expect(
+      (
+        await fetch(settings.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${TOKEN}`,
+          },
+          body: JSON.stringify(payload()),
+        })
+      ).status
+    ).toBe(200);
+  } finally {
+    await native.stop();
+    await occupied.stop(true);
     for (const key of keys) {
       if (previous[key] === undefined) {
         Reflect.deleteProperty(process.env, key);

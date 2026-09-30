@@ -13,7 +13,11 @@ function youtubeId(url: URL): string | null {
     const [id] = pathSegments(url.pathname);
     return id ?? null;
   }
-  if (host !== "youtube.com" && host !== "m.youtube.com" && host !== "youtube-nocookie.com") {
+  if (
+    host !== "youtube.com" &&
+    host !== "m.youtube.com" &&
+    host !== "youtube-nocookie.com"
+  ) {
     return null;
   }
   if (url.pathname === "/watch") {

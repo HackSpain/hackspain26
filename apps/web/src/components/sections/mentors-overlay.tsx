@@ -77,8 +77,8 @@ export function MentorsOverlay({ onClose }: { onClose: () => void }) {
           <span className="text-hs-gold">Y MENTORES</span>
         </h2>
         <p className="mx-auto mt-4 max-w-xl font-sans font-semibold text-[clamp(0.9rem,2.2vw,1.1rem)] text-hs-paper/80 leading-snug">
-          Estarán contigo durante el fin de semana: fundadores, operadores e
-          ingenieros de las mejores compañías del ecosistema.
+          Fundadores, operadores e ingenieros de las mejores compañías del
+          ecosistema acompañaron a los equipos durante HackSpain 2026.
         </p>
       </header>
 
@@ -87,10 +87,6 @@ export function MentorsOverlay({ onClose }: { onClose: () => void }) {
           <MentorCard key={m.id} mentor={m} />
         ))}
       </div>
-
-      <p className="mt-10 text-center font-sans font-semibold text-hs-paper/50 text-xs leading-snug sm:text-sm">
-        Y más mentores muy pronto.
-      </p>
     </OverlayDialog>
   );
 }

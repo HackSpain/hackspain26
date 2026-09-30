@@ -1,7 +1,43 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Doc, Id } from "./_generated/dataModel";
-import { describeEvent, pollTargetsForTeam } from "./githubFeed";
+import {
+  describeEvent,
+  githubEventInWindow,
+  githubFeedPollWindow,
+  pollTargetsForTeam,
+} from "./githubFeed";
+
+test("GitHub polling follows the scheduled window and six-hour API delay", () => {
+  const startsAt = Date.parse("2026-09-18T16:00:00Z");
+  const endsAt = Date.parse("2026-09-20T16:00:00Z");
+  const window = { startsAt, endsAt };
+  assert.equal(githubFeedPollWindow({}, startsAt), null);
+  assert.equal(githubFeedPollWindow(window, startsAt - 1), null);
+  assert.deepEqual(githubFeedPollWindow(window, startsAt), window);
+  assert.deepEqual(githubFeedPollWindow(window, endsAt), window);
+  assert.deepEqual(
+    githubFeedPollWindow(window, endsAt + (6 * 60 + 3) * 60_000 - 1),
+    window
+  );
+  assert.equal(
+    githubFeedPollWindow(window, endsAt + (6 * 60 + 3) * 60_000),
+    null
+  );
+  assert.equal(
+    githubFeedPollWindow({ startsAt, endsAt: startsAt }, startsAt),
+    null
+  );
+});
+
+test("late GitHub polls only include activity that occurred during the event", () => {
+  const window = { startsAt: 100, endsAt: 200 };
+  assert.equal(githubEventInWindow(99, window), false);
+  assert.equal(githubEventInWindow(100, window), true);
+  assert.equal(githubEventInWindow(199, window), true);
+  assert.equal(githubEventInWindow(200, window), false);
+  assert.equal(githubEventInWindow(Number.NaN, window), false);
+});
 
 test("every linked team repository gets its own conditional poll target", () => {
   const team = {

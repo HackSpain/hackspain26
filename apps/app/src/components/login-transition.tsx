@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { gsap } from "gsap";
 import { useReducedMotion } from "motion/react";
 import {
@@ -22,7 +24,7 @@ import { cn } from "@/lib/utils";
 const LoginTransitionContext = createContext<(email: string | null) => void>(
   () => {
     // No gate above (a page rendered outside it): nothing to cover.
-  },
+  }
 );
 
 export const LoginTransitionProvider = LoginTransitionContext.Provider;
@@ -77,8 +79,14 @@ export function LoginTransition({
           stagger: 0.06,
         }).from(
           "[data-plate]",
-          { autoAlpha: 0, y: 16, scale: 0.97, duration: 0.4, ease: "power3.out" },
-          "-=0.3",
+          {
+            autoAlpha: 0,
+            y: 16,
+            scale: 0.97,
+            duration: 0.4,
+            ease: "power3.out",
+          },
+          "-=0.3"
         );
         gsap.to("[data-slider]", {
           xPercent: 200,
@@ -131,7 +139,7 @@ export function LoginTransition({
             ease: "expo.inOut",
             stagger: 0.05,
           },
-          "-=0.1",
+          "-=0.1"
         );
       });
     });
@@ -161,7 +169,7 @@ export function LoginTransition({
           data-plate
           className="flex w-full max-w-xs flex-col items-center border-[3px] border-hs-ink bg-hs-paper px-8 py-8"
         >
-          <img
+          <Image
             src="/logo.svg"
             alt="HackSpain"
             width={250}

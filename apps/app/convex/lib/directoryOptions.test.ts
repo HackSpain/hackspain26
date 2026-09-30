@@ -16,12 +16,12 @@ describe("canonical", () => {
     expect(canonical(UNIVERSITY_OPTIONS, "UPM")).toBe(
       "Universidad Politécnica de Madrid"
     );
-    expect(canonical(UNIVERSITY_OPTIONS, "technical university of madrid")).toBe(
-      "Universidad Politécnica de Madrid"
-    );
-    expect(canonical(UNIVERSITY_OPTIONS, "universidad politecnica de madrid.")).toBe(
-      "Universidad Politécnica de Madrid"
-    );
+    expect(
+      canonical(UNIVERSITY_OPTIONS, "technical university of madrid")
+    ).toBe("Universidad Politécnica de Madrid");
+    expect(
+      canonical(UNIVERSITY_OPTIONS, "universidad politecnica de madrid.")
+    ).toBe("Universidad Politécnica de Madrid");
     expect(canonical(CITY_OPTIONS, "Seville")).toBe("Sevilla");
     expect(canonical(CITY_OPTIONS, "san sebastián")).toBe(
       "Donostia / San Sebastián"
@@ -35,13 +35,25 @@ describe("canonical", () => {
   });
 
   test("no two options share a spelling", () => {
-    for (const list of [ROLE_OPTIONS, CITY_OPTIONS, UNIVERSITY_OPTIONS, SKILL_OPTIONS, INTEREST_OPTIONS]) {
+    for (const list of [
+      ROLE_OPTIONS,
+      CITY_OPTIONS,
+      UNIVERSITY_OPTIONS,
+      SKILL_OPTIONS,
+      INTEREST_OPTIONS,
+    ]) {
       const seen = new Map<string, string>();
       for (const option of list) {
         for (const key of [option.value, ...(option.aliases ?? [])]) {
-          const folded = key.normalize("NFD").replaceAll(/[̀-ͯ]/g, "").toLowerCase();
+          const folded = key
+            .normalize("NFD")
+            .replaceAll(/[̀-ͯ]/g, "")
+            .toLowerCase();
           const owner = seen.get(folded);
-          expect(owner === undefined || owner === option.value, `${key} in ${owner} and ${option.value}`).toBe(true);
+          expect(
+            owner === undefined || owner === option.value,
+            `${key} in ${owner} and ${option.value}`
+          ).toBe(true);
           seen.set(folded, option.value);
         }
       }
@@ -52,12 +64,16 @@ describe("canonical", () => {
 
 describe("canonicalTags", () => {
   test("folds aliases and drops duplicates that fold together", () => {
-    expect(canonicalTags(SKILL_OPTIONS, ["ReactJS", "react", "JS", "OpenCV", "yolo", "Cobol"])).toEqual([
-      "React",
-      "JavaScript",
-      "Computer Vision",
-      "Cobol",
-    ]);
+    expect(
+      canonicalTags(SKILL_OPTIONS, [
+        "ReactJS",
+        "react",
+        "JS",
+        "OpenCV",
+        "yolo",
+        "Cobol",
+      ])
+    ).toEqual(["React", "JavaScript", "Computer Vision", "Cobol"]);
   });
 });
 

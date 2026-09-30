@@ -307,9 +307,9 @@ describe("detectStack across the catalog", () => {
     expect(detect("a.py", "from google.cloud import storage\n")).toContain(
       "Google Cloud"
     );
-    expect(detect("a.py", "import cv2\nfrom anthropic import Anthropic\n")).toEqual(
-      expect.arrayContaining(["OpenCV", "Anthropic"])
-    );
+    expect(
+      detect("a.py", "import cv2\nfrom anthropic import Anthropic\n")
+    ).toEqual(expect.arrayContaining(["OpenCV", "Anthropic"]));
     expect(detect("a.py", "from os import path\nimport json\n")).toEqual([
       "Python",
     ]);
@@ -362,7 +362,10 @@ describe("detectStack across the catalog", () => {
       )
     ).toEqual(["C#", "EF Core", "Postgres"]);
     expect(
-      detect("pom.xml", "<groupId>io.quarkus</groupId><groupId>org.hibernate</groupId>")
+      detect(
+        "pom.xml",
+        "<groupId>io.quarkus</groupId><groupId>org.hibernate</groupId>"
+      )
     ).toEqual(["Java", "Quarkus", "Hibernate"]);
   });
 
@@ -388,7 +391,13 @@ describe("detectStack across the catalog", () => {
     );
     expect(stack).toHaveLength(MAX_TECH_STACK);
     expect(stack).toEqual(
-      expect.arrayContaining(["Next.js", "Convex", "Hono", "Anthropic", "Postgres"])
+      expect.arrayContaining([
+        "Next.js",
+        "Convex",
+        "Hono",
+        "Anthropic",
+        "Postgres",
+      ])
     );
     expect(stack).not.toContain("Vitest");
     expect(stack).not.toContain("Storybook");

@@ -15,10 +15,7 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import { cn } from "@/lib/utils";
-import {
-  NO_TEAM_ID,
-  useLiveInsights,
-} from "@/app/insights/use-live-insights";
+import { NO_TEAM_ID, useLiveInsights } from "@/app/insights/use-live-insights";
 import { useBarScale, useCountUp } from "./gsap";
 
 /**
@@ -92,7 +89,7 @@ function MiniStat({
     <div
       className={cn(
         "flex min-w-0 flex-col justify-between border border-hs-ink/15 bg-hs-paper p-[1cqw]",
-        highlight && "bg-hs-gold",
+        highlight && "bg-hs-gold"
       )}
     >
       <p className="text-[0.85cqw] font-semibold tracking-wide text-hs-brown uppercase">
@@ -269,7 +266,12 @@ export function InsightsScatterBox() {
       eyebrow="Consumo y contribuciones"
       className="h-full overflow-hidden border-hs-ink/20 py-3"
     >
-      <TeamScatter teams={teams} onSelect={() => undefined} />
+      <TeamScatter
+        teams={teams}
+        onSelect={() => {
+          /* Venue screens display the chart without opening team details. */
+        }}
+      />
     </Panel>
   );
 }
@@ -277,7 +279,7 @@ export function InsightsScatterBox() {
 export function InsightsLeaderboardBox() {
   const { teams } = useInsightSnapshot();
   const ranked = [...teams]
-    .sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
+    .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
     .slice(0, 8);
   return (
     <Panel
@@ -297,13 +299,15 @@ export function InsightsLeaderboardBox() {
             <span
               className={cn(
                 "flex size-7 shrink-0 items-center justify-center font-mono text-xs",
-                index === 0 ? "bg-hs-gold font-bold" : "text-hs-brown",
+                index === 0 ? "bg-hs-gold font-bold" : "text-hs-brown"
               )}
             >
               {index + 1}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-bold">{team.name}</span>
+              <span className="block truncate text-sm font-bold">
+                {team.name}
+              </span>
               <span className="block truncate text-[11px] text-hs-brown">
                 {team.project}
               </span>

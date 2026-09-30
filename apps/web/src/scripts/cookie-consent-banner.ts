@@ -5,6 +5,7 @@ import { trackPageviewAfterConsent } from "../lib/consent-analytics";
 export function initCookieConsentBanner(): void {
   const banner = document.querySelector("#hs-cookie-banner");
   const acceptBtn = document.querySelector("#hs-cookie-accept");
+  const rejectBtn = document.querySelector("#hs-cookie-reject");
 
   function readConsent(): string | null {
     try {
@@ -19,7 +20,7 @@ export function initCookieConsentBanner(): void {
   }
 
   const existing = readConsent();
-  if (existing !== "granted") {
+  if (existing !== "granted" && existing !== "denied") {
     banner?.classList.remove("hidden");
   }
 
@@ -38,5 +39,9 @@ export function initCookieConsentBanner(): void {
   acceptBtn?.addEventListener("click", () => {
     persist("granted");
     trackPageviewAfterConsent();
+  });
+
+  rejectBtn?.addEventListener("click", () => {
+    persist("denied");
   });
 }

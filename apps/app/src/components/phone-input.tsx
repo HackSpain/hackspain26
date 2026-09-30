@@ -21,12 +21,15 @@ import { cn } from "@/lib/utils";
 /** Regional indicator pair for an ISO code, e.g. "ES" → 🇪🇸. */
 function flag(iso: string): string {
   return String.fromCodePoint(
-    ...[...iso].map((letter) => 0x1_f1_e6 + (letter.codePointAt(0) ?? 65) - 65),
+    ...[...iso].map((letter) => 127_462 + (letter.codePointAt(0) ?? 65) - 65)
   );
 }
 
 function countryByIso(iso: string): PhoneCountry {
-  return PHONE_COUNTRIES.find((country) => country.iso === iso) ?? DEFAULT_PHONE_COUNTRY;
+  return (
+    PHONE_COUNTRIES.find((country) => country.iso === iso) ??
+    DEFAULT_PHONE_COUNTRY
+  );
 }
 
 /** The dropdown entry a stored E.164 number belongs to; Spain when unknown. */
@@ -81,7 +84,7 @@ export function PhoneInput({
 }) {
   const [iso, setIso] = useState(() => countryFor(value).iso);
   const [national, setNational] = useState(() =>
-    groupDigits(value ? (splitPhone(value)?.national ?? "") : ""),
+    groupDigits(value ? (splitPhone(value)?.national ?? "") : "")
   );
   // Complain once the field is left, or as soon as the number is already as
   // long as the country allows (so an extra digit is flagged while typing).
@@ -106,7 +109,10 @@ export function PhoneInput({
           disabled={disabled}
           onValueChange={(next) => update(next, national)}
         >
-          <SelectTrigger className="w-[7.25rem] shrink-0" aria-label="Prefijo del país">
+          <SelectTrigger
+            className="w-[7.25rem] shrink-0"
+            aria-label="Prefijo del país"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent position="popper" className="max-h-72">
@@ -132,7 +138,7 @@ export function PhoneInput({
           className={cn(
             "tabular-nums",
             error &&
-              "border-hs-red focus-visible:border-hs-red focus-visible:ring-hs-red/25",
+              "border-hs-red focus-visible:border-hs-red focus-visible:ring-hs-red/25"
           )}
           onChange={(event) => {
             const typed = event.target.value;
@@ -141,7 +147,7 @@ export function PhoneInput({
               const split = splitPhone(typed);
               if (split) {
                 const country = PHONE_COUNTRIES.find(
-                  (entry) => entry.code === split.code,
+                  (entry) => entry.code === split.code
                 );
                 if (country) {
                   update(country.iso, groupDigits(split.national));

@@ -1,5 +1,8 @@
 /** Collection follows the configured event schedule for every account. */
-export function telemetryWindow(event: { startsAt?: number; endsAt?: number }): {
+export function telemetryWindow(event: {
+  startsAt?: number;
+  endsAt?: number;
+}): {
   startsAt: number;
   endsAt: number;
 } | null {

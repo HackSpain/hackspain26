@@ -1,10 +1,5 @@
 import type { CreateEmailOptions } from "resend";
 import { Resend } from "resend";
-import {
-  ACCEPTANCE_EMAIL_SUBJECT,
-  acceptanceEmailHtml,
-  acceptanceEmailText,
-} from "./acceptance-email-template";
 import { envFromRuntime, siteOriginFromRuntime } from "./runtime-env";
 
 interface ResendConfig {
@@ -188,54 +183,6 @@ El equipo de HackSpain`;
     idempotencyKey: `signup-cancellation/${input.signupId}/${input.requestedAt}`,
     subject: "Confirma la cancelación — HackSpain 2026",
     text,
-    to: input.email,
-  });
-}
-
-export interface SignupAcceptanceEmailInput {
-  email: string;
-  fullName: string;
-  managementToken: string;
-  signupId: string;
-}
-
-function signupAcceptanceUrl(managementToken: string): string {
-  const url = new URL("/confirmacion", siteOriginFromRuntime());
-  url.searchParams.set("token", managementToken);
-  return url.toString();
-}
-
-/**
- * Absolute URL for the raster logo in `public/`. Email clients cannot resolve
- * relative image paths, and a data: URI would be stripped by Gmail.
- */
-function emailLogoUrl(): string {
-  return new URL("/hs-email-logo.png", siteOriginFromRuntime()).toString();
-}
-
-/**
- * Sent when a place is granted. The confirm link is the confirmation: opening it
- * moves the signup from accepted to confirmed. The cancel link points at the
- * ordinary management page, so someone who cannot come can free the place
- * without writing in.
- */
-export function sendSignupAcceptanceEmail(
-  input: SignupAcceptanceEmailInput
-): Promise<ConfirmationEmailResult> {
-  const content = {
-    cancelUrl: signupManagementUrl(input.managementToken),
-    confirmUrl: signupAcceptanceUrl(input.managementToken),
-    firstName: firstNameFrom(input.fullName),
-    logoUrl: emailLogoUrl(),
-  };
-
-  return sendEmail({
-    category: "signup_acceptance",
-    entityReference: `hackspain-signup-acceptance-${input.signupId}`,
-    html: acceptanceEmailHtml(content),
-    idempotencyKey: `signup-acceptance/${input.signupId}`,
-    subject: ACCEPTANCE_EMAIL_SUBJECT,
-    text: acceptanceEmailText(content),
     to: input.email,
   });
 }
