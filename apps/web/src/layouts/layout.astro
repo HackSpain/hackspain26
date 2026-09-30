@@ -1,9 +1,8 @@
 ---
 import "../styles/global.css";
+import { Font } from "astro:assets";
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
-import bungeeLatinUrl from "../assets/fonts/bungee-latin-400-normal.woff2?url";
-import dmSansLatinUrl from "../assets/fonts/dm-sans-latin-variable-normal.woff2?url";
 import CookieConsent from "../components/cookie-consent.astro";
 import LegalFooter from "../components/legal-footer.astro";
 import { ANALYTICS_CONSENT_STORAGE_KEY } from "../data/cookie-consent";
@@ -130,20 +129,14 @@ const webPageJson = JSON.stringify(
     {bingVerify && <meta content={bingVerify} name="msvalidate.01" />}
     {yandexVerify && <meta content={yandexVerify} name="yandex-verification" />}
 
-    <link
-      rel="preload"
-      href={dmSansLatinUrl}
-      as="font"
-      type="font/woff2"
-      crossorigin="anonymous"
-    >
-    <link
-      rel="preload"
-      href={bungeeLatinUrl}
-      as="font"
-      type="font/woff2"
-      crossorigin="anonymous"
-    >
+    <Font
+      cssVariable="--hs-dm-sans"
+      preload={[{ subset: "latin", style: "normal" }]}
+    />
+    <Font
+      cssVariable="--hs-bungee"
+      preload={[{ subset: "latin", style: "normal" }]}
+    />
     <meta name="generator" content={Astro.generator}>
     <title>{title}</title>
     {includeStructuredData && (
