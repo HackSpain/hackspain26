@@ -268,6 +268,40 @@ binaries target `https://hackspain.app`; the optional repository variable
 typecheck, lint, tests, and a host compile on every PR that touches `apps/cli` or the Convex
 functions.
 
+## JSON output
+
+With `--json`, a successful command writes an object shaped like
+`{"ok":true,"data":{}}` to stdout.
+Failures write one JSON object there, for example:
+
+```json
+{"ok":false,"code":"UNAUTHENTICATED","message":"You are not logged in.","hint":"Run `hackspain auth login`.","exitCode":3}
+```
+
+`code` is the machine-readable reason; `message` and the optional `hint` are for
+people. Runtime errors include `exitCode`, but Commander syntax errors omit that
+field. Use the process exit status below to determine success or failure. Diagnostic
+output goes to stderr, so scripts can parse stdout as one object.
+
+Current codes include:
+
+| Code | Meaning |
+| --- | --- |
+| `USAGE`, `VALIDATION` | Invalid command input or server-side validation |
+| `UNAUTHENTICATED`, `SESSION_EXPIRED` | Login required or session expired |
+| `NOT_REGISTERED`, `UNREGISTERED`, `NOT_ACCEPTED`, `NOT_ONBOARDED`, `NOT_ADMIN`, `EVENT_CLOSED` | Participant or event access gate |
+| `NETWORK` | Backend could not be reached |
+| `LOCKED`, `WATCHER_RUNNING` | Another CLI process holds the credentials or watcher lock |
+| `GITHUB`, `NOT_CONFIGURED` | GitHub linking failed or is not configured |
+| `NO_TEAM`, `NO_PROJECT`, `NO_REPO`, `NO_MEMBERS` | Required team, project, repository, or member is missing |
+| `LOGIN_TIMEOUT`, `SIGNIN_FAILED`, `BAD_OTP`, `OTP_EXPIRED`, `TOO_MANY_ATTEMPTS`, `SEND_FAILED` | Sign-in or email-code failure |
+| `ALREADY_IN_TEAM`, `BAD_CODE`, `NOT_FOUND`, `NOT_MEMBER`, `NOT_OWNER`, `NOT_ALLOWED`, `TRACK_FULL`, `ALREADY_SUBMITTED` | Team, track, or project operation rejected |
+| `SINK_HTTP_PENDING`, `SINK_HTTP`, `SINK_HTTP_RECEIPT` | Damaged pending telemetry upload, upload failure, or invalid receipt |
+| `ERROR`, `SERVER`, `UNKNOWN` | Generic or unexpected error |
+
+Other codes can come from the backend or a specific command. Handle known codes
+explicitly and use the exit status for a fallback.
+
 ## Exit codes
 
 | Code | Meaning |
