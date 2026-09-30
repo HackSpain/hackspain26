@@ -102,7 +102,9 @@ export function effectiveSections(
   if (user.role === "admin") {
     return ALL_SECTIONS;
   }
-  const sections = type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS;
+  const sections = type
+    ? normalizeSections(type.sections)
+    : PARTICIPANT_SECTIONS;
   let next = sections;
   if (isSponsorType(type)) {
     next = withSponsorCatalog(sections);
@@ -140,7 +142,9 @@ export function grantsDirectory(
   if (isSponsorType(type) || isMentorType(type)) {
     return true;
   }
-  const sections = type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS;
+  const sections = type
+    ? normalizeSections(type.sections)
+    : PARTICIPANT_SECTIONS;
   return sections.includes("judging") || sections.includes("judgingSponsors");
 }
 

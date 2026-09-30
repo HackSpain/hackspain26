@@ -1,16 +1,19 @@
 ---
-export const prerender = true;
-
 import SignupNavbar from "../components/nav/signup-navbar.astro";
 import { MentorSponsorPage } from "../components/pages/mentor-sponsor-page";
+import { hasEventEnded } from "../data/signup-deadline";
 import Layout from "../layouts/layout.astro";
+
+export const prerender = true;
+
+const closed = hasEventEnded();
 ---
 
 <Layout
   sectionIndex={0}
   allowScroll
-  title="Confirma tu asistencia — HackSpain 2026"
-  description="Formulario para mentores y sponsors de HackSpain 2026: dinos qué días y franjas estarás en el evento."
+  title={closed ? "Confirmación de asistencia cerrada — HackSpain 2026" : "Confirma tu asistencia — HackSpain 2026"}
+  description={closed ? "El formulario de asistencia de mentores y sponsors de HackSpain 2026 está cerrado." : "Formulario para mentores y sponsors de HackSpain 2026: dinos qué días y franjas estarás en el evento."}
   canonicalPathOverride="/asistencia"
   robotsDirectives="noindex, nofollow"
   includeStructuredData={false}
@@ -19,6 +22,26 @@ import Layout from "../layouts/layout.astro";
     <div class="relative z-10 mx-auto max-w-4xl px-0 pt-0 sm:px-4 sm:pt-10">
       <SignupNavbar />
     </div>
-    <MentorSponsorPage client:load />
+    {closed ? (
+      <section
+        class="mx-auto flex min-h-[calc(100dvh-10rem)] max-w-4xl items-center px-4 py-10 sm:px-6"
+      >
+        <div
+          class="w-full border-[3px] border-hs-ink bg-hs-paper p-6 shadow-[8px_8px_0_var(--color-hs-ink)] sm:p-10"
+        >
+          <h1
+            class="text-balance font-bungee text-3xl text-hs-ink leading-tight sm:text-5xl"
+          >
+            Confirmación cerrada
+          </h1>
+          <p class="mt-4 max-w-lg text-pretty font-bold text-hs-brown text-lg">
+            HackSpain 2026 ya terminó. Gracias a los mentores y sponsors que
+            participaron.
+          </p>
+        </div>
+      </section>
+    ) : (
+      <MentorSponsorPage client:load />
+    )}
   </main>
 </Layout>

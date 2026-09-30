@@ -13,8 +13,17 @@ import { externalThumbnail } from "./lib/photo";
 import { histogramReturn, stackHistogram } from "./stack";
 import { messageReturn, widgetReturn } from "./tv";
 import {
-  SCREEN_CLIENT_ID_PATTERN, SCREEN_CONNECTION_LIMIT, SCREEN_LIMIT, SCREEN_OFFLINE_MS,
-  isScreenCounter, isScreenDimension, parseScreenUrl, screenConfig, screenConfigValidator, screenKey, screenPresetValidator,
+  SCREEN_CLIENT_ID_PATTERN,
+  SCREEN_CONNECTION_LIMIT,
+  SCREEN_LIMIT,
+  SCREEN_OFFLINE_MS,
+  isScreenCounter,
+  isScreenDimension,
+  parseScreenUrl,
+  screenConfig,
+  screenConfigValidator,
+  screenKey,
+  screenPresetValidator,
 } from "./lib/tvScreens";
 
 export const snapshotValidator = v.object({
@@ -61,13 +70,15 @@ export const reload = adminMutation({
   },
 });
 
-
 // Only configuration changes invalidate this subscription; presence is a separate table.
 export const screenConfiguration = query({
   args: { key: v.string() },
   returns: v.union(screenConfigValidator, v.null()),
   handler: async (ctx, args) => {
-    const row = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", screenKey(args.key))).unique();
+    const row = await ctx.db
+      .query("tvScreens")
+      .withIndex("by_key", (q) => q.eq("key", screenKey(args.key)))
+      .unique();
     return row ? screenConfig(row) : null;
   },
 });
@@ -75,60 +86,105 @@ export const screenConfiguration = query({
 // Public kiosks can announce their presence, but cannot change an existing screen's commands.
 export const heartbeat = mutation({
   args: {
-    key: v.string(), clientId: v.string(), url: v.string(), initialPreset: screenPresetValidator,
-    width: v.number(), height: v.number(), receivedRevision: v.number(), receivedReloadVersion: v.number(),
+    key: v.string(),
+    clientId: v.string(),
+    url: v.string(),
+    initialPreset: screenPresetValidator,
+    width: v.number(),
+    height: v.number(),
+    receivedRevision: v.number(),
+    receivedReloadVersion: v.number(),
   },
   returns: screenConfigValidator,
   handler: async (ctx, args) => {
     const key = screenKey(args.key);
-    if (!SCREEN_CLIENT_ID_PATTERN.test(args.clientId)) { throw new Error("Identificador no válido"); }
+    if (!SCREEN_CLIENT_ID_PATTERN.test(args.clientId)) {
+      throw new Error("Identificador no válido");
+    }
     const url = parseScreenUrl(args.url);
-    if (!url) { throw new Error("URL de pantalla no válida"); }
+    if (!url) {
+      throw new Error("URL de pantalla no válida");
+    }
     // Only retain display parameters, never auth tokens or other query strings.
     const safeUrl = new URL("/tv", url.origin);
     safeUrl.searchParams.set("screen", key);
-    if (url.searchParams.has("view")) { safeUrl.searchParams.set("view", args.initialPreset); }
-    if (!isScreenCounter(args.receivedRevision) || !isScreenCounter(args.receivedReloadVersion)) {
+    if (url.searchParams.has("view")) {
+      safeUrl.searchParams.set("view", args.initialPreset);
+    }
+    if (
+      !isScreenCounter(args.receivedRevision) ||
+      !isScreenCounter(args.receivedReloadVersion)
+    ) {
       throw new Error("Estado de pantalla no válido");
     }
-    if (!isScreenDimension(args.width) || !isScreenDimension(args.height)) { throw new Error("Resolución no válida"); }
-    let screen = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", key)).unique();
+    if (!isScreenDimension(args.width) || !isScreenDimension(args.height)) {
+      throw new Error("Resolución no válida");
+    }
+    let screen = await ctx.db
+      .query("tvScreens")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
     if (!screen) {
       // Anyone can reach this without a session, so unknown names stop at SCREEN_LIMIT rows.
       // setScreen (admin) is not bounded, and a prepared name never hits this branch.
       const registered = await ctx.db.query("tvScreens").take(SCREEN_LIMIT);
       if (registered.length >= SCREEN_LIMIT) {
-        fail("SCREEN_LIMIT", `Ya hay ${SCREEN_LIMIT} pantallas registradas. Borra alguna o prepara «${key}» desde el panel.`);
+        fail(
+          "SCREEN_LIMIT",
+          `Ya hay ${SCREEN_LIMIT} pantallas registradas. Borra alguna o prepara «${key}» desde el panel.`
+        );
       }
       const id = await ctx.db.insert("tvScreens", {
-        key, preset: args.initialPreset, message: "", revision: 0, reloadVersion: 0,
+        key,
+        preset: args.initialPreset,
+        message: "",
+        revision: 0,
+        reloadVersion: 0,
       });
       screen = await ctx.db.get(id);
     }
-    if (!screen) { throw new Error("Pantalla no disponible"); }
-    const connection = await ctx.db.query("tvScreenConnections")
-      .withIndex("by_client", (q) => q.eq("clientId", args.clientId)).unique();
+    if (!screen) {
+      throw new Error("Pantalla no disponible");
+    }
+    const connection = await ctx.db
+      .query("tvScreenConnections")
+      .withIndex("by_client", (q) => q.eq("clientId", args.clientId))
+      .unique();
     const fields = {
-      screenId: screen._id, clientId: args.clientId, url: safeUrl.toString(),
-      width: args.width, height: args.height, lastSeenAt: Date.now(),
-      receivedRevision: args.receivedRevision, receivedReloadVersion: args.receivedReloadVersion,
+      screenId: screen._id,
+      clientId: args.clientId,
+      url: safeUrl.toString(),
+      width: args.width,
+      height: args.height,
+      lastSeenAt: Date.now(),
+      receivedRevision: args.receivedRevision,
+      receivedReloadVersion: args.receivedReloadVersion,
     };
-    if (connection) { await ctx.db.patch(connection._id, fields); }
-    else {
+    if (connection) {
+      await ctx.db.patch(connection._id, fields);
+    } else {
       // A new device reads its peers once, here; recurring heartbeats never do (see the cleanup below).
       // At the cap it takes over the least recently seen row instead of adding one.
-      const peers = await ctx.db.query("tvScreenConnections")
+      const peers = await ctx.db
+        .query("tvScreenConnections")
         .withIndex("by_screen_last_seen", (q) => q.eq("screenId", screen._id))
-        .order("asc").take(SCREEN_CONNECTION_LIMIT);
-      const recycled = peers.length >= SCREEN_CONNECTION_LIMIT ? peers[0] : undefined;
-      if (recycled) { await ctx.db.patch(recycled._id, fields); }
-      else { await ctx.db.insert("tvScreenConnections", fields); }
+        .order("asc")
+        .take(SCREEN_CONNECTION_LIMIT);
+      const recycled =
+        peers.length >= SCREEN_CONNECTION_LIMIT ? peers[0] : undefined;
+      if (recycled) {
+        await ctx.db.patch(recycled._id, fields);
+      } else {
+        await ctx.db.insert("tvScreenConnections", fields);
+      }
     }
     // Read only expired connections: reading live peers makes their heartbeats conflict.
-    const old = await ctx.db.query("tvScreenConnections")
+    const old = await ctx.db
+      .query("tvScreenConnections")
       .withIndex("by_screen_last_seen", (q) =>
         q.eq("screenId", screen._id).lt("lastSeenAt", Date.now() - 86_400_000)
-      ).take(100);
+      )
+      .take(100);
     for (const row of old) {
       await ctx.db.delete(row._id);
     }
@@ -140,15 +196,19 @@ export const screens = adminQuery({
   args: {},
   handler: async (ctx) => {
     const [rows, connections] = await Promise.all([
-      ctx.db.query("tvScreens").collect(), ctx.db.query("tvScreenConnections").collect(),
+      ctx.db.query("tvScreens").collect(),
+      ctx.db.query("tvScreenConnections").collect(),
     ]);
     return {
       serverTime: Date.now(),
-      screens: rows.toSorted((a, b) => a.key.localeCompare(b.key)).map((screen) => ({
-        ...screen,
-        connections: connections.filter((connection) => connection.screenId === screen._id)
-          .toSorted((a, b) => b.lastSeenAt - a.lastSeenAt),
-      })),
+      screens: rows
+        .toSorted((a, b) => a.key.localeCompare(b.key))
+        .map((screen) => ({
+          ...screen,
+          connections: connections
+            .filter((connection) => connection.screenId === screen._id)
+            .toSorted((a, b) => b.lastSeenAt - a.lastSeenAt),
+        })),
     };
   },
 });
@@ -159,12 +219,27 @@ export const setScreen = adminMutation({
   handler: async (ctx, args) => {
     const key = screenKey(args.key);
     const message = args.message.trim();
-    if (message.length > 500) { throw new Error("El aviso admite hasta 500 caracteres"); }
-    const screen = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", key)).unique();
+    if (message.length > 500) {
+      throw new Error("El aviso admite hasta 500 caracteres");
+    }
+    const screen = await ctx.db
+      .query("tvScreens")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
     if (screen) {
-      await ctx.db.patch(screen._id, { preset: args.preset, message, revision: screen.revision + 1 });
+      await ctx.db.patch(screen._id, {
+        preset: args.preset,
+        message,
+        revision: screen.revision + 1,
+      });
     } else {
-      await ctx.db.insert("tvScreens", { key, preset: args.preset, message, revision: 0, reloadVersion: 0 });
+      await ctx.db.insert("tvScreens", {
+        key,
+        preset: args.preset,
+        message,
+        revision: 0,
+        reloadVersion: 0,
+      });
     }
     return null;
   },
@@ -174,8 +249,13 @@ export const reloadScreen = adminMutation({
   args: { key: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const screen = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", screenKey(args.key))).unique();
-    if (!screen) { throw new Error("Pantalla no encontrada"); }
+    const screen = await ctx.db
+      .query("tvScreens")
+      .withIndex("by_key", (q) => q.eq("key", screenKey(args.key)))
+      .unique();
+    if (!screen) {
+      throw new Error("Pantalla no encontrada");
+    }
     await ctx.db.patch(screen._id, { reloadVersion: screen.reloadVersion + 1 });
     return null;
   },
@@ -185,13 +265,27 @@ export const removeScreen = adminMutation({
   args: { key: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const screen = await ctx.db.query("tvScreens").withIndex("by_key", (q) => q.eq("key", screenKey(args.key))).unique();
-    if (!screen) { return null; }
-    const connections = await ctx.db.query("tvScreenConnections").withIndex("by_screen", (q) => q.eq("screenId", screen._id)).collect();
-    if (connections.some((connection) => Date.now() - connection.lastSeenAt < SCREEN_OFFLINE_MS)) {
+    const screen = await ctx.db
+      .query("tvScreens")
+      .withIndex("by_key", (q) => q.eq("key", screenKey(args.key)))
+      .unique();
+    if (!screen) {
+      return null;
+    }
+    const connections = await ctx.db
+      .query("tvScreenConnections")
+      .withIndex("by_screen", (q) => q.eq("screenId", screen._id))
+      .collect();
+    if (
+      connections.some(
+        (connection) => Date.now() - connection.lastSeenAt < SCREEN_OFFLINE_MS
+      )
+    ) {
       throw new Error("Desconecta la pantalla antes de borrarla");
     }
-    for (const connection of connections) { await ctx.db.delete(connection._id); }
+    for (const connection of connections) {
+      await ctx.db.delete(connection._id);
+    }
     await ctx.db.delete(screen._id);
     return null;
   },
@@ -202,7 +296,10 @@ export const INSIGHT_BUCKETS = 24;
 
 export function githubActivityKind(
   event: string
-): typeof GITHUB_FEED_EVENTS.push | typeof GITHUB_FEED_EVENTS.pullRequest | null {
+):
+  | typeof GITHUB_FEED_EVENTS.push
+  | typeof GITHUB_FEED_EVENTS.pullRequest
+  | null {
   if (event === GITHUB_FEED_EVENTS.push) {
     return GITHUB_FEED_EVENTS.push;
   }
@@ -368,7 +465,9 @@ export const insightsPeople = query({
     for (const value of args.logins.slice(0, INSIGHT_PEOPLE)) {
       const user = await ctx.db
         .query("users")
-        .withIndex("by_github", (q) => q.eq("githubUsername", value.toLowerCase()))
+        .withIndex("by_github", (q) =>
+          q.eq("githubUsername", value.toLowerCase())
+        )
         .first();
       if (user) {
         found.set(user._id, user);

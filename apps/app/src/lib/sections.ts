@@ -126,6 +126,7 @@ export function isPathAllowedWhenClosed(
     return true;
   }
   return OPEN_WHEN_CLOSED.some(
-    (href) => pathname === href || (href !== "/" && pathname.startsWith(`${href}/`))
+    (href) =>
+      pathname === href || (href !== "/" && pathname.startsWith(`${href}/`))
   );
 }

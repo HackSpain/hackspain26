@@ -37,7 +37,7 @@ type PostArgs = {
  */
 function optimisticPost(
   me: Me | undefined,
-  preview: string | undefined,
+  preview: string | undefined
 ): OptimisticUpdate<PostArgs> {
   return (localStore, args) => {
     const now = Date.now();
@@ -65,7 +65,7 @@ function optimisticPost(
       text: args.text.trim(),
     };
     for (const { args: queryArgs, value } of localStore.getAllQueries(
-      api.feed.list,
+      api.feed.list
     )) {
       if (!value || queryArgs.before !== undefined) {
         continue;
@@ -109,7 +109,9 @@ export function FeedComposer() {
       return;
     }
     if (file && file.size > MAX_IMAGE_BYTES) {
-      toast.error("La imagen no puede superar 5 MB.", { id: "feed-image-size" });
+      toast.error("La imagen no puede superar 5 MB.", {
+        id: "feed-image-size",
+      });
       return;
     }
     inFlight.current = true;
@@ -126,7 +128,7 @@ export function FeedComposer() {
         imageId = await uploadToConvex(
           uploadUrl,
           attached,
-          "No se pudo subir la imagen",
+          "No se pudo subir la imagen"
         );
         setUploading(false);
       }

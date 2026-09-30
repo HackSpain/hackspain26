@@ -6,9 +6,20 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { FormError, FormNotice, LoadingText, errorMessage } from "@/components/page";
+import {
+  FormError,
+  FormNotice,
+  LoadingText,
+  errorMessage,
+} from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 type ScanResult = {
@@ -51,7 +62,9 @@ export function AdminEventControls() {
   const codesReady = total > 0 && sent >= total;
   const completed = total > 0 && stats.checkedIn >= total;
   const currentStep = codesReady ? 1 : 0;
-  const pace = (stats.checkInTimes ?? []).filter((at) => at >= now - 60_000).length;
+  const pace = (stats.checkInTimes ?? []).filter(
+    (at) => at >= now - 60_000
+  ).length;
   let finalStepText = `Faltan ${Math.max(total - stats.checkedIn, 0)} por llegar`;
   if (completed) {
     finalStepText = "Ya estamos todos";
@@ -68,7 +81,8 @@ export function AdminEventControls() {
     },
     {
       title: "Registrar llegadas",
-      description: "Los admins pueden activar los códigos en cualquier momento.",
+      description:
+        "Los admins pueden activar los códigos en cualquier momento.",
       icon: Radio,
     },
   ];
@@ -86,7 +100,9 @@ export function AdminEventControls() {
       setScanResult(await scan({ value }));
       setCode("");
     } catch (caughtError) {
-      setScanError(errorMessage(caughtError, "No se ha podido activar el código"));
+      setScanError(
+        errorMessage(caughtError, "No se ha podido activar el código")
+      );
     } finally {
       setScanning(false);
       window.requestAnimationFrame(() => codeInputRef.current?.focus());
@@ -104,7 +120,9 @@ export function AdminEventControls() {
       setScanResult(null);
       codeInputRef.current?.focus();
     } catch (caughtError) {
-      setScanError(errorMessage(caughtError, "No se ha podido deshacer el check-in"));
+      setScanError(
+        errorMessage(caughtError, "No se ha podido deshacer el check-in")
+      );
     } finally {
       setScanning(false);
     }
@@ -117,10 +135,12 @@ export function AdminEventControls() {
     try {
       const result = await issueAndEmailAccepted({});
       setNotice(
-        `${result.emailed} emails en cola. El progreso se actualizará al confirmar el envío.`,
+        `${result.emailed} emails en cola. El progreso se actualizará al confirmar el envío.`
       );
     } catch (caughtError) {
-      setError(errorMessage(caughtError, "No se han podido preparar los códigos"));
+      setError(
+        errorMessage(caughtError, "No se han podido preparar los códigos")
+      );
     } finally {
       setSendingCodes(false);
       setConfirmingSend(false);
@@ -149,7 +169,10 @@ export function AdminEventControls() {
       <FormError message={error} />
       <FormNotice message={notice} />
 
-      <ol aria-label="Progreso de la entrada" className="grid gap-4 md:grid-cols-2">
+      <ol
+        aria-label="Progreso de la entrada"
+        className="grid gap-4 md:grid-cols-2"
+      >
         {steps.map((step, index) => {
           const done = index < currentStep || (index === 1 && completed);
           const active = !completed && index === currentStep;
@@ -170,7 +193,8 @@ export function AdminEventControls() {
                 {confirmingSend ? (
                   <div className="space-y-2">
                     <p className="text-sm">
-                      Se enviarán los códigos pendientes a los participantes aceptados.
+                      Se enviarán los códigos pendientes a los participantes
+                      aceptados.
                     </p>
                     <Button
                       className="min-h-11 w-full"
@@ -201,7 +225,9 @@ export function AdminEventControls() {
             );
           } else {
             content = (
-              <p className="text-sm font-semibold tabular-nums text-hs-brown">{finalStepText}</p>
+              <p className="text-sm font-semibold tabular-nums text-hs-brown">
+                {finalStepText}
+              </p>
             );
           }
           return (
@@ -216,15 +242,29 @@ export function AdminEventControls() {
                 >
                   {done ? <Check className="size-4" /> : index + 1}
                 </span>
-                <span className={`h-0.5 flex-1 ${done ? "bg-hs-teal" : "bg-hs-ink/15"}`} />
+                <span
+                  className={`h-0.5 flex-1 ${done ? "bg-hs-teal" : "bg-hs-ink/15"}`}
+                />
               </div>
-              <Card className={`flex-1 ${active ? "border-hs-teal bg-hs-teal/5" : ""}`}>
+              <Card
+                className={`flex-1 ${active ? "border-hs-teal bg-hs-teal/5" : ""}`}
+              >
                 <CardHeader>
-                  <Icon className="mb-2 size-6 text-hs-brown" strokeWidth={2} aria-hidden />
-                  <CardTitle className="text-base text-balance">{step.title}</CardTitle>
-                  <CardDescription className="text-pretty">{step.description}</CardDescription>
+                  <Icon
+                    className="mb-2 size-6 text-hs-brown"
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                  <CardTitle className="text-base text-balance">
+                    {step.title}
+                  </CardTitle>
+                  <CardDescription className="text-pretty">
+                    {step.description}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="mt-auto space-y-3">{content}</CardContent>
+                <CardContent className="mt-auto space-y-3">
+                  {content}
+                </CardContent>
               </Card>
             </li>
           );
@@ -238,7 +278,8 @@ export function AdminEventControls() {
           </div>
           <CardTitle>Activar código</CardTitle>
           <CardDescription className="text-pretty">
-            Introduce el código de cuatro caracteres que recibió el participante.
+            Introduce el código de cuatro caracteres que recibió el
+            participante.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -257,7 +298,7 @@ export function AdminEventControls() {
                   event.target.value
                     .toUpperCase()
                     .replaceAll(PASS_CODE_CHARS, "")
-                    .slice(0, 4),
+                    .slice(0, 4)
                 )
               }
               placeholder="AB7K"
@@ -295,7 +336,9 @@ export function AdminEventControls() {
                       : "Ya estaba dentro"}
                   </CardTitle>
                   <CardDescription>
-                    <span className="font-semibold text-hs-ink">{scanResult.name}</span>
+                    <span className="font-semibold text-hs-ink">
+                      {scanResult.name}
+                    </span>
                     <br />
                     {scanResult.email}
                   </CardDescription>

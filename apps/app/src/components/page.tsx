@@ -38,7 +38,9 @@ export function Page({
             title
           )}
           {description ? (
-            <p className="mt-1 text-sm font-medium text-hs-brown">{description}</p>
+            <p className="mt-1 text-sm font-medium text-hs-brown">
+              {description}
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -137,7 +139,9 @@ export function Field({
         <div className="flex items-baseline justify-between gap-3">
           <Label htmlFor={htmlFor}>{label}</Label>
           {meta ? (
-            <span className="shrink-0 text-xs tabular-nums text-hs-brown">{meta}</span>
+            <span className="shrink-0 text-xs tabular-nums text-hs-brown">
+              {meta}
+            </span>
           ) : null}
         </div>
         {hint ? <p className="text-sm text-hs-brown">{hint}</p> : null}
@@ -169,10 +173,14 @@ export function RecordCard({
             {badges}
           </CardTitle>
         ) : (
-          <CardTitle className="min-w-0 break-words text-base">{title}</CardTitle>
+          <CardTitle className="min-w-0 break-words text-base">
+            {title}
+          </CardTitle>
         )}
         {subtitle ? (
-          <CardDescription className="min-w-0 break-all">{subtitle}</CardDescription>
+          <CardDescription className="min-w-0 break-all">
+            {subtitle}
+          </CardDescription>
         ) : null}
       </CardHeader>
       {children || actions ? (

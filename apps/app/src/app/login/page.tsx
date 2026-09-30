@@ -31,7 +31,8 @@ const CODE_LENGTH = 8;
 /** Seconds before "Reenviar" works again, so a nervous tap does not queue emails. */
 const RESEND_COOLDOWN_S = 30;
 
-const NETWORK_MESSAGE = "No hay conexión. Comprueba tu red e inténtalo otra vez.";
+const NETWORK_MESSAGE =
+  "No hay conexión. Comprueba tu red e inténtalo otra vez.";
 
 /**
  * Copy for every way the send step can fail. `code` comes from
@@ -39,10 +40,14 @@ const NETWORK_MESSAGE = "No hay conexión. Comprueba tu red e inténtalo otra ve
  * the page does not understand. Signups are closed, so the unregistered
  * copy points at the organisers rather than at the form.
  */
-const SEND_ERROR_MESSAGE: Record<LoginErrorCode | "NETWORK" | "UNKNOWN", string> = {
+const SEND_ERROR_MESSAGE: Record<
+  LoginErrorCode | "NETWORK" | "UNKNOWN",
+  string
+> = {
   INVALID_EMAIL: "Ese email no parece válido. Revísalo e inténtalo otra vez.",
   NETWORK: NETWORK_MESSAGE,
-  SEND_FAILED: "No hemos podido enviar el código ahora mismo. Inténtalo en un minuto.",
+  SEND_FAILED:
+    "No hemos podido enviar el código ahora mismo. Inténtalo en un minuto.",
   UNKNOWN: "No hemos podido enviar el código. Inténtalo otra vez.",
   UNREGISTERED:
     "No encontramos ninguna inscripción con ese email. Prueba con el email que usaste al apuntarte; si crees que falta tu solicitud, escribe a la organización.",
@@ -272,7 +277,9 @@ export default function LoginPage() {
                           onClick={() => void resendCode()}
                           disabled={resendIn > 0 || pending}
                         >
-                          {resendIn > 0 ? `Reenviar (${resendIn}s)` : "Reenviar"}
+                          {resendIn > 0
+                            ? `Reenviar (${resendIn}s)`
+                            : "Reenviar"}
                         </TextLink>
                       </p>
                     </div>

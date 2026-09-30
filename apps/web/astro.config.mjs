@@ -3,7 +3,7 @@
 import react from "@astrojs/react";
 import vercel from "@astrojs/vercel";
 import sentry from "@sentry/astro";
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 
 const sourceMapsConfigured = Boolean(
   process.env.BETTER_STACK_API_TOKEN &&
@@ -17,6 +17,24 @@ export default defineConfig({
   // Astro 7 defaults to JSX whitespace rules ("jsx"); keep the HTML-aware
   // compression from Astro 6 so spaces between inline elements survive.
   compressHTML: true,
+  fonts: [
+    {
+      name: "Bungee",
+      cssVariable: "--hs-bungee",
+      provider: fontProviders.fontsource(),
+      weights: [400],
+      styles: ["normal"],
+      subsets: ["latin", "latin-ext"],
+    },
+    {
+      name: "DM Sans",
+      cssVariable: "--hs-dm-sans",
+      provider: fontProviders.fontsource(),
+      weights: ["100 1000"],
+      styles: ["normal", "italic"],
+      subsets: ["latin", "latin-ext"],
+    },
+  ],
   integrations: [
     react(),
     sentry({

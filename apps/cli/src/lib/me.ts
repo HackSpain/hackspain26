@@ -22,9 +22,9 @@ export type GateState =
 
 const GATE_CODE: Record<Exclude<GateState, "admin" | "ready">, string> = {
   closed: "EVENT_CLOSED",
-  onboarding: "NOT_ONBOARDING",
-  pending: "NOT_PENDING",
-  unregistered: "NOT_UNREGISTERED",
+  onboarding: "NOT_ONBOARDED",
+  pending: "NOT_ACCEPTED",
+  unregistered: "NOT_REGISTERED",
 };
 
 const EVENT_DATE = new Intl.DateTimeFormat("en-GB", {

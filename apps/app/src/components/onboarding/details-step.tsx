@@ -40,7 +40,11 @@ export function DetailsStep({
 
   // Until the field is touched, the stored number (already E.164) stands.
   const phone = phoneDraft?.e164 ?? status?.phone ?? "";
-  const phoneError = phoneDraft ? phoneDraft.error : phone ? null : "Escribe tu número.";
+  const phoneError = phoneDraft
+    ? phoneDraft.error
+    : phone
+      ? null
+      : "Escribe tu número.";
   const consent = consentDraft ?? status?.notificationConsent ?? false;
   // Coming back to this step after finishing it, the terms are already accepted.
   const termsAccepted = termsDraft ?? status?.onboardingComplete ?? false;
@@ -160,7 +164,11 @@ export function DetailsStep({
           disabled={pending || !termsAccepted || phoneError !== null}
           onClick={() => void finish()}
         >
-          {pending ? "Guardando…" : status.onboardingComplete ? "Continuar" : "Confirmar"}
+          {pending
+            ? "Guardando…"
+            : status.onboardingComplete
+              ? "Continuar"
+              : "Confirmar"}
           <ArrowRight aria-hidden />
         </Button>
       </StepNav>

@@ -31,14 +31,14 @@ export async function POST(request: Request) {
     const me = await fetchQuery(
       api.users.me,
       {},
-      { token: result.tokens.token },
+      { token: result.tokens.token }
     );
     return ok({
       status: "approved",
       tokens: result.tokens,
       email: me?.email ?? null,
     });
-  } catch (err) {
-    return fromError(err);
+  } catch (caughtError) {
+    return fromError(caughtError);
   }
 }

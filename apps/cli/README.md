@@ -46,7 +46,7 @@ hackspain team dissolve          # owner deletes a team nobody else is in
 hackspain stack set nextjs convex claude-code
 
 hackspain track list
-hackspain track register [slug] | unregister
+hackspain track register [slug] | unregister [slug]
 hackspain project show | list   # submit is on the dashboard: /submit
 hackspain perk list
 
@@ -95,6 +95,12 @@ everyone plus GitHub activity from every team repo, with pictures inline where t
 draw them and links elsewhere; `↑`/`↓` scroll it, `g` returns to live), and a status bar with the
 next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
 `--plain` use the line-by-line mode instead.
+
+`hackspain --json watch --once` writes one result object to stdout after its scan.
+Continuous `hackspain --json watch` keeps progress and organiser messages on stderr,
+then writes one result object to stdout when stopped. The result includes the exit
+status and totals for scans, events by harness, skipped events and notifications;
+an incomplete one-shot upload reports `status: "pending"` and exits 5.
 
 Every 30 s it reads the local session logs of the
 AI coding harnesses it finds (Claude Code, Codex, Cursor, GitHub Copilot CLI, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin), normalises them into one
@@ -223,6 +229,8 @@ opened and merged pull requests, releases and tags. Nothing is read from the hac
 push often and it shows up.
 
 Tracks live on the project: `track register` saves a draft with the chosen challenges.
+When entered in THEKER and another track, `track unregister` asks which one to leave;
+scripts should pass its slug.
 Final submit is on the dashboard (`/submit`): YouTube video, public GitHub repo, optional
 product link. Commands that need a team, an accepted signup, or completed
 onboarding fail fast with the next step to take.
@@ -270,3 +278,7 @@ functions.
 | 4 | Not eligible (no signup, not accepted, onboarding incomplete, or the hackathon is not running: `EVENT_CLOSED`) |
 | 5 | Could not reach the backend |
 | 130 | Interrupted |
+
+For `--json`, eligibility failures use `NOT_REGISTERED`, `NOT_ACCEPTED`,
+`NOT_ONBOARDED`, or `EVENT_CLOSED` whether the CLI catches the gate before a
+prompt or the server rejects the command.

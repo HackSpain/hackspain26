@@ -6,12 +6,8 @@ import {
   anytimeOnboardedQuery,
 } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
-import {
-  isHttpUrl,
-  normalizeInputs,
-  validateAnswers,
-  type PerkInput,
-} from "./lib/perkInputs";
+import { isHttpUrl, normalizeInputs, validateAnswers } from "./lib/perkInputs";
+import type { PerkInput } from "./lib/perkInputs";
 import { membershipForUser } from "./lib/team";
 import {
   claimStatusValidator,
@@ -41,7 +37,7 @@ function perkFields(perk: Doc<"perks">) {
 async function claimWithCode(
   ctx: QueryCtx,
   claim: Doc<"perkClaims">,
-  perk: Doc<"perks">,
+  perk: Doc<"perks">
 ) {
   let code: string | undefined;
   if (claim.codeId) {
@@ -88,7 +84,9 @@ function cleanInstructions(raw: string, required = false): string | undefined {
 
 function cleanInputs(raw: PerkInput[]): PerkInput[] {
   const result = normalizeInputs(raw);
-  if (!result.ok) throw new Error(result.message);
+  if (!result.ok) {
+    throw new Error(result.message);
+  }
   return result.inputs;
 }
 
@@ -124,7 +122,7 @@ export const listCatalog = anytimeOnboardedQuery({
     v.object({
       perk: perkReturn,
       claim: v.union(claimReturn, v.null()),
-    }),
+    })
   ),
   handler: async (ctx) => {
     const perks = await ctx.db
@@ -136,7 +134,7 @@ export const listCatalog = anytimeOnboardedQuery({
       const claim = await ctx.db
         .query("perkClaims")
         .withIndex("by_perk_and_user", (q) =>
-          q.eq("perkId", perk._id).eq("userId", ctx.user._id),
+          q.eq("perkId", perk._id).eq("userId", ctx.user._id)
         )
         .unique();
       let availableCodes: number | undefined;
@@ -144,7 +142,7 @@ export const listCatalog = anytimeOnboardedQuery({
         const unused = await ctx.db
           .query("perkCodes")
           .withIndex("by_perk_available", (q) =>
-            q.eq("perkId", perk._id).eq("available", true),
+            q.eq("perkId", perk._id).eq("available", true)
           )
           .collect();
         availableCodes = unused.length;
@@ -166,14 +164,18 @@ export const claim = anytimeOnboardedMutation({
   returns: v.id("perkClaims"),
   handler: async (ctx, args) => {
     const perk = await ctx.db.get(args.perkId);
-    if (!perk || !perk.active) throw new Error("Perk no encontrado");
+    if (!perk || !perk.active) {
+      throw new Error("Perk no encontrado");
+    }
     const existing = await ctx.db
       .query("perkClaims")
       .withIndex("by_perk_and_user", (q) =>
-        q.eq("perkId", perk._id).eq("userId", ctx.user._id),
+        q.eq("perkId", perk._id).eq("userId", ctx.user._id)
       )
       .unique();
-    if (existing) throw new Error("Ya has reclamado este perk");
+    if (existing) {
+      throw new Error("Ya has reclamado este perk");
+    }
 
     switch (perk.type) {
       case "external": {
@@ -190,7 +192,9 @@ export const claim = anytimeOnboardedMutation({
     }
 
     const checked = validateAnswers(perk.inputs ?? [], args.answers);
-    if (!checked.ok) fail("VALIDATION", checked.message);
+    if (!checked.ok) {
+      fail("VALIDATION", checked.message);
+    }
     const answers = checked.answers.length > 0 ? checked.answers : undefined;
 
     const now = Date.now();
@@ -198,10 +202,12 @@ export const claim = anytimeOnboardedMutation({
       const unused = await ctx.db
         .query("perkCodes")
         .withIndex("by_perk_available", (q) =>
-          q.eq("perkId", perk._id).eq("available", true),
+          q.eq("perkId", perk._id).eq("available", true)
         )
         .first();
-      if (!unused) throw new Error("No quedan códigos para este perk");
+      if (!unused) {
+        throw new Error("No quedan códigos para este perk");
+      }
       await ctx.db.patch(unused._id, {
         available: false,
         assignedTo: ctx.user._id,
@@ -248,7 +254,7 @@ export const adminList = adminQuery({
       codeCount: v.number(),
       availableCodes: v.number(),
       claimCount: v.number(),
-    }),
+    })
   ),
   handler: async (ctx) => {
     const perks = await ctx.db.query("perks").collect();
@@ -314,7 +320,9 @@ export const adminCreate = adminMutation({
     if (args.type === "code") {
       for (const raw of args.codes ?? []) {
         const code = raw.trim();
-        if (!code) continue;
+        if (!code) {
+          continue;
+        }
         await ctx.db.insert("perkCodes", {
           perkId,
           code,
@@ -343,21 +351,31 @@ export const adminUpdate = adminMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const perk = await ctx.db.get(args.perkId);
-    if (!perk) throw new Error("Perk no encontrado");
+    if (!perk) {
+      throw new Error("Perk no encontrado");
+    }
     const external = perk.type === "external";
     const patch: Partial<Doc<"perks">> = { updatedAt: Date.now() };
     if (args.company !== undefined) {
       const company = args.company.trim();
-      if (!company) throw new Error("La empresa no puede estar vacía");
+      if (!company) {
+        throw new Error("La empresa no puede estar vacía");
+      }
       patch.company = company;
     }
     if (args.title !== undefined) {
       const title = args.title.trim();
-      if (!title) throw new Error("El título no puede estar vacío");
+      if (!title) {
+        throw new Error("El título no puede estar vacío");
+      }
       patch.title = title;
     }
-    if (args.value !== undefined) patch.value = args.value.trim();
-    if (args.description !== undefined) patch.description = args.description.trim();
+    if (args.value !== undefined) {
+      patch.value = args.value.trim();
+    }
+    if (args.description !== undefined) {
+      patch.description = args.description.trim();
+    }
     if (args.sponsorUrl !== undefined) {
       patch.sponsorUrl = cleanSponsorUrl(args.sponsorUrl, external);
     }
@@ -368,13 +386,17 @@ export const adminUpdate = adminMutation({
       const inputs = cleanInputs(args.inputs);
       patch.inputs = inputs.length > 0 ? inputs : undefined;
     }
-    if (args.active !== undefined) patch.active = args.active;
+    if (args.active !== undefined) {
+      patch.active = args.active;
+    }
     await ctx.db.patch(perk._id, patch);
 
     if (perk.type === "code" && args.codesToAdd) {
       for (const raw of args.codesToAdd) {
         const code = raw.trim();
-        if (!code) continue;
+        if (!code) {
+          continue;
+        }
         await ctx.db.insert("perkCodes", {
           perkId: perk._id,
           code,
@@ -388,39 +410,41 @@ export const adminUpdate = adminMutation({
 
 async function teamNameFor(ctx: QueryCtx, userId: Doc<"users">["_id"]) {
   const membership = await membershipForUser(ctx, userId);
-  if (!membership) return undefined;
+  if (!membership) {
+    return;
+  }
   const team = await ctx.db.get(membership.teamId);
   return team?.name;
 }
 
 async function attachCodeToClaim(
   ctx: MutationCtx,
-  claim: Doc<"perkClaims">,
-  raw: string,
+  application: Doc<"perkClaims">,
+  raw: string
 ) {
   const code = raw.trim();
   if (!code) {
-    return claim.codeId;
+    return application.codeId;
   }
   const existing = await ctx.db
     .query("perkCodes")
-    .withIndex("by_perk", (q) => q.eq("perkId", claim.perkId))
+    .withIndex("by_perk", (q) => q.eq("perkId", application.perkId))
     .collect();
   const copies = existing.filter((row) => row.code === code);
   const match =
-    copies.find((row) => row.assignedTo === claim.userId) ??
+    copies.find((row) => row.assignedTo === application.userId) ??
     copies.find((row) => row.available);
   const now = Date.now();
   if (copies.length > 0 && !match) {
     throw new Error("Ese código ya está asignado a otra persona");
   }
   if (match) {
-    if (match.assignedTo && match.assignedTo !== claim.userId) {
+    if (match.assignedTo && match.assignedTo !== application.userId) {
       throw new Error("Ese código ya está asignado a otra persona");
     }
-    if (claim.codeId && claim.codeId !== match._id) {
-      const previous = await ctx.db.get(claim.codeId);
-      if (previous && previous.assignedTo === claim.userId) {
+    if (application.codeId && application.codeId !== match._id) {
+      const previous = await ctx.db.get(application.codeId);
+      if (previous && previous.assignedTo === application.userId) {
         await ctx.db.patch(previous._id, {
           available: true,
           assignedTo: undefined,
@@ -430,27 +454,29 @@ async function attachCodeToClaim(
     }
     await ctx.db.patch(match._id, {
       available: false,
-      assignedTo: claim.userId,
+      assignedTo: application.userId,
       assignedAt: now,
     });
     return match._id;
   }
   return await ctx.db.insert("perkCodes", {
-    perkId: claim.perkId,
+    perkId: application.perkId,
     code,
     available: false,
-    assignedTo: claim.userId,
+    assignedTo: application.userId,
     assignedAt: now,
   });
 }
 
 async function releaseClaimCode(
   ctx: MutationCtx,
-  claim: Doc<"perkClaims">,
+  application: Doc<"perkClaims">
 ) {
-  if (!claim.codeId) return;
-  const assigned = await ctx.db.get(claim.codeId);
-  if (assigned && assigned.assignedTo === claim.userId) {
+  if (!application.codeId) {
+    return;
+  }
+  const assigned = await ctx.db.get(application.codeId);
+  if (assigned && assigned.assignedTo === application.userId) {
     await ctx.db.patch(assigned._id, {
       available: true,
       assignedTo: undefined,
@@ -473,7 +499,7 @@ export const adminRequests = adminQuery({
       status: claimStatusValidator,
       code: v.optional(v.string()),
       createdAt: v.number(),
-    }),
+    })
   ),
   handler: async (ctx, args) => {
     const claims = await ctx.db
@@ -481,26 +507,26 @@ export const adminRequests = adminQuery({
       .withIndex("by_perk", (q) => q.eq("perkId", args.perkId))
       .collect();
     const rows = [];
-    for (const claim of claims) {
-      const user = await ctx.db.get(claim.userId);
+    for (const application of claims) {
+      const user = await ctx.db.get(application.userId);
       let code: string | undefined;
-      if (claim.codeId) {
-        const assigned = await ctx.db.get(claim.codeId);
+      if (application.codeId) {
+        const assigned = await ctx.db.get(application.codeId);
         code = assigned?.code;
       }
       rows.push({
-        _id: claim._id,
-        userId: claim.userId,
+        _id: application._id,
+        userId: application.userId,
         name: user?.name,
         email: user?.email,
-        teamName: await teamNameFor(ctx, claim.userId),
-        answers: claim.answers ?? [],
-        status: claim.status,
+        teamName: await teamNameFor(ctx, application.userId),
+        answers: application.answers ?? [],
+        status: application.status,
         code,
-        createdAt: claim.createdAt,
+        createdAt: application.createdAt,
       });
     }
-    return rows.sort((a, b) => b.createdAt - a.createdAt);
+    return rows.toSorted((a, b) => b.createdAt - a.createdAt);
   },
 });
 
@@ -517,7 +543,7 @@ export const adminCodes = adminQuery({
       email: v.optional(v.string()),
       teamName: v.optional(v.string()),
       assignedAt: v.optional(v.number()),
-    }),
+    })
   ),
   handler: async (ctx, args) => {
     const codes = await ctx.db
@@ -534,7 +560,9 @@ export const adminCodes = adminQuery({
         userId: row.assignedTo,
         name: user?.name,
         email: user?.email,
-        teamName: row.assignedTo ? await teamNameFor(ctx, row.assignedTo) : undefined,
+        teamName: row.assignedTo
+          ? await teamNameFor(ctx, row.assignedTo)
+          : undefined,
         assignedAt: row.assignedAt,
       });
     }
@@ -567,64 +595,77 @@ export const adminApplications = adminQuery({
       code: v.optional(v.string()),
       answers: v.array(v.object({ label: v.string(), value: v.string() })),
       createdAt: v.number(),
-    }),
+    })
   ),
   handler: async (ctx, args) => {
-    const claims = args.status
+    const status = args.status;
+    const claims = status
       ? await ctx.db
           .query("perkClaims")
-          .withIndex("by_status", (q) => q.eq("status", args.status!))
+          .withIndex("by_status", (q) => q.eq("status", status))
           .collect()
       : await ctx.db.query("perkClaims").collect();
-    const emailClaims = claims.filter((claim) => claim.type === "email");
+    const emailClaims = claims.filter(
+      (application) => application.type === "email"
+    );
     const rows = [];
-    for (const claim of emailClaims) {
-      const perk = await ctx.db.get(claim.perkId);
-      const user = await ctx.db.get(claim.userId);
-      if (!perk) continue;
+    for (const application of emailClaims) {
+      const perk = await ctx.db.get(application.perkId);
+      const user = await ctx.db.get(application.userId);
+      if (!perk) {
+        continue;
+      }
       let code: string | undefined;
-      if (claim.codeId) {
-        const assigned = await ctx.db.get(claim.codeId);
+      if (application.codeId) {
+        const assigned = await ctx.db.get(application.codeId);
         code = assigned?.code;
       }
-      const labels = new Map((perk.inputs ?? []).map((input) => [input.key, input.label]));
+      const labels = new Map(
+        (perk.inputs ?? []).map((input) => [input.key, input.label])
+      );
       rows.push({
-        _id: claim._id,
-        perkId: claim.perkId,
+        _id: application._id,
+        perkId: application.perkId,
         title: perk.title,
         company: perk.company,
-        userId: claim.userId,
+        userId: application.userId,
         email: user?.email,
         name: user?.name,
-        status: claim.status,
+        status: application.status,
         code,
-        answers: (claim.answers ?? []).map((answer) => ({
+        answers: (application.answers ?? []).map((answer) => ({
           label: labels.get(answer.key) ?? answer.key,
           value: answer.value,
         })),
-        createdAt: claim.createdAt,
+        createdAt: application.createdAt,
       });
     }
-    return rows.sort((a, b) => b.createdAt - a.createdAt);
+    return rows.toSorted((a, b) => b.createdAt - a.createdAt);
   },
 });
 
 export const adminSetApplicationStatus = adminMutation({
   args: {
     claimId: v.id("perkClaims"),
-    status: v.union(v.literal("pending"), v.literal("added"), v.literal("rejected")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("added"),
+      v.literal("rejected")
+    ),
     code: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const claim = await ctx.db.get(args.claimId);
-    if (!claim) throw new Error("Solicitud no encontrada");
-    if (claim.type !== "email") {
+    const application = await ctx.db.get(args.claimId);
+    if (!application) {
+      throw new Error("Solicitud no encontrada");
+    }
+    if (application.type !== "email") {
       throw new Error("Aquí solo se revisan solicitudes de perks por email");
     }
     if (args.status === "rejected") {
-      await releaseClaimCode(ctx, claim);
-      await ctx.db.patch(claim._id, {
+      await releaseClaimCode(ctx, application);
+      await ctx.db.patch(application._id, {
         status: args.status,
         codeId: undefined,
         updatedAt: Date.now(),
@@ -633,9 +674,9 @@ export const adminSetApplicationStatus = adminMutation({
     }
     const codeId =
       args.status === "added"
-        ? await attachCodeToClaim(ctx, claim, args.code ?? "")
-        : claim.codeId;
-    await ctx.db.patch(claim._id, {
+        ? await attachCodeToClaim(ctx, application, args.code ?? "")
+        : application.codeId;
+    await ctx.db.patch(application._id, {
       status: args.status,
       codeId,
       updatedAt: Date.now(),

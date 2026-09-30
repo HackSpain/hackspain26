@@ -21,19 +21,26 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 function useMilestonePlayback(
   data: LiveInsightData,
-  replayInitial: boolean,
+  replayInitial: boolean
 ): TokenMilestone | undefined {
   const milestones = useMemo(
     () =>
       reachedTokenMilestones(
         data.samples,
-        data.teams.filter((team) => team.id !== NO_TEAM_ID),
-    ),
-    [data.samples, data.teams],
+        data.teams.filter((team) => team.id !== NO_TEAM_ID)
+      ),
+    [data.samples, data.teams]
   );
-  const [playback, setPlayback] = useState(() => replayInitial && data.status === "ok"
-    ? updateMilestonePlayback(createMilestonePlayback(), milestones, Date.now(), true)
-    : createMilestonePlayback());
+  const [playback, setPlayback] = useState(() =>
+    replayInitial && data.status === "ok"
+      ? updateMilestonePlayback(
+          createMilestonePlayback(),
+          milestones,
+          Date.now(),
+          true
+        )
+      : createMilestonePlayback()
+  );
 
   useEffect(() => {
     if (data.status !== "ok" && data.status !== "empty") {
@@ -41,18 +48,27 @@ function useMilestonePlayback(
     }
     const now = Date.now();
     // oxlint-disable-next-line react/set-state-in-effect -- reconcile an external telemetry poll with the timed broadcast queue.
-    setPlayback((current) => updateMilestonePlayback(current, milestones, now, replayInitial));
+    setPlayback((current) =>
+      updateMilestonePlayback(current, milestones, now, replayInitial)
+    );
   }, [data.status, milestones, replayInitial]);
 
-  const nextAt = playback.active ? playback.endsAt : playback.pending.length ? playback.availableAt : undefined;
+  const nextAt = playback.active
+    ? playback.endsAt
+    : playback.pending.length
+      ? playback.availableAt
+      : undefined;
   useEffect(() => {
     if (nextAt === undefined) {
       return;
     }
-    const timer = window.setTimeout(() => {
-      const now = Date.now();
-      setPlayback((current) => advanceMilestonePlayback(current, now));
-    }, Math.max(0, nextAt - Date.now()));
+    const timer = window.setTimeout(
+      () => {
+        const now = Date.now();
+        setPlayback((current) => advanceMilestonePlayback(current, now));
+      },
+      Math.max(0, nextAt - Date.now())
+    );
     return () => window.clearTimeout(timer);
   }, [nextAt]);
 
@@ -84,16 +100,22 @@ export function MilestoneBroadcast({
         >
           <div className={styles.layout}>
             <header className={styles.header}>
-              <span className={styles.badge}><Trophy aria-hidden /> Nuevo hito</span>
+              <span className={styles.badge}>
+                <Trophy aria-hidden /> Nuevo hito
+              </span>
               <span className={styles.eyebrow}>
                 {active.kind === "team" ? "Equipo" : "Todo HackSpain"}
               </span>
             </header>
 
             <div className={styles.content}>
-              <div className={styles.lights} aria-hidden><ArenaLights /></div>
+              <div className={styles.lights} aria-hidden>
+                <ArenaLights />
+              </div>
               <h2 className={styles.name}>
-                {active.kind === "team" ? `El equipo ${active.team.name}` : "Entre todos"}
+                {active.kind === "team"
+                  ? `El equipo ${active.team.name}`
+                  : "Entre todos"}
               </h2>
               <p className={styles.achievement}>
                 {active.kind === "team" ? "Ha alcanzado" : "Hemos alcanzado"}
@@ -113,7 +135,10 @@ export function MilestoneBroadcast({
               aria-hidden
               initial={{ scaleX: 1 }}
               animate={{ scaleX: reduced ? 1 : 0 }}
-              transition={{ duration: reduced ? 0 : BROADCAST_MS / 1000, ease: "linear" }}
+              transition={{
+                duration: reduced ? 0 : BROADCAST_MS / 1000,
+                ease: "linear",
+              }}
             />
           </div>
         </motion.aside>

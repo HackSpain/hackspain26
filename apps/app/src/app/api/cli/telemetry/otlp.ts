@@ -15,7 +15,10 @@ import type { TelemetryEvent } from "./rawtree";
  * moment it happened.
  */
 
-type AnyValue = { stringValue: string } | { intValue: string } | { doubleValue: number };
+type AnyValue =
+  | { stringValue: string }
+  | { intValue: string }
+  | { doubleValue: number };
 type KeyValue = { key: string; value: AnyValue };
 
 export type OtlpLogRecord = {
@@ -176,7 +179,9 @@ export async function exportTelemetryAsOtlpLogs(
   }
   const receipt: unknown = await response.json().catch(() => null);
   const rejected =
-    typeof receipt === "object" && receipt !== null && "partialSuccess" in receipt
+    typeof receipt === "object" &&
+    receipt !== null &&
+    "partialSuccess" in receipt
       ? Number(
           (receipt.partialSuccess as { rejectedLogRecords?: unknown } | null)
             ?.rejectedLogRecords ?? 0

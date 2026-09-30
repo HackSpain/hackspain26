@@ -1,6 +1,6 @@
 import { isGithubHandle } from "./github-handle";
 
-export const GITHUB_AVATAR_SIZE = 460;
+const GITHUB_AVATAR_SIZE = 460;
 const UPSTREAM_TIMEOUT_MS = 4000;
 
 export type GithubAvatarResult =

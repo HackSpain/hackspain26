@@ -44,7 +44,14 @@ const EMPTY: LiveInsightData = {
 };
 
 const HARNESS_IDS = new Set<string>(HARNESSES.map((harness) => harness.id));
-const TEAM_COLORS = ["#d96b2a", "#35858a", "#1e3958", "#8b6b9f", "#a67516", "#677558"];
+const TEAM_COLORS = [
+  "#d96b2a",
+  "#35858a",
+  "#1e3958",
+  "#8b6b9f",
+  "#a67516",
+  "#677558",
+];
 
 export function toInsightData(payload: TvInsights): LiveInsightData {
   const known = new Set(payload.teams.map((team) => team.id));
@@ -94,7 +101,11 @@ export function toInsightData(payload: TvInsights): LiveInsightData {
     if (!known.has(row.teamId)) {
       continue;
     }
-    const sample = sampleFor(row.teamId, mainHarness(row.teamId, 0), row.bucket);
+    const sample = sampleFor(
+      row.teamId,
+      mainHarness(row.teamId, 0),
+      row.bucket
+    );
     sample.commits += row.pushes;
     sample.pullRequests += row.pullRequests;
   }

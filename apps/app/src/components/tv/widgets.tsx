@@ -3,7 +3,12 @@
 import { useRef } from "react";
 import { useLiveInsights } from "@/app/insights/use-live-insights";
 import type { TvFontWeight, TvWidget } from "@/lib/tv";
-import { tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from "@/lib/tv";
+import {
+  tvFontSizeClass,
+  tvFontSizeStyle,
+  tvFontWeightClass,
+  tvHasBackground,
+} from "@/lib/tv";
 import { cn } from "@/lib/utils";
 import { gsap, SplitText, TV_EASE_OUT, useGSAP } from "./gsap";
 import { useClock, usePrefersReducedMotion } from "./motion";
@@ -60,14 +65,14 @@ function BannerWidget({
           }),
       });
     },
-    { dependencies: [text, reduced], revertOnUpdate: true },
+    { dependencies: [text, reduced], revertOnUpdate: true }
   );
 
   return (
     <div
       className={cn(
         "flex h-full items-center justify-center px-4 text-center",
-        tvHasBackground(background) && "bg-hs-ink",
+        tvHasBackground(background) && "bg-hs-ink"
       )}
     >
       <p
@@ -76,7 +81,7 @@ function BannerWidget({
         className={cn(
           "font-bungee leading-tight text-balance text-hs-gold uppercase",
           tvFontSizeClass("banner", fontSize),
-          tvFontWeightClass(fontWeight),
+          tvFontWeightClass(fontWeight)
         )}
       >
         {text}
@@ -106,7 +111,7 @@ function TickerWidget({
     <div
       className={cn(
         "flex h-full items-center overflow-hidden",
-        fill && "bg-hs-gold",
+        fill && "bg-hs-gold"
       )}
     >
       <div
@@ -122,7 +127,7 @@ function TickerWidget({
               "flex shrink-0 whitespace-nowrap font-bungee uppercase",
               fill ? "text-hs-ink" : "text-hs-gold",
               tvFontSizeClass("ticker", fontSize),
-              tvFontWeightClass(fontWeight),
+              tvFontWeightClass(fontWeight)
             )}
           >
             {items.map((item, index) => (
@@ -177,7 +182,10 @@ function EventClock() {
   return (
     <div className="grid h-full grid-cols-[minmax(0,0.9fr)_minmax(0,1.5fr)_minmax(0,1.1fr)] gap-[0.3cqw] bg-hs-ink">
       <p className="flex items-center justify-center gap-[0.5cqw] bg-hs-red px-[0.6cqw] font-bungee text-[clamp(0.7rem,1.3cqw,1.8rem)] uppercase text-hs-paper">
-        <span className="tv-pulse size-[0.7cqw] shrink-0 rounded-full bg-hs-paper" aria-hidden />
+        <span
+          className="tv-pulse size-[0.7cqw] shrink-0 rounded-full bg-hs-paper"
+          aria-hidden
+        />
         En directo
       </p>
       <div className="flex flex-col items-center justify-center bg-hs-gold px-[0.6cqw] leading-none text-hs-ink">
@@ -208,7 +216,7 @@ function ClockWidget({ fontSize }: { fontSize?: number }) {
         style={tvFontSizeStyle(fontSize)}
         className={cn(
           "font-bungee tabular-nums text-hs-paper",
-          tvFontSizeClass("clock", fontSize),
+          tvFontSizeClass("clock", fontSize)
         )}
         aria-label="Hora actual"
       >
@@ -239,7 +247,7 @@ function MessageWidget({
       className={cn(
         "flex h-full flex-col justify-center p-4",
         tvHasBackground(background) &&
-          "border-[3px] border-hs-gold/40 bg-hs-paper/5",
+          "border-[3px] border-hs-gold/40 bg-hs-paper/5"
       )}
     >
       <p
@@ -247,7 +255,7 @@ function MessageWidget({
         className={cn(
           "whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper",
           tvFontSizeClass("message", fontSize),
-          tvFontWeightClass(fontWeight),
+          tvFontWeightClass(fontWeight)
         )}
       >
         {text}
@@ -264,7 +272,7 @@ export function TvWidgetView({
   editor?: boolean;
 }) {
   switch (widget.kind) {
-    case "banner":
+    case "banner": {
       return (
         <BannerWidget
           text={widget.text}
@@ -273,7 +281,8 @@ export function TvWidgetView({
           background={widget.background}
         />
       );
-    case "ticker":
+    }
+    case "ticker": {
       return (
         <TickerWidget
           text={widget.text}
@@ -282,13 +291,15 @@ export function TvWidgetView({
           background={widget.background}
         />
       );
-    case "clock":
+    }
+    case "clock": {
       return widget.text === "event" ? (
         <EventClock />
       ) : (
         <ClockWidget fontSize={widget.fontSize} />
       );
-    case "message":
+    }
+    case "message": {
       return (
         <MessageWidget
           text={widget.text}
@@ -297,39 +308,52 @@ export function TvWidgetView({
           background={widget.background}
         />
       );
-    case "insightsStats":
+    }
+    case "insightsStats": {
       return <InsightsStatsBox />;
-    case "insightsActivity":
+    }
+    case "insightsActivity": {
       return <InsightsActivityBox />;
-    case "insightsHarness":
+    }
+    case "insightsHarness": {
       return <InsightsHarnessBox />;
-    case "insightsStacks":
+    }
+    case "insightsStacks": {
       return <InsightsStacksBox />;
-    case "insightsScatter":
+    }
+    case "insightsScatter": {
       return <InsightsScatterBox />;
-    case "insightsLeaderboard":
+    }
+    case "insightsLeaderboard": {
       return <InsightsLeaderboardBox />;
-    case "insightsEvolution":
+    }
+    case "insightsEvolution": {
       return <InsightsEvolutionBox />;
-    case "liveCommits":
+    }
+    case "liveCommits": {
       return <LiveCommitsBox />;
-    case "liveAgents":
+    }
+    case "liveAgents": {
       return <LiveAgentsBox />;
-    case "liveTokens":
+    }
+    case "liveTokens": {
       return <LiveTokensBox />;
-    case "liveModels":
+    }
+    case "liveModels": {
       return <LiveModelsBox />;
-    case "liveLeaderboard":
+    }
+    case "liveLeaderboard": {
       return <LiveLeaderboardBox />;
-    case "feed":
-      return (
-        <FeedBox mode={widget.feedMode} source={widget.feedSource} />
-      );
-    case "sponsorGrid":
+    }
+    case "feed": {
+      return <FeedBox mode={widget.feedMode} source={widget.feedSource} />;
+    }
+    case "sponsorGrid": {
       return (
         <SponsorGridBox sponsors={widget.sponsors ?? []} editor={editor} />
       );
-    case "sponsorTicker":
+    }
+    case "sponsorTicker": {
       return (
         <SponsorTickerBox
           sponsors={widget.sponsors ?? []}
@@ -338,5 +362,6 @@ export function TvWidgetView({
           logosOnly={widget.text === "logos"}
         />
       );
+    }
   }
 }

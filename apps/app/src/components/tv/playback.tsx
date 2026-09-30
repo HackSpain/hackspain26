@@ -62,7 +62,7 @@ export function useTvPlayback() {
       try {
         sessionStorage.setItem(
           "hs-tv-reload-version",
-          String(value.reloadVersion),
+          String(value.reloadVersion)
         );
       } catch {
         /* In-memory baseline remains usable. */

@@ -17,9 +17,15 @@ const convex = new ConvexReactClient(convexUrl ?? "");
 
 function useRecoverableAuth() {
   const { fetchAccessToken, ...auth } = useConvexAuth();
-  const recovery = useMemo(() => recoveringTokenFetcher(fetchAccessToken, (error) => {
-    captureException(error, { tags: { operation: "session-refresh-recovery" } });
-  }), [fetchAccessToken]);
+  const recovery = useMemo(
+    () =>
+      recoveringTokenFetcher(fetchAccessToken, (error) => {
+        captureException(error, {
+          tags: { operation: "session-refresh-recovery" },
+        });
+      }),
+    [fetchAccessToken]
+  );
   useEffect(() => () => recovery.cancel(), [recovery, auth.isAuthenticated]);
   return { ...auth, fetchAccessToken: recovery.fetch };
 }

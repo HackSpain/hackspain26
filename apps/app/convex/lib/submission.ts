@@ -36,7 +36,9 @@ function asUrl(raw: string): URL | null {
     return null;
   }
   try {
-    return new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    return new URL(
+      /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+    );
   } catch {
     return null;
   }
@@ -109,7 +111,10 @@ export function parseOptionalProductUrl(
 export function parseProjectName(raw: string): ParseResult {
   const name = raw.trim();
   if (name.length < 2) {
-    return { ok: false, message: "Ponle un nombre al proyecto (mínimo 2 caracteres)." };
+    return {
+      ok: false,
+      message: "Ponle un nombre al proyecto (mínimo 2 caracteres).",
+    };
   }
   if (name.length > 80) {
     return { ok: false, message: "El nombre es demasiado largo." };

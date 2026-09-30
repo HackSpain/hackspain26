@@ -97,7 +97,7 @@ function ScorePicker({
                 "min-h-11 border-hs-ink font-bungee text-sm tabular-nums outline-none select-none not-last:border-r-[3px] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-hs-navy disabled:opacity-50 motion-safe:transition-[background-color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:not-disabled:scale-[0.97]",
                 selected
                   ? "bg-hs-gold text-hs-ink"
-                  : "bg-hs-paper text-hs-brown [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand",
+                  : "bg-hs-paper text-hs-brown [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand"
               )}
             >
               {score}
@@ -135,7 +135,7 @@ export function AssessmentForm({
   const run = async (
     work: () => Promise<void>,
     fallback: string,
-    success: string,
+    success: string
   ) => {
     setError(null);
     setNotice(null);
@@ -158,7 +158,7 @@ export function AssessmentForm({
         void run(
           () => onSubmit({ scores, ownCriteriaComment: trimmed }),
           "No se ha podido enviar la evaluación",
-          submitted ? "Evaluación actualizada" : "Evaluación enviada",
+          submitted ? "Evaluación actualizada" : "Evaluación enviada"
         );
       }}
     >
@@ -222,7 +222,7 @@ export function AssessmentForm({
               void run(
                 () => onSaveDraft({ scores, ownCriteriaComment: comment }),
                 "No se ha podido guardar el borrador",
-                "Borrador guardado",
+                "Borrador guardado"
               )
             }
           >

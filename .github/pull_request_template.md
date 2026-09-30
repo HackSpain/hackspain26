@@ -1,14 +1,11 @@
 ## Cambio
 
-Describe el comportamiento que cambia y el riesgo principal.
+Explica el problema, el comportamiento resultante y el riesgo principal.
 
 ## Verificación
 
-Indica los comandos o comprobaciones manuales ejecutados y su resultado.
+Indica los controles ejecutados y sus resultados, incluidos los que no pudieron completarse.
 
 ## Revisión
 
-- [ ] He leído el diff completo y comprobado que no incluye cambios ajenos.
-- [ ] He revisado permisos, ventana del evento y contratos de datos cuando el cambio los afecta.
-- [ ] He comprobado el comportamiento modificado en su capa responsable.
-- [ ] Las excepciones de lint son puntuales y tienen una explicación.
+Identifica el diff revisado, quién lo revisó y cómo se resolvieron los hallazgos. Indica si fue revisión independiente o autorrevisión; los criterios están en las instrucciones del proyecto.

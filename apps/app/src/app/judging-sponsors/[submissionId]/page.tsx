@@ -18,13 +18,12 @@ export default function DeliveryPage() {
     typeof params.submissionId === "string" ? params.submissionId : "";
   const me = useQuery(api.users.me);
   const allowed =
-    me?.role === "admin" ||
-    (me?.sections.includes("judgingSponsors") ?? false);
+    me?.role === "admin" || (me?.sections.includes("judgingSponsors") ?? false);
   const item = useQuery(
     api.judging.getDelivery,
     allowed && submissionId
       ? { submissionId: submissionId as Id<"submissions"> }
-      : "skip",
+      : "skip"
   );
 
   if (me === undefined) {

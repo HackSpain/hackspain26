@@ -24,7 +24,11 @@
       { "name": "Zhivel", "pushes": 218, "pullRequests": 117 }
     ],
     "people": [
-      { "name": "Martín Hernández González", "pushes": 189, "pullRequests": 121 },
+      {
+        "name": "Martín Hernández González",
+        "pushes": 189,
+        "pullRequests": 121
+      },
       { "name": "Javier Saguar", "pushes": 210, "pullRequests": 35 },
       { "name": "Taras aka 2pac", "pushes": 220, "pullRequests": 1 }
     ]

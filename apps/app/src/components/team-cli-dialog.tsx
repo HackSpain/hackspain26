@@ -2,7 +2,8 @@
 
 import { Check, Copy } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   Dialog,
@@ -22,9 +23,13 @@ type CommandLine = {
 function commandLines(source: string): CommandLine[] {
   return source.split("\n").flatMap((raw) => {
     const line = raw.trim();
-    if (!line) return [];
+    if (!line) {
+      return [];
+    }
     const hash = line.indexOf(" #");
-    if (hash === -1) return [{ command: line, comment: null }];
+    if (hash === -1) {
+      return [{ command: line, comment: null }];
+    }
     return [
       {
         command: line.slice(0, hash).trimEnd(),
@@ -40,7 +45,9 @@ async function copyText(value: string): Promise<boolean> {
       await navigator.clipboard.writeText(value);
       return true;
     }
-  } catch {}
+  } catch {
+    // Clipboard permissions may reject; the selection fallback below still works.
+  }
 
   const field = document.createElement("textarea");
   field.value = value;
@@ -63,7 +70,9 @@ function LineCopyButton({ value }: { value: string }) {
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!copied) return;
+    if (!copied) {
+      return;
+    }
     const id = window.setTimeout(() => setCopied(false), 1600);
     return () => window.clearTimeout(id);
   }, [copied]);
@@ -77,11 +86,13 @@ function LineCopyButton({ value }: { value: string }) {
         "inline-flex min-h-10 shrink-0 items-center gap-1.5 px-1.5 font-bungee text-[11px] uppercase tracking-wide outline-none",
         "text-hs-paper/70 hover:text-hs-paper focus-visible:text-hs-paper focus-visible:ring-2 focus-visible:ring-hs-gold",
         "motion-safe:transition-[color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.96]",
-        copied && "text-hs-gold hover:text-hs-gold",
+        copied && "text-hs-gold hover:text-hs-gold"
       )}
       onClick={() => {
         void copyText(value).then((ok) => {
-          if (ok) setCopied(true);
+          if (ok) {
+            setCopied(true);
+          }
         });
       }}
     >
@@ -107,7 +118,9 @@ function LineCopyButton({ value }: { value: string }) {
           </motion.span>
         </AnimatePresence>
       </span>
-      <span className="w-[4.75rem] text-left">{copied ? "Copiado" : "Copiar"}</span>
+      <span className="w-[4.75rem] text-left">
+        {copied ? "Copiado" : "Copiar"}
+      </span>
     </button>
   );
 }
@@ -153,7 +166,9 @@ export function TeamCliDialog({ children }: { children: ReactNode }) {
         <div className="space-y-2">
           <p className="font-bungee text-xs">1 · Instala e inicia sesión</p>
           <CodeBlock>
-            {"curl -fsSL https://hackspain.com/install.sh | sh\nhackspain auth login"}
+            {
+              "curl -fsSL https://hackspain.com/install.sh | sh\nhackspain auth login"
+            }
           </CodeBlock>
         </div>
 

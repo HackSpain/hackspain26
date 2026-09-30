@@ -129,7 +129,11 @@ export function ActivityChart({
 }) {
   const [selectedBucket, setSelectedBucket] = useState<number | null>(null);
   if (samples.length === 0) {
-    return <p className="py-6 text-sm text-hs-brown">Sin datos de actividad todavía.</p>;
+    return (
+      <p className="py-6 text-sm text-hs-brown">
+        Sin datos de actividad todavía.
+      </p>
+    );
   }
   const buckets = [...new Set(samples.map((sample) => sample.bucket))];
   const rows = buckets.map((bucket) => {
@@ -163,7 +167,11 @@ export function ActivityChart({
   return (
     <div className={mode === "tv" ? "flex h-full min-h-0 flex-col" : undefined}>
       <div className={mode === "tv" ? "min-h-0 flex-1" : STAGE}>
-        <ResponsiveContainer width="100%" height={mode === "tv" ? "100%" : 248} minWidth={0}>
+        <ResponsiveContainer
+          width="100%"
+          height={mode === "tv" ? "100%" : 248}
+          minWidth={0}
+        >
           <BarChart
             data={rows}
             margin={{ bottom: 0, left: -12, right: 0, top: 12 }}
@@ -243,7 +251,13 @@ export function ActivityChart({
           </span>
         </div>
       ) : null}
-      <div className={mode === "tv" ? "mt-[0.4cqw] flex shrink-0 flex-wrap gap-x-[0.8cqw] gap-y-1 [&>span]:text-[0.7cqw]" : "mt-3 flex flex-wrap gap-x-4 gap-y-2"}>
+      <div
+        className={
+          mode === "tv"
+            ? "mt-[0.4cqw] flex shrink-0 flex-wrap gap-x-[0.8cqw] gap-y-1 [&>span]:text-[0.7cqw]"
+            : "mt-3 flex flex-wrap gap-x-4 gap-y-2"
+        }
+      >
         {activeTools.map((harness) => (
           <span
             key={harness.id}
@@ -381,7 +395,11 @@ export function TeamScatter({
   onSelect: (team: TeamRow) => void;
 }) {
   if (teams.length === 0) {
-    return <p className="py-6 text-sm text-hs-brown">Sin datos de equipos todavía.</p>;
+    return (
+      <p className="py-6 text-sm text-hs-brown">
+        Sin datos de equipos todavía.
+      </p>
+    );
   }
   return (
     <div>

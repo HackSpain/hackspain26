@@ -40,10 +40,18 @@
   line-height: 1.5;
 }
 
-.help p { margin: 0; }
+.help p {
+  margin: 0;
+}
 
-@media (max-aspect-ratio: 1/1) {
-  .headline { font-size: 10vw; }
-  .instructions { font-size: 4vmin; }
-  .help { font-size: 3.8vmin; }
+@media (max-aspect-ratio: 1 / 1) {
+  .headline {
+    font-size: 10vw;
+  }
+  .instructions {
+    font-size: 4vmin;
+  }
+  .help {
+    font-size: 3.8vmin;
+  }
 }

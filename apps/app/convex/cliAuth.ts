@@ -25,10 +25,9 @@ const EXPIRED_SWEEP_LIMIT = 20;
 function randomCode(): string {
   const bytes = new Uint8Array(CODE_LENGTH);
   crypto.getRandomValues(bytes);
-  return Array.from(
-    bytes,
-    (b) => CODE_ALPHABET[b % CODE_ALPHABET.length],
-  ).join("");
+  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join(
+    ""
+  );
 }
 
 export const start = mutation({
@@ -66,7 +65,7 @@ export const status = query({
   returns: v.union(
     v.literal("pending"),
     v.literal("approved"),
-    v.literal("expired"),
+    v.literal("expired")
   ),
   handler: async (ctx, args) => {
     const row = await ctx.db

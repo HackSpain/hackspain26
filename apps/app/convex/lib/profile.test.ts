@@ -48,8 +48,8 @@ describe("missingProfileFields", () => {
         directory: { ...card, skills: [] },
       })
     ).toEqual(["directory"]);
-    expect(missingProfileFields({ ...complete, directory: undefined })).toEqual([
-      "directory",
-    ]);
+    expect(missingProfileFields({ ...complete, directory: undefined })).toEqual(
+      ["directory"]
+    );
   });
 });
