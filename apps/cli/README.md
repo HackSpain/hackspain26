@@ -46,7 +46,7 @@ hackspain team dissolve          # owner deletes a team nobody else is in
 hackspain stack set nextjs convex claude-code
 
 hackspain track list
-hackspain track register [slug] | unregister
+hackspain track register [slug] | unregister [slug]
 hackspain project show | list   # submit is on the dashboard: /submit
 hackspain perk list
 
@@ -223,6 +223,8 @@ opened and merged pull requests, releases and tags. Nothing is read from the hac
 push often and it shows up.
 
 Tracks live on the project: `track register` saves a draft with the chosen challenges.
+When entered in THEKER and another track, `track unregister` asks which one to leave;
+scripts should pass its slug.
 Final submit is on the dashboard (`/submit`): YouTube video, public GitHub repo, optional
 product link. Commands that need a team, an accepted signup, or completed
 onboarding fail fast with the next step to take.
