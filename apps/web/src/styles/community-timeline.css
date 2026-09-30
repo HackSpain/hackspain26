@@ -376,13 +376,13 @@
 }
 @media (hover: hover) {
   button:hover > .recap-play {
-    transform: translate(-2px, -2px);
     box-shadow: 7px 7px 0 var(--color-hs-ink);
+    transform: translate(-2px, -2px);
   }
 }
 button:active > .recap-play {
-  transform: translate(4px, 4px);
   box-shadow: 1px 1px 0 var(--color-hs-ink);
+  transform: translate(4px, 4px);
 }
 @media (prefers-reduced-motion: reduce) {
   .recap-play {

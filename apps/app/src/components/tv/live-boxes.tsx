@@ -1,7 +1,14 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
 import { INSIGHT_BUCKETS } from "@convex/tvPlayback";
@@ -15,10 +22,7 @@ import {
   teamRows,
 } from "@/app/insights/mock-data";
 import type { HarnessRow, TeamRow } from "@/app/insights/mock-data";
-import {
-  NO_TEAM_ID,
-  useLiveInsights,
-} from "@/app/insights/use-live-insights";
+import { NO_TEAM_ID, useLiveInsights } from "@/app/insights/use-live-insights";
 import type { LiveInsightData } from "@/app/insights/use-live-insights";
 import { cn } from "@/lib/utils";
 import {
@@ -49,7 +53,7 @@ function LiveHeader({
     <header
       className={cn(
         "flex shrink-0 items-baseline justify-between gap-3 border-b pb-[0.5cqw]",
-        dark ? "border-hs-ink/25" : "border-hs-ink/15",
+        dark ? "border-hs-ink/25" : "border-hs-ink/15"
       )}
     >
       <p className="font-bungee text-[clamp(0.6rem,1.05cqw,1.4rem)] leading-none">
@@ -86,10 +90,12 @@ export function LiveCommitsBox() {
         text: row.text,
         sha: row.sha,
       })),
-    [remote],
+    [remote]
   );
   const queue = useMemo(() => {
-    if (source.length === 0) {return [];}
+    if (source.length === 0) {
+      return [];
+    }
     const count = Math.min(6, source.length);
     const rows: CommitRow[] = [];
     for (let index = 0; index < count; index += 1) {
@@ -97,7 +103,9 @@ export function LiveCommitsBox() {
       const srcIndex =
         ((appearAt % source.length) + source.length) % source.length;
       const row = source[srcIndex];
-      if (!row) {continue;}
+      if (!row) {
+        continue;
+      }
       rows.push({ ...row, instance: `${row.id}-${appearAt}` });
     }
     return rows;
@@ -105,14 +113,16 @@ export function LiveCommitsBox() {
   const ids = useMemo(() => queue.map((row) => row.instance), [queue]);
   const repos = useMemo(
     () => new Set(source.map((row) => row.repo)).size,
-    [source],
+    [source]
   );
 
   const onEnter = useCallback((rows: HTMLElement[]) => {
     flashGold(rows);
     for (const row of rows) {
       const sha = row.querySelector<HTMLElement>("[data-sha]");
-      if (!sha?.dataset.sha) {continue;}
+      if (!sha?.dataset.sha) {
+        continue;
+      }
       gsap.to(sha, {
         duration: 0.9,
         scrambleText: {
@@ -130,7 +140,9 @@ export function LiveCommitsBox() {
       <LiveHeader title="Commits en vivo" aside={`${repos} repos`} />
       {queue.length === 0 ? (
         <p className="mt-[0.6cqw] text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
-          {remote === undefined ? "Cargando actividad…" : "Sin commits todavía."}
+          {remote === undefined
+            ? "Cargando actividad…"
+            : "Sin commits todavía."}
         </p>
       ) : null}
       <ol
@@ -187,34 +199,47 @@ function AgentRow({
   useLayoutEffect(() => {
     const before = previous.current;
     previous.current = { sessions: row.sessions, rank };
-    if (before === null || reduced) {return;}
+    if (before === null || reduced) {
+      return;
+    }
     const timeline = gsap.timeline();
     // New sessions: a shine runs down the bar, the count pops, a "+N" rides up.
-    if (row.sessions > before.sessions && shine.current && count.current && delta.current) {
+    if (
+      row.sessions > before.sessions &&
+      shine.current &&
+      count.current &&
+      delta.current
+    ) {
       timeline.fromTo(
         shine.current,
         { xPercent: -120, opacity: 0.85 },
         { xPercent: 120, opacity: 0, duration: 0.9, ease: TV_EASE_OUT },
-        0,
+        0
       );
       timeline.fromTo(
         count.current,
         { scale: 1.28, transformOrigin: "100% 50%" },
         { scale: 1, duration: 0.6, ease: TV_EASE_POP },
-        0,
+        0
       );
       delta.current.textContent = `+${number(row.sessions - before.sessions)}`;
       timeline.fromTo(
         delta.current,
         { opacity: 0, y: 6 },
         { opacity: 1, y: 0, duration: 0.3, ease: TV_EASE_OUT },
-        0.05,
+        0.05
       );
-      timeline.to(delta.current, { opacity: 0, y: -8, duration: 0.22, ease: "power2.in" }, "+=1.1");
+      timeline.to(
+        delta.current,
+        { opacity: 0, y: -8, duration: 0.22, ease: "power2.in" },
+        "+=1.1"
+      );
     }
     if (rank < before.rank && flash.current) {
       const flashTween = flashGold(flash.current, 1.6);
-      if (flashTween) {timeline.add(flashTween, 0);}
+      if (flashTween) {
+        timeline.add(flashTween, 0);
+      }
     }
     return () => {
       settle(timeline);
@@ -280,7 +305,9 @@ export function LiveAgentsBox() {
   const samples = filterSamples(data.samples, "event", "all", data.teams);
   const tools = harnessRows(samples)
     .filter((row) => row.sessions > 0)
-    .toSorted((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
+    .toSorted(
+      (a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name)
+    );
   const max = Math.max(1, ...tools.map((tool) => tool.sessions));
   const total = tools.reduce((sum, tool) => sum + tool.sessions, 0);
   const order = useMemo(() => tools.map((tool) => tool.id), [tools]);
@@ -291,11 +318,13 @@ export function LiveAgentsBox() {
   useLayoutEffect(() => {
     const before = previousTotal.current;
     previousTotal.current = total;
-    if (before === null || reduced || total <= before || !totalRef.current) {return;}
+    if (before === null || reduced || total <= before || !totalRef.current) {
+      return;
+    }
     const tween = gsap.fromTo(
       totalRef.current,
       { scale: 1.2, transformOrigin: "100% 50%" },
-      { scale: 1, duration: 0.6, ease: TV_EASE_POP },
+      { scale: 1, duration: 0.6, ease: TV_EASE_POP }
     );
     return () => {
       settle(tween);
@@ -304,7 +333,9 @@ export function LiveAgentsBox() {
 
   useGSAP(
     () => {
-      if (reduced) {return;}
+      if (reduced) {
+        return;
+      }
       gsap.to("[data-live-dot]", {
         scale: 1.7,
         opacity: 0.35,
@@ -315,17 +346,19 @@ export function LiveAgentsBox() {
         stagger: 0.14,
       });
     },
-    { scope: root, dependencies: [reduced], revertOnUpdate: true },
+    { scope: root, dependencies: [reduced], revertOnUpdate: true }
   );
 
   const byId = useMemo(() => {
     const map = new Map<string, HarnessRow>();
-    for (const tool of tools) {map.set(tool.id, tool);}
+    for (const tool of tools) {
+      map.set(tool.id, tool);
+    }
     return map;
   }, [tools]);
   const stable = useMemo(
     () => tools.toSorted((a, b) => a.id.localeCompare(b.id)),
-    [tools],
+    [tools]
   );
 
   return (
@@ -337,7 +370,10 @@ export function LiveAgentsBox() {
         title="Agentes activos"
         aside={
           <>
-            <span ref={totalRef} className="inline-block">{number(total)}</span> sesiones
+            <span ref={totalRef} className="inline-block">
+              {number(total)}
+            </span>{" "}
+            sesiones
           </>
         }
       />
@@ -399,32 +435,43 @@ function ModelRowView({
   // The name types itself in from noise the first time the model shows up.
   useGSAP(
     () => {
-      if (reduced || !name.current) {return;}
+      if (reduced || !name.current) {
+        return;
+      }
       gsap.to(name.current, {
         duration: 0.9,
         delay: 0.35 + rank * 0.08,
-        scrambleText: { text: model.name, chars: "lowerCase", speed: 0.6, revealDelay: 0.15 },
+        scrambleText: {
+          text: model.name,
+          chars: "lowerCase",
+          speed: 0.6,
+          revealDelay: 0.15,
+        },
       });
     },
-    { dependencies: [model.name, reduced] },
+    { dependencies: [model.name, reduced] }
   );
 
   useLayoutEffect(() => {
     const before = previous.current;
     previous.current = { rank, tokens: model.tokens };
-    if (before === null || reduced) {return;}
+    if (before === null || reduced) {
+      return;
+    }
     const timeline = gsap.timeline();
     if (model.tokens > before.tokens && shine.current) {
       timeline.fromTo(
         shine.current,
         { xPercent: -120, opacity: 0.85 },
         { xPercent: 120, opacity: 0, duration: 0.9, ease: TV_EASE_OUT },
-        0,
+        0
       );
     }
     if (rank < before.rank && flash.current) {
       const flashTween = flashGold(flash.current, 1.6);
-      if (flashTween) {timeline.add(flashTween, 0);}
+      if (flashTween) {
+        timeline.add(flashTween, 0);
+      }
     }
     return () => {
       settle(timeline);
@@ -441,7 +488,7 @@ function ModelRowView({
       <span
         className={cn(
           "font-bungee flex w-[2.2cqw] shrink-0 items-center justify-center py-[0.25cqw] text-[clamp(0.45rem,0.6cqw,0.85rem)]",
-          rank === 0 ? "text-hs-gold" : "text-hs-paper",
+          rank === 0 ? "text-hs-gold" : "text-hs-paper"
         )}
         style={{ backgroundColor: rank === 0 ? "#2a170f" : style.color }}
       >
@@ -492,7 +539,7 @@ export function LiveModelsBox() {
         .filter((model) => model.tokens > 0)
         .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
         .slice(0, MODEL_ROWS),
-    [data.models],
+    [data.models]
   );
   const total = data.models.reduce((sum, model) => sum + model.tokens, 0);
   const max = Math.max(1, ...ranked.map((model) => model.tokens));
@@ -500,7 +547,7 @@ export function LiveModelsBox() {
   const register = useRankRows(order);
   const stable = useMemo(
     () => ranked.toSorted((a, b) => a.name.localeCompare(b.name)),
-    [ranked],
+    [ranked]
   );
 
   return (
@@ -515,7 +562,9 @@ export function LiveModelsBox() {
       />
       {ranked.length === 0 ? (
         <p className="mt-[0.6cqw] text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
-          {data.status === "loading" ? "Cargando modelos…" : "Sin modelos todavía."}
+          {data.status === "loading"
+            ? "Cargando modelos…"
+            : "Sin modelos todavía."}
         </p>
       ) : null}
       <ol className="relative mt-[0.5cqw] min-h-0 flex-1">
@@ -541,7 +590,12 @@ const FACE_PERCENT = 100 / ODOMETER_FACES.length;
 const TOKEN_POLL_MS = 30_000;
 const TOKEN_DRIFT = 0.6;
 
-type OdometerLayout = { unit: string; divisor: number; decimals: number; places: number };
+type OdometerLayout = {
+  unit: string;
+  divisor: number;
+  decimals: number;
+  places: number;
+};
 
 function odometerLayout(value: number): OdometerLayout {
   const abs = Math.max(0, value);
@@ -554,7 +608,8 @@ function odometerLayout(value: number): OdometerLayout {
           ? { unit: "k", divisor: 1000, decimals: 1 }
           : { unit: "", divisor: 1, decimals: 0 };
   const places =
-    Math.max(1, String(Math.floor(abs / scale.divisor)).length) + scale.decimals;
+    Math.max(1, String(Math.floor(abs / scale.divisor)).length) +
+    scale.decimals;
   return { ...scale, places };
 }
 
@@ -565,7 +620,9 @@ function odometerLayout(value: number): OdometerLayout {
  */
 function wheelPosition(counter: number, power: number): number {
   const shifted = counter / 10 ** power;
-  if (power === 0) {return shifted % 10;}
+  if (power === 0) {
+    return shifted % 10;
+  }
   const whole = Math.floor(shifted);
   const below = shifted - whole;
   const roll = gsap.utils.clamp(0, 1, (below - 0.9) / 0.1);
@@ -578,7 +635,13 @@ function wheelPosition(counter: number, power: number): number {
  * never sits still, capped below the next expected answer so it does not
  * overshoot the truth.
  */
-function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) {
+function Odometer({
+  target,
+  ratePerMs,
+}: {
+  target: number;
+  ratePerMs: number;
+}) {
   const reduced = usePrefersReducedMotion();
   const [layout, setLayout] = useState(() => odometerLayout(target));
   const shown = useRef(0);
@@ -590,7 +653,9 @@ function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) 
   const paint = useCallback((value: number) => {
     const next = odometerLayout(value);
     setLayout((current) =>
-      current.unit === next.unit && current.places === next.places ? current : next,
+      current.unit === next.unit && current.places === next.places
+        ? current
+        : next
     );
     const counter = (value / next.divisor) * 10 ** next.decimals;
     for (const [power, wheel] of wheels.current) {
@@ -600,10 +665,13 @@ function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) 
 
   const register = useCallback(
     (power: number) => (node: HTMLElement | null) => {
-      if (node) {wheels.current.set(power, node);}
-      else {wheels.current.delete(power);}
+      if (node) {
+        wheels.current.set(power, node);
+      } else {
+        wheels.current.delete(power);
+      }
     },
-    [],
+    []
   );
 
   useEffect(() => {
@@ -619,11 +687,14 @@ function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) 
     anchor.current = target;
     if (reduced) {
       shown.current = target;
+      // oxlint-disable-next-line react/set-state-in-effect -- Synchronizes GSAP wheel DOM and digit columns immediately when reduced motion disables tween callbacks.
       paint(target);
       return;
     }
     const from = shown.current;
-    if (from === target) {return;}
+    if (from === target) {
+      return;
+    }
     const up = target > from;
     const proxy = { value: from };
     rolling.current?.kill();
@@ -646,11 +717,18 @@ function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) 
   }, [target, reduced, paint]);
 
   useEffect(() => {
-    if (reduced) {return;}
+    if (reduced) {
+      return;
+    }
     const tick = (_time: number, deltaMs: number) => {
-      if (rolling.current) {return;}
+      if (rolling.current) {
+        return;
+      }
       const cap = anchor.current + rate.current * TOKEN_POLL_MS * 0.9;
-      shown.current = Math.min(cap, shown.current + rate.current * TOKEN_DRIFT * deltaMs);
+      shown.current = Math.min(
+        cap,
+        shown.current + rate.current * TOKEN_DRIFT * deltaMs
+      );
       paint(shown.current);
     };
     gsap.ticker.add(tick);
@@ -663,9 +741,12 @@ function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) 
   for (let power = layout.places - 1; power >= 0; power -= 1) {
     if (layout.decimals > 0 && power === layout.decimals - 1) {
       columns.push(
-        <span key="sep" className="inline-block w-[0.3em] text-center leading-none">
+        <span
+          key="sep"
+          className="inline-block w-[0.3em] text-center leading-none"
+        >
           ,
-        </span>,
+        </span>
       );
     }
     columns.push(
@@ -673,14 +754,17 @@ function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) 
         key={`w${power}`}
         className="relative inline-block h-[1em] w-[0.62em] overflow-hidden text-center"
       >
-        <span ref={register(power)} className="absolute inset-x-0 top-0 block will-change-transform">
+        <span
+          ref={register(power)}
+          className="absolute inset-x-0 top-0 block will-change-transform"
+        >
           {ODOMETER_FACES.map((face, index) => (
             <span key={index} className="block h-[1em] leading-none">
               {face}
             </span>
           ))}
         </span>
-      </span>,
+      </span>
     );
   }
 
@@ -690,7 +774,10 @@ function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) 
       aria-label={`${compact(target)} tokens`}
       className="inline-flex items-end font-sans font-black tracking-[-0.06em] tabular-nums"
     >
-      <span aria-hidden className="inline-flex text-[clamp(1.6rem,4.6cqw,6.5rem)] leading-none">
+      <span
+        aria-hidden
+        className="inline-flex text-[clamp(1.6rem,4.6cqw,6.5rem)] leading-none"
+      >
         {columns}
       </span>
       {layout.unit ? (
@@ -711,7 +798,9 @@ function Odometer({ target, ratePerMs }: { target: number; ratePerMs: number }) 
  */
 function burst(root: HTMLElement | null, origin: HTMLElement, count: number) {
   const timeline = gsap.timeline();
-  if (!root) {return timeline;}
+  if (!root) {
+    return timeline;
+  }
   const box = root.getBoundingClientRect();
   const from = origin.getBoundingClientRect();
   const x = from.left - box.left + from.width / 2;
@@ -722,7 +811,7 @@ function burst(root: HTMLElement | null, origin: HTMLElement, count: number) {
     shard.setAttribute("aria-hidden", "true");
     shard.className = cn(
       "pointer-events-none absolute left-0 top-0 block",
-      index % 3 === 0 ? "bg-hs-paper" : "bg-hs-ink",
+      index % 3 === 0 ? "bg-hs-paper" : "bg-hs-ink"
     );
     const size = random(4, 10);
     shard.style.width = `${size}px`;
@@ -743,7 +832,7 @@ function burst(root: HTMLElement | null, origin: HTMLElement, count: number) {
         ease: "power3.out",
         onComplete: () => shard.remove(),
       },
-      random(0, 0.08),
+      random(0, 0.08)
     );
   }
   return timeline;
@@ -760,12 +849,17 @@ function TokenBars({ values, current }: { values: number[]; current: number }) {
   useGSAP(
     () => {
       const bars = root.current?.querySelectorAll<HTMLElement>("[data-bar]");
-      if (!bars || bars.length === 0) {return;}
+      if (!bars || bars.length === 0) {
+        return;
+      }
       const first = !mounted.current;
       mounted.current = true;
       if (reduced) {
         for (const bar of bars) {
-          gsap.set(bar, { scaleY: Number(bar.dataset.bar), transformOrigin: "50% 100%" });
+          gsap.set(bar, {
+            scaleY: Number(bar.dataset.bar),
+            transformOrigin: "50% 100%",
+          });
         }
         return;
       }
@@ -779,7 +873,7 @@ function TokenBars({ values, current }: { values: number[]; current: number }) {
         overwrite: "auto",
       });
     },
-    { dependencies: [key, reduced] },
+    { dependencies: [key, reduced] }
   );
 
   return (
@@ -794,7 +888,11 @@ function TokenBars({ values, current }: { values: number[]; current: number }) {
           data-bar={Math.max(0.04, value / max)}
           className={cn(
             "block h-full flex-1 origin-bottom scale-y-0",
-            index === current ? "tv-pulse bg-hs-paper" : index < current ? "bg-hs-ink" : "bg-hs-ink/20",
+            index === current
+              ? "tv-pulse bg-hs-paper"
+              : index < current
+                ? "bg-hs-ink"
+                : "bg-hs-ink/20"
           )}
         />
       ))}
@@ -821,21 +919,32 @@ export function LiveTokensBox() {
   }, [samples]);
   const current = perBucket.findLastIndex((value) => value > 0);
   const perMinute =
-    current === -1 ? 0 : (perBucket[current] ?? 0) / Math.max(data.bucketMinutes, 1);
+    current === -1
+      ? 0
+      : (perBucket[current] ?? 0) / Math.max(data.bucketMinutes, 1);
   const rateRef = useCountUp(perMinute, compact, { fromZero: true });
 
   useLayoutEffect(() => {
     const before = previous.current;
     previous.current = totals.tokens;
-    if (before === null || reduced || totals.tokens <= before) {return;}
+    if (before === null || reduced || totals.tokens <= before) {
+      return;
+    }
     const delta = totals.tokens - before;
     const chipEl = chip.current;
     const ringEl = ring.current;
-    const odometer = root.current?.querySelector<HTMLElement>("[data-odometer]");
-    if (!chipEl || !ringEl || !odometer) {return;}
+    const odometer =
+      root.current?.querySelector<HTMLElement>("[data-odometer]");
+    if (!chipEl || !ringEl || !odometer) {
+      return;
+    }
     chipEl.textContent = `+${compact(delta)}`;
     // Bigger jumps shake harder; the hit is random every time so it never loops.
-    const punch = gsap.utils.clamp(0.5, 1.6, Math.log10(Math.max(delta, 10)) / 4);
+    const punch = gsap.utils.clamp(
+      0.5,
+      1.6,
+      Math.log10(Math.max(delta, 10)) / 4
+    );
     const random = gsap.utils.random;
     const timeline = gsap.timeline();
     timeline.to(
@@ -848,37 +957,47 @@ export function LiveTokensBox() {
             rotation: random(-2.5, 2.5) * punch,
             duration: 0.045,
           })),
-          { x: 0, y: 0, rotation: 0, duration: 0.7, ease: "elastic.out(1, 0.35)" },
+          {
+            x: 0,
+            y: 0,
+            rotation: 0,
+            duration: 0.7,
+            ease: "elastic.out(1, 0.35)",
+          },
         ],
       },
-      0,
+      0
     );
     timeline.fromTo(
       odometer,
       { scale: 1 + 0.05 * punch },
       { scale: 1, duration: 0.8, ease: "elastic.out(1, 0.4)" },
-      0.05,
+      0.05
     );
     if (sweep.current) {
       timeline.fromTo(
         sweep.current,
         { xPercent: -130, opacity: 0.9 },
         { xPercent: 130, opacity: 0, duration: 0.8, ease: TV_EASE_OUT },
-        0.1,
+        0.1
       );
     }
     timeline.fromTo(
       chipEl,
       { opacity: 0, y: 10, scale: 0.92 },
       { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: TV_EASE_POP },
-      0.1,
+      0.1
     );
-    timeline.to(chipEl, { opacity: 0, y: -10, duration: 0.25, ease: "power2.in" }, "+=1.6");
+    timeline.to(
+      chipEl,
+      { opacity: 0, y: -10, duration: 0.25, ease: "power2.in" },
+      "+=1.6"
+    );
     timeline.fromTo(
       ringEl,
       { opacity: 0.9, scale: 0.985 },
       { opacity: 0, scale: 1.015, duration: 1.1, ease: TV_EASE_OUT },
-      0,
+      0
     );
     const shards = burst(root.current, chipEl, Math.round(6 + 8 * punch));
     timeline.add(shards, 0.02);
@@ -910,7 +1029,10 @@ export function LiveTokensBox() {
       <div className="mt-[0.6cqw] flex min-h-0 flex-1 items-stretch justify-between gap-[2cqw]">
         <div className="flex min-w-0 shrink-0 flex-col justify-end">
           <div className="flex items-start gap-[0.6cqw]">
-            <span data-odometer className="relative inline-block overflow-hidden will-change-transform">
+            <span
+              data-odometer
+              className="relative inline-block overflow-hidden will-change-transform"
+            >
               <Odometer target={totals.tokens} ratePerMs={perMinute / 60_000} />
               <span
                 ref={sweep}
@@ -925,7 +1047,8 @@ export function LiveTokensBox() {
             />
           </div>
           <p className="mt-[0.3cqw] text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
-            {percent(totals.cachedTokens, totals.tokens)} reutilizados desde caché
+            {percent(totals.cachedTokens, totals.tokens)} reutilizados desde
+            caché
           </p>
         </div>
         <TokenBars values={perBucket} current={current} />
@@ -955,10 +1078,14 @@ function TeamRowView({
   useLayoutEffect(() => {
     const before = previousRank.current;
     previousRank.current = rank;
-    if (before === null || reduced || rank >= before || !flash.current) {return;}
+    if (before === null || reduced || rank >= before || !flash.current) {
+      return;
+    }
     const tween = flashGold(flash.current, 1.8);
     return () => {
-      if (tween) {settle(tween);}
+      if (tween) {
+        settle(tween);
+      }
     };
   }, [rank, reduced]);
 
@@ -972,7 +1099,7 @@ function TeamRowView({
       <span
         className={cn(
           "flex size-[1.8cqw] shrink-0 items-center justify-center font-bungee text-[clamp(0.55rem,0.8cqw,1.1rem)]",
-          rank + offset === 0 ? "bg-hs-ink text-hs-gold" : "text-hs-brown",
+          rank + offset === 0 ? "bg-hs-ink text-hs-gold" : "text-hs-brown"
         )}
       >
         {rank + offset + 1}
@@ -1008,7 +1135,7 @@ export function LiveLeaderboardBox() {
   const data = useLiveInsights();
   const ranked = teamRows(
     filterSamples(data.samples, "event", "all", data.teams),
-    data.teams,
+    data.teams
   )
     .filter((team) => team.id !== NO_TEAM_ID)
     .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name));
@@ -1021,8 +1148,11 @@ export function LiveLeaderboardBox() {
   const bar = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (target === page) {return;}
-    const turn = () => setVisit((current) => ({ page: target, id: current.id + 1 }));
+    if (target === page) {
+      return;
+    }
+    const turn = () =>
+      setVisit((current) => ({ page: target, id: current.id + 1 }));
     if (!list.current || reduced) {
       turn();
       return;
@@ -1044,7 +1174,9 @@ export function LiveLeaderboardBox() {
 
   useGSAP(
     () => {
-      if (!bar.current || pages <= 1) {return;}
+      if (!bar.current || pages <= 1) {
+        return;
+      }
       gsap.fromTo(
         bar.current,
         { scaleX: 0 },
@@ -1053,13 +1185,16 @@ export function LiveLeaderboardBox() {
           duration: (LEADERBOARD_PAGE_MS - 400) / 1000,
           ease: "none",
           transformOrigin: "0% 50%",
-        },
+        }
       );
     },
-    { dependencies: [visit.id, pages], revertOnUpdate: true },
+    { dependencies: [visit.id, pages], revertOnUpdate: true }
   );
 
-  const shown = ranked.slice(page * LEADERBOARD_PAGE, (page + 1) * LEADERBOARD_PAGE);
+  const shown = ranked.slice(
+    page * LEADERBOARD_PAGE,
+    (page + 1) * LEADERBOARD_PAGE
+  );
   const order = useMemo(() => shown.map((team) => team.id), [shown]);
   const register = useRankRows(order, visit.id);
   const rankOf = new Map(order.map((id, index) => [id, index]));
@@ -1074,7 +1209,10 @@ export function LiveLeaderboardBox() {
       />
       {pages > 1 ? (
         <div className="mt-[0.4cqw] h-[0.25cqw] shrink-0 bg-hs-ink/10">
-          <div ref={bar} className="h-full w-full origin-left scale-x-0 bg-hs-gold" />
+          <div
+            ref={bar}
+            className="h-full w-full origin-left scale-x-0 bg-hs-gold"
+          />
         </div>
       ) : null}
       <ol

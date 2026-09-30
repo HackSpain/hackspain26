@@ -20,7 +20,8 @@ const buttonVariants = cva(
       },
       variant: {
         default: "border-hs-ink bg-hs-gold text-hs-ink",
-        outline: "border-2 border-hs-ink/25 bg-transparent text-hs-ink focus-visible:ring-2 focus-visible:ring-hs-navy",
+        outline:
+          "border-2 border-hs-ink/25 bg-transparent text-hs-ink focus-visible:ring-2 focus-visible:ring-hs-navy",
         teal: "border-hs-ink bg-hs-teal/40 text-hs-ink",
       },
     },

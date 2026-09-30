@@ -82,38 +82,147 @@ export function tvFontSizeClass(kind: TvWidgetKind, fontSize?: number): string {
 
 // New sizes use pixels on a 1920px canvas. Legacy presets keep their rendering.
 export function tvFontSizeStyle(fontSize?: number) {
-  return fontSize !== undefined && Number.isFinite(fontSize) && fontSize >= 8 && fontSize <= 240
+  return fontSize !== undefined &&
+    Number.isFinite(fontSize) &&
+    fontSize >= 8 &&
+    fontSize <= 240
     ? { fontSize: `${fontSize / 19.2}cqw` }
     : undefined;
 }
 
 export function tvFontSizePixels(kind: TvWidgetKind, value?: number): number {
-  if (value !== undefined && value >= 8) return value;
-  const legacy: Record<number, number> = { 0.85: 19, 1.1: 28, 1.5: 32, 2: 48, 2.75: 72 };
-  return value !== undefined ? legacy[value] ?? 28 : kind === "clock" ? 80 : kind === "banner" ? 72 : kind === "ticker" ? 32 : 28;
+  if (value !== undefined && value >= 8) {
+    return value;
+  }
+  const legacy: Record<number, number> = {
+    0.85: 19,
+    1.1: 28,
+    1.5: 32,
+    2: 48,
+    2.75: 72,
+  };
+  if (value !== undefined) {
+    return legacy[value] ?? 28;
+  }
+  switch (kind) {
+    case "clock": {
+      return 80;
+    }
+    case "banner": {
+      return 72;
+    }
+    case "ticker": {
+      return 32;
+    }
+    default: {
+      return 28;
+    }
+  }
 }
 
-export function tvFontWeightClass(fontWeight?: TvFontWeight): string | undefined {
+export function tvFontWeightClass(
+  fontWeight?: TvFontWeight
+): string | undefined {
   return fontWeight ? TV_FONT_WEIGHT_CLASS[fontWeight] : undefined;
 }
 
 const DEFAULT_TV_SPONSORS: TvSponsor[] = [
-  { name: "Cursor", logoUrl: "/sponsors/cursor.svg", href: "https://cursor.com", tier: "gold" },
-  { name: "fal.ai", logoUrl: "/sponsors/fal.svg", href: "https://fal.ai", tier: "gold" },
-  { name: "Cognition", logoUrl: "/sponsors/cognition.svg", href: "https://cognition.ai", tier: "gold" },
-  { name: "HappyRobot", logoUrl: "/sponsors/happyrobot.png", href: "https://www.happyrobot.ai", tier: "gold" },
-  { name: "Exa", logoUrl: "/sponsors/exa.svg", href: "https://exa.ai", tier: "silver" },
-  { name: "Convex", logoUrl: "/sponsors/convex.svg", href: "https://www.convex.dev", tier: "silver" },
-  { name: "Vercel", logoUrl: "/sponsors/vercel.svg", href: "https://vercel.com", tier: "silver" },
-  { name: "QuiverAI", logoUrl: "/sponsors/quiver_ai.svg", href: "https://quiver.ai", tier: "silver" },
-  { name: "Cloudflare", logoUrl: "/sponsors/cloudflare.svg", href: "https://www.cloudflare.com", tier: "silver" },
-  { name: "Tinybird", logoUrl: "/sponsors/tinybird.svg", href: "https://www.tinybird.co", tier: "silver" },
-  { name: "Helmcode", logoUrl: "/sponsors/helmcode.svg", href: "https://helmcode.com", tier: "silver" },
-  { name: "OneCoWork", logoUrl: "/sponsors/onecowork.svg", href: "https://www.onecowork.com", tier: "community" },
-  { name: "Embat", logoUrl: "/sponsors/embat.png", href: "https://www.embat.io", tier: "gold" },
-  { name: "THEKER", logoUrl: "/sponsors/theker.svg", href: "https://www.theker.ai", tier: "gold" },
-  { name: "Prosper AI", logoUrl: "/sponsors/prosper_ai.svg", href: "https://www.getprosper.ai", tier: "gold" },
-  { name: "Maisa", logoUrl: "/sponsors/maisa.png", href: "https://maisa.ai", tier: "gold" },
+  {
+    name: "Cursor",
+    logoUrl: "/sponsors/cursor.svg",
+    href: "https://cursor.com",
+    tier: "gold",
+  },
+  {
+    name: "fal.ai",
+    logoUrl: "/sponsors/fal.svg",
+    href: "https://fal.ai",
+    tier: "gold",
+  },
+  {
+    name: "Cognition",
+    logoUrl: "/sponsors/cognition.svg",
+    href: "https://cognition.ai",
+    tier: "gold",
+  },
+  {
+    name: "HappyRobot",
+    logoUrl: "/sponsors/happyrobot.png",
+    href: "https://www.happyrobot.ai",
+    tier: "gold",
+  },
+  {
+    name: "Exa",
+    logoUrl: "/sponsors/exa.svg",
+    href: "https://exa.ai",
+    tier: "silver",
+  },
+  {
+    name: "Convex",
+    logoUrl: "/sponsors/convex.svg",
+    href: "https://www.convex.dev",
+    tier: "silver",
+  },
+  {
+    name: "Vercel",
+    logoUrl: "/sponsors/vercel.svg",
+    href: "https://vercel.com",
+    tier: "silver",
+  },
+  {
+    name: "QuiverAI",
+    logoUrl: "/sponsors/quiver_ai.svg",
+    href: "https://quiver.ai",
+    tier: "silver",
+  },
+  {
+    name: "Cloudflare",
+    logoUrl: "/sponsors/cloudflare.svg",
+    href: "https://www.cloudflare.com",
+    tier: "silver",
+  },
+  {
+    name: "Tinybird",
+    logoUrl: "/sponsors/tinybird.svg",
+    href: "https://www.tinybird.co",
+    tier: "silver",
+  },
+  {
+    name: "Helmcode",
+    logoUrl: "/sponsors/helmcode.svg",
+    href: "https://helmcode.com",
+    tier: "silver",
+  },
+  {
+    name: "OneCoWork",
+    logoUrl: "/sponsors/onecowork.svg",
+    href: "https://www.onecowork.com",
+    tier: "community",
+  },
+  {
+    name: "Embat",
+    logoUrl: "/sponsors/embat.png",
+    href: "https://www.embat.io",
+    tier: "gold",
+  },
+  {
+    name: "THEKER",
+    logoUrl: "/sponsors/theker.svg",
+    href: "https://www.theker.ai",
+    tier: "gold",
+  },
+  {
+    name: "Prosper AI",
+    logoUrl: "/sponsors/prosper_ai.svg",
+    href: "https://www.getprosper.ai",
+    tier: "gold",
+  },
+  {
+    name: "Maisa",
+    logoUrl: "/sponsors/maisa.png",
+    href: "https://maisa.ai",
+    tier: "gold",
+  },
 ];
 
 export function resolveTvSponsors(sponsors?: TvSponsor[]): TvSponsor[] {

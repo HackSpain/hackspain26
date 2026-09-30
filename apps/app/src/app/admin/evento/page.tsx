@@ -4,7 +4,13 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { EventPhase } from "@convex/lib/eventWindow";
-import { Field, FormError, LoadingText, Page, errorMessage } from "@/components/page";
+import {
+  Field,
+  FormError,
+  LoadingText,
+  Page,
+  errorMessage,
+} from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +21,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { formatEventDate, fromDatetimeLocal, toDatetimeLocal } from "@/lib/utils";
+import {
+  formatEventDate,
+  fromDatetimeLocal,
+  toDatetimeLocal,
+} from "@/lib/utils";
 
 const PHASE_LABEL: Record<EventPhase, string> = {
   after: "Terminado",
@@ -67,7 +77,8 @@ function WindowForm({
   const dirty =
     startsAt !== toDatetimeLocal(current.startsAt) ||
     endsAt !== toDatetimeLocal(current.endsAt);
-  const scheduled = current.startsAt !== undefined && current.endsAt !== undefined;
+  const scheduled =
+    current.startsAt !== undefined && current.endsAt !== undefined;
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   async function run(args: Window) {
@@ -118,7 +129,9 @@ function WindowForm({
             </Badge>
           </CardTitle>
           <CardDescription>
-            {scheduled && current.startsAt !== undefined && current.endsAt !== undefined
+            {scheduled &&
+            current.startsAt !== undefined &&
+            current.endsAt !== undefined
               ? `Del ${formatEventDate(current.startsAt)} al ${formatEventDate(current.endsAt)} (hora de Madrid).`
               : "Sin ventana: todo está abierto hasta que guardes un inicio y un fin."}
           </CardDescription>

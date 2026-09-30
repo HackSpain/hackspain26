@@ -55,6 +55,12 @@ test("canonicalModel keeps the raw string next to the derived fields", () => {
 
 test("totalTokens never counts reasoning twice", () => {
   expect(
-    totalTokens({ cacheRead: 4, cacheWrite: 5, input: 2, output: 3, reasoning: 1 })
+    totalTokens({
+      cacheRead: 4,
+      cacheWrite: 5,
+      input: 2,
+      output: 3,
+      reasoning: 1,
+    })
   ).toBe(14);
 });

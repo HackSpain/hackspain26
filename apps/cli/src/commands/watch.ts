@@ -3,11 +3,13 @@ import type { Command } from "commander";
 import { api, openSession } from "../lib/api";
 import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
-import { usageError } from "../lib/errors";
+import { EXIT, usageError } from "../lib/errors";
 import { formatEventDate, requireOnboarded } from "../lib/me";
+import type { Ui } from "../lib/output";
 import { firstName, uiFor } from "../lib/output";
 import { c, terminalText } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
+import type { ScanResult } from "../watcher";
 import { acquireWatchLock, runWatch } from "../watcher";
 import { uninstallClaudeOtel } from "../watcher/collectors/claude-otel";
 import { uninstallCursorHook } from "../watcher/collectors/cursor";
@@ -35,6 +37,49 @@ function positiveNumber(flag: string, raw: string): number {
     throw usageError(`${flag} must be a positive number, got "${raw}".`);
   }
   return value;
+}
+
+export function createJsonWatchReporter(ui: Pick<Ui, "result">) {
+  const summary = {
+    scans: 0,
+    events: 0,
+    skipped: 0,
+    byHarness: {} as Record<string, number>,
+    notifications: 0,
+  };
+  return {
+    onScan(scanned: ScanResult) {
+      summary.scans++;
+      summary.events += scanned.events;
+      summary.skipped += scanned.skipped;
+      for (const [harness, count] of Object.entries(scanned.byHarness)) {
+        summary.byHarness[harness] = (summary.byHarness[harness] ?? 0) + count;
+      }
+    },
+    say(message: string) {
+      process.stderr.write(`${terminalText(message)}\n`);
+    },
+    announce(subject: string, body: string, at: number) {
+      summary.notifications++;
+      process.stderr.write(
+        `${new Date(at).toISOString()} Organisers: ${terminalText(subject)}\n${terminalText(body)}\n`
+      );
+    },
+    finish(code: number, once: boolean) {
+      let status = "pending";
+      if (code === EXIT.OK) {
+        status = "completed";
+      } else if (code === EXIT.INTERRUPTED) {
+        status = "interrupted";
+      }
+      ui.result({
+        ...summary,
+        exitCode: code,
+        mode: once ? "once" : "continuous",
+        status,
+      });
+    },
+  };
 }
 
 export function registerWatch(program: Command): void {
@@ -102,6 +147,7 @@ export function registerWatch(program: Command): void {
         }
         return;
       }
+      const jsonReporter = ctx.json ? createJsonWatchReporter(ui) : undefined;
       const intervalMs = positiveNumber("--interval", flags.interval) * 1000;
       const memory = openMemory();
       const session = await openSession(ctx, { requireAuth: true });
@@ -140,6 +186,11 @@ export function registerWatch(program: Command): void {
       };
       let updatedVersion: string | undefined;
       const checkForUpdate = async (): Promise<boolean> => {
+        // The JSON result belongs to this invocation; restarting here would
+        // exit before it is written and may create a second result document.
+        if (ctx.json) {
+          return false;
+        }
         updatedVersion = await autoUpdate(process.argv.slice(2), {
           silent: true,
         });
@@ -227,10 +278,8 @@ export function registerWatch(program: Command): void {
       }
 
       const say = (message: string) => {
-        if (ctx.json) {
-          console.log(
-            JSON.stringify({ at: Date.now(), event: "log", message })
-          );
+        if (jsonReporter) {
+          jsonReporter.say(message);
         } else {
           console.log(message);
         }
@@ -239,10 +288,8 @@ export function registerWatch(program: Command): void {
         process.stderr.write(`${terminalText(message)}\n`);
       };
       const announce = (subject: string, body: string, at: number) => {
-        if (ctx.json) {
-          console.log(
-            JSON.stringify({ at, body, event: "notification", subject })
-          );
+        if (jsonReporter) {
+          jsonReporter.announce(subject, body, at);
           return;
         }
         process.stdout.write("\u0007");
@@ -282,6 +329,7 @@ export function registerWatch(program: Command): void {
           log,
           me,
           memory,
+          onScan: jsonReporter?.onScan,
           say,
           session,
           teamId: team?._id,
@@ -290,6 +338,7 @@ export function registerWatch(program: Command): void {
         releaseLock();
       }
       await restartAfterUpdate();
+      jsonReporter?.finish(code, Boolean(flags.once));
       process.exitCode = code;
     });
 }

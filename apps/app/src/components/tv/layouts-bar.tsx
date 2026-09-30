@@ -1,7 +1,7 @@
 "use client";
 
 import { MoreHorizontal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -43,9 +43,11 @@ export function TvLayoutsBar({
 }) {
   const [name, setName] = useState(currentName ?? "");
 
-  useEffect(() => {
+  const [source, setSource] = useState({ id: currentId, name: currentName });
+  if (source.id !== currentId || source.name !== currentName) {
+    setSource({ id: currentId, name: currentName });
     setName(currentName ?? "");
-  }, [currentId, currentName]);
+  }
 
   const draftName = name.trim() || "Sin nombre";
   const nameDirty = name.trim() !== (currentName ?? "").trim();
@@ -103,7 +105,7 @@ export function TvLayoutsBar({
               Cambios sin guardar
               {currentId &&
               layouts?.some(
-                (layout) => layout._id === currentId && layout.isLive,
+                (layout) => layout._id === currentId && layout.isLive
               )
                 ? " · Guardar actualizará la TV en vivo."
                 : "."}
@@ -130,7 +132,7 @@ export function TvLayoutsBar({
                   "flex min-w-0 flex-col border p-4",
                   current
                     ? "border-hs-navy/40 bg-hs-sand/60"
-                    : "border-hs-ink/15",
+                    : "border-hs-ink/15"
                 )}
               >
                 <div className="flex items-start justify-between gap-2">

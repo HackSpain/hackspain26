@@ -9,6 +9,16 @@
       "!convex/_generated/**"
     ]
   },
+  "overrides": [
+    {
+      "includes": ["**/*.module.css"],
+      "css": {
+        "parser": {
+          "cssModules": true
+        }
+      }
+    }
+  ],
   "linter": {
     "enabled": false
   },

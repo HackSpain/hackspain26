@@ -81,14 +81,18 @@ export function TagPicker({
   }
 
   return (
-    <Popover.Root open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => (next ? setOpen(true) : close())}
+    >
       <Popover.Anchor asChild>
         <div
+          role="presentation"
           className={cn(
             "relative flex min-h-11 w-full cursor-text flex-wrap items-center gap-1.5 border-2 border-hs-ink/25 bg-hs-paper py-1.5 pr-10 pl-2 text-base text-hs-ink",
             "motion-safe:transition-[border-color,box-shadow] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
             "has-[input:focus-visible]:border-hs-navy has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-hs-navy/25",
-            disabled && "cursor-not-allowed opacity-50",
+            disabled && "cursor-not-allowed opacity-50"
           )}
           onMouseDown={(event) => {
             // Clicking the box (not a chip button) puts the caret in the input.
@@ -151,7 +155,9 @@ export function TagPicker({
                 }
                 const step = event.key === "ArrowDown" ? 1 : -1;
                 setActive((index) =>
-                  rows.length === 0 ? 0 : (index + step + rows.length) % rows.length,
+                  rows.length === 0
+                    ? 0
+                    : (index + step + rows.length) % rows.length
                 );
               } else if (event.key === "Enter") {
                 event.preventDefault();
@@ -162,7 +168,11 @@ export function TagPicker({
                 } else {
                   setOpen(true);
                 }
-              } else if (event.key === "Backspace" && query === "" && value.length > 0) {
+              } else if (
+                event.key === "Backspace" &&
+                query === "" &&
+                value.length > 0
+              ) {
                 event.preventDefault();
                 onChange(value.slice(0, -1));
               } else if (event.key === "Escape" && open) {
@@ -190,7 +200,7 @@ export function TagPicker({
             <ChevronDown
               className={cn(
                 "size-4 motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
-                open && "rotate-180",
+                open && "rotate-180"
               )}
               aria-hidden
             />
@@ -210,7 +220,9 @@ export function TagPicker({
           className="z-50 max-h-72 w-(--radix-popover-trigger-width) origin-(--radix-popover-content-transform-origin) overflow-y-auto border border-hs-ink/20 bg-hs-paper p-1 text-hs-ink motion-safe:duration-150 motion-safe:ease-[var(--ease-out)] data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95"
         >
           {rows.length === 0 ? (
-            <p className="px-2 py-2 text-sm text-hs-brown">Nada con “{query.trim()}”.</p>
+            <p className="px-2 py-2 text-sm text-hs-brown">
+              Nada con “{query.trim()}”.
+            </p>
           ) : (
             rows.map((row, index) => {
               const selected = value.includes(row.value);
@@ -222,7 +234,7 @@ export function TagPicker({
                     <p
                       className={cn(
                         "px-2 pt-2 pb-1 font-bungee text-[10px] tracking-wide text-hs-brown",
-                        index > 0 && "mt-1 border-t border-hs-ink/10",
+                        index > 0 && "mt-1 border-t border-hs-ink/10"
                       )}
                     >
                       {row.group}
@@ -237,22 +249,32 @@ export function TagPicker({
                     data-active={index === activeIndex ? "" : undefined}
                     className={cn(
                       "flex min-h-9 cursor-default items-center gap-2.5 px-2 py-1.5 text-sm select-none data-active:bg-hs-sand",
-                      blocked && "opacity-40",
+                      blocked && "opacity-40"
                     )}
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseMove={() => setActive(index)}
                     onClick={() => toggle(row.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        toggle(row.value);
+                      }
+                    }}
                   >
                     <span
                       aria-hidden
                       className={cn(
                         "flex size-4 shrink-0 items-center justify-center border-2 border-hs-ink/40 bg-hs-paper",
-                        selected && "border-hs-ink bg-hs-gold",
+                        selected && "border-hs-ink bg-hs-gold"
                       )}
                     >
-                      {selected ? <Check className="size-3" strokeWidth={3} /> : null}
+                      {selected ? (
+                        <Check className="size-3" strokeWidth={3} />
+                      ) : null}
                     </span>
-                    <span className={cn(selected && "font-semibold")}>{row.value}</span>
+                    <span className={cn(selected && "font-semibold")}>
+                      {row.value}
+                    </span>
                   </div>
                 </div>
               );

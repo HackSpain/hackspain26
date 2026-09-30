@@ -1,10 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import {
-  authedMutation,
-  profileMutation,
-} from "./lib/customFunctions";
+import { authedMutation, profileMutation } from "./lib/customFunctions";
 import { meValidator } from "./lib/validators";
 import { defaultedAttendance } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";

@@ -84,7 +84,9 @@ function parseBrandUrl(raw: string, what: string): string | undefined {
   if (value.startsWith("/") || /^https?:\/\//.test(value)) {
     return value;
   }
-  throw new Error(`${what} debe ser una URL https:// o una ruta que empiece por /`);
+  throw new Error(
+    `${what} debe ser una URL https:// o una ruta que empiece por /`
+  );
 }
 
 const trackReturn = v.object({

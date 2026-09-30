@@ -3,12 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  usingDefaultTvSponsors,
-  type TvSponsor,
-  type TvSponsorTier,
-  type TvTickerSpeed,
-} from "@/lib/tv";
+import { usingDefaultTvSponsors } from "@/lib/tv";
+import type { TvSponsor, TvSponsorTier, TvTickerSpeed } from "@/lib/tv";
 
 const TIERS: TvSponsorTier[] = ["gold", "silver", "community"];
 const SPEEDS: TvTickerSpeed[] = ["slow", "normal", "fast"];
@@ -23,21 +19,24 @@ export function SponsorEditor({
   sponsors: TvSponsor[];
   tickerSpeed?: TvTickerSpeed;
   showSpeed?: boolean;
-  onSave: (next: { sponsors: TvSponsor[]; tickerSpeed?: TvTickerSpeed }) => void;
+  onSave: (next: {
+    sponsors: TvSponsor[];
+    tickerSpeed?: TvTickerSpeed;
+  }) => void;
   onClose?: () => void;
 }) {
   const [rows, setRows] = useState<TvSponsor[]>(
     sponsors.length > 0
       ? sponsors
-      : [{ name: "", logoUrl: "", href: "", tier: "gold" }],
+      : [{ name: "", logoUrl: "", href: "", tier: "gold" }]
   );
   const [speed, setSpeed] = useState<TvTickerSpeed>(tickerSpeed ?? "normal");
 
   function update(index: number, patch: Partial<TvSponsor>) {
     setRows((current) =>
       current.map((row, rowIndex) =>
-        rowIndex === index ? { ...row, ...patch } : row,
-      ),
+        rowIndex === index ? { ...row, ...patch } : row
+      )
     );
   }
 
@@ -55,7 +54,10 @@ export function SponsorEditor({
       ) : null}
       <div className="mt-2 space-y-3">
         {rows.map((row, index) => (
-          <div key={index} className="grid gap-2 border-b border-hs-ink/15 pb-2">
+          <div
+            key={index}
+            className="grid gap-2 border-b border-hs-ink/15 pb-2"
+          >
             <Input
               aria-label="Nombre del sponsor"
               placeholder="Nombre"
@@ -66,7 +68,9 @@ export function SponsorEditor({
               aria-label="URL del logo"
               placeholder="https://…/logo.svg"
               value={row.logoUrl}
-              onChange={(event) => update(index, { logoUrl: event.target.value })}
+              onChange={(event) =>
+                update(index, { logoUrl: event.target.value })
+              }
             />
             <Input
               aria-label="Enlace del sponsor"
@@ -109,14 +113,16 @@ export function SponsorEditor({
           Velocidad
           <select
             value={speed}
-            onChange={(event) =>
-              setSpeed(event.target.value as TvTickerSpeed)
-            }
+            onChange={(event) => setSpeed(event.target.value as TvTickerSpeed)}
             className="mt-1 min-h-11 w-full border-[3px] border-hs-ink bg-hs-paper px-2 text-sm text-hs-ink"
           >
             {SPEEDS.map((item) => (
               <option key={item} value={item}>
-                {item === "slow" ? "Lenta" : item === "fast" ? "Rápida" : "Normal"}
+                {item === "slow"
+                  ? "Lenta"
+                  : item === "fast"
+                    ? "Rápida"
+                    : "Normal"}
               </option>
             ))}
           </select>

@@ -42,7 +42,7 @@ describe("judgingDashboardHome", () => {
       judgingDashboardHome({
         canJudge: false,
         sections: ["judgingSponsors", "participantes"],
-      }),
+      })
     ).toBe(DIRECTORY_PATH);
   });
 
@@ -51,7 +51,7 @@ describe("judgingDashboardHome", () => {
       judgingDashboardHome({
         canJudge: false,
         sections: ["tracks", "cli", "participantes"],
-      }),
+      })
     ).toBe(DIRECTORY_PATH);
   });
 
@@ -60,7 +60,7 @@ describe("judgingDashboardHome", () => {
       judgingDashboardHome({
         canJudge: true,
         sections: ["judging", "judgingSponsors", "participantes"],
-      }),
+      })
     ).toBe(JUDGING_PATH);
   });
 });

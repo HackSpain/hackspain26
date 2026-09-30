@@ -37,7 +37,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { attendanceLabel, cn, displayedAttendance, roleLabel } from "@/lib/utils";
+import {
+  attendanceLabel,
+  cn,
+  displayedAttendance,
+  roleLabel,
+} from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -55,8 +60,12 @@ type ParticipantList = FunctionReturnType<typeof api.admin.listParticipants>;
 type ParticipantRow = ParticipantList["items"][number];
 
 function rowRef(row: ParticipantRow): ParticipantRef | null {
-  if (row.signupId) {return { kind: "signup", id: row.signupId };}
-  if (row.userId) {return { kind: "user", id: row.userId };}
+  if (row.signupId) {
+    return { kind: "signup", id: row.signupId };
+  }
+  if (row.userId) {
+    return { kind: "user", id: row.userId };
+  }
   return null;
 }
 
@@ -74,8 +83,12 @@ function sameRef(a: ParticipantRef | null, b: ParticipantRef | null) {
 }
 
 function activateOnKey(event: KeyboardEvent<HTMLElement>, open: () => void) {
-  if (event.target !== event.currentTarget) {return;}
-  if (event.key !== "Enter" && event.key !== " ") {return;}
+  if (event.target !== event.currentTarget) {
+    return;
+  }
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
   event.preventDefault();
   open();
 }
@@ -119,7 +132,9 @@ function AdminCrm() {
     "all" | "attending" | "cancelled" | "undecided"
   >("all");
   const [accepted, setAccepted] = useState<"all" | "yes" | "no">("all");
-  const [userType, setUserType] = useState<"all" | "none" | Id<"userTypes">>("all");
+  const [userType, setUserType] = useState<"all" | "none" | Id<"userTypes">>(
+    "all"
+  );
   const userTypes = useQuery(api.userTypes.list);
   const ensureDefaults = useMutation(api.userTypes.ensureDefaults);
 
@@ -158,7 +173,9 @@ function AdminCrm() {
   const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!selected) {pushed.current = false;}
+    if (!selected) {
+      pushed.current = false;
+    }
   }, [selected]);
 
   const openParticipant = (ref: ParticipantRef, from: HTMLElement | null) => {
@@ -166,8 +183,11 @@ function AdminCrm() {
     const next = new URLSearchParams(window.location.search);
     const alreadyOpen = next.has(USER_PARAM);
     next.set(USER_PARAM, ref.id);
-    if (ref.kind === "user") {next.set(KIND_PARAM, "user");}
-    else {next.delete(KIND_PARAM);}
+    if (ref.kind === "user") {
+      next.set(KIND_PARAM, "user");
+    } else {
+      next.delete(KIND_PARAM);
+    }
     const url = `${pathname}?${next.toString()}`;
     if (alreadyOpen) {
       window.history.replaceState(null, "", url);
@@ -187,7 +207,11 @@ function AdminCrm() {
     next.delete(USER_PARAM);
     next.delete(KIND_PARAM);
     const query = next.toString();
-    window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
+    window.history.replaceState(
+      null,
+      "",
+      query ? `${pathname}?${query}` : pathname
+    );
   };
 
   const selectedRow = selected
@@ -260,7 +284,7 @@ function AdminCrm() {
           value={attendance}
           onValueChange={(value) => {
             setAttendance(
-              value as "all" | "attending" | "cancelled" | "undecided",
+              value as "all" | "attending" | "cancelled" | "undecided"
             );
             setPage(1);
           }}
@@ -299,7 +323,7 @@ function AdminCrm() {
             className={cn(
               "min-h-0 flex-1",
               refreshing &&
-                "opacity-60 motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-[var(--ease-out)]",
+                "opacity-60 motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-[var(--ease-out)]"
             )}
           >
             <div
@@ -310,11 +334,13 @@ function AdminCrm() {
                 const ref = rowRef(row);
                 const status = displayedAttendance(
                   row.attendanceStatus,
-                  row.onboardingComplete === true,
+                  row.onboardingComplete === true
                 );
                 const staff = roleLabel(row.role);
                 const open = (from: HTMLElement) => {
-                  if (ref) {openParticipant(ref, from);}
+                  if (ref) {
+                    openParticipant(ref, from);
+                  }
                 };
                 return (
                   <div
@@ -378,7 +404,7 @@ function AdminCrm() {
                     const isSelected = sameRef(ref, selected);
                     const status = displayedAttendance(
                       row.attendanceStatus,
-                      row.onboardingComplete === true,
+                      row.onboardingComplete === true
                     );
                     const staff = roleLabel(row.role);
                     return (
@@ -386,12 +412,14 @@ function AdminCrm() {
                         key={rowKey(row)}
                         data-state={isSelected ? "selected" : undefined}
                         onClick={(event) => {
-                          if (!ref) {return;}
+                          if (!ref) {
+                            return;
+                          }
                           openParticipant(
                             ref,
                             event.currentTarget.querySelector<HTMLElement>(
-                              "[data-row-trigger]",
-                            ),
+                              "[data-row-trigger]"
+                            )
                           );
                         }}
                         className="h-11 cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 motion-safe:transition-colors motion-safe:duration-100 [&_td]:border-b [&_td]:border-hs-ink/20"
@@ -408,7 +436,9 @@ function AdminCrm() {
                               {row.name}
                             </button>
                             {staff ? (
-                              <Badge className="whitespace-nowrap">{staff}</Badge>
+                              <Badge className="whitespace-nowrap">
+                                {staff}
+                              </Badge>
                             ) : null}
                           </div>
                         </TableCell>
@@ -493,7 +523,10 @@ function CrmPager({
           <ChevronLeft />
           Anterior
         </Button>
-        <p className="min-w-16 text-center text-sm tabular-nums" aria-live="polite">
+        <p
+          className="min-w-16 text-center text-sm tabular-nums"
+          aria-live="polite"
+        >
           {page} / {pages}
         </p>
         <Button
@@ -515,7 +548,10 @@ function CrmPager({
 
 function CrmToolbarSkeleton() {
   return (
-    <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden>
+    <div
+      className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      aria-hidden
+    >
       <Skeleton className="h-11" />
       <Skeleton className="h-11" />
       <Skeleton className="h-11" />
@@ -589,30 +625,40 @@ function ParticipantSheet({
   returnFocusRef: RefObject<HTMLElement | null>;
 }) {
   const [shown, setShown] = useState(selected);
-  if (selected && !sameRef(selected, shown)) {setShown(selected);}
+  if (selected && !sameRef(selected, shown)) {
+    setShown(selected);
+  }
 
   const detail = useParticipant(shown);
-  const name = detail ? participantName(detail) : (fallbackName ?? "Participante");
+  const name = detail
+    ? participantName(detail)
+    : (fallbackName ?? "Participante");
   const email = detail?.signup?.email ?? detail?.user?.email ?? fallbackEmail;
 
   return (
     <Sheet
       open={selected !== null}
       onOpenChange={(open) => {
-        if (!open) {onClose();}
+        if (!open) {
+          onClose();
+        }
       }}
     >
       <SheetContent
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           const target = returnFocusRef.current;
-          if (target?.isConnected) {target.focus();}
+          if (target?.isConnected) {
+            target.focus();
+          }
           returnFocusRef.current = null;
         }}
       >
         <SheetHeader>
           <SheetTitle>{name}</SheetTitle>
-          <SheetDescription>{email ?? "Ficha del participante"}</SheetDescription>
+          <SheetDescription>
+            {email ?? "Ficha del participante"}
+          </SheetDescription>
           {shown ? (
             <Link
               href={participantHref(shown)}

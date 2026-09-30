@@ -164,7 +164,10 @@ async function upsertIn(
   return "added";
 }
 
-async function hydrateFinalist(ctx: QueryCtx | MutationCtx, row: Doc<"finalists">) {
+async function hydrateFinalist(
+  ctx: QueryCtx | MutationCtx,
+  row: Doc<"finalists">
+) {
   const person = await resolvePerson(ctx, {
     signupId: row.signupId,
     userId: row.userId,
@@ -629,11 +632,11 @@ async function scoresByTeam(ctx: QueryCtx | MutationCtx) {
     ? estimateGenerosity(
         judgeIds,
         observations,
-        settings?.lambda ?? DEFAULT_LAMBDA,
+        settings?.lambda ?? DEFAULT_LAMBDA
       )
     : new Map<Id<"users">, number>();
   const ranked = new Map(
-    rankProjects(scored, generosity).map((result) => [result.project, result]),
+    rankProjects(scored, generosity).map((result) => [result.project, result])
   );
 
   const byTeam = new Map<
@@ -693,7 +696,8 @@ export const listTeams = adminQuery({
         if (member.status !== "member") {
           continue;
         }
-        const hasIdentity = member.userId !== undefined || member.signupId !== undefined;
+        const hasIdentity =
+          member.userId !== undefined || member.signupId !== undefined;
         if (!hasIdentity) {
           continue;
         }
@@ -957,7 +961,10 @@ export const deliver = internalAction({
         if (error) {
           errorKinds.add(error.name ?? "ResendError");
           for (const item of chunk) {
-            failures.push({ finalistId: item.finalistId, error: error.message });
+            failures.push({
+              finalistId: item.finalistId,
+              error: error.message,
+            });
           }
         } else {
           for (const item of chunk) {
@@ -974,7 +981,10 @@ export const deliver = internalAction({
       }
     }
 
-    await ctx.runMutation(internal.finalists.markEmailed, { failures, ids: sent });
+    await ctx.runMutation(internal.finalists.markEmailed, {
+      failures,
+      ids: sent,
+    });
     if (failures.length > 0) {
       console.error("finalists.deliver failures", {
         count: failures.length,
@@ -1005,7 +1015,9 @@ export const markEmailed = internalMutation({
     for (const failure of args.failures) {
       const row = await ctx.db.get(failure.finalistId);
       if (row?.status === "in") {
-        await ctx.db.patch(failure.finalistId, { deliveryError: failure.error });
+        await ctx.db.patch(failure.finalistId, {
+          deliveryError: failure.error,
+        });
       }
     }
     return null;

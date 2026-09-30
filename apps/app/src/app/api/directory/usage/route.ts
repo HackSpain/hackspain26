@@ -18,7 +18,10 @@ const USER_ID = /^[a-z0-9]+$/i;
 export async function GET(request: Request) {
   const token = await convexAuthNextjsToken();
   if (!token) {
-    return NextResponse.json({ error: "No has iniciado sesión" }, { status: 401 });
+    return NextResponse.json(
+      { error: "No has iniciado sesión" },
+      { status: 401 }
+    );
   }
   const userId = new URL(request.url).searchParams.get("userId") ?? "";
   if (!USER_ID.test(userId) || userId.length > 64) {
@@ -50,9 +53,6 @@ export async function GET(request: Request) {
         ? { code: error.error, hint: error.hint, status: error.status }
         : {}),
     });
-    return NextResponse.json(
-      { error: "Uso no disponible." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Uso no disponible." }, { status: 503 });
   }
 }

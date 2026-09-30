@@ -140,7 +140,8 @@ export function IdentityStep({
           <DialogHeader>
             <DialogTitle>Nombre de inscripción</DialogTitle>
             <DialogDescription>
-              Este nombre es el de tu plaza. Si está mal, contacta a la organización.
+              Este nombre es el de tu plaza. Si está mal, contacta a la
+              organización.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -153,7 +154,11 @@ export function IdentityStep({
 
       <div className="space-y-3">
         <Label>Foto</Label>
-        <AvatarPicker name={trimmed || me.name} avatarUrl={me.avatarUrl} action={action}>
+        <AvatarPicker
+          name={trimmed || me.name}
+          avatarUrl={me.avatarUrl}
+          action={action}
+        >
           {hasPhoto ? null : (
             <Button
               type="button"
@@ -168,7 +173,9 @@ export function IdentityStep({
             </Button>
           )}
         </AvatarPicker>
-        {github.error ? <p className="text-sm text-hs-red">{github.error}</p> : null}
+        {github.error ? (
+          <p className="text-sm text-hs-red">{github.error}</p>
+        ) : null}
         {hasPhoto ? null : (
           <p className="text-sm text-hs-brown">
             Necesitamos una foto para que la gente te reconozca en el evento.
@@ -179,7 +186,10 @@ export function IdentityStep({
       <Feedback action={action} hideMessage />
 
       <StepNav onBack={onBack} disabled={action.pending}>
-        <Button type="submit" disabled={action.pending || !nameValid || !hasPhoto}>
+        <Button
+          type="submit"
+          disabled={action.pending || !nameValid || !hasPhoto}
+        >
           {action.pending ? "Guardando…" : "Continuar"}
           <ArrowRight aria-hidden />
         </Button>

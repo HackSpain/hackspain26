@@ -6,11 +6,7 @@ import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
 import { fail } from "./lib/errors";
-import {
-  OTP_EMAIL_SUBJECT,
-  otpEmailHtml,
-  otpEmailText,
-} from "./lib/otpEmail";
+import { OTP_EMAIL_SUBJECT, otpEmailHtml, otpEmailText } from "./lib/otpEmail";
 import { resendApiKey, resendFrom } from "./lib/resend";
 
 const SEND_FAILED_MESSAGE =
@@ -73,7 +69,9 @@ export async function sendVerificationRequest(
     // One line, no stack: the Resend error name is what an operator needs
     // (invalid key, unverified domain, quota), and the recipient stays out
     // of the log. The client only gets the coded error.
-    console.warn(`[auth] Resend rejected the code email: ${error.name}: ${error.message}`);
+    console.warn(
+      `[auth] Resend rejected the code email: ${error.name}: ${error.message}`
+    );
     fail("SEND_FAILED", SEND_FAILED_MESSAGE);
   }
 }

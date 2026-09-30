@@ -44,7 +44,7 @@ describe("cliAuthReturnTo", () => {
         pathname: "/cli-auth",
         search: "?hs-code=abc123",
         hash: "",
-      }),
+      })
     ).toBe("/cli-auth?hs-code=abc123");
   });
 
@@ -54,29 +54,29 @@ describe("cliAuthReturnTo", () => {
         pathname: "/cli-auth",
         search: "?next=%2Ffeed",
         hash: "#hs-code=abc123",
-      }),
+      })
     ).toBe("/cli-auth?next=%2Ffeed#hs-code=abc123");
   });
 
   test("accepts a bare /cli-auth visit", () => {
     expect(
-      cliAuthReturnTo({ pathname: "/cli-auth", search: "", hash: "" }),
+      cliAuthReturnTo({ pathname: "/cli-auth", search: "", hash: "" })
     ).toBe("/cli-auth");
   });
 
   test("returns nothing for any other page, fragment or not", () => {
     expect(
-      cliAuthReturnTo({ pathname: "/feed", search: "", hash: "#hs-code=x" }),
+      cliAuthReturnTo({ pathname: "/feed", search: "", hash: "#hs-code=x" })
     ).toBeNull();
     expect(
       cliAuthReturnTo({
         pathname: "/cli-auth/handoff",
         search: "",
         hash: "#hs-token=x",
-      }),
+      })
     ).toBeNull();
     expect(
-      cliAuthReturnTo({ pathname: "/", search: "?hs-code=x", hash: "" }),
+      cliAuthReturnTo({ pathname: "/", search: "?hs-code=x", hash: "" })
     ).toBeNull();
   });
 });
@@ -85,13 +85,13 @@ describe("safeCliAuthReturnTo", () => {
   test("accepts the approval card with or without query or fragment", () => {
     expect(safeCliAuthReturnTo("/cli-auth")).toBe("/cli-auth");
     expect(safeCliAuthReturnTo("/cli-auth?hs-code=abc")).toBe(
-      "/cli-auth?hs-code=abc",
+      "/cli-auth?hs-code=abc"
     );
     expect(safeCliAuthReturnTo("/cli-auth#hs-code=abc")).toBe(
-      "/cli-auth#hs-code=abc",
+      "/cli-auth#hs-code=abc"
     );
     expect(safeCliAuthReturnTo("/cli-auth?next=%2Ffeed#hs-code=abc")).toBe(
-      "/cli-auth?next=%2Ffeed#hs-code=abc",
+      "/cli-auth?next=%2Ffeed#hs-code=abc"
     );
   });
 

@@ -294,6 +294,7 @@ async function linkGithub(
   const { session, me } = await openProfile(ctx);
   if (opts.unlink) {
     if (!me.githubLinked) {
+      ui.result({ githubLinked: false, changed: false });
       ui.info("No GitHub account is linked.");
       return;
     }

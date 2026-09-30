@@ -46,7 +46,7 @@ hackspain team dissolve          # owner deletes a team nobody else is in
 hackspain stack set nextjs convex claude-code
 
 hackspain track list
-hackspain track register [slug] | unregister
+hackspain track register [slug] | unregister [slug]
 hackspain project show | list   # submit is on the dashboard: /submit
 hackspain perk list
 
@@ -95,6 +95,12 @@ everyone plus GitHub activity from every team repo, with pictures inline where t
 draw them and links elsewhere; `↑`/`↓` scroll it, `g` returns to live), and a status bar with the
 next scan and upload state. `q` quits, `p` pauses scanning. Piped output, `--json`, `--once` and
 `--plain` use the line-by-line mode instead.
+
+`hackspain --json watch --once` writes one result object to stdout after its scan.
+Continuous `hackspain --json watch` keeps progress and organiser messages on stderr,
+then writes one result object to stdout when stopped. The result includes the exit
+status and totals for scans, events by harness, skipped events and notifications;
+an incomplete one-shot upload reports `status: "pending"` and exits 5.
 
 Every 30 s it reads the local session logs of the
 AI coding harnesses it finds (Claude Code, Codex, Cursor, GitHub Copilot CLI, Gemini CLI, Qwen Code, OpenCode, Kilo Code, Cline, Pi, Oh My Pi, Antigravity, Devin), normalises them into one
@@ -214,9 +220,10 @@ and served from `https://hackspain.app/api/files/<id>` (needs a dashboard login;
 open feed` gets you one). In terminals that speak the Kitty graphics protocol (kitty, Ghostty,
 WezTerm, Konsole 22.04+) or the iTerm2 inline-image protocol (iTerm2, Warp, VS Code) the picture
 is drawn inline: the CLI asks the server for a PNG thumbnail (`?w=576`) and hands the bytes to
-the terminal, so it ships no image decoders. Everywhere else, in tmux, when piped, with `--json`,
-`--no-images` or `HACKSPAIN_NO_IMAGES=1`, you get the link. Pictures are capped at 36 columns by
-12 rows in `hackspain feed` and 30 by 6 in the watcher band; tall photos shrink to fit the row cap.
+the terminal, so it ships no image decoders. Everywhere else, in tmux or GNU screen, when piped,
+with `--json`, `--no-images` or `HACKSPAIN_NO_IMAGES=1`, you get the link. Pictures are capped at
+36 columns by 12 rows in `hackspain feed` and 30 by 6 in the watcher band; tall photos shrink to
+fit the row cap.
 
 Pages are 20 posts by default (`-n`). On a TTY the feed asks "Show older posts?" after a full
 page; piped or `--json` it prints the cursor to pass as `--before` (the oldest post's `createdAt`,
@@ -228,6 +235,8 @@ opened and merged pull requests, releases and tags. Nothing is read from the hac
 push often and it shows up.
 
 Tracks live on the project: `track register` saves a draft with the chosen challenges.
+When entered in THEKER and another track, `track unregister` asks which one to leave;
+scripts should pass its slug.
 Final submit is on the dashboard (`/submit`): YouTube video, public GitHub repo, optional
 product link. Commands that need a team, an accepted signup, or completed
 onboarding fail fast with the next step to take.
@@ -264,6 +273,40 @@ binaries target `https://hackspain.app`; the optional repository variable
 typecheck, lint, tests, and a host compile on every PR that touches `apps/cli` or the Convex
 functions.
 
+## JSON output
+
+With `--json`, a successful command writes an object shaped like
+`{"ok":true,"data":{}}` to stdout.
+Failures write one JSON object there, for example:
+
+```json
+{"ok":false,"code":"UNAUTHENTICATED","message":"You are not logged in.","hint":"Run `hackspain auth login`.","exitCode":3}
+```
+
+`code` is the machine-readable reason; `message` and the optional `hint` are for
+people. Runtime errors include `exitCode`, but Commander syntax errors omit that
+field. Use the process exit status below to determine success or failure. Diagnostic
+output goes to stderr, so scripts can parse stdout as one object.
+
+Current codes include:
+
+| Code | Meaning |
+| --- | --- |
+| `USAGE`, `VALIDATION` | Invalid command input or server-side validation |
+| `UNAUTHENTICATED`, `SESSION_EXPIRED` | Login required or session expired |
+| `NOT_REGISTERED`, `UNREGISTERED`, `NOT_ACCEPTED`, `NOT_ONBOARDED`, `NOT_ADMIN`, `EVENT_CLOSED` | Participant or event access gate |
+| `NETWORK` | Backend could not be reached |
+| `LOCKED`, `WATCHER_RUNNING` | Another CLI process holds the credentials or watcher lock |
+| `GITHUB`, `NOT_CONFIGURED` | GitHub linking failed or is not configured |
+| `NO_TEAM`, `NO_PROJECT`, `NO_REPO`, `NO_MEMBERS` | Required team, project, repository, or member is missing |
+| `LOGIN_TIMEOUT`, `SIGNIN_FAILED`, `BAD_OTP`, `OTP_EXPIRED`, `TOO_MANY_ATTEMPTS`, `SEND_FAILED` | Sign-in or email-code failure |
+| `ALREADY_IN_TEAM`, `BAD_CODE`, `NOT_FOUND`, `NOT_MEMBER`, `NOT_OWNER`, `NOT_ALLOWED`, `TRACK_FULL`, `ALREADY_SUBMITTED` | Team, track, or project operation rejected |
+| `SINK_HTTP_PENDING`, `SINK_HTTP`, `SINK_HTTP_RECEIPT` | Damaged pending telemetry upload, upload failure, or invalid receipt |
+| `ERROR`, `SERVER`, `UNKNOWN` | Generic or unexpected error |
+
+Other codes can come from the backend or a specific command. Handle known codes
+explicitly and use the exit status for a fallback.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -275,3 +318,7 @@ functions.
 | 4 | Not eligible (no signup, not accepted, onboarding incomplete, or the hackathon is not running: `EVENT_CLOSED`) |
 | 5 | Could not reach the backend |
 | 130 | Interrupted |
+
+For `--json`, eligibility failures use `NOT_REGISTERED`, `NOT_ACCEPTED`,
+`NOT_ONBOARDED`, or `EVENT_CLOSED` whether the CLI catches the gate before a
+prompt or the server rejects the command.

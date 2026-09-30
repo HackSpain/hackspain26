@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function FinalCancelLayout({ children }: { children: ReactNode }) {
+export default function FinalCancelLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return children;
 }

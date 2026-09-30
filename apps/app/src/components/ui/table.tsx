@@ -19,7 +19,7 @@ function Table({
       data-slot="table-container"
       className={cn(
         "relative w-full overflow-auto border-[3px] border-hs-ink bg-hs-paper",
-        containerClassName,
+        containerClassName
       )}
     >
       <table

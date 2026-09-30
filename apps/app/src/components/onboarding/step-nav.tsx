@@ -18,7 +18,12 @@ export function StepNav({
   return (
     <div className="flex items-center justify-between gap-3">
       {onBack ? (
-        <Button type="button" variant="outline" disabled={disabled} onClick={onBack}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled}
+          onClick={onBack}
+        >
           <ArrowLeft aria-hidden />
           Atrás
         </Button>

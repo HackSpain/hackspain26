@@ -10,7 +10,9 @@ export const PHASES = [
 ] as const;
 
 // Fictional pricing for the mock. This is not a provider's price schedule.
-export function usageUsd(totals: Pick<Totals, "tokens" | "cachedTokens">): number {
+export function usageUsd(
+  totals: Pick<Totals, "tokens" | "cachedTokens">
+): number {
   return (
     ((totals.tokens - totals.cachedTokens) * 4 + totals.cachedTokens * 0.5) /
     1_000_000
@@ -98,4 +100,3 @@ export const MILESTONES = TEAMS.map((team, index) => {
     teamId: team.id,
   };
 });
-

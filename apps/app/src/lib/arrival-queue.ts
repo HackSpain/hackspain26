@@ -14,7 +14,10 @@ export type Arrival = {
 export type ArrivalQueue = { pending: Arrival[]; seen: Set<string> };
 
 /** Retain chronological order, drop undone entries, and never replay profile edits. */
-export function reconcileArrivals(state: ArrivalQueue, entries: Arrival[]): ArrivalQueue {
+export function reconcileArrivals(
+  state: ArrivalQueue,
+  entries: Arrival[]
+): ArrivalQueue {
   const available = new Map(entries.map((entry) => [entry.id, entry]));
   const fresh = entries.filter((entry) => !state.seen.has(entry.id));
   const pending = state.pending.flatMap((entry) => {
@@ -22,8 +25,9 @@ export function reconcileArrivals(state: ArrivalQueue, entries: Arrival[]): Arri
     return current ? [current] : [];
   });
   return {
-    pending: [...pending, ...fresh].toSorted((a, b) =>
-      a.checkedInAt - b.checkedInAt || a.id.localeCompare(b.id)),
+    pending: [...pending, ...fresh].toSorted(
+      (a, b) => a.checkedInAt - b.checkedInAt || a.id.localeCompare(b.id)
+    ),
     seen: new Set([...state.seen, ...entries.map((entry) => entry.id)]),
   };
 }
