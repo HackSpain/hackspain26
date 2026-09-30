@@ -28,18 +28,26 @@ function safeUrl(url?: string): string | undefined {
 
 const components: Components = {
   h1: ({ children }) => (
-    <h2 className="font-bungee text-2xl leading-tight text-balance">{children}</h2>
+    <h2 className="font-bungee text-2xl leading-tight text-balance">
+      {children}
+    </h2>
   ),
   h2: ({ children }) => (
-    <h3 className="font-bungee text-xl leading-tight text-balance">{children}</h3>
+    <h3 className="font-bungee text-xl leading-tight text-balance">
+      {children}
+    </h3>
   ),
   h3: ({ children }) => (
-    <h4 className="font-bungee text-base leading-snug text-balance">{children}</h4>
+    <h4 className="font-bungee text-base leading-snug text-balance">
+      {children}
+    </h4>
   ),
   h4: ({ children }) => (
     <h5 className="font-semibold leading-snug text-balance">{children}</h5>
   ),
-  p: ({ children }) => <p className="text-pretty leading-relaxed">{children}</p>,
+  p: ({ children }) => (
+    <p className="text-pretty leading-relaxed">{children}</p>
+  ),
   ul: ({ children }) => (
     <ul className="list-disc space-y-1 pl-5 text-pretty">{children}</ul>
   ),
@@ -63,7 +71,9 @@ const components: Components = {
       </a>
     );
   },
-  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  strong: ({ children }) => (
+    <strong className="font-semibold">{children}</strong>
+  ),
   em: ({ children }) => <em>{children}</em>,
   blockquote: ({ children }) => (
     <blockquote className="border-l-[3px] border-hs-ink/30 pl-3 text-hs-brown">

@@ -7,11 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  EmptyState,
-  LoadingText,
-  Page,
-} from "@/components/page";
+import { EmptyState, LoadingText, Page } from "@/components/page";
 import { SubmitFlow } from "@/components/submit-project";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +54,7 @@ function AdminSubmitPage() {
   const selected = directory?.teams.find((team) => team._id === teamId);
   const detail = useQuery(
     api.submissions.adminForTeam,
-    selected ? { teamId: selected._id } : "skip",
+    selected ? { teamId: selected._id } : "skip"
   );
 
   const query = search.trim().toLowerCase();
@@ -79,7 +75,11 @@ function AdminSubmitPage() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
-  if (directory === undefined || tracks === undefined || settings === undefined) {
+  if (
+    directory === undefined ||
+    tracks === undefined ||
+    settings === undefined
+  ) {
     return <LoadingText />;
   }
 
@@ -100,7 +100,9 @@ function AdminSubmitPage() {
         <div className="hs-enter space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <p className="font-bungee text-xl text-balance">{selected.name}</p>
+              <p className="font-bungee text-xl text-balance">
+                {selected.name}
+              </p>
               <p className="mt-1 text-sm font-medium text-pretty text-hs-brown">
                 {memberLine(selected)}
               </p>
@@ -114,7 +116,9 @@ function AdminSubmitPage() {
                   ) : null}
                 </div>
               ) : (
-                <p className="mt-2 text-sm text-hs-brown">Sin track asignado.</p>
+                <p className="mt-2 text-sm text-hs-brown">
+                  Sin track asignado.
+                </p>
               )}
             </div>
             <Button

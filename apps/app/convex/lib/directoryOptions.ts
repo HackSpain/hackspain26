@@ -17,19 +17,74 @@ export type OptionGroup = { label: string; options: readonly Option[] };
 const o = (value: string, ...aliases: string[]): Option => ({ aliases, value });
 
 export const ROLE_OPTIONS: readonly Option[] = [
-  o("AI Engineer", "ai", "ia", "ingeniero ia", "ingeniera ia", "llm engineer", "genai engineer"),
+  o(
+    "AI Engineer",
+    "ai",
+    "ia",
+    "ingeniero ia",
+    "ingeniera ia",
+    "llm engineer",
+    "genai engineer"
+  ),
   o("ML Engineer", "ml", "machine learning engineer", "mlops"),
-  o("Data Scientist", "data", "data science", "cientifico de datos", "cientifica de datos"),
+  o(
+    "Data Scientist",
+    "data",
+    "data science",
+    "cientifico de datos",
+    "cientifica de datos"
+  ),
   o("Data Engineer", "data engineering", "ingeniero de datos"),
   o("Backend Developer", "backend", "back-end", "back end", "backend engineer"),
-  o("Frontend Developer", "frontend", "front-end", "front end", "frontend engineer"),
-  o("Full-stack Developer", "full-stack", "fullstack", "full stack", "full-stack engineer"),
-  o("Mobile Developer", "mobile", "movil", "ios developer", "android developer"),
-  o("DevOps / Platform", "devops", "platform", "sre", "infra", "cloud engineer"),
-  o("Product Designer", "diseno", "diseno de producto", "designer", "ux designer", "ui designer", "ux/ui"),
+  o(
+    "Frontend Developer",
+    "frontend",
+    "front-end",
+    "front end",
+    "frontend engineer"
+  ),
+  o(
+    "Full-stack Developer",
+    "full-stack",
+    "fullstack",
+    "full stack",
+    "full-stack engineer"
+  ),
+  o(
+    "Mobile Developer",
+    "mobile",
+    "movil",
+    "ios developer",
+    "android developer"
+  ),
+  o(
+    "DevOps / Platform",
+    "devops",
+    "platform",
+    "sre",
+    "infra",
+    "cloud engineer"
+  ),
+  o(
+    "Product Designer",
+    "diseno",
+    "diseno de producto",
+    "designer",
+    "ux designer",
+    "ui designer",
+    "ux/ui"
+  ),
   o("Product Manager", "product", "pm", "producto"),
   o("Researcher", "research", "investigador", "investigadora", "phd"),
-  o("Founder", "fundador", "fundadora", "ceo", "cto", "emprendedor", "emprendedora"),
+  o(
+    "Founder",
+    "fundador",
+    "fundadora",
+    "ceo",
+    "cto",
+    "emprendedor",
+    "emprendedora"
+  ),
   o("Estudiante", "student", "alumno", "alumna"),
   o("Otro", "other", "otra"),
 ];
@@ -85,8 +140,18 @@ export const CITY_OPTIONS: readonly Option[] = [
 ];
 
 export const UNIVERSITY_OPTIONS: readonly Option[] = [
-  o("Universidad Politécnica de Madrid", "upm", "technical university of madrid", "politecnica de madrid"),
-  o("Universidad Complutense de Madrid", "ucm", "complutense", "complutense university"),
+  o(
+    "Universidad Politécnica de Madrid",
+    "upm",
+    "technical university of madrid",
+    "politecnica de madrid"
+  ),
+  o(
+    "Universidad Complutense de Madrid",
+    "ucm",
+    "complutense",
+    "complutense university"
+  ),
   o("Universidad Autónoma de Madrid", "uam", "autonoma de madrid"),
   o("Universidad Carlos III de Madrid", "uc3m", "carlos iii", "carlos 3"),
   o("Universidad Rey Juan Carlos", "urjc"),
@@ -98,17 +163,42 @@ export const UNIVERSITY_OPTIONS: readonly Option[] = [
   o("Universidad Francisco de Vitoria", "ufv"),
   o("Universidad Nebrija", "nebrija"),
   o("U-tad", "utad"),
-  o("Universitat Politècnica de Catalunya", "upc", "universidad politecnica de cataluna", "polytechnic university of catalonia", "barcelonatech"),
-  o("Universitat de Barcelona", "ub", "universidad de barcelona", "university of barcelona"),
-  o("Universitat Autònoma de Barcelona", "uab", "universidad autonoma de barcelona"),
+  o(
+    "Universitat Politècnica de Catalunya",
+    "upc",
+    "universidad politecnica de cataluna",
+    "polytechnic university of catalonia",
+    "barcelonatech"
+  ),
+  o(
+    "Universitat de Barcelona",
+    "ub",
+    "universidad de barcelona",
+    "university of barcelona"
+  ),
+  o(
+    "Universitat Autònoma de Barcelona",
+    "uab",
+    "universidad autonoma de barcelona"
+  ),
   o("Universitat Pompeu Fabra", "upf", "pompeu fabra"),
   o("Universitat Ramon Llull", "url", "la salle", "esade", "iqs"),
   o("Universitat Oberta de Catalunya", "uoc"),
   o("Universitat de Girona", "udg", "universidad de girona"),
   o("Universitat Rovira i Virgili", "urv"),
   o("Universitat de Lleida", "udl", "universidad de lleida"),
-  o("Universitat Politècnica de València", "upv", "universidad politecnica de valencia", "politecnica de valencia"),
-  o("Universitat de València", "uv", "universidad de valencia", "university of valencia"),
+  o(
+    "Universitat Politècnica de València",
+    "upv",
+    "universidad politecnica de valencia",
+    "politecnica de valencia"
+  ),
+  o(
+    "Universitat de València",
+    "uv",
+    "universidad de valencia",
+    "university of valencia"
+  ),
   o("Universidad de Alicante", "ua", "universitat d'alacant"),
   o("Universidad Miguel Hernández", "umh"),
   o("Universitat Jaume I", "uji", "jaume i"),
@@ -123,7 +213,13 @@ export const UNIVERSITY_OPTIONS: readonly Option[] = [
   o("Universidad de Jaén", "ujaen"),
   o("Universidad de Almería", "ual"),
   o("Universidad de Huelva", "uhu"),
-  o("Universidad del País Vasco", "upv/ehu", "ehu", "euskal herriko unibertsitatea", "university of the basque country"),
+  o(
+    "Universidad del País Vasco",
+    "upv/ehu",
+    "ehu",
+    "euskal herriko unibertsitatea",
+    "university of the basque country"
+  ),
   o("Universidad de Deusto", "deusto"),
   o("Mondragon Unibertsitatea", "mondragon"),
   o("Universidad de Navarra", "unav", "university of navarra", "tecnun"),
@@ -138,12 +234,25 @@ export const UNIVERSITY_OPTIONS: readonly Option[] = [
   o("Universidad de Oviedo", "uniovi", "university of oviedo"),
   o("Universidad de Cantabria", "unican"),
   o("Universidad de La Rioja", "unirioja"),
-  o("Universidade de Santiago de Compostela", "usc", "universidad de santiago de compostela"),
-  o("Universidade da Coruña", "udc", "universidad de a coruna", "universidad de la coruna"),
+  o(
+    "Universidade de Santiago de Compostela",
+    "usc",
+    "universidad de santiago de compostela"
+  ),
+  o(
+    "Universidade da Coruña",
+    "udc",
+    "universidad de a coruna",
+    "universidad de la coruna"
+  ),
   o("Universidade de Vigo", "uvigo", "universidad de vigo"),
   o("Universidad de Castilla-La Mancha", "uclm"),
   o("Universidad de Extremadura", "uex"),
-  o("Universitat de les Illes Balears", "uib", "universidad de las islas baleares"),
+  o(
+    "Universitat de les Illes Balears",
+    "uib",
+    "universidad de las islas baleares"
+  ),
   o("Universidad de La Laguna", "ull"),
   o("Universidad de Las Palmas de Gran Canaria", "ulpgc"),
   o("UNED", "universidad nacional de educacion a distancia"),
@@ -153,19 +262,52 @@ export const UNIVERSITY_OPTIONS: readonly Option[] = [
 ];
 
 export const DEGREE_OPTIONS: readonly Option[] = [
-  o("Ingeniería Informática", "informatica", "computer science", "computer engineering", "cs", "grado en ingenieria informatica", "enginyeria informatica"),
-  o("Ingeniería del Software", "software engineering", "ingenieria de software"),
-  o("Ciencia de Datos", "data science", "ciencia e ingenieria de datos", "ingenieria de datos"),
-  o("Inteligencia Artificial", "ia", "ai", "artificial intelligence", "grado en inteligencia artificial"),
+  o(
+    "Ingeniería Informática",
+    "informatica",
+    "computer science",
+    "computer engineering",
+    "cs",
+    "grado en ingenieria informatica",
+    "enginyeria informatica"
+  ),
+  o(
+    "Ingeniería del Software",
+    "software engineering",
+    "ingenieria de software"
+  ),
+  o(
+    "Ciencia de Datos",
+    "data science",
+    "ciencia e ingenieria de datos",
+    "ingenieria de datos"
+  ),
+  o(
+    "Inteligencia Artificial",
+    "ia",
+    "ai",
+    "artificial intelligence",
+    "grado en inteligencia artificial"
+  ),
   o("Matemáticas", "mathematics", "maths", "math", "matematicas"),
   o("Física", "physics", "fisica"),
-  o("Ingeniería de Telecomunicaciones", "telecomunicaciones", "teleco", "telecommunications engineering"),
+  o(
+    "Ingeniería de Telecomunicaciones",
+    "telecomunicaciones",
+    "teleco",
+    "telecommunications engineering"
+  ),
   o("Ingeniería Industrial", "industrial engineering", "industriales"),
   o("Ingeniería Electrónica", "electronica", "electronics"),
   o("Ingeniería Biomédica", "biomedica", "biomedical engineering"),
   o("Bioinformática", "bioinformatics"),
   o("Diseño", "design", "diseno grafico", "diseno de producto"),
-  o("Administración y Dirección de Empresas", "ade", "business", "business administration"),
+  o(
+    "Administración y Dirección de Empresas",
+    "ade",
+    "business",
+    "business administration"
+  ),
   o("Economía", "economics", "economia"),
   o("Derecho", "law"),
   o("Máster / Posgrado", "master", "posgrado", "msc", "phd", "doctorado"),
@@ -209,18 +351,45 @@ export const SKILL_GROUPS: readonly OptionGroup[] = [
     label: "IA y ML",
     options: [
       o("LLMs", "llm", "large language models", "gpt", "claude", "openai"),
-      o("Agentes IA", "agents", "ai agents", "agentes", "agentic", "langchain", "langgraph"),
+      o(
+        "Agentes IA",
+        "agents",
+        "ai agents",
+        "agentes",
+        "agentic",
+        "langchain",
+        "langgraph"
+      ),
       o("RAG", "retrieval", "vector search", "embeddings"),
       o("Prompt engineering", "prompting", "prompts"),
-      o("Machine Learning", "ml", "aprendizaje automatico", "scikit-learn", "sklearn"),
+      o(
+        "Machine Learning",
+        "ml",
+        "aprendizaje automatico",
+        "scikit-learn",
+        "sklearn"
+      ),
       o("Deep Learning", "dl", "neural networks", "redes neuronales"),
       o("PyTorch", "torch"),
       o("TensorFlow", "keras"),
-      o("Computer Vision", "cv", "vision por computador", "vision artificial", "opencv", "yolo"),
+      o(
+        "Computer Vision",
+        "cv",
+        "vision por computador",
+        "vision artificial",
+        "opencv",
+        "yolo"
+      ),
       o("NLP", "procesamiento del lenguaje", "natural language processing"),
       o("Fine-tuning", "finetuning", "lora"),
       o("Voz y audio", "speech", "audio", "tts", "asr", "whisper"),
-      o("IA generativa", "genai", "generative ai", "stable diffusion", "imagen generativa"),
+      o(
+        "IA generativa",
+        "genai",
+        "generative ai",
+        "stable diffusion",
+        "imagen generativa"
+      ),
     ],
   },
   {
@@ -266,7 +435,13 @@ export const SKILL_GROUPS: readonly OptionGroup[] = [
       o("Robótica", "robotics", "robots"),
       o("ROS 2", "ros", "ros2"),
       o("Hardware", "arduino", "raspberry pi", "iot", "electronica"),
-      o("Ciberseguridad", "seguridad", "security", "cybersecurity", "pentesting"),
+      o(
+        "Ciberseguridad",
+        "seguridad",
+        "security",
+        "cybersecurity",
+        "pentesting"
+      ),
       o("Blockchain", "web3", "solidity", "crypto"),
       o("Game dev", "gamedev", "videojuegos", "unity", "unreal", "godot"),
       o("AR / VR", "ar", "vr", "xr", "realidad virtual", "realidad aumentada"),
@@ -286,7 +461,14 @@ export const INTEREST_OPTIONS: readonly Option[] = [
   o("Educación", "education", "edtech", "educacion"),
   o("Salud", "health", "healthtech", "medicina", "biotech"),
   o("Fintech", "finanzas", "finance", "pagos"),
-  o("Sostenibilidad", "sustainability", "clima", "climate", "energia", "medio ambiente"),
+  o(
+    "Sostenibilidad",
+    "sustainability",
+    "clima",
+    "climate",
+    "energia",
+    "medio ambiente"
+  ),
   o("Robótica", "robotics", "robots"),
   o("Hardware", "iot", "electronica"),
   o("Videojuegos", "games", "gaming", "game dev"),
@@ -379,6 +561,11 @@ export function canonicalTags(
   return out;
 }
 
-export function isOption(options: readonly Option[], value: string | undefined): boolean {
-  return value !== undefined && options.some((option) => option.value === value);
+export function isOption(
+  options: readonly Option[],
+  value: string | undefined
+): boolean {
+  return (
+    value !== undefined && options.some((option) => option.value === value)
+  );
 }

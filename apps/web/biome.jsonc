@@ -5,8 +5,30 @@
     "ultracite/biome/astro",
     "ultracite/biome/react"
   ],
+  "overrides": [
+    {
+      // Astro renders templates once and has no React reconciliation keys.
+      // https://docs.astro.build/en/reference/astro-syntax/#differences-between-astro-and-jsx
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useJsxKeyInIterable": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/pages/brand.astro"],
+      "html": {
+        "formatter": {
+          "selfCloseVoidElements": "always"
+        }
+      }
+    }
+  ],
   "files": {
-    "includes": ["!!drizzle/meta", "!!src/pages/brand.astro"]
+    "includes": ["!!drizzle/meta"]
   },
   "linter": {
     "rules": {

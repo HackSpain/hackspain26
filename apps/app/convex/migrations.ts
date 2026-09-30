@@ -335,8 +335,11 @@ export const listAvatarsWithoutThumbnail = query({
   handler: async (ctx, args) => {
     assertMigrationSecret(args.secret);
     const users = await ctx.db.query("users").collect();
-    const out: { userId: Id<"users">; avatarId: Id<"_storage">; url: string }[] =
-      [];
+    const out: {
+      userId: Id<"users">;
+      avatarId: Id<"_storage">;
+      url: string;
+    }[] = [];
     for (const user of users) {
       if (!user.avatarId || user.avatarThumbId) {
         continue;

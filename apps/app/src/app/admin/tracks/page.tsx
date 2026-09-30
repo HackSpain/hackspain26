@@ -62,19 +62,23 @@ function TracksAdmin() {
   const requestedSlug = searchParams.get(TRACK_PARAM);
 
   useEffect(() => {
-    if (tracks === undefined) return;
+    if (tracks === undefined) {
+      return;
+    }
     const stale =
       tracks.length === 0 ||
       tracks.some(
         (track) =>
-          track.active && (track.slug === "ml" || track.slug === "non-tech"),
+          track.active && (track.slug === "ml" || track.slug === "non-tech")
       );
     if (stale) {
       void ensureDefaults({});
     }
   }, [tracks, ensureDefaults]);
 
-  if (!tracks || !settings || submissions === undefined) return <LoadingText />;
+  if (!tracks || !settings || submissions === undefined) {
+    return <LoadingText />;
+  }
 
   const selected =
     tracks.find((track) => track.slug === requestedSlug) ?? tracks[0] ?? null;
@@ -152,7 +156,7 @@ function TracksAdmin() {
             track={selected}
             teamLimit={settings.teamLimit}
             submissions={submissions.filter((row) =>
-              row.challengeIds.includes(selected._id),
+              row.challengeIds.includes(selected._id)
             )}
           />
         </div>
@@ -188,13 +192,16 @@ function TrackEditor({
     logoUrl.trim() !== (track.logoUrl ?? "") ||
     website.trim() !== (track.website ?? "");
 
-  const run = async (kind: "text" | "visibility", work: () => Promise<null>) => {
+  const run = async (
+    kind: "text" | "visibility",
+    work: () => Promise<null>
+  ) => {
     setPending(kind);
     setError(null);
     try {
       await work();
-    } catch (err) {
-      setError(errorMessage(err, "No se pudo guardar el reto."));
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No se pudo guardar el reto."));
     } finally {
       setPending(null);
     }
@@ -204,7 +211,10 @@ function TrackEditor({
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-3">
-          <TrackLogo track={{ label: track.label, logoUrl: logoUrl.trim() || undefined }} className="h-7" />
+          <TrackLogo
+            track={{ label: track.label, logoUrl: logoUrl.trim() || undefined }}
+            className="h-7"
+          />
           <Badge>{track.active ? "Activo" : "Oculto"}</Badge>
           <Badge variant="gold" className="tabular-nums">
             {projectCount(submissions.length, teamLimit)}
@@ -293,7 +303,7 @@ function TrackEditor({
                   note,
                   logoUrl,
                   website,
-                }),
+                })
               )
             }
           >
@@ -305,7 +315,7 @@ function TrackEditor({
             disabled={pending !== null}
             onClick={() =>
               void run("visibility", () =>
-                update({ trackId: track._id, active: !track.active }),
+                update({ trackId: track._id, active: !track.active })
               )
             }
           >
@@ -320,7 +330,9 @@ function TrackEditor({
           ) : null}
         </div>
         {submissions.length === 0 ? (
-          <p className="text-sm text-hs-brown">Aún no hay proyectos en este reto.</p>
+          <p className="text-sm text-hs-brown">
+            Aún no hay proyectos en este reto.
+          </p>
         ) : (
           <ul
             aria-label="Proyectos en este reto"
@@ -344,12 +356,14 @@ function ProjectRow({ row }: { row: Submission }) {
         "relative grid gap-x-6 gap-y-1.5 py-3 pr-3 pl-4 md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)]",
         "before:absolute before:inset-y-0 before:left-0 before:w-1",
         submitted ? "before:bg-hs-gold" : "before:bg-hs-ink/20",
-        "transition-[background-color] duration-150 ease-[var(--ease-out)] hover:bg-hs-sand/50",
+        "transition-[background-color] duration-150 ease-[var(--ease-out)] hover:bg-hs-sand/50"
       )}
     >
       <div className="min-w-0 space-y-1.5">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bungee text-sm leading-tight">
-          <span className="min-w-0 break-words">{row.name || "Sin título"}</span>
+          <span className="min-w-0 break-words">
+            {row.name || "Sin título"}
+          </span>
           <Badge variant={submitted ? "gold" : "default"} className="shrink-0">
             {submissionStatusLabel(row.status)}
           </Badge>

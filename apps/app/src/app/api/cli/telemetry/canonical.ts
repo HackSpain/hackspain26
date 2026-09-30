@@ -20,15 +20,31 @@ export function telemetryDedupKeys(event: {
   identity: { userId: string };
   native?: { requestId?: string };
 }): string[] {
-  const keys = [JSON.stringify([event.identity.userId, "event", event.eventId])];
-  if (event.harness === "claude-code" && event.type === "usage" && event.native?.requestId) {
-    keys.push(JSON.stringify([event.identity.userId, "claude-request", event.sessionId, event.native.requestId]));
+  const keys = [
+    JSON.stringify([event.identity.userId, "event", event.eventId]),
+  ];
+  if (
+    event.harness === "claude-code" &&
+    event.type === "usage" &&
+    event.native?.requestId
+  ) {
+    keys.push(
+      JSON.stringify([
+        event.identity.userId,
+        "claude-request",
+        event.sessionId,
+        event.native.requestId,
+      ])
+    );
   }
   return keys;
 }
 
 /** Remember both aliases even when one is already known. */
-export function rememberTelemetry(seen: Set<string>, event: Parameters<typeof telemetryDedupKeys>[0]): boolean {
+export function rememberTelemetry(
+  seen: Set<string>,
+  event: Parameters<typeof telemetryDedupKeys>[0]
+): boolean {
   const keys = telemetryDedupKeys(event);
   const duplicate = keys.some((key) => seen.has(key));
   for (const key of keys) {
@@ -75,7 +91,8 @@ export function modelFamily(raw: string): ModelFamily {
   return "other";
 }
 
-const CLOUD_PREFIX = /^(?:[a-z]{2,4}\.)?(?:anthropic|amazon|meta|mistral|cohere)\./;
+const CLOUD_PREFIX =
+  /^(?:[a-z]{2,4}\.)?(?:anthropic|amazon|meta|mistral|cohere)\./;
 const VARIANT_SUFFIX = /[:@].*$/;
 const DATE_SUFFIX = /-(?:\d{8}|\d{4}-\d{2}-\d{2})$/;
 const REVISION_SUFFIX = /-v\d+$/;
@@ -129,7 +146,10 @@ export function modelProvider(
   reported: string | undefined,
   family: ModelFamily
 ): string {
-  const slug = reported?.trim().toLowerCase().replaceAll(PROVIDER_SEPARATORS, "-");
+  const slug = reported
+    ?.trim()
+    .toLowerCase()
+    .replaceAll(PROVIDER_SEPARATORS, "-");
   if (!slug) {
     return FAMILY_PROVIDER[family];
   }

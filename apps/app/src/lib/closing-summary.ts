@@ -8,7 +8,13 @@ const SPRINT_BUCKETS = 2;
 /** A team needs this share of the top team's tokens to compete on cache rate. */
 const CACHE_AWARD_FLOOR = 0.05;
 
-export type Bar = { key: string; name: string; value: number; share: number; detail?: string };
+export type Bar = {
+  key: string;
+  name: string;
+  value: number;
+  share: number;
+  detail?: string;
+};
 
 export type Award = { title: string; team: string; detail: string };
 
@@ -22,7 +28,12 @@ export type ClosingSummary = {
     github: number[];
     nightShare: number;
   };
-  usage: { tokens: number; requests: number; sessions: number; cachedShare: number };
+  usage: {
+    tokens: number;
+    requests: number;
+    sessions: number;
+    cachedShare: number;
+  };
   harnesses: Bar[];
   models: Bar[];
   stacks: { rows: Bar[]; total: number; auto: number };
@@ -32,7 +43,9 @@ export type ClosingSummary = {
   generatedAt: number;
 };
 
-const compactFormat = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
+const compactFormat = new Intl.NumberFormat("es-ES", {
+  maximumFractionDigits: 1,
+});
 const plainFormat = new Intl.NumberFormat("es-ES", { useGrouping: "always" });
 
 /** "1.234", "56,7 mil", "2.345 M": short enough for a slide, never "mil M". */
@@ -53,7 +66,10 @@ export function percent(share: number): string {
   return `${Math.round(share * 100)} %`;
 }
 
-function bars(rows: { key: string; name: string; value: number; detail?: string }[], limit: number): Bar[] {
+function bars(
+  rows: { key: string; name: string; value: number; detail?: string }[],
+  limit: number
+): Bar[] {
   const top = rows
     .filter((row) => row.value > 0)
     .toSorted((a, b) => b.value - a.value)
@@ -75,15 +91,30 @@ export function summarize(data: ClosingData): ClosingSummary {
   const { insights, totals } = data;
   const { startsAt, endsAt } = insights.window;
   const buckets = insights.buckets;
-  const scheduled = startsAt !== undefined && endsAt !== undefined && endsAt > startsAt;
+  const scheduled =
+    startsAt !== undefined && endsAt !== undefined && endsAt > startsAt;
   const bucketMs = scheduled ? (endsAt - startsAt) / buckets : 3_600_000;
   const origin = scheduled ? startsAt : 0;
 
-  const tick = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: MADRID, weekday: "short" });
-  const hourOf = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: MADRID });
-  const labels = Array.from({ length: buckets }, (_, bucket) => tick.format(origin + bucket * bucketMs));
+  const tick = new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: MADRID,
+    weekday: "short",
+  });
+  const hourOf = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    timeZone: MADRID,
+  });
+  const labels = Array.from({ length: buckets }, (_, bucket) =>
+    tick.format(origin + bucket * bucketMs)
+  );
   const night = Array.from({ length: buckets }, (_, bucket) =>
-    scheduled ? Number(hourOf.format(origin + (bucket + 0.5) * bucketMs)) < NIGHT_ENDS_HOUR : false
+    scheduled
+      ? Number(hourOf.format(origin + (bucket + 0.5) * bucketMs)) <
+        NIGHT_ENDS_HOUR
+      : false
   );
 
   const teamName = new Map(insights.teams.map((team) => [team.id, team.name]));
@@ -107,7 +138,8 @@ export function summarize(data: ClosingData): ClosingSummary {
     cached += row.cachedTokens;
     requests += row.requests;
     sessions += row.sessions;
-    tokensPerBucket[row.bucket] = (tokensPerBucket[row.bucket] ?? 0) + row.tokens;
+    tokensPerBucket[row.bucket] =
+      (tokensPerBucket[row.bucket] ?? 0) + row.tokens;
     add(perHarness, row.harness, row.tokens);
     if (!teamName.has(row.teamId)) {
       continue;
@@ -126,7 +158,8 @@ export function summarize(data: ClosingData): ClosingSummary {
   for (const row of insights.activity) {
     pushes += row.pushes;
     pulls += row.pullRequests;
-    githubPerBucket[row.bucket] = (githubPerBucket[row.bucket] ?? 0) + row.pushes + row.pullRequests;
+    githubPerBucket[row.bucket] =
+      (githubPerBucket[row.bucket] ?? 0) + row.pushes + row.pullRequests;
     if (teamName.has(row.teamId)) {
       add(teamPushes, row.teamId, row.pushes);
       add(teamPulls, row.teamId, row.pullRequests);
@@ -140,25 +173,65 @@ export function summarize(data: ClosingData): ClosingSummary {
       cacheRates.set(teamId, (teamCached.get(teamId) ?? 0) / total);
     }
   }
-  const award = (title: string, best: [string, number] | null, detail: (value: number) => string): Award[] =>
-    best ? [{ detail: detail(best[1]), team: teamName.get(best[0]) ?? "", title }] : [];
+  const award = (
+    title: string,
+    best: [string, number] | null,
+    detail: (value: number) => string
+  ): Award[] =>
+    best
+      ? [{ detail: detail(best[1]), team: teamName.get(best[0]) ?? "", title }]
+      : [];
 
-  const nightTokens = tokensPerBucket.reduce((sum, value, bucket) => sum + (night[bucket] ? value : 0), 0);
-  const harnessName = new Map<string, string>(HARNESSES.map((harness) => [harness.id, harness.name]));
+  const nightTokens = tokensPerBucket.reduce(
+    (sum, value, bucket) => sum + (night[bucket] ? value : 0),
+    0
+  );
+  const harnessName = new Map<string, string>(
+    HARNESSES.map((harness) => [harness.id, harness.name])
+  );
 
   return {
     awards: [
-      ...award("Quemadores de tokens", topTokens, (value) => `${figure(value)} tokens`),
-      ...award("Máquina de commits", winner(teamPushes), (value) => `${figure(value)} pushes`),
-      ...award("Reyes del pull request", winner(teamPulls), (value) => `${figure(value)} PRs`),
-      ...award("Los búhos", winner(teamNight), (value) => `${figure(value)} tokens de madrugada`),
-      ...award("Sprint final", winner(teamSprint), (value) => `${figure(value)} tokens en la recta final`),
-      ...award("Maestros de la caché", winner(cacheRates), (value) => `${percent(value)} de tokens desde caché`),
+      ...award(
+        "Quemadores de tokens",
+        topTokens,
+        (value) => `${figure(value)} tokens`
+      ),
+      ...award(
+        "Máquina de commits",
+        winner(teamPushes),
+        (value) => `${figure(value)} pushes`
+      ),
+      ...award(
+        "Reyes del pull request",
+        winner(teamPulls),
+        (value) => `${figure(value)} PRs`
+      ),
+      ...award(
+        "Los búhos",
+        winner(teamNight),
+        (value) => `${figure(value)} tokens de madrugada`
+      ),
+      ...award(
+        "Sprint final",
+        winner(teamSprint),
+        (value) => `${figure(value)} tokens en la recta final`
+      ),
+      ...award(
+        "Maestros de la caché",
+        winner(cacheRates),
+        (value) => `${percent(value)} de tokens desde caché`
+      ),
     ],
     feed: totals.feed,
     generatedAt: data.generatedAt,
     harnesses: bars(
-      [...perHarness].map(([id, value]) => ({ detail: tokens > 0 ? percent(value / tokens) : "", key: id, name: harnessName.get(id) ?? id, value })),
+      [...perHarness].map(([id, value]) => ({
+        detail: tokens > 0 ? percent(value / tokens) : "",
+        key: id,
+        name: harnessName.get(id) ?? id,
+        value,
+      })),
       6
     ),
     hero: [
@@ -173,14 +246,24 @@ export function summarize(data: ClosingData): ClosingSummary {
     ],
     hours: scheduled ? Math.round((endsAt - startsAt) / 3_600_000) : 0,
     models: bars(
-      insights.models.map((model) => ({ detail: model.provider, key: model.name, name: model.name, value: model.tokens })),
+      insights.models.map((model) => ({
+        detail: model.provider,
+        key: model.name,
+        name: model.name,
+        value: model.tokens,
+      })),
       6
     ),
     stacks: {
       auto: insights.stacks.auto,
       rows: bars(
         // "Otras" is the catalog's catch-all; on a slide it reads as noise.
-        insights.stacks.rows.map((row) => ({ ...(row.category === "Otras" ? {} : { detail: row.category }), key: row.name, name: row.name, value: row.count })),
+        insights.stacks.rows.map((row) => ({
+          ...(row.category === "Otras" ? {} : { detail: row.category }),
+          key: row.name,
+          name: row.name,
+          value: row.count,
+        })),
         14
       ),
       total: insights.stacks.total,
@@ -194,12 +277,21 @@ export function summarize(data: ClosingData): ClosingSummary {
     },
     tracks: {
       rows: bars(
-        totals.submissions.byTrack.map((track) => ({ key: track.label, name: track.label, value: track.count })),
+        totals.submissions.byTrack.map((track) => ({
+          key: track.label,
+          name: track.label,
+          value: track.count,
+        })),
         12
       ),
       total: totals.submissions.total,
     },
-    usage: { cachedShare: tokens > 0 ? cached / tokens : 0, requests, sessions, tokens },
+    usage: {
+      cachedShare: tokens > 0 ? cached / tokens : 0,
+      requests,
+      sessions,
+      tokens,
+    },
   };
 }
 
@@ -226,11 +318,14 @@ export function demoClosingData(): ClosingData {
       energy = 1.6;
     }
     for (const [index, team] of teams.entries()) {
-      const tokens = Math.round(energy * (900_000 + ((index * 37 + bucket * 53) % 17) * 140_000));
+      const tokens = Math.round(
+        energy * (900_000 + ((index * 37 + bucket * 53) % 17) * 140_000)
+      );
       samples.push({
         bucket,
         cachedTokens: Math.round(tokens * (0.5 + (index % 5) * 0.08)),
-        harness: harnesses[(index + (bucket % 2)) % harnesses.length] ?? "claude-code",
+        harness:
+          harnesses[(index + (bucket % 2)) % harnesses.length] ?? "claude-code",
         requests: Math.round(tokens / 30_000),
         sessions: bucket % 4 === 0 ? 1 + (index % 2) : 0,
         teamId: team.id,
@@ -244,7 +339,22 @@ export function demoClosingData(): ClosingData {
       });
     }
   }
-  const stackNames = ["TypeScript", "React", "Next.js", "Tailwind CSS", "Python", "Convex", "FastAPI", "Supabase", "Vercel AI SDK", "PostgreSQL", "Bun", "Docker", "Astro", "Rust"];
+  const stackNames = [
+    "TypeScript",
+    "React",
+    "Next.js",
+    "Tailwind CSS",
+    "Python",
+    "Convex",
+    "FastAPI",
+    "Supabase",
+    "Vercel AI SDK",
+    "PostgreSQL",
+    "Bun",
+    "Docker",
+    "Astro",
+    "Rust",
+  ];
   return {
     generatedAt: Date.now(),
     insights: {
@@ -252,17 +362,51 @@ export function demoClosingData(): ClosingData {
       buckets,
       generatedAt: Date.now(),
       models: [
-        { family: "claude", name: "claude-opus-5", provider: "anthropic", requests: 5200, tokens: 210_000_000 },
-        { family: "claude", name: "claude-sonnet-5", provider: "anthropic", requests: 4100, tokens: 140_000_000 },
-        { family: "gpt", name: "gpt-5.2-codex", provider: "openai", requests: 2300, tokens: 66_000_000 },
-        { family: "gemini", name: "gemini-3-pro", provider: "google", requests: 900, tokens: 21_000_000 },
-        { family: "other", name: "kimi-k2", provider: "moonshot", requests: 300, tokens: 6_000_000 },
+        {
+          family: "claude",
+          name: "claude-opus-5",
+          provider: "anthropic",
+          requests: 5200,
+          tokens: 210_000_000,
+        },
+        {
+          family: "claude",
+          name: "claude-sonnet-5",
+          provider: "anthropic",
+          requests: 4100,
+          tokens: 140_000_000,
+        },
+        {
+          family: "gpt",
+          name: "gpt-5.2-codex",
+          provider: "openai",
+          requests: 2300,
+          tokens: 66_000_000,
+        },
+        {
+          family: "gemini",
+          name: "gemini-3-pro",
+          provider: "google",
+          requests: 900,
+          tokens: 21_000_000,
+        },
+        {
+          family: "other",
+          name: "kimi-k2",
+          provider: "moonshot",
+          requests: 300,
+          tokens: 6_000_000,
+        },
       ],
       people: [],
       samples,
       stacks: {
         auto: 9,
-        rows: stackNames.map((name, index) => ({ category: index % 3 === 0 ? "lenguaje" : "framework", count: Math.max(1, 12 - index), name })),
+        rows: stackNames.map((name, index) => ({
+          category: index % 3 === 0 ? "lenguaje" : "framework",
+          count: Math.max(1, 12 - index),
+          name,
+        })),
         total: 12,
       },
       teams,
@@ -272,9 +416,14 @@ export function demoClosingData(): ClosingData {
     totals: {
       feed: {
         authors: 96,
-        byHour: Array.from({ length: 24 }, (_, hour) => (hour < 7 ? 2 : 6 + ((hour * 7) % 11))),
+        byHour: Array.from({ length: 24 }, (_, hour) =>
+          hour < 7 ? 2 : 6 + ((hour * 7) % 11)
+        ),
         comments: 214,
-        emojis: ["🔥", "😂", "🚀", "❤️", "👀", "🥲"].map((emoji, index) => ({ count: 120 - index * 17, emoji })),
+        emojis: ["🔥", "😂", "🚀", "❤️", "👀", "🥲"].map((emoji, index) => ({
+          count: 120 - index * 17,
+          emoji,
+        })),
         images: 88,
         memes: 47,
         posts: 263,
@@ -283,7 +432,17 @@ export function demoClosingData(): ClosingData {
       milestones: 31,
       people: { checkedIn: 342, inTeams: 318 },
       submissions: {
-        byTrack: ["General", "Agentes", "Fintech", "Salud", "Educación", "Open source"].map((label, index) => ({ count: 12 - index * 2 + (index % 2), label })),
+        byTrack: [
+          "General",
+          "Agentes",
+          "Fintech",
+          "Salud",
+          "Educación",
+          "Open source",
+        ].map((label, index) => ({
+          count: 12 - index * 2 + (index % 2),
+          label,
+        })),
         total: 12,
       },
       teams: 12,

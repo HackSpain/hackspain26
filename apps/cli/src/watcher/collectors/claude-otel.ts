@@ -41,7 +41,8 @@ function record(value: unknown): value is Record<string, unknown> {
 export function installClaudeOtel(
   path: string,
   config: ReceiverConfig,
-  shellEnv: Record<string, string | undefined> = process.env
+  shellEnv: Record<string, string | undefined> = process.env,
+  previousConfig?: ReceiverConfig
 ): "installed" | "unchanged" | "conflict" {
   const settings: unknown = existsSync(path)
     ? JSON.parse(readFileSync(path, "utf8"))
@@ -54,10 +55,20 @@ export function installClaudeOtel(
   }
   const env = (settings.env ?? {}) as Record<string, unknown>;
   const own = environment(config);
+  const previous = previousConfig && environment(previousConfig);
+  const updatingOwnReceiver =
+    previous !== undefined &&
+    env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT ===
+      previous.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT &&
+    env.OTEL_EXPORTER_OTLP_LOGS_HEADERS ===
+      previous.OTEL_EXPORTER_OTLP_LOGS_HEADERS;
   if (settings.otelHeadersHelper !== undefined) {
     return "conflict";
   }
-  for (const source of [env, shellEnv]) {
+  for (const [source, canUpdatePrevious] of [
+    [env, updatingOwnReceiver],
+    [shellEnv, false],
+  ] as const) {
     for (const [key, value] of Object.entries(source)) {
       if (value === undefined) {
         continue;
@@ -66,7 +77,8 @@ export function installClaudeOtel(
         (key.startsWith("OTEL_") ||
           key === "CLAUDE_CODE_ENABLE_TELEMETRY" ||
           key === "BETA_TRACING_ENDPOINT") &&
-        value !== own[key]
+        value !== own[key] &&
+        !(canUpdatePrevious && value === previous?.[key])
       ) {
         return "conflict";
       }
@@ -80,6 +92,64 @@ export function installClaudeOtel(
     `${JSON.stringify({ ...settings, env: { ...env, ...own } }, null, 2)}\n`
   );
   return "installed";
+}
+
+/** Remove only exporter values that still match this installation's receiver. */
+export function uninstallClaudeOtel(
+  path = join(claudeConfigDir(), "settings.json"),
+  configPath = join(stateDir(), "claude-otel.json")
+): "removed" | "absent" | "unverified" {
+  if (!existsSync(path)) {
+    return "absent";
+  }
+  const settings: unknown = JSON.parse(readFileSync(path, "utf8"));
+  if (
+    !record(settings) ||
+    (settings.env !== undefined && !record(settings.env))
+  ) {
+    throw new Error("Invalid Claude settings");
+  }
+  const env = settings.env as Record<string, unknown> | undefined;
+  if (!env) {
+    return "absent";
+  }
+  if (
+    env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT === undefined &&
+    env.OTEL_EXPORTER_OTLP_LOGS_HEADERS === undefined
+  ) {
+    return "absent";
+  }
+  const config = readJsonFile<ReceiverConfig>(configPath);
+  if (
+    config?.version !== 1 ||
+    !Number.isInteger(config.port) ||
+    config.port <= 0 ||
+    config.port > 65_535 ||
+    typeof config.token !== "string" ||
+    !TOKEN_PATTERN.test(config.token)
+  ) {
+    return "unverified";
+  }
+  const own = environment(config);
+  if (
+    env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT !==
+      own.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT ||
+    env.OTEL_EXPORTER_OTLP_LOGS_HEADERS !== own.OTEL_EXPORTER_OTLP_LOGS_HEADERS
+  ) {
+    return "unverified";
+  }
+  const nextEnv = Object.fromEntries(
+    Object.entries(env).filter(([key, value]) => own[key] !== value)
+  );
+  writeFileAtomic(
+    path,
+    `${JSON.stringify({ ...settings, env: nextEnv }, null, 2)}\n`
+  );
+  return "removed";
+}
+
+function addressInUse(error: unknown): boolean {
+  return record(error) && error.code === "EADDRINUSE";
 }
 
 function* queuedEvents(
@@ -162,14 +232,16 @@ export function createClaudeOtelCollector(options: {
         ) {
           throw new Error("Invalid receiver configuration");
         }
-        const config: ReceiverConfig = stored ?? {
-          version: 1,
-          port: 0,
-          token: Buffer.from(
-            crypto.getRandomValues(new Uint8Array(32))
-          ).toString("hex"),
-        };
-        receiver = startOtelReceiver({
+        const config: ReceiverConfig = stored
+          ? { ...stored }
+          : {
+              version: 1,
+              port: 0,
+              token: Buffer.from(
+                crypto.getRandomValues(new Uint8Array(32))
+              ).toString("hex"),
+            };
+        const receiverOptions = {
           ...config,
           queuePath,
           userId: options.userId,
@@ -179,19 +251,43 @@ export function createClaudeOtelCollector(options: {
             status(
               "claude-code: OTLP queue write failed; exporter can retry, transcripts remain enabled"
             ),
-        });
+        };
+        let recovered = false;
+        try {
+          receiver = startOtelReceiver(receiverOptions);
+        } catch (error) {
+          if (!(stored && addressInUse(error))) {
+            throw error;
+          }
+          receiver = startOtelReceiver({ ...receiverOptions, port: 0 });
+          recovered = true;
+        }
         if (receiver.port === undefined) {
           throw new Error("Receiver did not bind a TCP port");
         }
         config.port = receiver.port;
-        if (!stored) {
+        if (!stored || recovered) {
           writeFileAtomic(configPath, `${JSON.stringify(config)}\n`);
         }
-        const result = installClaudeOtel(
-          join(claudeConfigDir(), "settings.json"),
-          config
-        );
+        const previousConfig = recovered && stored ? stored : undefined;
+        let result: ReturnType<typeof installClaudeOtel>;
+        try {
+          result = installClaudeOtel(
+            join(claudeConfigDir(), "settings.json"),
+            config,
+            process.env,
+            previousConfig
+          );
+        } catch (error) {
+          if (previousConfig) {
+            writeFileAtomic(configPath, `${JSON.stringify(previousConfig)}\n`);
+          }
+          throw error;
+        }
         if (result === "conflict") {
+          if (previousConfig) {
+            writeFileAtomic(configPath, `${JSON.stringify(previousConfig)}\n`);
+          }
           await receiver.stop(true);
           receiver = undefined;
           status(

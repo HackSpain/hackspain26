@@ -6,9 +6,9 @@ test("reads a body exactly at the limit", async () => {
     body: new Uint8Array([1, 2, 3]),
     method: "POST",
   });
-  expect(new Uint8Array((await readLimitedBody(request, 3)) ?? new ArrayBuffer(0))).toEqual(
-    new Uint8Array([1, 2, 3])
-  );
+  expect(
+    new Uint8Array((await readLimitedBody(request, 3)) ?? new ArrayBuffer(0))
+  ).toEqual(new Uint8Array([1, 2, 3]));
 });
 
 test("stops reading as soon as a streamed body exceeds the limit", async () => {

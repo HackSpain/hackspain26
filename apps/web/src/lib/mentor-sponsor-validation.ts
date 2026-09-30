@@ -10,7 +10,7 @@ const MENTOR_SPONSOR_MAX = {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** `<day>_<slot>` keys; must stay in sync with the DB check constraint. */
-export const ATTENDANCE_SLOT_IDS = [
+const ATTENDANCE_SLOT_IDS = [
   "fri_morning",
   "fri_lunch",
   "fri_afternoon",

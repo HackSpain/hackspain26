@@ -81,9 +81,7 @@ function assessmentFor(
   project: ExportProject,
   judge: ExportJudgeRef
 ): ExportAssessment | null {
-  return (
-    project.assessments.find((row) => row.judge._id === judge._id) ?? null
-  );
+  return project.assessments.find((row) => row.judge._id === judge._id) ?? null;
 }
 
 export function rankingCsv(
@@ -146,7 +144,9 @@ export function assessmentsCsv(projects: ExportProject[]): string {
   ];
   const rows: CsvValue[][] = [];
   for (const project of projects) {
-    const track = project.challenges.map((challenge) => challenge.label).join(" | ");
+    const track = project.challenges
+      .map((challenge) => challenge.label)
+      .join(" | ");
     for (const judge of project.judges) {
       const assessment = assessmentFor(project, judge);
       const submitted = assessment?.status === "submitted";

@@ -37,7 +37,9 @@ function useAdminAction() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function run(work: () => Promise<unknown>) {
-    if (pending) {return false;}
+    if (pending) {
+      return false;
+    }
     setPending(true);
     setError(null);
     try {
@@ -66,9 +68,12 @@ function SectionPicker({
 }) {
   return (
     <fieldset className="space-y-2" disabled={disabled}>
-      <legend className="font-bungee text-xs uppercase">Secciones visibles</legend>
+      <legend className="font-bungee text-xs uppercase">
+        Secciones visibles
+      </legend>
       <p className="text-xs text-hs-brown">
-        El feed y el perfil se ven siempre. Marca las secciones (iconos del inicio) que este tipo puede abrir.
+        El feed y el perfil se ven siempre. Marca las secciones (iconos del
+        inicio) que este tipo puede abrir.
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         {SECTION_ORDER.map((key) => {
@@ -86,13 +91,17 @@ function SectionPicker({
                 onCheckedChange={(state) =>
                   onChange(
                     state === true
-                      ? SECTION_ORDER.filter((k) => k === key || value.includes(k))
-                      : value.filter((k) => k !== key),
+                      ? SECTION_ORDER.filter(
+                          (k) => k === key || value.includes(k)
+                        )
+                      : value.filter((k) => k !== key)
                   )
                 }
               />
               <span className="space-y-0.5">
-                <span className="block font-semibold">{SECTION_NAV[key].label}</span>
+                <span className="block font-semibold">
+                  {SECTION_NAV[key].label}
+                </span>
                 <span className="block text-xs text-hs-brown">
                   {SECTION_NAV[key].hint}
                 </span>
@@ -105,12 +114,7 @@ function SectionPicker({
   );
 }
 
-const NEW_DEFAULT_SECTIONS: SectionKey[] = [
-  "teams",
-  "tracks",
-  "perks",
-  "cli",
-];
+const NEW_DEFAULT_SECTIONS: SectionKey[] = ["teams", "tracks", "perks", "cli"];
 
 function NewTypeCard() {
   const create = useMutation(api.userTypes.create);
@@ -138,7 +142,9 @@ function NewTypeCard() {
             void action
               .run(() => create({ description, isDefault, label, sections }))
               .then((ok) => {
-                if (!ok) {return;}
+                if (!ok) {
+                  return;
+                }
                 setLabel("");
                 setDescription("");
                 setSections(NEW_DEFAULT_SECTIONS);
@@ -159,7 +165,10 @@ function NewTypeCard() {
                 onChange={(event) => setLabel(event.target.value)}
               />
             </Field>
-            <Field label="Descripción (opcional)" htmlFor="new-type-description">
+            <Field
+              label="Descripción (opcional)"
+              htmlFor="new-type-description"
+            >
               <Input
                 id="new-type-description"
                 maxLength={200}
@@ -176,7 +185,10 @@ function NewTypeCard() {
             onChange={setSections}
             disabled={action.pending}
           />
-          <label htmlFor="new-type-default" className="flex items-start gap-3 text-sm">
+          <label
+            htmlFor="new-type-default"
+            className="flex items-start gap-3 text-sm"
+          >
             <Checkbox
               id="new-type-default"
               checked={isDefault}
@@ -191,7 +203,10 @@ function NewTypeCard() {
             </span>
           </label>
           <FormError message={action.error} />
-          <Button type="submit" disabled={action.pending || label.trim().length < 2}>
+          <Button
+            type="submit"
+            disabled={action.pending || label.trim().length < 2}
+          >
             {action.pending ? "Creando…" : "Crear tipo"}
           </Button>
         </form>
@@ -245,7 +260,7 @@ function TypeCard({
           onSubmit={(event) => {
             event.preventDefault();
             void action.run(() =>
-              update({ description, label, sections, typeId: type._id }),
+              update({ description, label, sections, typeId: type._id })
             );
           }}
         >
@@ -287,7 +302,9 @@ function TypeCard({
               variant="outline"
               disabled={action.pending || type.isDefault}
               onClick={() =>
-                void action.run(() => update({ isDefault: true, typeId: type._id }))
+                void action.run(() =>
+                  update({ isDefault: true, typeId: type._id })
+                )
               }
             >
               Hacer por defecto
@@ -299,7 +316,7 @@ function TypeCard({
                 disabled={action.pending}
                 onClick={() =>
                   void action.run(() =>
-                    update({ isDefault: false, typeId: type._id }),
+                    update({ isDefault: false, typeId: type._id })
                   )
                 }
               >
@@ -314,7 +331,9 @@ function TypeCard({
                 aria-label="Subir"
                 disabled={action.pending || index === 0}
                 onClick={() =>
-                  void action.run(() => move({ direction: "up", typeId: type._id }))
+                  void action.run(() =>
+                    move({ direction: "up", typeId: type._id })
+                  )
                 }
               >
                 <ArrowUp />
@@ -327,7 +346,7 @@ function TypeCard({
                 disabled={action.pending || index === count - 1}
                 onClick={() =>
                   void action.run(() =>
-                    move({ direction: "down", typeId: type._id }),
+                    move({ direction: "down", typeId: type._id })
                   )
                 }
               >
@@ -350,7 +369,9 @@ function TypeCard({
                 variant="outline"
                 className="text-hs-red"
                 disabled={action.pending}
-                onClick={() => void action.run(() => remove({ typeId: type._id }))}
+                onClick={() =>
+                  void action.run(() => remove({ typeId: type._id }))
+                }
               >
                 <Trash2 aria-hidden /> Sí, borrar
               </Button>

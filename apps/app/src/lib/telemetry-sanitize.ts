@@ -31,9 +31,10 @@ const EXTENSION_FRAME_PREFIXES = [
 function comesFromBrowserExtension(event: TelemetryEvent): boolean {
   return Boolean(
     event.exception?.values?.some((value) =>
-      value.stacktrace?.frames?.some(({ filename = "" }) =>
-        filename === "app:///scripts/inpage.js" ||
-        EXTENSION_FRAME_PREFIXES.some((prefix) => filename.startsWith(prefix))
+      value.stacktrace?.frames?.some(
+        ({ filename = "" }) =>
+          filename === "app:///scripts/inpage.js" ||
+          EXTENSION_FRAME_PREFIXES.some((prefix) => filename.startsWith(prefix))
       )
     )
   );

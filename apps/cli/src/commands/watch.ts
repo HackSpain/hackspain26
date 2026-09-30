@@ -3,12 +3,16 @@ import type { Command } from "commander";
 import { api, openSession } from "../lib/api";
 import { readConfig } from "../lib/config";
 import { contextFor } from "../lib/context";
-import { usageError } from "../lib/errors";
+import { EXIT, usageError } from "../lib/errors";
 import { formatEventDate, requireOnboarded } from "../lib/me";
+import type { Ui } from "../lib/output";
 import { firstName, uiFor } from "../lib/output";
 import { c, terminalText } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
+import type { ScanResult } from "../watcher";
 import { acquireWatchLock, runWatch } from "../watcher";
+import { uninstallClaudeOtel } from "../watcher/collectors/claude-otel";
+import { uninstallCursorHook } from "../watcher/collectors/cursor";
 import { openMemory } from "../watcher/memory";
 import { startScreen, summaryLines } from "../watcher/screen";
 import { createState, feedLive, scrollFeed } from "../watcher/state";
@@ -16,6 +20,7 @@ import { collectionWindow, windowNotice } from "../watcher/window";
 import { autoUpdate, restartCurrentCommand } from "./update";
 
 type WatchFlags = {
+  uninstall?: boolean;
   once?: boolean;
   interval: string;
   toast: boolean;
@@ -34,6 +39,49 @@ function positiveNumber(flag: string, raw: string): number {
   return value;
 }
 
+export function createJsonWatchReporter(ui: Pick<Ui, "result">) {
+  const summary = {
+    scans: 0,
+    events: 0,
+    skipped: 0,
+    byHarness: {} as Record<string, number>,
+    notifications: 0,
+  };
+  return {
+    onScan(scanned: ScanResult) {
+      summary.scans++;
+      summary.events += scanned.events;
+      summary.skipped += scanned.skipped;
+      for (const [harness, count] of Object.entries(scanned.byHarness)) {
+        summary.byHarness[harness] = (summary.byHarness[harness] ?? 0) + count;
+      }
+    },
+    say(message: string) {
+      process.stderr.write(`${terminalText(message)}\n`);
+    },
+    announce(subject: string, body: string, at: number) {
+      summary.notifications++;
+      process.stderr.write(
+        `${new Date(at).toISOString()} Organisers: ${terminalText(subject)}\n${terminalText(body)}\n`
+      );
+    },
+    finish(code: number, once: boolean) {
+      let status = "pending";
+      if (code === EXIT.OK) {
+        status = "completed";
+      } else if (code === EXIT.INTERRUPTED) {
+        status = "interrupted";
+      }
+      ui.result({
+        ...summary,
+        exitCode: code,
+        mode: once ? "once" : "continuous",
+        status,
+      });
+    },
+  };
+}
+
 export function registerWatch(program: Command): void {
   program
     .command("watch")
@@ -41,6 +89,10 @@ export function registerWatch(program: Command): void {
       "Keep this open during the hackathon: live usage board and organiser messages"
     )
     .option("--once", "scan once, flush, and exit")
+    .option(
+      "--uninstall",
+      "remove HackSpain Cursor hooks and Claude exporter settings"
+    )
     .option("-i, --interval <seconds>", "seconds between scans", "30")
     .option("--no-toast", "print notifications only, no desktop toast")
     .option("--no-upload", "keep events in the local spool only")
@@ -54,6 +106,48 @@ export function registerWatch(program: Command): void {
     .action(async (flags: WatchFlags, command: Command) => {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
+      if (flags.uninstall) {
+        const releaseLock = acquireWatchLock();
+        try {
+          const failures: string[] = [];
+          let cursor: ReturnType<typeof uninstallCursorHook> | "error" =
+            "error";
+          let claude: ReturnType<typeof uninstallClaudeOtel> | "error" =
+            "error";
+          try {
+            cursor = uninstallCursorHook();
+          } catch (error) {
+            failures.push(`Cursor: ${String(error)}`);
+          }
+          try {
+            claude = uninstallClaudeOtel();
+          } catch (error) {
+            failures.push(`Claude Code: ${String(error)}`);
+          }
+          if (ctx.json) {
+            ui.result({ claude, cursor, failures });
+          } else {
+            ui.intro("watch · uninstall");
+            ui.line(`Cursor hooks: ${cursor}`);
+            ui.line(`Claude exporter: ${claude}`);
+            for (const failure of failures) {
+              ui.warn(failure);
+            }
+            if (claude === "unverified") {
+              ui.warn(
+                "Claude settings were kept because their ownership could not be verified."
+              );
+            }
+            ui.outro("Local telemetry and saved sessions remain available.");
+          }
+          process.exitCode =
+            failures.length > 0 || claude === "unverified" ? 1 : 0;
+        } finally {
+          releaseLock();
+        }
+        return;
+      }
+      const jsonReporter = ctx.json ? createJsonWatchReporter(ui) : undefined;
       const intervalMs = positiveNumber("--interval", flags.interval) * 1000;
       const memory = openMemory();
       const session = await openSession(ctx, { requireAuth: true });
@@ -92,6 +186,11 @@ export function registerWatch(program: Command): void {
       };
       let updatedVersion: string | undefined;
       const checkForUpdate = async (): Promise<boolean> => {
+        // The JSON result belongs to this invocation; restarting here would
+        // exit before it is written and may create a second result document.
+        if (ctx.json) {
+          return false;
+        }
         updatedVersion = await autoUpdate(process.argv.slice(2), {
           silent: true,
         });
@@ -179,10 +278,8 @@ export function registerWatch(program: Command): void {
       }
 
       const say = (message: string) => {
-        if (ctx.json) {
-          console.log(
-            JSON.stringify({ at: Date.now(), event: "log", message })
-          );
+        if (jsonReporter) {
+          jsonReporter.say(message);
         } else {
           console.log(message);
         }
@@ -191,10 +288,8 @@ export function registerWatch(program: Command): void {
         process.stderr.write(`${terminalText(message)}\n`);
       };
       const announce = (subject: string, body: string, at: number) => {
-        if (ctx.json) {
-          console.log(
-            JSON.stringify({ at, body, event: "notification", subject })
-          );
+        if (jsonReporter) {
+          jsonReporter.announce(subject, body, at);
           return;
         }
         process.stdout.write("\u0007");
@@ -234,6 +329,7 @@ export function registerWatch(program: Command): void {
           log,
           me,
           memory,
+          onScan: jsonReporter?.onScan,
           say,
           session,
           teamId: team?._id,
@@ -242,6 +338,7 @@ export function registerWatch(program: Command): void {
         releaseLock();
       }
       await restartAfterUpdate();
+      jsonReporter?.finish(code, Boolean(flags.once));
       process.exitCode = code;
     });
 }

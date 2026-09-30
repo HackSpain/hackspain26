@@ -23,7 +23,7 @@ export const tvZoneValidator = v.union(
   v.literal("banner"),
   v.literal("left"),
   v.literal("right"),
-  v.literal("ticker"),
+  v.literal("ticker")
 );
 
 export const messageReturn = v.object({
@@ -48,7 +48,7 @@ export const list = query({
     const rows = await ctx.db.query("tvMessages").collect();
     return rows
       .filter((row) => row.active)
-      .sort(byZoneOrder)
+      .toSorted(byZoneOrder)
       .map((row) => ({
         _id: row._id,
         text: row.text,
@@ -178,24 +178,36 @@ function byZ(a: Doc<"tvWidgets">, b: Doc<"tvWidgets">) {
 }
 
 function defaultText(kind: WidgetKind, text?: string) {
-  if (!TEXT_KINDS.has(kind)) return "";
+  if (!TEXT_KINDS.has(kind)) {
+    return "";
+  }
   const trimmed = text?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : KIND_DEFAULTS[kind].text;
 }
 
 function zoneLayout(
   zone: Doc<"tvMessages">["zone"],
-  index: number,
+  index: number
 ): { x: number; y: number; w: number; h: number } {
-  if (zone === "banner") return { x: 4, y: 4 + index * 16, w: 72, h: 14 };
-  if (zone === "ticker") return { x: 0, y: 86, w: 100, h: 14 };
-  if (zone === "left") return { x: 4, y: 22 + index * 20, w: 44, h: 18 };
+  if (zone === "banner") {
+    return { x: 4, y: 4 + index * 16, w: 72, h: 14 };
+  }
+  if (zone === "ticker") {
+    return { x: 0, y: 86, w: 100, h: 14 };
+  }
+  if (zone === "left") {
+    return { x: 4, y: 22 + index * 20, w: 44, h: 18 };
+  }
   return { x: 52, y: 22 + index * 20, w: 44, h: 18 };
 }
 
 function zoneKind(zone: Doc<"tvMessages">["zone"]): WidgetKind {
-  if (zone === "banner") return "banner";
-  if (zone === "ticker") return "ticker";
+  if (zone === "banner") {
+    return "banner";
+  }
+  if (zone === "ticker") {
+    return "ticker";
+  }
   return "message";
 }
 
@@ -218,7 +230,7 @@ export const listWidgets = query({
       }));
     }
     const rows = await ctx.db.query("tvWidgets").withIndex("by_z").collect();
-    return rows.sort(byZ).map(toPublicWidget);
+    return rows.toSorted(byZ).map(toPublicWidget);
   },
 });
 
@@ -240,8 +252,8 @@ async function toTvFeedPost(ctx: QueryCtx, post: Doc<"posts">) {
   const team = post.teamId ? await ctx.db.get(post.teamId) : null;
   const authorName =
     post.kind === "github"
-      ? (post.github?.actor || team?.name || "GitHub")
-      : (author?.name || signup?.fullName || "Alguien");
+      ? post.github?.actor || team?.name || "GitHub"
+      : author?.name || signup?.fullName || "Alguien";
   return {
     _id: post._id,
     kind: post.kind,
@@ -276,8 +288,12 @@ export const listFeed = query({
       .order("desc")
       .take(source === "all" ? 40 : 200);
     const filtered = rows.filter((row) => {
-      if (source === "participants") return row.kind === "post";
-      if (source === "github") return row.kind === "github";
+      if (source === "participants") {
+        return row.kind === "post";
+      }
+      if (source === "github") {
+        return row.kind === "github";
+      }
       return true;
     });
     const out = [];
@@ -308,7 +324,7 @@ export const listMemes = query({
       /** Most used first. */
       reactions: v.array(v.object({ emoji: v.string(), count: v.number() })),
       commentCount: v.number(),
-    }),
+    })
   ),
   handler: async (ctx) => {
     const rows = await ctx.db
@@ -334,11 +350,14 @@ export const listMemes = query({
           imageUrl: imageUrl ?? undefined,
           createdAt: post.createdAt,
           reactions: (social?.reactions ?? [])
-            .map((reaction) => ({ emoji: reaction.emoji, count: reaction.userIds.length }))
+            .map((reaction) => ({
+              emoji: reaction.emoji,
+              count: reaction.userIds.length,
+            }))
             .toSorted((a, b) => b.count - a.count),
           commentCount: social?.commentCount ?? 0,
         };
-      }),
+      })
     );
   },
 });
@@ -357,7 +376,7 @@ export const teamFormation = query({
       name: v.string(),
       photoUrl: v.optional(v.string()),
       team: v.optional(v.object({ id: v.string(), name: v.string() })),
-    }),
+    })
   ),
   handler: async (ctx) => {
     const [users, teams, memberships] = await Promise.all([
@@ -376,7 +395,10 @@ export const teamFormation = query({
     const people = await Promise.all(
       users.map(async (user) => {
         const membership = membershipByUser.get(user._id);
-        const team = membership?.status === "member" ? teamsById.get(membership.teamId) : undefined;
+        const team =
+          membership?.status === "member"
+            ? teamsById.get(membership.teamId)
+            : undefined;
         // The people on the participants map, plus anyone already in a team.
         if (!team && !(user.directory && isDirectoryComplete(user.directory))) {
           return null;
@@ -392,7 +414,7 @@ export const teamFormation = query({
           photoUrl,
           team: team ? { id: team._id as string, name: team.name } : undefined,
         };
-      }),
+      })
     );
     return people
       .filter((person) => person !== null)
@@ -409,7 +431,7 @@ export const listGithubActivity = query({
       actor: v.string(),
       text: v.string(),
       sha: v.string(),
-    }),
+    })
   ),
   handler: async (ctx) => {
     const rows = await ctx.db
@@ -435,7 +457,7 @@ export const adminListWidgets = adminQuery({
   returns: v.array(widgetReturn),
   handler: async (ctx) => {
     const rows = await ctx.db.query("tvWidgets").withIndex("by_z").collect();
-    return rows.sort(byZ).map(toPublicWidget);
+    return rows.toSorted(byZ).map(toPublicWidget);
   },
 });
 
@@ -455,7 +477,10 @@ export const adminCreateWidget = adminMutation({
       w: preset.w,
       h: preset.h,
     });
-    const z = existing.reduce((max, row) => Math.max(max, row.z), 0) + 1;
+    let z = 1;
+    for (const row of existing) {
+      z = Math.max(z, row.z + 1);
+    }
     const now = Date.now();
     const isSponsor =
       args.kind === "sponsorGrid" || args.kind === "sponsorTicker";
@@ -495,7 +520,9 @@ export const adminUpdateWidget = adminMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
-    if (!widget) throw new Error("Caja no encontrada");
+    if (!widget) {
+      throw new Error("Caja no encontrada");
+    }
     const box = layoutBox({
       x: args.x ?? widget.x,
       y: args.y ?? widget.y,
@@ -508,7 +535,9 @@ export const adminUpdateWidget = adminMutation({
         text = widget.text;
       } else {
         const trimmed = args.text.trim();
-        if (!trimmed) throw new Error("El texto no puede estar vacío");
+        if (!trimmed) {
+          throw new Error("El texto no puede estar vacío");
+        }
         text = trimmed;
       }
     }
@@ -548,7 +577,9 @@ export const adminRemoveWidget = adminMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
-    if (!widget) throw new Error("Caja no encontrada");
+    if (!widget) {
+      throw new Error("Caja no encontrada");
+    }
     await ctx.db.delete(widget._id);
     return null;
   },
@@ -557,7 +588,7 @@ export const adminRemoveWidget = adminMutation({
 async function ensureNamedLayout(
   ctx: { db: MutationCtx["db"]; user: { _id: Id<"users"> } },
   name: string,
-  widgets: Omit<Infer<typeof widgetReturn>, "_id">[],
+  widgets: Omit<Infer<typeof widgetReturn>, "_id">[]
 ) {
   const rows = await ctx.db.query("tvLayouts").collect();
   if (rows.some((row) => row.name === name)) {
@@ -585,7 +616,7 @@ export const adminEnsureLayout = adminMutation({
     }
 
     const messages = await ctx.db.query("tvMessages").collect();
-    const active = messages.filter((row) => row.active).sort(byZoneOrder);
+    const active = messages.filter((row) => row.active).toSorted(byZoneOrder);
     const now = Date.now();
     let created = 0;
 
@@ -623,7 +654,7 @@ export const adminEnsureLayout = adminMutation({
       return created + 1;
     }
 
-    const seed: Array<{
+    const seed: {
       kind: WidgetKind;
       x: number;
       y: number;
@@ -631,7 +662,7 @@ export const adminEnsureLayout = adminMutation({
       h: number;
       z: number;
       text: string;
-    }> = [
+    }[] = [
       {
         kind: "clock",
         x: 80,
@@ -714,12 +745,12 @@ export const adminListLayouts = adminQuery({
       name: v.string(),
       isLive: v.boolean(),
       updatedAt: v.number(),
-    }),
+    })
   ),
   handler: async (ctx) => {
     const rows = await ctx.db.query("tvLayouts").collect();
     return rows
-      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .toSorted((a, b) => b.updatedAt - a.updatedAt)
       .map((row) => ({
         _id: row._id,
         name: row.name,
@@ -729,19 +760,22 @@ export const adminListLayouts = adminQuery({
   },
 });
 
-
 export const adminSaveLayout = adminMutation({
   args: { name: v.string(), layoutId: v.optional(v.id("tvLayouts")) },
   returns: v.id("tvLayouts"),
   handler: async (ctx, args) => {
     const name = args.name.trim();
-    if (!name) throw new Error("Ponle un nombre al estado");
+    if (!name) {
+      throw new Error("Ponle un nombre al estado");
+    }
     const rows = await ctx.db.query("tvWidgets").withIndex("by_z").collect();
-    const widgets = rows.sort(byZ).map(snapshotOf);
+    const widgets = rows.toSorted(byZ).map(snapshotOf);
     const now = Date.now();
     if (args.layoutId) {
       const existing = await ctx.db.get(args.layoutId);
-      if (!existing) throw new Error("Estado no encontrado");
+      if (!existing) {
+        throw new Error("Estado no encontrado");
+      }
       await ctx.db.patch(existing._id, { name, widgets, updatedAt: now });
       return existing._id;
     }
@@ -765,16 +799,23 @@ export const adminLoadLayout = adminMutation({
   handler: async (ctx, args) => {
     const presetWidgets =
       args.preset === "panelv2" ? PANEL_V2_LAYOUT : INSIGHTS_LAYOUT;
-    const layout: { widgets: Omit<Infer<typeof widgetReturn>, "_id">[] } | null =
-      args.layoutId ? await ctx.db.get(args.layoutId) : { widgets: presetWidgets };
-    if (!layout) throw new Error("Estado no encontrado");
+    const layout: {
+      widgets: Omit<Infer<typeof widgetReturn>, "_id">[];
+    } | null = args.layoutId
+      ? await ctx.db.get(args.layoutId)
+      : { widgets: presetWidgets };
+    if (!layout) {
+      throw new Error("Estado no encontrado");
+    }
     const current = await ctx.db.query("tvWidgets").collect();
     if (!args.layoutId && current.length > 0) {
       const now = Date.now();
-      const hasLiveLayout = (await ctx.db.query("tvLayouts").collect()).some((saved) => saved.isLive);
+      const hasLiveLayout = (await ctx.db.query("tvLayouts").collect()).some(
+        (saved) => saved.isLive
+      );
       await ctx.db.insert("tvLayouts", {
         name: `Antes de restaurar · ${new Date(now).toISOString()}`,
-        widgets: current.sort(byZ).map(snapshotOf),
+        widgets: current.toSorted(byZ).map(snapshotOf),
         isLive: !hasLiveLayout,
         createdBy: ctx.user._id,
         createdAt: now,
@@ -785,7 +826,7 @@ export const adminLoadLayout = adminMutation({
       await ctx.db.delete(row._id);
     }
     const now = Date.now();
-    const created: Array<ReturnType<typeof toPublicWidget>> = [];
+    const created: ReturnType<typeof toPublicWidget>[] = [];
     for (const widget of layout.widgets) {
       const box = layoutBox(widget);
       const id = await ctx.db.insert("tvWidgets", {
@@ -819,9 +860,7 @@ export const adminLoadLayout = adminMutation({
         background: widget.background,
       });
     }
-    return created.sort(
-      (a, b) => a.z - b.z || a._id.localeCompare(b._id),
-    );
+    return created.toSorted((a, b) => a.z - b.z || a._id.localeCompare(b._id));
   },
 });
 
@@ -830,7 +869,9 @@ export const adminSetLive = adminMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const layout = await ctx.db.get(args.layoutId);
-    if (!layout) throw new Error("Estado no encontrado");
+    if (!layout) {
+      throw new Error("Estado no encontrado");
+    }
     const live = await ctx.db
       .query("tvLayouts")
       .withIndex("by_live", (q) => q.eq("isLive", true))
@@ -851,7 +892,9 @@ export const adminRemoveLayout = adminMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const layout = await ctx.db.get(args.layoutId);
-    if (!layout) throw new Error("Estado no encontrado");
+    if (!layout) {
+      throw new Error("Estado no encontrado");
+    }
     await ctx.db.delete(layout._id);
     return null;
   },

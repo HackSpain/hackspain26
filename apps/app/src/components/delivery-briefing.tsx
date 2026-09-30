@@ -20,13 +20,11 @@ export function DeliveryBriefing() {
           </p>
           <ul className="list-disc space-y-1.5 pl-5 text-hs-brown">
             <li>
-              Un vídeo de 3 minutos. Contad el proyecto a fondo, para que
-              puedan juzgar craftsmanship, problem solving, creativity y overall.
+              Un vídeo de 3 minutos. Contad el proyecto a fondo, para que puedan
+              juzgar craftsmanship, problem solving, creativity y overall.
             </li>
             <li>Si aplica, una demo que se pueda probar.</li>
-            <li>
-              El repo, con instrucciones en el README.md de cómo usarlo.
-            </li>
+            <li>El repo, con instrucciones en el README.md de cómo usarlo.</li>
           </ul>
         </section>
         <section className="space-y-2">
@@ -36,8 +34,8 @@ export function DeliveryBriefing() {
           </p>
           <ul className="list-disc space-y-1.5 pl-5 text-hs-brown">
             <li>
-              Tendréis unos 10 minutos para presentar el proyecto a los
-              jueces de cada track. Ese tiempo incluye sus preguntas.
+              Tendréis unos 10 minutos para presentar el proyecto a los jueces
+              de cada track. Ese tiempo incluye sus preguntas.
             </li>
             <li>El tiempo lo gestionan los propios track masters.</li>
           </ul>

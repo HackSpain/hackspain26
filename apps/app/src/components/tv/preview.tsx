@@ -1,11 +1,17 @@
 "use client";
 
-import { memo } from 'react';
-import type { ReactNode } from 'react';
-import { TV_PALETTE, tvFontSizeClass, tvFontSizeStyle, tvFontWeightClass, tvHasBackground } from '@/lib/tv';
-import type { TvFontWeight, TvWidget } from '@/lib/tv';
-import { cn } from '@/lib/utils';
-import { SponsorTickerBox } from './sponsor-boxes';
+import { memo } from "react";
+import type { ReactNode } from "react";
+import {
+  TV_PALETTE,
+  tvFontSizeClass,
+  tvFontSizeStyle,
+  tvFontWeightClass,
+  tvHasBackground,
+} from "@/lib/tv";
+import type { TvFontWeight, TvWidget } from "@/lib/tv";
+import { cn } from "@/lib/utils";
+import { SponsorTickerBox } from "./sponsor-boxes";
 
 function BannerPreview({
   text,
@@ -21,16 +27,16 @@ function BannerPreview({
   return (
     <div
       className={cn(
-        'flex h-full items-center justify-center px-4 text-center',
-        tvHasBackground(background) && 'bg-hs-ink',
+        "flex h-full items-center justify-center px-4 text-center",
+        tvHasBackground(background) && "bg-hs-ink"
       )}
     >
       <p
         style={tvFontSizeStyle(fontSize)}
         className={cn(
-          'font-bungee leading-tight text-balance text-hs-gold uppercase',
-          tvFontSizeClass('banner', fontSize),
-          tvFontWeightClass(fontWeight),
+          "font-bungee leading-tight text-balance text-hs-gold uppercase",
+          tvFontSizeClass("banner", fontSize),
+          tvFontWeightClass(fontWeight)
         )}
       >
         {text}
@@ -54,17 +60,17 @@ function TickerPreview({
   return (
     <div
       className={cn(
-        'flex h-full items-center overflow-hidden px-4',
-        fill && 'bg-hs-gold',
+        "flex h-full items-center overflow-hidden px-4",
+        fill && "bg-hs-gold"
       )}
     >
       <p
         style={tvFontSizeStyle(fontSize)}
         className={cn(
-          'truncate font-bungee uppercase',
-          fill ? 'text-hs-ink' : 'text-hs-gold',
-          tvFontSizeClass('ticker', fontSize),
-          tvFontWeightClass(fontWeight),
+          "truncate font-bungee uppercase",
+          fill ? "text-hs-ink" : "text-hs-gold",
+          tvFontSizeClass("ticker", fontSize),
+          tvFontWeightClass(fontWeight)
         )}
       >
         {text}
@@ -80,7 +86,7 @@ function ClockPreview({ fontSize }: { fontSize?: number }) {
         style={tvFontSizeStyle(fontSize)}
         className={cn(
           "font-bungee tabular-nums text-hs-paper",
-          tvFontSizeClass("clock", fontSize),
+          tvFontSizeClass("clock", fontSize)
         )}
       >
         21:00
@@ -103,17 +109,17 @@ function MessagePreview({
   return (
     <div
       className={cn(
-        'flex h-full flex-col justify-center p-4',
+        "flex h-full flex-col justify-center p-4",
         tvHasBackground(background) &&
-          'border-[3px] border-hs-gold/40 bg-hs-paper/5',
+          "border-[3px] border-hs-gold/40 bg-hs-paper/5"
       )}
     >
       <p
         style={tvFontSizeStyle(fontSize)}
         className={cn(
-          'line-clamp-6 whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper',
-          tvFontSizeClass('message', fontSize),
-          tvFontWeightClass(fontWeight),
+          "line-clamp-6 whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper",
+          tvFontSizeClass("message", fontSize),
+          tvFontWeightClass(fontWeight)
         )}
       >
         {text}
@@ -122,13 +128,7 @@ function MessagePreview({
   );
 }
 
-function Frame({
-  title,
-  children,
-}: {
-  title: string;
-  children?: ReactNode;
-}) {
+function Frame({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="flex h-full flex-col bg-hs-paper p-3 text-hs-ink">
       <p className="font-bungee text-[10px] uppercase">{title}</p>
@@ -319,14 +319,19 @@ export const TvWidgetPreview = memo(function TvWidgetPreview({
       return (
         <Frame title="Modelos">
           <div className="space-y-2">
-            {["claude-sonnet-4-5", "gpt-5-codex", "gemini-2-5-pro"].map((name, index) => (
-              <div key={name}>
-                <p className="font-mono text-xs">{name}</p>
-                <span className="mt-1 block h-1.5 bg-hs-ink/10">
-                  <span className="block h-full bg-hs-ink/50" style={{ width: `${90 - index * 28}%` }} />
-                </span>
-              </div>
-            ))}
+            {["claude-sonnet-4-5", "gpt-5-codex", "gemini-2-5-pro"].map(
+              (name, index) => (
+                <div key={name}>
+                  <p className="font-mono text-xs">{name}</p>
+                  <span className="mt-1 block h-1.5 bg-hs-ink/10">
+                    <span
+                      className="block h-full bg-hs-ink/50"
+                      style={{ width: `${90 - index * 28}%` }}
+                    />
+                  </span>
+                </div>
+              )
+            )}
           </div>
         </Frame>
       );

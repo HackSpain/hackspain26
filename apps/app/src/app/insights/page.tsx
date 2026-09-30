@@ -58,7 +58,6 @@ import {
   PERIODS,
   sumSamples,
   teamRows,
-  TRACKS,
 } from "./mock-data";
 import { NO_TEAM_ID, useLiveInsights } from "./use-live-insights";
 import type { LiveInsightData } from "./use-live-insights";
@@ -109,7 +108,7 @@ function MetricSwitch({
             "flex min-h-11 items-center sm:min-h-10 gap-1.5 px-2.5 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-hs-navy",
             value === id
               ? "bg-hs-ink text-hs-paper"
-              : "text-hs-brown hover:bg-hs-sand",
+              : "text-hs-brown hover:bg-hs-sand"
           )}
         >
           <Icon className="size-4" aria-hidden />
@@ -139,7 +138,7 @@ function StatCard({
     <Card
       className={cn(
         "gap-4 border border-hs-ink/15 p-4 sm:p-5",
-        highlight && "bg-hs-gold",
+        highlight && "bg-hs-gold"
       )}
     >
       <div className="flex items-center justify-between">
@@ -165,7 +164,7 @@ function ToolMark({ id, small = false }: { id: HarnessId; small?: boolean }) {
     <span
       className={cn(
         "inline-flex shrink-0 items-center justify-center border border-current font-mono font-bold",
-        small ? "size-6 text-[9px]" : "size-8 text-[11px]",
+        small ? "size-6 text-[9px]" : "size-8 text-[11px]"
       )}
       style={{ color: harness.color, backgroundColor: `${harness.color}12` }}
       aria-hidden
@@ -183,7 +182,7 @@ function HarnessUsage({
   onExplore: (id: HarnessId) => void;
 }) {
   const [metric, setMetric] = useState<"tokens" | "sessions">("tokens");
-  const sorted = [...rows].sort((a, b) => b[metric] - a[metric]);
+  const sorted = [...rows].toSorted((a, b) => b[metric] - a[metric]);
   const total = rows.reduce((sum, row) => sum + row[metric], 0);
   return (
     <Panel
@@ -288,17 +287,17 @@ function downloadCsv(rows: TeamRow[]) {
     ]),
   ]
     .map((row) =>
-      row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","),
+      row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")
     )
     .join("\r\n");
   const url = URL.createObjectURL(
-    new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" }),
+    new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" })
   );
   const link = document.createElement("a");
   link.href = url;
   link.download = "hackspain-insights.csv";
   link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function Leaderboard({
@@ -324,9 +323,9 @@ function Leaderboard({
           team.secondary === harness) &&
         `${team.name} ${team.project}`
           .toLocaleLowerCase("es")
-          .includes(search.toLocaleLowerCase("es")),
+          .includes(search.toLocaleLowerCase("es"))
     )
-    .sort((a, b) => b[metric] - a[metric] || a.name.localeCompare(b.name));
+    .toSorted((a, b) => b[metric] - a[metric] || a.name.localeCompare(b.name));
   const max = Math.max(...filtered.map((team) => team[metric]), 1);
   return (
     <Panel
@@ -388,7 +387,8 @@ function Leaderboard({
         <Table className="min-w-[680px]">
           <caption className="sr-only">
             Equipos ordenados por{" "}
-            {METRICS.find((item) => item.id === metric)?.label}. Sin puntuación de calidad.
+            {METRICS.find((item) => item.id === metric)?.label}. Sin puntuación
+            de calidad.
           </caption>
           <TableHeader>
             <TableRow>
@@ -423,14 +423,14 @@ function Leaderboard({
                 key={team.id}
                 className={cn(
                   "group hover:bg-hs-sand/30",
-                  index === 0 && "bg-hs-gold/10",
+                  index === 0 && "bg-hs-gold/10"
                 )}
               >
                 <TableCell className="text-center">
                   <span
                     className={cn(
                       "inline-flex size-6 items-center justify-center font-mono text-xs",
-                      index === 0 ? "bg-hs-gold font-bold" : "text-hs-brown",
+                      index === 0 ? "bg-hs-gold font-bold" : "text-hs-brown"
                     )}
                   >
                     {index === 0 ? (
@@ -460,8 +460,7 @@ function Leaderboard({
                         {team.name}
                       </span>
                       <span className="mt-0.5 block text-[11px] text-hs-brown">
-                        {team.project} <span className="px-1">·</span>{" "}
-                        {team.track}
+                        {[team.project, team.track].filter(Boolean).join(" · ")}
                       </span>
                     </span>
                   </button>
@@ -486,7 +485,7 @@ function Leaderboard({
                     key={item.id}
                     className={cn(
                       "text-right font-mono text-xs tabular-nums",
-                      metric === item.id && "font-bold text-hs-navy",
+                      metric === item.id && "font-bold text-hs-navy"
                     )}
                   >
                     <span>
@@ -518,9 +517,9 @@ function Leaderboard({
                               samples.filter(
                                 (sample) =>
                                   sample.teamId === team.id &&
-                                  sample.bucket === bucket,
-                              ),
-                            )[metric],
+                                  sample.bucket === bucket
+                              )
+                            )[metric]
                         )}
                     />
                   </div>
@@ -565,10 +564,10 @@ function Leaderboard({
 
 function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
   const tools = harnessRows(
-    samples.filter((sample) => sample.teamId === team.id),
+    samples.filter((sample) => sample.teamId === team.id)
   )
     .filter((row) => row.tokens > 0)
-    .sort((a, b) => b.tokens - a.tokens);
+    .toSorted((a, b) => b.tokens - a.tokens);
   return (
     <>
       <DialogHeader>
@@ -577,12 +576,16 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
         </p>
         <DialogTitle>{team.name}</DialogTitle>
         <DialogDescription>
-          {team.project} · {team.track} · {team.members} personas
+          {[team.project, team.track, `${team.members} personas`]
+            .filter(Boolean)
+            .join(" · ")}
         </DialogDescription>
       </DialogHeader>
-      <p className="border-y border-hs-ink/15 py-4 leading-relaxed">
-        {team.description}
-      </p>
+      {team.description.trim() ? (
+        <p className="border-y border-hs-ink/15 py-4 leading-relaxed">
+          {team.description}
+        </p>
+      ) : null}
       <div className="grid grid-cols-3 gap-3">
         {METRICS.map((metric) => (
           <div
@@ -648,13 +651,12 @@ export function InsightsView() {
   const live = useLiveInsights();
   const timeline = useMemo(
     () => ({ bucketMinutes: live.bucketMinutes, startsAt: live.startsAt }),
-    [live.bucketMinutes, live.startsAt],
+    [live.bucketMinutes, live.startsAt]
   );
   const [activeTab, setActiveTab] = useState("overview");
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const leaderboardTabRef = useRef<HTMLButtonElement | null>(null);
   const [period, setPeriod] = useState<Period>("event");
-  const [track, setTrack] = useState("all");
   const [chartMetric, setChartMetric] = useState<Metric>("tokens");
   const [harness, setHarness] = useState("all");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -672,12 +674,12 @@ export function InsightsView() {
 
   const allSamples = live.samples;
   const samples = useMemo(
-    () => filterSamples(allSamples, period, track, live.teams, timeline),
-    [allSamples, period, track, live.teams, timeline],
+    () => filterSamples(allSamples, period, "all", live.teams, timeline),
+    [allSamples, period, live.teams, timeline]
   );
   const eventSamples = useMemo(
-    () => filterSamples(allSamples, "event", track, live.teams, timeline),
-    [allSamples, track, live.teams, timeline],
+    () => filterSamples(allSamples, "event", "all", live.teams, timeline),
+    [allSamples, live.teams, timeline]
   );
   // People without a team count in every total and never in a team list.
   const ranked = (rows: Sample[]) =>
@@ -688,13 +690,13 @@ export function InsightsView() {
   const tools = harnessRows(samples);
   const detailSamples = activeTab === "evolution" ? eventSamples : samples;
   const selectedTeam = ranked(detailSamples).find(
-    (team) => team.id === selectedTeamId,
+    (team) => team.id === selectedTeamId
   );
   const buckets = bucketTotals(samples);
   const trend = (metric: Metric | "sessions") =>
     buckets.map((bucket) => bucket[metric]);
-  const topCommitTeam = [...teams].sort((a, b) => b.commits - a.commits)[0];
-  const leadingTool = [...tools].sort((a, b) => b.tokens - a.tokens)[0];
+  const topCommitTeam = [...teams].toSorted((a, b) => b.commits - a.commits)[0];
+  const leadingTool = [...tools].toSorted((a, b) => b.tokens - a.tokens)[0];
 
   function openTeam(team: TeamRow) {
     returnFocus.current =
@@ -705,7 +707,9 @@ export function InsightsView() {
   }
 
   function changeTab(value: string) {
-    if (!NAV.some((tab) => tab.id === value)) return;
+    if (!NAV.some((tab) => tab.id === value)) {
+      return;
+    }
     setActiveTab(value);
     window.history.replaceState(window.history.state, "", `#${value}`);
   }
@@ -720,223 +724,211 @@ export function InsightsView() {
   return (
     <div className="space-y-5 pb-4 [&_button]:focus-visible:outline-2 [&_button]:focus-visible:outline-offset-2 [&_button]:focus-visible:outline-hs-navy">
       <div className="min-w-0 space-y-5 tabular-nums">
-      <section
-        className="flex flex-col items-center px-2 pt-5 pb-7 text-center sm:pt-8 sm:pb-10"
-        aria-labelledby="insights-title"
-      >
-        <h1
-          id="insights-title"
-          className="max-w-4xl text-3xl leading-tight text-balance sm:text-4xl lg:text-5xl"
+        <section
+          className="flex flex-col items-center px-2 pt-5 pb-7 text-center sm:pt-8 sm:pb-10"
+          aria-labelledby="insights-title"
         >
-          Insights del evento
-        </h1>
-        <p className="mt-4 max-w-xl text-sm leading-relaxed text-pretty text-hs-brown sm:text-base">
-          Tokens, pushes y herramientas de los equipos de HackSpain.
-        </p>
-      </section>
-
-      <Tabs.Root
-        value={activeTab}
-        onValueChange={changeTab}
-        ref={tabsRef}
-        className="scroll-mt-4 space-y-5"
-      >
-        <div className="flex flex-col justify-between gap-3 border-b border-hs-ink/20 pb-4 lg:flex-row lg:items-center">
-          <Tabs.List
-            aria-label="Secciones de insights"
-            className="grid grid-cols-3 gap-1 border border-hs-ink/15 bg-hs-sand/40 p-1 sm:inline-flex"
+          <h1
+            id="insights-title"
+            className="max-w-4xl text-3xl leading-tight text-balance sm:text-4xl lg:text-5xl"
           >
-            {NAV.map(({ id, label, icon: Icon }) => (
-              <Tabs.Trigger
-                key={id}
-                value={id}
-                ref={id === "leaderboard" ? leaderboardTabRef : undefined}
-                className="flex min-h-11 items-center justify-center gap-2 px-3 text-xs font-semibold text-hs-brown outline-none hover:bg-hs-sand focus-visible:ring-2 focus-visible:ring-hs-navy data-[state=active]:bg-hs-ink data-[state=active]:text-hs-paper"
-              >
-                <Icon className="hidden size-4 sm:block" aria-hidden />
-                {label}
-              </Tabs.Trigger>
-            ))}
-          </Tabs.List>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Select value={track} onValueChange={setTrack}>
-              <SelectTrigger
-                aria-label="Filtrar insights por reto"
-                className="min-h-11 border text-xs sm:min-h-10 sm:w-36"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los retos</SelectItem>
-                {TRACKS.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {activeTab === "overview" || activeTab === "leaderboard" ? (
-              <Select
-                value={period}
-                onValueChange={(value) => {
-                  const option = PERIODS.find((item) => item.id === value);
-                  if (option) setPeriod(option.id);
-                }}
-              >
-                <SelectTrigger
-                  aria-label="Periodo de los insights"
-                  className="min-h-11 border text-xs sm:min-h-10 sm:w-44"
+            Insights del evento
+          </h1>
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-pretty text-hs-brown sm:text-base">
+            Tokens, pushes y herramientas de los equipos de HackSpain.
+          </p>
+        </section>
+
+        <Tabs.Root
+          value={activeTab}
+          onValueChange={changeTab}
+          ref={tabsRef}
+          className="scroll-mt-4 space-y-5"
+        >
+          <div className="flex flex-col justify-between gap-3 border-b border-hs-ink/20 pb-4 lg:flex-row lg:items-center">
+            <Tabs.List
+              aria-label="Secciones de insights"
+              className="grid grid-cols-3 gap-1 border border-hs-ink/15 bg-hs-sand/40 p-1 sm:inline-flex"
+            >
+              {NAV.map(({ id, label, icon: Icon }) => (
+                <Tabs.Trigger
+                  key={id}
+                  value={id}
+                  ref={id === "leaderboard" ? leaderboardTabRef : undefined}
+                  className="flex min-h-11 items-center justify-center gap-2 px-3 text-xs font-semibold text-hs-brown outline-none hover:bg-hs-sand focus-visible:ring-2 focus-visible:ring-hs-navy data-[state=active]:bg-hs-ink data-[state=active]:text-hs-paper"
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PERIODS.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
+                  <Icon className="hidden size-4 sm:block" aria-hidden />
+                  {label}
+                </Tabs.Trigger>
+              ))}
+            </Tabs.List>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {activeTab === "overview" || activeTab === "leaderboard" ? (
+                <Select
+                  value={period}
+                  onValueChange={(value) => {
+                    const option = PERIODS.find((item) => item.id === value);
+                    if (option) {
+                      setPeriod(option.id);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    aria-label="Periodo de los insights"
+                    className="min-h-11 border text-xs sm:min-h-10 sm:w-44"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PERIODS.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
+            </div>
           </div>
-        </div>
 
-        <Tabs.Content
-          value="overview"
-          className="space-y-5 outline-none focus-visible:ring-2 focus-visible:ring-hs-navy"
-        >
-          <section
-            aria-label="Resumen del evento"
-            className="grid scroll-mt-6 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          <Tabs.Content
+            value="overview"
+            className="space-y-5 outline-none focus-visible:ring-2 focus-visible:ring-hs-navy"
           >
-            <StatCard
-              label="Tokens procesados"
-              value={compact(totals.tokens)}
-              detail={`${percent(totals.cachedTokens, totals.tokens)} desde caché · entrada + salida`}
-              icon={Zap}
-              trend={trend("tokens")}
-              highlight
-            />
-            <StatCard
-              label="Pushes a GitHub"
-              value={number(totals.commits)}
-              detail={`${number(totals.commits / Math.max(teams.length, 1))} de media por equipo`}
-              icon={GitCommitHorizontal}
-              trend={trend("commits")}
-            />
-            <StatCard
-              label="Sesiones de agentes"
-              value={number(totals.sessions)}
-              detail={`${tools.filter((tool) => tool.sessions > 0).length} harnesses en uso en este periodo`}
-              icon={Bot}
-              trend={trend("sessions")}
-            />
-            <StatCard
-              label="Pull requests abiertas"
-              value={number(totals.pullRequests)}
-              detail="Flujo de contribuciones durante el evento"
-              icon={GitPullRequest}
-              trend={trend("pullRequests")}
-            />
-          </section>
+            <section
+              aria-label="Resumen del evento"
+              className="grid scroll-mt-6 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              <StatCard
+                label="Tokens procesados"
+                value={compact(totals.tokens)}
+                detail={`${percent(totals.cachedTokens, totals.tokens)} desde caché · entrada + salida`}
+                icon={Zap}
+                trend={trend("tokens")}
+                highlight
+              />
+              <StatCard
+                label="Pushes a GitHub"
+                value={number(totals.commits)}
+                detail={`${number(totals.commits / Math.max(teams.length, 1))} de media por equipo`}
+                icon={GitCommitHorizontal}
+                trend={trend("commits")}
+              />
+              <StatCard
+                label="Sesiones de agentes"
+                value={number(totals.sessions)}
+                detail={`${tools.filter((tool) => tool.sessions > 0).length} harnesses en uso en este periodo`}
+                icon={Bot}
+                trend={trend("sessions")}
+              />
+              <StatCard
+                label="Pull requests abiertas"
+                value={number(totals.pullRequests)}
+                detail="Flujo de contribuciones durante el evento"
+                icon={GitPullRequest}
+                trend={trend("pullRequests")}
+              />
+            </section>
 
-          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
-            <div className="min-w-0 space-y-5">
-              <Panel
-                title="Actividad del evento"
-                eyebrow={`Actividad por intervalos de ${bucketSpan(timeline)}`}
-                action={
-                  <MetricSwitch
-                    value={chartMetric}
-                    onChange={setChartMetric}
-                    metrics={METRICS.slice(0, 2)}
-                    label="Métrica del gráfico de actividad"
-                  />
-                }
-              >
-                <ActivityChart
-                  samples={samples}
-                  metric={chartMetric}
-                  timeline={timeline}
-                />
-                {topCommitTeam && (
-                  <div className="mt-5 flex items-start gap-3 bg-hs-teal/10 p-3">
-                    <Activity
-                      className="mt-0.5 size-4 shrink-0 text-hs-teal"
-                      aria-hidden
+            <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
+              <div className="min-w-0 space-y-5">
+                <Panel
+                  title="Actividad del evento"
+                  eyebrow={`Actividad por intervalos de ${bucketSpan(timeline)}`}
+                  action={
+                    <MetricSwitch
+                      value={chartMetric}
+                      onChange={setChartMetric}
+                      metrics={METRICS.slice(0, 2)}
+                      label="Métrica del gráfico de actividad"
                     />
-                    <p className="text-xs leading-relaxed">
-                      <strong>{topCommitTeam?.name}</strong> lidera en pushes en
-                      este periodo.{" "}
-                      <span className="text-hs-brown">
-                        {leadingTool?.name} concentra el{" "}
-                        {percent(leadingTool?.tokens ?? 0, totals.tokens)} de los
-                        tokens.
-                      </span>
-                    </p>
-                  </div>
-                )}
-              </Panel>
-              <LiveTechnologyStacks />
+                  }
+                >
+                  <ActivityChart
+                    samples={samples}
+                    metric={chartMetric}
+                    timeline={timeline}
+                  />
+                  {topCommitTeam && (
+                    <div className="mt-5 flex items-start gap-3 bg-hs-teal/10 p-3">
+                      <Activity
+                        className="mt-0.5 size-4 shrink-0 text-hs-teal"
+                        aria-hidden
+                      />
+                      <p className="text-xs leading-relaxed">
+                        <strong>{topCommitTeam?.name}</strong> lidera en pushes
+                        en este periodo.{" "}
+                        <span className="text-hs-brown">
+                          {leadingTool?.name} concentra el{" "}
+                          {percent(leadingTool?.tokens ?? 0, totals.tokens)} de
+                          los tokens.
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </Panel>
+                <LiveTechnologyStacks />
+              </div>
+              <div className="min-w-0 space-y-5">
+                <HarnessUsage rows={tools} onExplore={exploreHarness} />
+              </div>
             </div>
-            <div className="min-w-0 space-y-5">
-              <HarnessUsage rows={tools} onExplore={exploreHarness} />
-            </div>
-          </div>
-        </Tabs.Content>
+          </Tabs.Content>
 
-        <Tabs.Content
-          value="leaderboard"
-          forceMount
-          className="outline-none focus-visible:ring-2 focus-visible:ring-hs-navy data-[state=inactive]:hidden"
-        >
-          <Leaderboard
-            teams={teams}
-            samples={samples}
-            harness={harness}
-            setHarness={setHarness}
-            onSelect={openTeam}
-          />
-        </Tabs.Content>
+          <Tabs.Content
+            value="leaderboard"
+            forceMount
+            className="outline-none focus-visible:ring-2 focus-visible:ring-hs-navy data-[state=inactive]:hidden"
+          >
+            <Leaderboard
+              teams={teams}
+              samples={samples}
+              harness={harness}
+              setHarness={setHarness}
+              onSelect={openTeam}
+            />
+          </Tabs.Content>
 
-        <Tabs.Content
-          value="evolution"
-          className="outline-none focus-visible:ring-2 focus-visible:ring-hs-navy"
-        >
-          <EventInsights
-            samples={eventSamples}
-            teams={eventTeams}
-            onSelect={openTeam}
-            timeline={timeline}
-          />
-        </Tabs.Content>
-      </Tabs.Root>
+          <Tabs.Content
+            value="evolution"
+            className="outline-none focus-visible:ring-2 focus-visible:ring-hs-navy"
+          >
+            <EventInsights
+              samples={eventSamples}
+              teams={eventTeams}
+              onSelect={openTeam}
+              timeline={timeline}
+            />
+          </Tabs.Content>
+        </Tabs.Root>
 
-      <footer className="border-t border-hs-ink/20 pt-5 text-xs leading-relaxed text-pretty text-hs-brown">
-        {INSIGHTS_FOOTER[live.status]}
-      </footer>
+        <footer className="border-t border-hs-ink/20 pt-5 text-xs leading-relaxed text-pretty text-hs-brown">
+          {INSIGHTS_FOOTER[live.status]}
+        </footer>
 
-      <Dialog
-        open={Boolean(selectedTeam)}
-        onOpenChange={(open) => {
-          if (!open) setSelectedTeamId(null);
-        }}
-      >
-        <DialogContent
-          onCloseAutoFocus={(event) => {
-            if (returnFocus.current?.isConnected) {
-              event.preventDefault();
-              returnFocus.current.focus();
+        <Dialog
+          open={Boolean(selectedTeam)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedTeamId(null);
             }
           }}
         >
-          {selectedTeam ? (
-            <TeamDetails team={selectedTeam} samples={detailSamples} />
-          ) : (
-            <DialogTitle>Equipo</DialogTitle>
-          )}
-        </DialogContent>
-      </Dialog>
+          <DialogContent
+            onCloseAutoFocus={(event) => {
+              if (returnFocus.current?.isConnected) {
+                event.preventDefault();
+                returnFocus.current.focus();
+              }
+            }}
+          >
+            {selectedTeam ? (
+              <TeamDetails team={selectedTeam} samples={detailSamples} />
+            ) : (
+              <DialogTitle>Equipo</DialogTitle>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

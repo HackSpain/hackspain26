@@ -17,12 +17,16 @@ test("a mention links only to the user whose name appears in the text", async ()
   } as unknown as MutationCtx;
 
   expect(
-    await checkedMentions(ctx, "Hola @Alice", [{ name: "Alice", userId: bobId }])
+    await checkedMentions(ctx, "Hola @Alice", [
+      { name: "Alice", userId: bobId },
+    ])
   ).toBeUndefined();
   expect(
     await checkedMentions(ctx, "Hola @bob", [{ name: "bob", userId: bobId }])
   ).toEqual([{ name: "bob", userId: bobId }]);
   expect(
-    await checkedMentions(ctx, "Hola @Alice", [{ name: "Alice", userId: aliceId }])
+    await checkedMentions(ctx, "Hola @Alice", [
+      { name: "Alice", userId: aliceId },
+    ])
   ).toEqual([{ name: "Alice", userId: aliceId }]);
 });

@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { errorBoundaryMessage } from "@/lib/error-boundary-message";
 
 export default function ErrorBoundary({
   error,
@@ -28,9 +29,7 @@ export default function ErrorBoundary({
       <Card className="hs-enter w-full max-w-md">
         <CardHeader>
           <CardTitle>Algo ha fallado</CardTitle>
-          <CardDescription>
-            {error.message || "Ha ocurrido un error inesperado."}
-          </CardDescription>
+          <CardDescription>{errorBoundaryMessage(error)}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 sm:flex-row">
           <Button className="w-full sm:w-auto" onClick={() => reset()}>

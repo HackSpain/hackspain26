@@ -21,7 +21,7 @@ import { TvWidgetView } from "./widgets";
 function useStageEntrance(
   root: RefObject<HTMLDivElement | null>,
   widgets: TvWidget[],
-  enabled: boolean,
+  enabled: boolean
 ) {
   const reduced = usePrefersReducedMotion();
   useTvVisibilityPause();
@@ -30,25 +30,34 @@ function useStageEntrance(
   useGSAP(
     () => {
       const stage = root.current;
-      if (!enabled || !stage) {return;}
+      if (!enabled || !stage) {
+        return;
+      }
       if (reduced) {
         gsap.fromTo(
           stage.querySelectorAll("[data-tv-box]"),
           { opacity: 0 },
-          { opacity: 1, duration: TV_REDUCED_FADE, ease: "none", clearProps: "opacity" },
+          {
+            opacity: 1,
+            duration: TV_REDUCED_FADE,
+            ease: "none",
+            clearProps: "opacity",
+          }
         );
         return;
       }
       const order = widgets.toSorted(
-        (a, b) => a.y + a.x * 0.6 - (b.y + b.x * 0.6),
+        (a, b) => a.y + a.x * 0.6 - (b.y + b.x * 0.6)
       );
       const boxes = order
         .map((widget) =>
-          stage.querySelector<HTMLElement>(`[data-tv-box="${widget._id}"]`),
+          stage.querySelector<HTMLElement>(`[data-tv-box="${widget._id}"]`)
         )
         .filter((node): node is HTMLElement => node !== null);
       const sweep = stage.querySelector<HTMLElement>("[data-tv-sweep]");
-      if (boxes.length === 0) {return;}
+      if (boxes.length === 0) {
+        return;
+      }
 
       try {
         const timeline = gsap.timeline({ defaults: { ease: TV_EASE_OUT } });
@@ -56,8 +65,13 @@ function useStageEntrance(
           timeline.fromTo(
             sweep,
             { yPercent: 0, opacity: 1 },
-            { yPercent: 100 * 100, opacity: 0.4, duration: 1.1, ease: "power2.inOut" },
-            0,
+            {
+              yPercent: 100 * 100,
+              opacity: 0.4,
+              duration: 1.1,
+              ease: "power2.inOut",
+            },
+            0
           );
           timeline.to(sweep, { opacity: 0, duration: 0.3 }, ">-0.1");
         }
@@ -80,13 +94,13 @@ function useStageEntrance(
             stagger: 0.07,
             clearProps: "clipPath,opacity,transform",
           },
-          0.12,
+          0.12
         );
       } catch {
         gsap.set(boxes, { clearProps: "clipPath,opacity,transform" });
       }
     },
-    { scope: root, dependencies: [key, enabled, reduced], revertOnUpdate: true },
+    { scope: root, dependencies: [key, enabled, reduced], revertOnUpdate: true }
   );
 }
 
@@ -115,7 +129,7 @@ export function TvStage({
       className={cn(
         "relative overflow-hidden bg-hs-ink [container-type:size]",
         fill ? "h-full w-full" : "aspect-video w-full",
-        className,
+        className
       )}
     >
       {widgets.length === 0 ? (
@@ -143,7 +157,7 @@ export function TvStage({
             >
               <TvWidgetView widget={widget} />
             </div>
-          ),
+          )
         )
       )}
       {enter && !renderWidget && widgets.length > 0 ? (

@@ -23,7 +23,9 @@ import { Button } from "@/components/ui/button";
 import { TableCell, TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-type QueueItem = FunctionReturnType<typeof api.judging.myQueue>["items"][number];
+type QueueItem = FunctionReturnType<
+  typeof api.judging.myQueue
+>["items"][number];
 
 function StatusBadge({ item }: { item: QueueItem }) {
   if (item.assessment?.status === "submitted") {
@@ -47,7 +49,8 @@ function JudgingPanel() {
   const me = useQuery(api.users.me);
   const allowed = me?.canJudge === true;
   const queue = useQuery(api.judging.myQueue, allowed ? {} : "skip");
-  const { projectId, triggerRef, openProject, closeProject } = useProjectPicker();
+  const { projectId, triggerRef, openProject, closeProject } =
+    useProjectPicker();
   const [saving, setSaving] = useState(false);
   const saveDraft = useMutation(api.judging.saveDraft);
   const submit = useMutation(api.judging.submit);
@@ -100,8 +103,7 @@ function JudgingPanel() {
           </EmptyState>
         ) : queue.hasRound ? (
           <EmptyState title="No tienes proyectos asignados">
-            El reparto ya está hecho y no te incluye. Habla con la
-            organización.
+            El reparto ya está hecho y no te incluye. Habla con la organización.
           </EmptyState>
         ) : (
           <EmptyState title="Aún no hay asignaciones">
@@ -185,7 +187,7 @@ function JudgingPanel() {
           <div
             className={cn(
               "border-t-[3px] border-hs-ink pt-5",
-              saving && "opacity-70",
+              saving && "opacity-70"
             )}
           >
             <AssessmentForm
@@ -198,7 +200,7 @@ function JudgingPanel() {
                     ...draft.scores,
                     ownCriteriaComment: draft.ownCriteriaComment,
                     submissionId: selected._id,
-                  }),
+                  })
                 )()
               }
               onSubmit={(draft: AssessmentDraft) =>

@@ -41,7 +41,9 @@ const ENV = [
   "RAWTREE_BASE_URL",
   "RAWTREE_DATABASE",
 ] as const;
-const original = Object.fromEntries(ENV.map((name) => [name, process.env[name]]));
+const original = Object.fromEntries(
+  ENV.map((name) => [name, process.env[name]])
+);
 
 afterEach(() => {
   for (const name of ENV) {
@@ -53,13 +55,17 @@ afterEach(() => {
   }
 });
 
-function attribute(record: { attributes: { key: string; value: unknown }[] }, key: string) {
+function attribute(
+  record: { attributes: { key: string; value: unknown }[] },
+  key: string
+) {
   return record.attributes.find((entry) => entry.key === key)?.value;
 }
 
 describe("toOtlpLogs", () => {
   test("the log is timed when the harness recorded it, not when it was read", () => {
-    const record = toOtlpLogs([event]).resourceLogs[0]?.scopeLogs[0]?.logRecords[0];
+    const record = toOtlpLogs([event]).resourceLogs[0]?.scopeLogs[0]
+      ?.logRecords[0];
     expect(record?.timeUnixNano).toBe("1791019800000000000");
     expect(record?.observedTimeUnixNano).toBe("1791194400000000000");
     expect(record?.eventName).toBe("hackspain.usage");
@@ -103,8 +109,12 @@ describe("toOtlpLogs", () => {
     expect(attribute(record, "gen_ai.request.model")).toEqual({
       stringValue: "claude-fable-5-1",
     });
-    expect(attribute(record, "gen_ai.usage.input_tokens")).toEqual({ intValue: "2" });
-    expect(attribute(record, "gen_ai.usage.output_tokens")).toEqual({ intValue: "3" });
+    expect(attribute(record, "gen_ai.usage.input_tokens")).toEqual({
+      intValue: "2",
+    });
+    expect(attribute(record, "gen_ai.usage.output_tokens")).toEqual({
+      intValue: "3",
+    });
     expect(attribute(record, "gen_ai.conversation.id")).toEqual({
       stringValue: "session-1",
     });
@@ -166,7 +176,10 @@ describe("exportTelemetryAsOtlpLogs", () => {
     process.env.RAWTREE_DATABASE = "hackspain";
     process.env.RAWTREE_BASE_URL = "https://rawtree.test/";
     const calls: { url: string; init: RequestInit }[] = [];
-    await exportTelemetryAsOtlpLogs([event], ((url: string, init: RequestInit) => {
+    await exportTelemetryAsOtlpLogs([event], ((
+      url: string,
+      init: RequestInit
+    ) => {
       calls.push({ init, url });
       return Promise.resolve(new Response("{}"));
     }) as unknown as typeof fetch);

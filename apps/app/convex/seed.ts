@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+} from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id, TableNames } from "./_generated/dataModel";
 import {
@@ -91,41 +95,143 @@ const shuffle = <T>(list: readonly T[]): T[] => {
 // ---------- data ----------
 
 const FIRST_NAMES = [
-  "Lucía", "Martín", "Sofía", "Hugo", "Paula", "Daniel", "Valeria", "Pablo",
-  "Carla", "Alejandro", "Nora", "Adrián", "Julia", "Mario", "Aitana", "Diego",
-  "Vera", "Iker", "Claudia", "Álvaro", "Irene", "Marc", "Alba", "Nil",
-  "Elena", "Jorge", "Candela", "Bruno", "Marta", "Óscar", "Laia", "Rubén",
-  "Ana", "Tomás", "Emma", "Ismael", "Olivia", "Sergio", "Gala", "Leo",
-  "Inés", "Raúl", "Noa", "Andrés", "Chloe", "Víctor", "Ariadna", "Jan",
-  "Miriam", "Guillem", "Rocío", "Pau", "Blanca", "Enzo", "Sara", "Joel",
+  "Lucía",
+  "Martín",
+  "Sofía",
+  "Hugo",
+  "Paula",
+  "Daniel",
+  "Valeria",
+  "Pablo",
+  "Carla",
+  "Alejandro",
+  "Nora",
+  "Adrián",
+  "Julia",
+  "Mario",
+  "Aitana",
+  "Diego",
+  "Vera",
+  "Iker",
+  "Claudia",
+  "Álvaro",
+  "Irene",
+  "Marc",
+  "Alba",
+  "Nil",
+  "Elena",
+  "Jorge",
+  "Candela",
+  "Bruno",
+  "Marta",
+  "Óscar",
+  "Laia",
+  "Rubén",
+  "Ana",
+  "Tomás",
+  "Emma",
+  "Ismael",
+  "Olivia",
+  "Sergio",
+  "Gala",
+  "Leo",
+  "Inés",
+  "Raúl",
+  "Noa",
+  "Andrés",
+  "Chloe",
+  "Víctor",
+  "Ariadna",
+  "Jan",
+  "Miriam",
+  "Guillem",
+  "Rocío",
+  "Pau",
+  "Blanca",
+  "Enzo",
+  "Sara",
+  "Joel",
 ];
 const LAST_NAMES = [
-  "García", "Martínez", "López", "Sánchez", "Pérez", "Gómez", "Fernández",
-  "Ruiz", "Díaz", "Moreno", "Jiménez", "Romero", "Navarro", "Torres",
-  "Domínguez", "Vázquez", "Serrano", "Molina", "Ortega", "Castro", "Rubio",
-  "Puig", "Ferrer", "Roca", "Vidal", "Soler", "Bosch", "Iglesias", "Cano",
+  "García",
+  "Martínez",
+  "López",
+  "Sánchez",
+  "Pérez",
+  "Gómez",
+  "Fernández",
+  "Ruiz",
+  "Díaz",
+  "Moreno",
+  "Jiménez",
+  "Romero",
+  "Navarro",
+  "Torres",
+  "Domínguez",
+  "Vázquez",
+  "Serrano",
+  "Molina",
+  "Ortega",
+  "Castro",
+  "Rubio",
+  "Puig",
+  "Ferrer",
+  "Roca",
+  "Vidal",
+  "Soler",
+  "Bosch",
+  "Iglesias",
+  "Cano",
 ];
 // Card values come from the curated vocabularies the form offers
 // (convex/lib/directoryOptions.ts), so seeded people cluster like real ones.
 const CITIES = [
-  "Madrid", "Barcelona", "Valencia", "Sevilla", "Bilbao", "Zaragoza",
-  "Málaga", "Murcia", "A Coruña", "Granada", "Alicante", "Donostia / San Sebastián",
+  "Madrid",
+  "Barcelona",
+  "Valencia",
+  "Sevilla",
+  "Bilbao",
+  "Zaragoza",
+  "Málaga",
+  "Murcia",
+  "A Coruña",
+  "Granada",
+  "Alicante",
+  "Donostia / San Sebastián",
 ];
-const DIETS = ["Ninguna", "Ninguna", "Ninguna", "Vegetariana", "Vegana", "Sin gluten", "Sin lactosa"];
+const DIETS = [
+  "Ninguna",
+  "Ninguna",
+  "Ninguna",
+  "Vegetariana",
+  "Vegana",
+  "Sin gluten",
+  "Sin lactosa",
+];
 
 const ROLES = ROLE_OPTIONS.filter((option) => option.value !== "Otro").map(
   (option) => option.value
 );
-const UNIVERSITIES = UNIVERSITY_OPTIONS.slice(0, 24).map((option) => option.value);
+const UNIVERSITIES = UNIVERSITY_OPTIONS.slice(0, 24).map(
+  (option) => option.value
+);
 const COMPANIES = [
-  "Nébula Labs", "Estudio Prisma", "Atlas Cloud", "Raíz Data", "Cabify",
-  "Glovo", "Factorial", "Wallapop", "Idealista", "Freelance",
+  "Nébula Labs",
+  "Estudio Prisma",
+  "Atlas Cloud",
+  "Raíz Data",
+  "Cabify",
+  "Glovo",
+  "Factorial",
+  "Wallapop",
+  "Idealista",
+  "Freelance",
 ];
 const DEGREES = [
   "Ingeniería Informática",
-  ...DEGREE_OPTIONS.filter((option) => !["Otra", "Máster / Posgrado"].includes(option.value)).map(
-    (option) => option.value
-  ),
+  ...DEGREE_OPTIONS.filter(
+    (option) => !["Otra", "Máster / Posgrado"].includes(option.value)
+  ).map((option) => option.value),
 ];
 const SKILLS = SKILL_OPTIONS.map((option) => option.value);
 const INTERESTS = INTEREST_OPTIONS.map((option) => option.value);
@@ -169,10 +275,20 @@ function directoryFor(city: string, stack: readonly string[]) {
 }
 
 const TEAM_NAMES = [
-  "Churros & Code", "Los Deterministas", "Siesta Labs", "Paella Stack",
-  "Tortilla Sin Cebolla", "404 Not Found", "Quantum Jamón", "La Terminal",
-  "Bit Bailarines", "Vibe Compilers", "Café con Bugs", "Latent Space Cadets",
-  "Garbanzo Neural", "Ctrl Alt Fiesta",
+  "Churros & Code",
+  "Los Deterministas",
+  "Siesta Labs",
+  "Paella Stack",
+  "Tortilla Sin Cebolla",
+  "404 Not Found",
+  "Quantum Jamón",
+  "La Terminal",
+  "Bit Bailarines",
+  "Vibe Compilers",
+  "Café con Bugs",
+  "Latent Space Cadets",
+  "Garbanzo Neural",
+  "Ctrl Alt Fiesta",
 ];
 
 const PROJECTS: {
@@ -182,25 +298,122 @@ const PROJECTS: {
   stack: string[];
   status: "submitted" | "draft";
 }[] = [
-  { name: "Ledgerito", description: "Agente de tesorería que concilia bancos y ERP en tiempo real y explica cada movimiento con trazabilidad.", tracks: ["embat", "maisa"], stack: ["Next.js", "TypeScript", "Convex", "OpenAI"], status: "submitted" },
-  { name: "CitaBot", description: "Voz + WhatsApp para gestionar citas y verificación de seguros en clínicas pequeñas.", tracks: ["prosper-ai", "happyrobot"], stack: ["Python", "FastAPI", "Twilio", "PostgreSQL"], status: "submitted" },
-  { name: "Brazo Amable", description: "Planificador de tareas para brazos reconfigurables entrenado con demostraciones en vídeo.", tracks: ["theker"], stack: ["Python", "PyTorch", "ROS 2", "Rust"], status: "submitted" },
-  { name: "Auditoría Viva", description: "Digital worker que audita facturas de proveedores y deja un rastro verificable de cada decisión.", tracks: ["maisa"], stack: ["TypeScript", "Bun", "SQLite", "Anthropic"], status: "submitted" },
-  { name: "Despacho", description: "Agente que atiende llamadas de transportistas y actualiza el TMS sin intervención humana.", tracks: ["happyrobot"], stack: ["Go", "gRPC", "Redis", "React"], status: "submitted" },
-  { name: "Recetario Clínico", description: "Prescripción asistida con verificación de interacciones y facturación automática.", tracks: ["prosper-ai"], stack: ["Kotlin", "Spring", "PostgreSQL", "Vue"], status: "submitted" },
-  { name: "Cashflow Lens", description: "Predicción de caja a 13 semanas con explicaciones en lenguaje natural para CFOs.", tracks: ["embat"], stack: ["Python", "Polars", "Streamlit", "DuckDB"], status: "submitted" },
-  { name: "Ojo de Halcón", description: "Visión para detectar piezas mal colocadas en una célula robótica y replanificar al vuelo.", tracks: ["theker", "maisa"], stack: ["Python", "OpenCV", "YOLO", "Rust"], status: "submitted" },
-  { name: "Nómada", description: "Copiloto de operaciones para pymes: email, chat y ERP en un solo agente auditable.", tracks: ["happyrobot", "maisa"], stack: ["TypeScript", "Next.js", "Supabase", "LangGraph"], status: "submitted" },
-  { name: "Triage", description: "Prioriza urgencias por voz en primaria con un modelo pequeño que corre en el móvil.", tracks: ["prosper-ai"], stack: ["Swift", "CoreML", "Python"], status: "submitted" },
-  { name: "Conciliador", description: "Match de cobros y facturas con LLM local y reglas explicables para cada excepción.", tracks: ["embat"], stack: ["Rust", "Axum", "SQLite", "Svelte"], status: "submitted" },
-  { name: "Manos Libres", description: "Teleoperación asistida de robots industriales con corrección automática de trayectoria.", tracks: ["theker"], stack: ["C++", "ROS 2", "Python", "Three.js"], status: "submitted" },
-  { name: "Portero", description: "Agente de recepción que gestiona visitas, paquetes y accesos por voz.", tracks: ["happyrobot"], stack: ["TypeScript", "Deno", "Elevenlabs"], status: "draft" },
-  { name: "Sin nombre aún", description: "", tracks: [], stack: [], status: "draft" },
+  {
+    name: "Ledgerito",
+    description:
+      "Agente de tesorería que concilia bancos y ERP en tiempo real y explica cada movimiento con trazabilidad.",
+    tracks: ["embat", "maisa"],
+    stack: ["Next.js", "TypeScript", "Convex", "OpenAI"],
+    status: "submitted",
+  },
+  {
+    name: "CitaBot",
+    description:
+      "Voz + WhatsApp para gestionar citas y verificación de seguros en clínicas pequeñas.",
+    tracks: ["prosper-ai", "happyrobot"],
+    stack: ["Python", "FastAPI", "Twilio", "PostgreSQL"],
+    status: "submitted",
+  },
+  {
+    name: "Brazo Amable",
+    description:
+      "Planificador de tareas para brazos reconfigurables entrenado con demostraciones en vídeo.",
+    tracks: ["theker"],
+    stack: ["Python", "PyTorch", "ROS 2", "Rust"],
+    status: "submitted",
+  },
+  {
+    name: "Auditoría Viva",
+    description:
+      "Digital worker que audita facturas de proveedores y deja un rastro verificable de cada decisión.",
+    tracks: ["maisa"],
+    stack: ["TypeScript", "Bun", "SQLite", "Anthropic"],
+    status: "submitted",
+  },
+  {
+    name: "Despacho",
+    description:
+      "Agente que atiende llamadas de transportistas y actualiza el TMS sin intervención humana.",
+    tracks: ["happyrobot"],
+    stack: ["Go", "gRPC", "Redis", "React"],
+    status: "submitted",
+  },
+  {
+    name: "Recetario Clínico",
+    description:
+      "Prescripción asistida con verificación de interacciones y facturación automática.",
+    tracks: ["prosper-ai"],
+    stack: ["Kotlin", "Spring", "PostgreSQL", "Vue"],
+    status: "submitted",
+  },
+  {
+    name: "Cashflow Lens",
+    description:
+      "Predicción de caja a 13 semanas con explicaciones en lenguaje natural para CFOs.",
+    tracks: ["embat"],
+    stack: ["Python", "Polars", "Streamlit", "DuckDB"],
+    status: "submitted",
+  },
+  {
+    name: "Ojo de Halcón",
+    description:
+      "Visión para detectar piezas mal colocadas en una célula robótica y replanificar al vuelo.",
+    tracks: ["theker", "maisa"],
+    stack: ["Python", "OpenCV", "YOLO", "Rust"],
+    status: "submitted",
+  },
+  {
+    name: "Nómada",
+    description:
+      "Copiloto de operaciones para pymes: email, chat y ERP en un solo agente auditable.",
+    tracks: ["happyrobot", "maisa"],
+    stack: ["TypeScript", "Next.js", "Supabase", "LangGraph"],
+    status: "submitted",
+  },
+  {
+    name: "Triage",
+    description:
+      "Prioriza urgencias por voz en primaria con un modelo pequeño que corre en el móvil.",
+    tracks: ["prosper-ai"],
+    stack: ["Swift", "CoreML", "Python"],
+    status: "submitted",
+  },
+  {
+    name: "Conciliador",
+    description:
+      "Match de cobros y facturas con LLM local y reglas explicables para cada excepción.",
+    tracks: ["embat"],
+    stack: ["Rust", "Axum", "SQLite", "Svelte"],
+    status: "submitted",
+  },
+  {
+    name: "Manos Libres",
+    description:
+      "Teleoperación asistida de robots industriales con corrección automática de trayectoria.",
+    tracks: ["theker"],
+    stack: ["C++", "ROS 2", "Python", "Three.js"],
+    status: "submitted",
+  },
+  {
+    name: "Portero",
+    description:
+      "Agente de recepción que gestiona visitas, paquetes y accesos por voz.",
+    tracks: ["happyrobot"],
+    stack: ["TypeScript", "Deno", "Elevenlabs"],
+    status: "draft",
+  },
+  {
+    name: "Sin nombre aún",
+    description: "",
+    tracks: [],
+    stack: [],
+    status: "draft",
+  },
 ];
 
 const MEME_TEXTS = [
   "Yo a las 4am explicándole al pato de goma por qué falla el deploy #meme",
-  "\"Funciona en mi máquina\": pues enviamos tu máquina al jurado #meme",
+  '"Funciona en mi máquina": pues enviamos tu máquina al jurado #meme',
   "Git blame dice que fui yo. Git blame miente. #meme",
   "Cuando el mentor pregunta por los tests #memes",
 ];
@@ -231,11 +444,20 @@ const POST_TEXTS = [
 const GITHUB_EVENTS: { event: string; text: (repo: string) => string }[] = [
   { event: "push", text: (repo) => `Push a main en ${repo}: 3 commits` },
   { event: "push", text: (repo) => `Push a feat/agent en ${repo}: 1 commit` },
-  { event: "pull_request", text: (repo) => `PR abierta en ${repo}: «Add ERP connector»` },
-  { event: "pull_request", text: (repo) => `PR fusionada en ${repo}: «Fix websocket reconnect»` },
+  {
+    event: "pull_request",
+    text: (repo) => `PR abierta en ${repo}: «Add ERP connector»`,
+  },
+  {
+    event: "pull_request",
+    text: (repo) => `PR fusionada en ${repo}: «Fix websocket reconnect»`,
+  },
   { event: "push", text: (repo) => `Push a main en ${repo}: 7 commits` },
   { event: "create", text: (repo) => `Nueva rama demo-video en ${repo}` },
-  { event: "issues", text: (repo) => `Issue abierta en ${repo}: «Latency spikes on mobile»` },
+  {
+    event: "issues",
+    text: (repo) => `Issue abierta en ${repo}: «Latency spikes on mobile»`,
+  },
 ];
 
 const PERKS: {
@@ -248,14 +470,70 @@ const PERKS: {
   instructions?: string;
   codes?: number;
 }[] = [
-  { company: "Vercel", title: "Pro durante 3 meses", value: "60 $", description: "Despliega tu demo con Pro y previews ilimitadas.", type: "code", sponsorUrl: "https://vercel.com", codes: 20 },
-  { company: "Convex", title: "Créditos de backend", value: "100 $", description: "Base de datos reactiva para tu proyecto.", type: "code", sponsorUrl: "https://convex.dev", codes: 20 },
-  { company: "Anthropic", title: "Créditos de API", value: "150 $", description: "Claude para tu agente. Solicítalo con el email del equipo.", type: "email", sponsorUrl: "https://anthropic.com" },
-  { company: "OpenAI", title: "Créditos de API", value: "100 $", description: "Para inferencia y embeddings durante el evento.", type: "email" },
-  { company: "GitHub", title: "Copilot Pro", value: "3 meses", description: "Copilot en tu editor mientras dure el hackathon y después.", type: "code", codes: 40 },
-  { company: "Supabase", title: "Pro un mes", value: "25 $", description: "Postgres, auth y storage sin límites de prueba.", type: "code", codes: 15 },
-  { company: "Twilio", title: "Saldo para SMS y voz", value: "50 $", description: "Para los agentes que llaman por teléfono.", type: "email" },
-  { company: "ElevenLabs", title: "Plan Creator", value: "1 mes", description: "Voces para tu demo.", type: "code", codes: 10 },
+  {
+    company: "Vercel",
+    title: "Pro durante 3 meses",
+    value: "60 $",
+    description: "Despliega tu demo con Pro y previews ilimitadas.",
+    type: "code",
+    sponsorUrl: "https://vercel.com",
+    codes: 20,
+  },
+  {
+    company: "Convex",
+    title: "Créditos de backend",
+    value: "100 $",
+    description: "Base de datos reactiva para tu proyecto.",
+    type: "code",
+    sponsorUrl: "https://convex.dev",
+    codes: 20,
+  },
+  {
+    company: "Anthropic",
+    title: "Créditos de API",
+    value: "150 $",
+    description: "Claude para tu agente. Solicítalo con el email del equipo.",
+    type: "email",
+    sponsorUrl: "https://anthropic.com",
+  },
+  {
+    company: "OpenAI",
+    title: "Créditos de API",
+    value: "100 $",
+    description: "Para inferencia y embeddings durante el evento.",
+    type: "email",
+  },
+  {
+    company: "GitHub",
+    title: "Copilot Pro",
+    value: "3 meses",
+    description: "Copilot en tu editor mientras dure el hackathon y después.",
+    type: "code",
+    codes: 40,
+  },
+  {
+    company: "Supabase",
+    title: "Pro un mes",
+    value: "25 $",
+    description: "Postgres, auth y storage sin límites de prueba.",
+    type: "code",
+    codes: 15,
+  },
+  {
+    company: "Twilio",
+    title: "Saldo para SMS y voz",
+    value: "50 $",
+    description: "Para los agentes que llaman por teléfono.",
+    type: "email",
+  },
+  {
+    company: "ElevenLabs",
+    title: "Plan Creator",
+    value: "1 mes",
+    description: "Voces para tu demo.",
+    type: "code",
+    codes: 10,
+  },
   {
     company: "Cursor",
     title: "Pro para el hackathon",
@@ -263,7 +541,8 @@ const PERKS: {
     description: "El editor con agentes. Se activa en su web, no desde la app.",
     type: "external",
     sponsorUrl: "https://cursor.com",
-    instructions: "Entra con el email del equipo, abre Billing y aplica el plan Pro del evento.",
+    instructions:
+      "Entra con el email del equipo, abre Billing y aplica el plan Pro del evento.",
   },
 ];
 
@@ -273,10 +552,30 @@ const USER_TYPES: {
   sections: Sections;
   isDefault: boolean;
 }[] = [
-  { label: "Hacker", description: "Participa en la hackathon.", sections: PARTICIPANT_SECTIONS, isDefault: true },
-  { label: "Jurado", description: "Puntúa proyectos en el panel del jurado.", sections: ["judging"], isDefault: false },
-  { label: "Mentor", description: "Acompaña a los equipos durante el evento.", sections: ["tracks", "cli"], isDefault: false },
-  { label: "Sponsor", description: "Partner del evento: retos, perks y entregas.", sections: ["tracks", "perks", "participantes", "judgingSponsors"], isDefault: false },
+  {
+    label: "Hacker",
+    description: "Participa en la hackathon.",
+    sections: PARTICIPANT_SECTIONS,
+    isDefault: true,
+  },
+  {
+    label: "Jurado",
+    description: "Puntúa proyectos en el panel del jurado.",
+    sections: ["judging"],
+    isDefault: false,
+  },
+  {
+    label: "Mentor",
+    description: "Acompaña a los equipos durante el evento.",
+    sections: ["tracks", "cli"],
+    isDefault: false,
+  },
+  {
+    label: "Sponsor",
+    description: "Partner del evento: retos, perks y entregas.",
+    sections: ["tracks", "perks", "participantes", "judgingSponsors"],
+    isDefault: false,
+  },
 ];
 
 // ---------- helpers ----------
@@ -388,7 +687,9 @@ async function insertUser(
         : directoryFor(travelOrigin ?? pick(CITIES), []),
     email: person.email,
     emailVerificationTime: Date.now() - between(1, 30) * 24 * HOUR,
-    githubLinkedAt: chance(0.8) ? Date.now() - between(1, 20) * 24 * HOUR : undefined,
+    githubLinkedAt: chance(0.8)
+      ? Date.now() - between(1, 20) * 24 * HOUR
+      : undefined,
     githubUsername: person.github,
     image: profile === "noPhoto" ? undefined : avatarFor(person.github),
     name,
@@ -397,7 +698,9 @@ async function insertUser(
     phone: opts.onboarded ? phoneFor(opts.index) : undefined,
     role: opts.role,
     signupId: opts.signupId,
-    termsAcceptedAt: opts.onboarded ? Date.now() - between(1, 10) * 24 * HOUR : undefined,
+    termsAcceptedAt: opts.onboarded
+      ? Date.now() - between(1, 10) * 24 * HOUR
+      : undefined,
     travelOrigin,
     userTypeId: opts.userTypeId,
   });
@@ -420,13 +723,24 @@ async function insertSignup(
       : undefined,
     createdAt: Date.now() - between(20, 60) * 24 * HOUR,
     email: person.email,
-    freeTime: chance(0.5) ? pick(["Escalada", "Ajedrez", "Cocina", "Fotografía", "Ciclismo"]) : undefined,
+    freeTime: chance(0.5)
+      ? pick(["Escalada", "Ajedrez", "Cocina", "Fotografía", "Ciclismo"])
+      : undefined,
     fullName: `${person.first} ${person.last}`,
     githubUsername: person.github,
     urls: [
       { kind: "github", url: `https://github.com/${person.github}` },
-      ...(chance(0.6) ? [{ kind: "linkedin" as const, url: `https://linkedin.com/in/${person.github}` }] : []),
-      ...(chance(0.3) ? [{ kind: "x" as const, url: `https://x.com/${person.github}` }] : []),
+      ...(chance(0.6)
+        ? [
+            {
+              kind: "linkedin" as const,
+              url: `https://linkedin.com/in/${person.github}`,
+            },
+          ]
+        : []),
+      ...(chance(0.3)
+        ? [{ kind: "x" as const, url: `https://x.com/${person.github}` }]
+        : []),
     ],
     wantsAmbassador: chance(0.1),
   });
@@ -445,7 +759,9 @@ function joinCodeFor(index: number): string {
 
 // ---------- clear ----------
 
-async function seededUserIds(ctx: QueryCtx | MutationCtx): Promise<Set<Id<"users">>> {
+async function seededUserIds(
+  ctx: QueryCtx | MutationCtx
+): Promise<Set<Id<"users">>> {
   const users = await ctx.db.query("users").collect();
   return new Set(
     users
@@ -468,7 +784,10 @@ async function clearSeed(ctx: MutationCtx): Promise<Record<string, number>> {
   const teamIds = new Set(teams.map((team) => team._id));
 
   for (const row of await ctx.db.query("posts").collect()) {
-    if ((row.authorId && userIds.has(row.authorId)) || (row.teamId && teamIds.has(row.teamId))) {
+    if (
+      (row.authorId && userIds.has(row.authorId)) ||
+      (row.teamId && teamIds.has(row.teamId))
+    ) {
       if (row.imageId) {
         await ctx.storage.delete(row.imageId);
       }
@@ -491,10 +810,15 @@ async function clearSeed(ctx: MutationCtx): Promise<Record<string, number>> {
     }
   }
   for (const row of await ctx.db.query("submissions").collect()) {
-    if (userIds.has(row.submittedBy) || (row.teamId && teamIds.has(row.teamId))) {
+    if (
+      userIds.has(row.submittedBy) ||
+      (row.teamId && teamIds.has(row.teamId))
+    ) {
       for (const score of await ctx.db
         .query("judgingScores")
-        .withIndex("by_submission_context", (q) => q.eq("submissionId", row._id))
+        .withIndex("by_submission_context", (q) =>
+          q.eq("submissionId", row._id)
+        )
         .collect()) {
         await del("judgingScores", score._id);
       }
@@ -659,14 +983,20 @@ async function runSeed(
   if (settings) {
     await ctx.db.patch(settings._id, { submissionsOpen: true });
   } else {
-    await ctx.db.insert("settings", { key: "hackathon", submissionsOpen: true });
+    await ctx.db.insert("settings", {
+      key: "hackathon",
+      submissionsOpen: true,
+    });
   }
   const judgingSettings = await ctx.db
     .query("judgingSettings")
     .withIndex("by_key", (q) => q.eq("key", JUDGING_SETTINGS_KEY))
     .unique();
   if (judgingSettings) {
-    await ctx.db.patch(judgingSettings._id, { generalGroupCount: 3, updatedAt: now });
+    await ctx.db.patch(judgingSettings._id, {
+      generalGroupCount: 3,
+      updatedAt: now,
+    });
   } else {
     await ctx.db.insert("judgingSettings", {
       generalGroupCount: 3,
@@ -765,7 +1095,12 @@ async function runSeed(
       inputs:
         spec.type === "email"
           ? [
-              { key: "email", label: "Email de la cuenta", required: true, type: "email" },
+              {
+                key: "email",
+                label: "Email de la cuenta",
+                required: true,
+                type: "email",
+              },
               { key: "team", label: "Equipo", required: false, type: "text" },
             ]
           : undefined,
@@ -790,7 +1125,12 @@ async function runSeed(
   // Teams of 2–4 hackers (three solo), each with a repo.
   const pool = shuffle(hackers);
   let poolCursor = 0;
-  const teams: { id: Id<"teams">; name: string; repo: string; members: Id<"users">[] }[] = [];
+  const teams: {
+    id: Id<"teams">;
+    name: string;
+    repo: string;
+    members: Id<"users">[];
+  }[] = [];
   for (const [index, name] of TEAM_NAMES.entries()) {
     const size = index < 3 ? 1 : between(2, 4);
     const members = pool.slice(poolCursor, poolCursor + size);
@@ -810,7 +1150,10 @@ async function runSeed(
       ownerId: owner.userId,
       repoUrl: `https://github.com/${repo}`,
       techStack: project?.stack,
-      techStackAt: project && project.stack.length > 0 ? now - between(1, 12) * HOUR : undefined,
+      techStackAt:
+        project && project.stack.length > 0
+          ? now - between(1, 12) * HOUR
+          : undefined,
       techStackSource: project && project.stack.length > 0 ? "repo" : undefined,
       updatedAt: createdAt,
     });
@@ -843,11 +1186,20 @@ async function runSeed(
         count("teamMembers");
       }
     }
-    teams.push({ id: teamId, members: members.map((m) => m.userId), name, repo });
+    teams.push({
+      id: teamId,
+      members: members.map((m) => m.userId),
+      name,
+      repo,
+    });
   }
 
   // Projects: one per team, most submitted, spread over 3 general groups.
-  const submissions: { id: Id<"submissions">; trackIds: Id<"tracks">[]; group?: number }[] = [];
+  const submissions: {
+    id: Id<"submissions">;
+    trackIds: Id<"tracks">[];
+    group?: number;
+  }[] = [];
   let group = 0;
   for (const [index, team] of teams.entries()) {
     const project = PROJECTS[index];
@@ -873,14 +1225,27 @@ async function runSeed(
       submittedBy: owner,
       teamId: team.id,
       techStack: project.stack,
-      techStackAt: project.stack.length > 0 ? now - between(1, 12) * HOUR : undefined,
+      techStackAt:
+        project.stack.length > 0 ? now - between(1, 12) * HOUR : undefined,
       techStackSource: project.stack.length > 0 ? "repo" : undefined,
       updatedAt: now - between(0, 3) * HOUR,
       urls: [
         { kind: "repo", url: `https://github.com/${team.repo}` },
-        ...(submitted ? [{ kind: "demo" as const, url: `https://${slugify(project.name)}.vercel.app` }] : []),
+        ...(submitted
+          ? [
+              {
+                kind: "demo" as const,
+                url: `https://${slugify(project.name)}.vercel.app`,
+              },
+            ]
+          : []),
         ...(submitted && chance(0.7)
-          ? [{ kind: "video" as const, url: `https://www.youtube.com/watch?v=seed${index}` }]
+          ? [
+              {
+                kind: "video" as const,
+                url: `https://www.youtube.com/watch?v=seed${index}`,
+              },
+            ]
           : []),
       ],
     });
@@ -945,7 +1310,9 @@ async function runSeed(
     if (!owner) {
       continue;
     }
-    const kinds: ("firstCommit" | "firstBuild" | "firstDemo")[] = ["firstCommit"];
+    const kinds: ("firstCommit" | "firstBuild" | "firstDemo")[] = [
+      "firstCommit",
+    ];
     if (chance(0.8)) {
       kinds.push("firstBuild");
     }
@@ -954,7 +1321,13 @@ async function runSeed(
     }
     let at = now - between(18, 30) * HOUR;
     for (const kind of kinds) {
-      await ctx.db.insert("milestones", { at, createdAt: at, kind, teamId: team.id, userId: owner });
+      await ctx.db.insert("milestones", {
+        at,
+        createdAt: at,
+        kind,
+        teamId: team.id,
+        userId: owner,
+      });
       count("milestones");
       at += between(2, 6) * HOUR;
     }
@@ -963,7 +1336,8 @@ async function runSeed(
   // Feed: ~120 participant posts and GitHub events over the last 30 hours.
   const postCount = 120;
   for (let i = 0; i < postCount; i += 1) {
-    const createdAt = now - Math.floor(rand() * rand() * 30 * HOUR) - between(0, 5) * MINUTE;
+    const createdAt =
+      now - Math.floor(rand() * rand() * 30 * HOUR) - between(0, 5) * MINUTE;
     const team = pick(teams);
     if (chance(0.35)) {
       const event = pick(GITHUB_EVENTS);
@@ -1012,12 +1386,18 @@ async function runSeed(
       case "code": {
         const code = await ctx.db
           .query("perkCodes")
-          .withIndex("by_perk_available", (q) => q.eq("perkId", perkId).eq("available", true))
+          .withIndex("by_perk_available", (q) =>
+            q.eq("perkId", perkId).eq("available", true)
+          )
           .first();
         if (!code) {
           continue;
         }
-        await ctx.db.patch(code._id, { assignedAt: at, assignedTo: hacker.userId, available: false });
+        await ctx.db.patch(code._id, {
+          assignedAt: at,
+          assignedTo: hacker.userId,
+          available: false,
+        });
         await ctx.db.insert("perkClaims", {
           codeId: code._id,
           createdAt: at,
@@ -1054,9 +1434,21 @@ async function runSeed(
 
   // Organiser broadcasts and venue screen messages.
   const broadcasts = [
-    { subject: "¡Arrancamos!", body: "Bienvenidos a HackSpain 2026. Wifi: HackSpain / clave en la pantalla principal.", hoursAgo: 28 },
-    { subject: "Cena a las 21:00", body: "Opciones vegetarianas y sin gluten en la barra de la derecha.", hoursAgo: 9 },
-    { subject: "Envíos abiertos", body: "Ya podéis enviar el proyecto desde Retos. Cierra a las 14:00.", hoursAgo: 3 },
+    {
+      subject: "¡Arrancamos!",
+      body: "Bienvenidos a HackSpain 2026. Wifi: HackSpain / clave en la pantalla principal.",
+      hoursAgo: 28,
+    },
+    {
+      subject: "Cena a las 21:00",
+      body: "Opciones vegetarianas y sin gluten en la barra de la derecha.",
+      hoursAgo: 9,
+    },
+    {
+      subject: "Envíos abiertos",
+      body: "Ya podéis enviar el proyecto desde Retos. Cierra a las 14:00.",
+      hoursAgo: 3,
+    },
   ];
   for (const broadcast of broadcasts) {
     await ctx.db.insert("notifications", {
@@ -1072,7 +1464,10 @@ async function runSeed(
     });
     count("notifications");
   }
-  const tvMessages: { text: string; zone: "banner" | "left" | "right" | "ticker" }[] = [
+  const tvMessages: {
+    text: string;
+    zone: "banner" | "left" | "right" | "ticker";
+  }[] = [
     { text: "HackSpain 2026 · Madrid", zone: "banner" },
     { text: "Envíos abiertos hasta las 14:00", zone: "ticker" },
     { text: "Wifi: HackSpain · clave: construir2026", zone: "ticker" },
@@ -1111,7 +1506,7 @@ export const run = internalMutation({
       .unique();
     if (existing) {
       throw new Error(
-        "The seed is already loaded. Run seed:run with {\"reset\":true} to reload it, or seed:clear to remove it."
+        'The seed is already loaded. Run seed:run with {"reset":true} to reload it, or seed:clear to remove it.'
       );
     }
     const { created, incompleteProfiles } = await runSeed(ctx);
@@ -1160,7 +1555,10 @@ export const attachLogo = internalMutation({
       return null;
     }
     const previous = team.logoId;
-    await ctx.db.patch(team._id, { logoId: args.logoId, updatedAt: Date.now() });
+    await ctx.db.patch(team._id, {
+      logoId: args.logoId,
+      updatedAt: Date.now(),
+    });
     if (previous && previous !== args.logoId) {
       await ctx.storage.delete(previous);
     }
@@ -1195,7 +1593,10 @@ export const logos = internalAction({
         const logoId = await ctx.storage.store(
           new Blob([await blob.arrayBuffer()], { type: "image/png" })
         );
-        await ctx.runMutation(internal.seed.attachLogo, { logoId, teamId: team._id });
+        await ctx.runMutation(internal.seed.attachLogo, {
+          logoId,
+          teamId: team._id,
+        });
         stored += 1;
       } catch (caughtError: unknown) {
         failed.push(

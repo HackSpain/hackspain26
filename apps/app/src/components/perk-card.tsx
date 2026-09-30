@@ -8,7 +8,13 @@ import { LinkedText } from "@/components/linked-text";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { answerFor } from "@/lib/perks";
-import { claimStatusLabel, cn, joinDotLabel, perkName, perkTypeLabel } from "@/lib/utils";
+import {
+  claimStatusLabel,
+  cn,
+  joinDotLabel,
+  perkName,
+  perkTypeLabel,
+} from "@/lib/utils";
 
 type CatalogEntry = FunctionReturnType<typeof api.perks.listCatalog>[number];
 
@@ -30,7 +36,10 @@ export function PerkCard({
   const description = perk.description.trim();
   const answered = claim
     ? perk.inputs
-        .map((input) => ({ label: input.label, value: answerFor(claim.answers, input.key) }))
+        .map((input) => ({
+          label: input.label,
+          value: answerFor(claim.answers, input.key),
+        }))
         .filter((entry) => entry.value.length > 0)
     : [];
 
@@ -46,14 +55,20 @@ export function PerkCard({
               className="inline-flex items-baseline gap-1 underline decoration-hs-ink/30 decoration-[3px] underline-offset-4 outline-none hover:decoration-hs-ink focus-visible:decoration-hs-navy"
             >
               {headline}
-              <ArrowUpRightIcon className="size-4 shrink-0 self-center" strokeWidth={2.5} aria-hidden />
+              <ArrowUpRightIcon
+                className="size-4 shrink-0 self-center"
+                strokeWidth={2.5}
+                aria-hidden
+              />
               <span className="sr-only"> (abre la web del sponsor)</span>
             </a>
           ) : (
             headline
           )}
         </h3>
-        {offer ? <p className="text-base leading-snug font-medium">{offer}</p> : null}
+        {offer ? (
+          <p className="text-base leading-snug font-medium">{offer}</p>
+        ) : null}
         {description ? (
           <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-hs-brown/80">
             <LinkedText text={description} />
@@ -76,7 +91,9 @@ export function PerkCard({
                 <dt className="font-bungee text-[11px] leading-none tracking-[0.06em] uppercase text-hs-brown">
                   {entry.label}
                 </dt>
-                <dd className="mt-0.5 text-sm leading-snug break-words">{entry.value}</dd>
+                <dd className="mt-0.5 text-sm leading-snug break-words">
+                  {entry.value}
+                </dd>
               </div>
             ))}
           </dl>
@@ -105,7 +122,11 @@ function PerkFooter({
       return (
         <div className="min-w-0">
           <MetaLabel>{kind}</MetaLabel>
-          <StatusLine status="No disponible" detail="Falta el enlace del partner." muted />
+          <StatusLine
+            status="No disponible"
+            detail="Falta el enlace del partner."
+            muted
+          />
         </div>
       );
     }
@@ -146,7 +167,10 @@ function PerkFooter({
     return (
       <div className="min-w-0">
         <MetaLabel>{kind}</MetaLabel>
-        <StatusLine status={claimStatusLabel(claim.status)} detail={claimDetail(claim.status)} />
+        <StatusLine
+          status={claimStatusLabel(claim.status)}
+          detail={claimDetail(claim.status)}
+        />
       </div>
     );
   }
@@ -237,9 +261,16 @@ function StatusLine({
   muted?: boolean;
 }) {
   return (
-    <p className={cn("mt-1 text-sm leading-snug", muted ? "text-hs-brown/70" : "text-hs-ink")}>
+    <p
+      className={cn(
+        "mt-1 text-sm leading-snug",
+        muted ? "text-hs-brown/70" : "text-hs-ink"
+      )}
+    >
       <span className="font-bungee text-xs uppercase">{status}</span>
-      {detail ? <span className={cn(!muted && "text-hs-brown")}> · {detail}</span> : null}
+      {detail ? (
+        <span className={cn(!muted && "text-hs-brown")}> · {detail}</span>
+      ) : null}
     </p>
   );
 }
@@ -248,7 +279,9 @@ function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!copied) return;
+    if (!copied) {
+      return;
+    }
     const id = window.setTimeout(() => setCopied(false), 1600);
     return () => window.clearTimeout(id);
   }, [copied]);

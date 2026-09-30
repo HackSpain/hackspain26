@@ -23,17 +23,25 @@ export function loadXWidgets(): Promise<XWidgets> {
     const script = document.createElement("script");
     script.src = "https://platform.twitter.com/widgets.js";
     script.async = true;
-    script.onload = () => {
-      const api = (window as Window & { twttr?: XWidgets }).twttr;
-      if (api?.widgets) {
-        resolve(api);
-      } else {
-        reject(new Error("X widgets unavailable"));
-      }
-    };
-    script.onerror = () => {
-      reject(new Error("X widgets could not load"));
-    };
+    script.addEventListener(
+      "load",
+      () => {
+        const api = (window as Window & { twttr?: XWidgets }).twttr;
+        if (api?.widgets) {
+          resolve(api);
+        } else {
+          reject(new Error("X widgets unavailable"));
+        }
+      },
+      { once: true }
+    );
+    script.addEventListener(
+      "error",
+      () => {
+        reject(new Error("X widgets could not load"));
+      },
+      { once: true }
+    );
     document.head.append(script);
   });
   return widgetsPromise;

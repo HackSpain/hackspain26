@@ -44,9 +44,9 @@ function ParticipantList({
   const filtered = useMemo(
     () =>
       participants.filter((participant) =>
-        searchHaystack(participant).includes(search),
+        searchHaystack(participant).includes(search)
       ),
-    [participants, search],
+    [participants, search]
   );
 
   return (
@@ -82,7 +82,14 @@ function ParticipantList({
               <div className="pd-person-heading">
                 {participant.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- profile images may use authenticated app URLs or GitHub avatars.
-                  <img src={participant.photoUrl} alt="" />
+                  <img
+                    src={participant.photoUrl}
+                    alt=""
+                    width={44}
+                    height={44}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <span className="pd-person-initial" aria-hidden="true">
                     {participant.displayName.charAt(0)}
@@ -196,13 +203,13 @@ export function ParticipantDirectory({
         persona
           ? `${pathname}?${DIRECTORY_PARAM}&${PERSON_PARAM}=${persona}`
           : `${pathname}?${DIRECTORY_PARAM}`,
-        { scroll: false },
+        { scroll: false }
       );
       return;
     }
     router.replace(
       persona ? `${pathname}?${PERSON_PARAM}=${persona}` : pathname,
-      { scroll: false },
+      { scroll: false }
     );
   }
 

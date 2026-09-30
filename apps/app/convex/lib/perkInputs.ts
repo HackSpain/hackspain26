@@ -19,10 +19,10 @@ export const perkInputTypeLabels: Record<PerkInputType, string> = {
 export function slugKey(label: string): string {
   return label
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replaceAll(/[\u0300-\u036F]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "_")
+    .replaceAll(/^_+|_+$/g, "")
     .slice(0, 40);
 }
 
@@ -52,10 +52,15 @@ export function normalizeInputs(raw: PerkInput[]): InputsResult {
   const inputs: PerkInput[] = [];
   for (const input of raw) {
     const label = input.label.trim();
-    if (!label) return { ok: false, message: "Cada campo necesita una etiqueta" };
+    if (!label) {
+      return { ok: false, message: "Cada campo necesita una etiqueta" };
+    }
     const key = slugKey(input.key.trim() || label);
     if (!key) {
-      return { ok: false, message: `El campo "${label}" necesita una clave válida` };
+      return {
+        ok: false,
+        message: `El campo "${label}" necesita una clave válida`,
+      };
     }
     if (seen.has(key)) {
       return { ok: false, message: `La clave "${key}" está repetida` };
@@ -63,14 +68,25 @@ export function normalizeInputs(raw: PerkInput[]): InputsResult {
     seen.add(key);
     let options: string[] | undefined;
     if (input.type === "select") {
-      options = Array.from(
-        new Set((input.options ?? []).map((option) => option.trim()).filter(Boolean)),
-      );
+      options = [
+        ...new Set(
+          (input.options ?? []).map((option) => option.trim()).filter(Boolean)
+        ),
+      ];
       if (options.length === 0) {
-        return { ok: false, message: `El selector "${label}" necesita opciones` };
+        return {
+          ok: false,
+          message: `El selector "${label}" necesita opciones`,
+        };
       }
     }
-    inputs.push({ key, label, type: input.type, required: input.required, options });
+    inputs.push({
+      key,
+      label,
+      type: input.type,
+      required: input.required,
+      options,
+    });
   }
   return { ok: true, inputs };
 }
@@ -81,10 +97,18 @@ export type AnswersResult =
   | { ok: false; key: string; message: string; fieldMessage: string };
 
 function answerProblem(input: PerkInput, value: string): string | null {
-  if (!value) return input.required ? "Obligatorio" : null;
-  if (value.length > MAX_ANSWER_LENGTH) return `Máximo ${MAX_ANSWER_LENGTH} caracteres`;
-  if (input.type === "email" && !isEmail(value)) return "No es un email válido";
-  if (input.type === "url" && !isHttpUrl(value)) return "Debe empezar por http:// o https://";
+  if (!value) {
+    return input.required ? "Obligatorio" : null;
+  }
+  if (value.length > MAX_ANSWER_LENGTH) {
+    return `Máximo ${MAX_ANSWER_LENGTH} caracteres`;
+  }
+  if (input.type === "email" && !isEmail(value)) {
+    return "No es un email válido";
+  }
+  if (input.type === "url" && !isHttpUrl(value)) {
+    return "Debe empezar por http:// o https://";
+  }
   if (input.type === "select" && !(input.options ?? []).includes(value)) {
     return "Elige una opción de la lista";
   }
@@ -94,10 +118,12 @@ function answerProblem(input: PerkInput, value: string): string | null {
 /** Checks a participant's answers against the perk definition and drops unknown keys. */
 export function validateAnswers(
   inputs: PerkInput[],
-  raw: PerkAnswer[] | undefined,
+  raw: PerkAnswer[] | undefined
 ): AnswersResult {
   const given = new Map<string, string>();
-  for (const answer of raw ?? []) given.set(answer.key, answer.value.trim());
+  for (const answer of raw ?? []) {
+    given.set(answer.key, answer.value.trim());
+  }
   const answers: PerkAnswer[] = [];
   for (const input of inputs) {
     const value = given.get(input.key) ?? "";
@@ -110,11 +136,16 @@ export function validateAnswers(
         fieldMessage: problem,
       };
     }
-    if (value) answers.push({ key: input.key, value });
+    if (value) {
+      answers.push({ key: input.key, value });
+    }
   }
   return { ok: true, answers };
 }
 
-export function answerFor(answers: PerkAnswer[] | undefined, key: string): string {
+export function answerFor(
+  answers: PerkAnswer[] | undefined,
+  key: string
+): string {
   return answers?.find((answer) => answer.key === key)?.value ?? "";
 }

@@ -6,7 +6,12 @@ import type { Ui } from "../lib/output";
 import { uiFor } from "../lib/output";
 import type { Participant } from "../lib/participant";
 import { openParticipant } from "../lib/participant";
-import { alreadySubmitted, planTracks, projectArgsFrom } from "../lib/project";
+import {
+  alreadySubmitted,
+  planTracks,
+  projectArgsFrom,
+  unregisterSelection,
+} from "../lib/project";
 import { pickOne } from "../lib/prompts";
 import { c, highlight, terminalSafe, terminalText } from "../lib/style";
 
@@ -17,7 +22,7 @@ function occupancy(count: number, limit: number): string {
 async function applyPlan(
   ui: Ui,
   participant: Participant,
-  ops: { add?: string[]; remove?: string[] }
+  ops: { add?: string; remove?: string }
 ): Promise<void> {
   const { session } = participant;
   const [tracks, submission] = await ui.spin(
@@ -80,7 +85,7 @@ async function applyPlan(
       : c.dim("Not entering any track right now.")
   );
   if (entered.length > 0) {
-    ui.next([["app.hackspain.com/submit", "submit from the dashboard"]]);
+    ui.next([["hackspain open submit", "submit from the dashboard"]]);
   }
 }
 
@@ -140,7 +145,7 @@ export function registerTrack(program: Command): void {
         ["hackspain track register [slug]", "enter a track"],
         ["hackspain track unregister [slug]", "leave a track"],
         [
-          "app.hackspain.com/submit",
+          "hackspain open submit",
           settings.submissionsOpen
             ? "submissions are open on the dashboard"
             : "opens later on the dashboard",
@@ -149,10 +154,10 @@ export function registerTrack(program: Command): void {
     });
 
   track
-    .command("register [slugs...]")
+    .command("register [slug]")
     .description("Enter a track; THEKER can be combined with one other")
-    .action(async (slugs: string[], _opts: unknown, command: Command) => {
-      const ctx = contextFor(command);
+    .action(async (slug: string | undefined, _opts: unknown, cmd: Command) => {
+      const ctx = contextFor(cmd);
       const ui = uiFor(ctx);
       const participant = await openParticipant(ctx);
       const { session } = participant;
@@ -166,7 +171,7 @@ export function registerTrack(program: Command): void {
         "Tracks loaded"
       );
       const currentId = submission?.challengeIds[0];
-      const chosen = await pickOne(ctx, slugs[0], {
+      const chosen = await pickOne(ctx, slug, {
         choices: tracks.map((t) => ({
           hint: occupancy(t.teamCount, t.teamLimit),
           label: terminalText(t.label),
@@ -182,14 +187,14 @@ export function registerTrack(program: Command): void {
           "Pass the slug or run interactively."
         );
       }
-      await applyPlan(ui, participant, { add: [chosen] });
+      await applyPlan(ui, participant, { add: chosen });
     });
 
   track
-    .command("unregister [slugs...]")
+    .command("unregister [slug]")
     .description("Leave one of the tracks your project is in")
-    .action(async (slugs: string[], _opts: unknown, command: Command) => {
-      const ctx = contextFor(command);
+    .action(async (slug: string | undefined, _opts: unknown, cmd: Command) => {
+      const ctx = contextFor(cmd);
       const ui = uiFor(ctx);
       const participant = await openParticipant(ctx);
       const { session } = participant;
@@ -202,13 +207,23 @@ export function registerTrack(program: Command): void {
           ]),
         "Tracks loaded"
       );
-      const current = tracks.find((t) => t._id === submission?.challengeIds[0]);
-      const slug = slugs[0] ?? current?.slug;
-      if (!slug) {
+      const selection = unregisterSelection(
+        submission?.challengeIds ?? [],
+        tracks
+      );
+      if (!slug && selection.choices.length === 0) {
         ui.result({ changed: false, tracks: [] });
         ui.info("Not in a track.");
         return;
       }
-      await applyPlan(ui, participant, { remove: [slug] });
+      const chosen = await pickOne(ctx, slug ?? selection.defaultSlug, {
+        choices: selection.choices.map((t) => ({
+          label: terminalText(t.label),
+          value: t.slug,
+        })),
+        flag: "<slug>",
+        message: "Which track do you want to leave?",
+      });
+      await applyPlan(ui, participant, { remove: chosen });
     });
 }

@@ -7,6 +7,7 @@ import {
   EVENT_CLOSED_HINT,
   EXIT,
   ONBOARDING_HINT,
+  UNREGISTERED_HINT,
 } from "./errors";
 
 export type Me = NonNullable<FunctionReturnType<typeof api.users.me>>;
@@ -21,9 +22,9 @@ export type GateState =
 
 const GATE_CODE: Record<Exclude<GateState, "admin" | "ready">, string> = {
   closed: "EVENT_CLOSED",
-  onboarding: "NOT_ONBOARDING",
-  pending: "NOT_PENDING",
-  unregistered: "NOT_UNREGISTERED",
+  onboarding: "NOT_ONBOARDED",
+  pending: "NOT_ACCEPTED",
+  unregistered: "NOT_REGISTERED",
 };
 
 const EVENT_DATE = new Intl.DateTimeFormat("en-GB", {
@@ -71,7 +72,7 @@ export function describeGate(me: Me): Gate {
   }
   if (!me.isRegistered) {
     return {
-      hint: "Log in with the email you applied with, or sign up at https://hackspain.com/signup.",
+      hint: UNREGISTERED_HINT,
       message: "No HackSpain signup for this email.",
       state: "unregistered",
     };

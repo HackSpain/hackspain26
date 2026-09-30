@@ -24,7 +24,9 @@ function ParticipantPage() {
   const search = useSearchParams();
   const detail = useParticipant(participantRef(search.get("kind"), params.id));
 
-  if (detail === undefined) return <LoadingText />;
+  if (detail === undefined) {
+    return <LoadingText />;
+  }
   if (detail === null) {
     return (
       <Page title="Participante">

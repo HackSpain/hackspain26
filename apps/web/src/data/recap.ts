@@ -57,13 +57,3 @@ export const communityPosts: CommunityPost[] = [
     url: "https://x.com/rubenpombo_/status/2102023234547855808",
   },
 ];
-
-/** One entry per published album; no placeholder or guessed gallery URLs. */
-export const photoAlbums: {
-  title: string;
-  description: string;
-  url: string;
-}[] = [];
-
-export const communitySearchUrl =
-  "https://x.com/search?q=HackSpain%20since%3A2026-09-18%20until%3A2026-09-23&f=live";

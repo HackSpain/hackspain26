@@ -70,21 +70,25 @@ function plural(count: number, one: string, many: string) {
   return count === 1 ? one : many;
 }
 
-function addSummary(result: { added: number; restored: number; skipped: number }) {
+function addSummary(result: {
+  added: number;
+  restored: number;
+  skipped: number;
+}) {
   const parts = [];
   if (result.added > 0) {
     parts.push(
-      `${result.added} ${plural(result.added, "persona nueva", "personas nuevas")}`,
+      `${result.added} ${plural(result.added, "persona nueva", "personas nuevas")}`
     );
   }
   if (result.restored > 0) {
     parts.push(
-      `${result.restored} ${plural(result.restored, "restaurada", "restauradas")}`,
+      `${result.restored} ${plural(result.restored, "restaurada", "restauradas")}`
     );
   }
   if (result.skipped > 0) {
     parts.push(
-      `${result.skipped} ${plural(result.skipped, "ya estaba", "ya estaban")}`,
+      `${result.skipped} ${plural(result.skipped, "ya estaba", "ya estaban")}`
     );
   }
   return parts.join(" · ");
@@ -130,7 +134,7 @@ function Stat({
           "font-bungee text-3xl leading-none tabular-nums",
           counting && "text-hs-ink/40",
           tone === "teal" && !counting && "text-hs-teal",
-          tone === "red" && !counting && "text-hs-red",
+          tone === "red" && !counting && "text-hs-red"
         )}
       >
         {counting ? "—" : value}
@@ -163,9 +167,9 @@ export default function AdminFinalPage() {
     | { kind: "cancelPerson"; row: Person }
     | null
   >(null);
-  const [pending, setPending] = useState<"add" | "team" | "send" | Id<"finalists"> | null>(
-    null,
-  );
+  const [pending, setPending] = useState<
+    "add" | "team" | "send" | Id<"finalists"> | null
+  >(null);
 
   const peopleMap = useMemo(() => {
     const map = new Map<string, Person>();
@@ -213,7 +217,7 @@ export default function AdminFinalPage() {
       (people ?? [])
         .filter((row) => row.status === "in" && row.finalistId)
         .map((row) => row.finalistId as Id<"finalists">),
-    [people],
+    [people]
   );
   const sinceMs = parseLocalDateTime(since);
   const sinceIds = useMemo(() => {
@@ -226,7 +230,7 @@ export default function AdminFinalPage() {
           row.status === "in" &&
           row.finalistId &&
           row.addedAt !== undefined &&
-          row.addedAt >= sinceMs,
+          row.addedAt >= sinceMs
       )
       .map((row) => row.finalistId as Id<"finalists">);
   }, [people, sinceMs]);
@@ -364,7 +368,7 @@ export default function AdminFinalPage() {
     try {
       const count = await sendEmails({ ids: idsToSend });
       flash(
-        `En cola para ${count} ${plural(count, "destinatario", "destinatarios")}.`,
+        `En cola para ${count} ${plural(count, "destinatario", "destinatarios")}.`
       );
       setSelected((current) => {
         const next = new Set(current);
@@ -390,7 +394,7 @@ export default function AdminFinalPage() {
         (row) =>
           row.finalistId !== undefined &&
           selected.has(row.finalistId) &&
-          row.emailedAt !== undefined,
+          row.emailedAt !== undefined
       ).length ?? 0;
     setConfirm({ already, ids: selectedIds, kind: "send" });
   }
@@ -585,153 +589,160 @@ export default function AdminFinalPage() {
           )}
           {people !== undefined && visible.length > 0 && (
             <Table containerClassName="max-h-[min(36rem,70vh)] border-0 border-t-[3px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox
-                    aria-label={
-                      filter === "in"
-                        ? "Seleccionar a quien está dentro"
-                        : "Seleccionar a quien se puede añadir"
-                    }
-                    checked={filter === "in" ? allVisibleSelected : allAddablePicked}
-                    className="mt-0"
-                    disabled={
-                      filter === "canceled" ||
-                      (filter === "in"
-                        ? selectableIds.length === 0
-                        : addableKeys.length === 0)
-                    }
-                    onCheckedChange={() => {
-                      if (filter === "in") {
-                        toggleAllVisible();
-                        return;
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      aria-label={
+                        filter === "in"
+                          ? "Seleccionar a quien está dentro"
+                          : "Seleccionar a quien se puede añadir"
                       }
-                      toggleAllAddable();
-                    }}
-                  />
-                </TableHead>
-                <TableHead>Persona</TableHead>
-                <TableHead>Equipo</TableHead>
-                <TableHead>Nota</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Correo</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((row) => {
-                const key = personKey(row);
-                const busy = pending === row.finalistId;
-                const checked =
-                  row.status === "in" && row.finalistId
-                    ? selected.has(row.finalistId)
-                    : picked.has(key);
-                return (
-                  <TableRow
-                    key={key || row.email}
-                    data-state={checked ? "selected" : undefined}
-                    className={
-                      row.status === "canceled" || !key
-                        ? undefined
-                        : "cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60"
-                    }
-                    onClick={() => toggleRow(row)}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        aria-label={`Seleccionar a ${row.name}`}
-                        checked={checked}
-                        className="mt-0"
-                        disabled={row.status === "canceled" || !key}
-                        onClick={(event) => event.stopPropagation()}
-                        onCheckedChange={() => toggleRow(row)}
-                      />
-                    </TableCell>
-                    <TableCell className="whitespace-normal">
-                      <span className="font-medium">{row.name}</span>
-                      <span className="mt-0.5 block text-xs text-hs-brown">
-                        {row.email || "sin email"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="whitespace-normal text-hs-brown">
-                      {row.teamName ?? "—"}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      <span className="font-medium">{teamScoreLabel(row)}</span>
-                      {row.scores.length > 0 ? (
+                      checked={
+                        filter === "in" ? allVisibleSelected : allAddablePicked
+                      }
+                      className="mt-0"
+                      disabled={
+                        filter === "canceled" ||
+                        (filter === "in"
+                          ? selectableIds.length === 0
+                          : addableKeys.length === 0)
+                      }
+                      onCheckedChange={() => {
+                        if (filter === "in") {
+                          toggleAllVisible();
+                          return;
+                        }
+                        toggleAllAddable();
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>Persona</TableHead>
+                  <TableHead>Equipo</TableHead>
+                  <TableHead>Nota</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Correo</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.map((row) => {
+                  const key = personKey(row);
+                  const busy = pending === row.finalistId;
+                  const checked =
+                    row.status === "in" && row.finalistId
+                      ? selected.has(row.finalistId)
+                      : picked.has(key);
+                  return (
+                    <TableRow
+                      key={key || row.email}
+                      data-state={checked ? "selected" : undefined}
+                      className={
+                        row.status === "canceled" || !key
+                          ? undefined
+                          : "cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60"
+                      }
+                      onClick={() => toggleRow(row)}
+                    >
+                      <TableCell>
+                        <Checkbox
+                          aria-label={`Seleccionar a ${row.name}`}
+                          checked={checked}
+                          className="mt-0"
+                          disabled={row.status === "canceled" || !key}
+                          onClick={(event) => event.stopPropagation()}
+                          onCheckedChange={() => toggleRow(row)}
+                        />
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
+                        <span className="font-medium">{row.name}</span>
                         <span className="mt-0.5 block text-xs text-hs-brown">
-                          {row.scores.map((value) => formatScore(value)).join(" · ")}
+                          {row.email || "sin email"}
                         </span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={row.status === "in" ? "gold" : "default"}
-                        className={cn(
-                          "whitespace-nowrap",
-                          row.status === "canceled" && "bg-hs-red text-hs-paper",
-                        )}
-                      >
-                        {row.status === "in"
-                          ? "Dentro"
-                          : row.status === "canceled"
-                            ? "Cancelado"
-                            : "Fuera"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs tabular-nums text-hs-brown">
-                      {row.status === "in" && row.addedAt !== undefined
-                        ? `${emailLabel(row)} · ${ADDED_AT.format(row.addedAt)}`
-                        : emailLabel(row)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {row.status === "in" ? (
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            aria-busy={busy}
-                            disabled={!row.email}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              requestSendOne(row);
-                            }}
-                          >
-                            {row.emailedAt ? "Reenviar" : "Enviar"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            aria-busy={busy}
-                            className="text-hs-red"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setConfirm({ kind: "cancelPerson", row });
-                            }}
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
-                      ) : row.status === "canceled" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          aria-busy={busy}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void submitStatus(row, "in");
-                          }}
+                      </TableCell>
+                      <TableCell className="whitespace-normal text-hs-brown">
+                        {row.teamName ?? "—"}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        <span className="font-medium">
+                          {teamScoreLabel(row)}
+                        </span>
+                        {row.scores.length > 0 ? (
+                          <span className="mt-0.5 block text-xs text-hs-brown">
+                            {row.scores
+                              .map((value) => formatScore(value))
+                              .join(" · ")}
+                          </span>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={row.status === "in" ? "gold" : "default"}
+                          className={cn(
+                            "whitespace-nowrap",
+                            row.status === "canceled" &&
+                              "bg-hs-red text-hs-paper"
+                          )}
                         >
-                          Restaurar
-                        </Button>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                          {row.status === "in"
+                            ? "Dentro"
+                            : row.status === "canceled"
+                              ? "Cancelado"
+                              : "Fuera"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs tabular-nums text-hs-brown">
+                        {row.status === "in" && row.addedAt !== undefined
+                          ? `${emailLabel(row)} · ${ADDED_AT.format(row.addedAt)}`
+                          : emailLabel(row)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {row.status === "in" ? (
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              aria-busy={busy}
+                              disabled={!row.email}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                requestSendOne(row);
+                              }}
+                            >
+                              {row.emailedAt ? "Reenviar" : "Enviar"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              aria-busy={busy}
+                              className="text-hs-red"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setConfirm({ kind: "cancelPerson", row });
+                              }}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        ) : row.status === "canceled" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            aria-busy={busy}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void submitStatus(row, "in");
+                            }}
+                          >
+                            Restaurar
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </div>
       </section>
@@ -804,13 +815,17 @@ export default function AdminFinalPage() {
             <DialogDescription>{confirmBody}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setConfirm(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirm(null)}
+            >
               No
             </Button>
             <Button
               type="button"
               className={cn(
-                confirm?.kind === "cancelPerson" && "bg-hs-red text-hs-paper",
+                confirm?.kind === "cancelPerson" && "bg-hs-red text-hs-paper"
               )}
               onClick={() => {
                 if (confirm?.kind === "send") {

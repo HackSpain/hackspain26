@@ -18,7 +18,9 @@ function CommandRow({
 }) {
   return (
     <div className="grid gap-1 border-b border-hs-ink/15 py-2 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:gap-4">
-      <code className="font-mono text-xs break-words sm:text-sm">{command}</code>
+      <code className="font-mono text-xs break-words sm:text-sm">
+        {command}
+      </code>
       <p className="text-sm text-hs-brown">{children}</p>
     </div>
   );
@@ -47,9 +49,17 @@ function CommandCard({
 const EXIT_CODES = [
   { code: "0", meaning: "Todo bien" },
   { code: "1", meaning: "Error del servidor o genérico" },
-  { code: "2", meaning: "Error de uso (flags mal puestos, falta input en modo no interactivo)" },
+  {
+    code: "2",
+    meaning:
+      "Error de uso (flags mal puestos, falta input en modo no interactivo)",
+  },
   { code: "3", meaning: "Sin sesión o sesión caducada" },
-  { code: "4", meaning: "Aún no elegible (sin solicitud, sin aceptar, onboarding incompleto o la hackathon no está en marcha)" },
+  {
+    code: "4",
+    meaning:
+      "Aún no elegible (sin solicitud, sin aceptar, onboarding incompleto o la hackathon no está en marcha)",
+  },
   { code: "5", meaning: "No se pudo alcanzar el backend" },
   { code: "130", meaning: "Interrumpido (Ctrl+C)" },
 ] as const;
@@ -67,11 +77,15 @@ export default function CliPage() {
         >
           <div className="space-y-3">
             <CodeBlock>
-              {"curl -fsSL https://hackspain.com/install.sh | sh\nhackspain update   # más adelante, para la última versión"}
+              {
+                "curl -fsSL https://hackspain.com/install.sh | sh\nhackspain update   # más adelante, para la última versión"
+              }
             </CodeBlock>
             <p className="text-sm text-hs-brown">
               Windows: descarga{" "}
-              <code className="font-mono text-xs">hackspain-windows-x64.exe</code>{" "}
+              <code className="font-mono text-xs">
+                hackspain-windows-x64.exe
+              </code>{" "}
               desde la{" "}
               <a
                 href="https://github.com/HackSpain/hackspain26/releases"
@@ -81,7 +95,8 @@ export default function CliPage() {
               >
                 página de releases
               </a>{" "}
-              y renómbralo a <code className="font-mono text-xs">hackspain.exe</code>.
+              y renómbralo a{" "}
+              <code className="font-mono text-xs">hackspain.exe</code>.
             </p>
           </div>
         </CommandCard>
@@ -91,19 +106,23 @@ export default function CliPage() {
           description="Misma cuenta que este dashboard. El login abre el navegador para aprobar el dispositivo; también vale el código de 8 dígitos. Después te pedirá lo que falte: nombre, teléfono o GitHub."
         >
           <CommandRow command="hackspain">
-            Dónde estás y qué toca hacer. En una terminal interactiva, menú para moverte.
+            Dónde estás y qué toca hacer. En una terminal interactiva, menú para
+            moverte.
           </CommandRow>
           <CommandRow command="hackspain auth login [--email …] [--code …]">
-            Por defecto abre /cli-auth para aprobar este dispositivo. Con --email/--code, el código de 8 dígitos por correo, como en la web.
+            Por defecto abre /cli-auth para aprobar este dispositivo. Con
+            --email/--code, el código de 8 dígitos por correo, como en la web.
           </CommandRow>
           <CommandRow command="hackspain open [feed|teams|perks|…]">
-            Abre el dashboard en tu navegador ya con la sesión iniciada: no
-            hace falta volver a pedir el código.
+            Abre el dashboard en tu navegador ya con la sesión iniciada: no hace
+            falta volver a pedir el código.
           </CommandRow>
           <CommandRow command="hackspain auth status">
             Comprueba tu sesión.
           </CommandRow>
-          <CommandRow command="hackspain auth logout">Cierra sesión.</CommandRow>
+          <CommandRow command="hackspain auth logout">
+            Cierra sesión.
+          </CommandRow>
         </CommandCard>
 
         <CommandCard title="Perfil">
@@ -148,7 +167,9 @@ export default function CliPage() {
             Vincula el repositorio público (o varios) de GitHub; su actividad
             aparece en el feed. Hazlo público antes de vincularlo.
           </CommandRow>
-          <CommandRow command="hackspain team leave">Sal del equipo.</CommandRow>
+          <CommandRow command="hackspain team leave">
+            Sal del equipo.
+          </CommandRow>
           <CommandRow command="hackspain team transfer [member]">
             El dueño cede el equipo a otro miembro.
           </CommandRow>
@@ -193,9 +214,9 @@ export default function CliPage() {
           description="El mismo feed que la página Feed del dashboard: mensajes de todo el mundo más pushes y PRs de cada repo de equipo."
         >
           <CommandRow command="hackspain feed [-n 20] [--no-images] [--before …]">
-            Últimas publicaciones y actividad de GitHub, por páginas. En
-            kitty, Ghostty, WezTerm, iTerm2 o la terminal de VS Code las fotos
-            se ven en la propia terminal; en el resto, un enlace.
+            Últimas publicaciones y actividad de GitHub, por páginas. En kitty,
+            Ghostty, WezTerm, iTerm2 o la terminal de VS Code las fotos se ven
+            en la propia terminal; en el resto, un enlace.
           </CommandRow>
           <CommandRow command='hackspain post "texto" [--image foto.jpg]'>
             Publica (≤500 caracteres; jpeg/png/webp/gif ≤5 MB).
@@ -209,8 +230,7 @@ export default function CliPage() {
           <CommandRow command="hackspain watch [--interval 30] [--no-upload] [--no-images] [--once]">
             Arranca el watcher; reporta todo el uso de IA de la ventana de la
             hackathon, también el de cuando estaba cerrado, y nada de fuera de
-            ella.{" "}
-            <code className="font-mono text-xs">q</code> sale,{" "}
+            ella. <code className="font-mono text-xs">q</code> sale,{" "}
             <code className="font-mono text-xs">p</code> pausa,{" "}
             <code className="font-mono text-xs">↑↓</code> recorren el feed y{" "}
             <code className="font-mono text-xs">g</code> vuelve al directo.
@@ -224,7 +244,9 @@ export default function CliPage() {
           title="Para scripts: --json"
           description="Cualquier comando con --json imprime exactamente un objeto JSON en stdout y desactiva los prompts. Todo lo demás va a stderr."
         >
-          <CodeBlock>{"hackspain --json team show\nhackspain --json feed -n 5"}</CodeBlock>
+          <CodeBlock>
+            {"hackspain --json team show\nhackspain --json feed -n 5"}
+          </CodeBlock>
         </CommandCard>
 
         <CommandCard

@@ -11,7 +11,10 @@ test("access code email renders the recipient and code in both formats", () => {
   const html = accessCodeEmailHtml(content);
   const text = accessCodeEmailText(content);
 
-  assert.equal(ACCESS_CODE_EMAIL_SUBJECT, "Tu código de acceso a HackSpain 2026");
+  assert.equal(
+    ACCESS_CODE_EMAIL_SUBJECT,
+    "Tu código de acceso a HackSpain 2026"
+  );
   assert.match(html, /Hola, Ada Lovelace/);
   assert.match(html, />AB7K</);
   assert.match(html, /https:\/\/hackspain\.app/);

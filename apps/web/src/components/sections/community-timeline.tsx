@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { type CommunityPost, communityPosts } from "../../data/recap";
+import type { CommunityPost } from "../../data/recap";
+import { communityPosts } from "../../data/recap";
 import { loadXWidgets } from "../../lib/x-widgets";
 import "../../styles/community-timeline.css";
 

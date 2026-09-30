@@ -13,7 +13,13 @@ export type TvInsights = {
   usage: "ok" | "empty" | "unconfigured" | "unavailable" | "unscheduled";
   window: { startsAt?: number; endsAt?: number };
   buckets: number;
-  teams: { id: string; name: string; project: string; members: number; logoUrl?: string }[];
+  teams: {
+    id: string;
+    name: string;
+    project: string;
+    members: number;
+    logoUrl?: string;
+  }[];
   samples: UsageRow[];
   /** Tokens per normalised model name over the window; empty unless `usage` is "ok". */
   models: ModelRow[];
@@ -67,7 +73,13 @@ async function load(): Promise<TvInsights> {
     window: base.window,
   };
   if (startsAt === undefined || endsAt === undefined || endsAt <= startsAt) {
-    return { ...shared, models: [], people: [], samples: [], usage: "unscheduled" };
+    return {
+      ...shared,
+      models: [],
+      people: [],
+      samples: [],
+      usage: "unscheduled",
+    };
   }
   let usage: UsageResult | null = null;
   try {

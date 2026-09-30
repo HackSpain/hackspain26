@@ -3,8 +3,8 @@
 @import "tailwindcss/index.css";
 
 @theme {
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-bungee: "Bungee", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--hs-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-bungee: var(--hs-bungee), ui-sans-serif, system-ui, sans-serif;
   --color-hs-paper: #f4ecd8;
   --color-hs-sand: #e8dcc4;
   --color-hs-cream: #f4ecd8;

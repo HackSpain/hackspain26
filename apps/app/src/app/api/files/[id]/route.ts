@@ -76,9 +76,7 @@ export async function GET(
     });
     return new NextResponse("Unavailable", { status: 502 });
   }
-  const width = parseThumbnailWidth(
-    new URL(request.url).searchParams.get("w")
-  );
+  const width = parseThumbnailWidth(new URL(request.url).searchParams.get("w"));
   if (width !== null) {
     try {
       return await thumbnail(upstream, width);

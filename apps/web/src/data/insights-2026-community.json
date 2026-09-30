@@ -1,9 +1,6 @@
 {
   "event": "HackSpain 2026",
-  "eventDates": [
-    "2026-09-18",
-    "2026-09-20"
-  ],
+  "eventDates": ["2026-09-18", "2026-09-20"],
   "snapshotDate": "2026-09-24",
   "participants": 254,
   "teams": 60,
@@ -1129,315 +1126,235 @@
         "id": 0,
         "name": "'; DROP TABLE Hackers; /*",
         "members": 4,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 1,
         "name": "540",
         "members": 3,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 2,
         "name": ":)",
         "members": 4,
-        "tracks": [
-          "theker"
-        ]
+        "tracks": ["theker"]
       },
       {
         "id": 3,
         "name": "abrollo",
         "members": 3,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 4,
         "name": "airbenders",
         "members": 4,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 5,
         "name": "Bacon queso",
         "members": 5,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 6,
         "name": "Betis",
         "members": 5,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 7,
         "name": "Blaubeere",
         "members": 4,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 8,
         "name": "burn-rate",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 9,
         "name": "Byte_Me",
         "members": 4,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 10,
         "name": "CabraLabs",
         "members": 3,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 11,
         "name": "cachopo",
         "members": 3,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 12,
         "name": "casa pepe",
         "members": 5,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 13,
         "name": "claudios",
         "members": 5,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 14,
         "name": "De Despeñaperros Pabajo",
         "members": 5,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 15,
         "name": "DreamTeamV2",
         "members": 5,
-        "tracks": [
-          "theker"
-        ]
+        "tracks": ["theker"]
       },
       {
         "id": 16,
         "name": "el_depor",
         "members": 5,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 17,
         "name": "Elequipo",
         "members": 3,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 18,
         "name": "Elkano",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 19,
         "name": "every.",
         "members": 4,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 20,
         "name": "FABAT",
         "members": 5,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 21,
         "name": "finhackers",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 22,
         "name": "gallegosytal",
         "members": 5,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 23,
         "name": "Gamma",
         "members": 4,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 24,
         "name": "ging",
         "members": 3,
-        "tracks": [
-          "prosper-ai",
-          "theker"
-        ]
+        "tracks": ["prosper-ai", "theker"]
       },
       {
         "id": 25,
         "name": "goldiggers",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 26,
         "name": "growth",
         "members": 3,
-        "tracks": [
-          "theker"
-        ]
+        "tracks": ["theker"]
       },
       {
         "id": 27,
         "name": "guluc3m",
         "members": 4,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 28,
         "name": "HackAndalus",
         "members": 5,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 29,
         "name": "hackers la l",
         "members": 3,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 30,
         "name": "HACPAQ",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 31,
         "name": "hash",
         "members": 4,
-        "tracks": [
-          "maisa",
-          "prosper-ai"
-        ]
+        "tracks": ["maisa", "prosper-ai"]
       },
       {
         "id": 32,
         "name": "hsdatos",
         "members": 5,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 33,
         "name": "hUMAnos",
         "members": 5,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 34,
         "name": "KermitPanic",
         "members": 5,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 35,
         "name": "kivof",
         "members": 1,
-        "tracks": [
-          "theker"
-        ]
+        "tracks": ["theker"]
       },
       {
         "id": 36,
         "name": "la_interseccion",
         "members": 4,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 37,
         "name": "lateflight",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 38,
         "name": "Los Joses",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 39,
@@ -1449,89 +1366,67 @@
         "id": 40,
         "name": "maferai",
         "members": 4,
-        "tracks": [
-          "theker"
-        ]
+        "tracks": ["theker"]
       },
       {
         "id": 41,
         "name": "nextgen_ai",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 42,
         "name": "QUANTICOW",
         "members": 4,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 43,
         "name": "Quantum Churros",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 44,
         "name": "refugia2",
         "members": 4,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 45,
         "name": "RG4L",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 46,
         "name": "router123",
         "members": 5,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 47,
         "name": "stokes",
         "members": 5,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 48,
         "name": "sucara",
         "members": 4,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 49,
         "name": "tbd",
         "members": 4,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 50,
         "name": "Team Socket",
         "members": 4,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 51,
@@ -1543,65 +1438,49 @@
         "id": 52,
         "name": "Thekenyos",
         "members": 4,
-        "tracks": [
-          "theker"
-        ]
+        "tracks": ["theker"]
       },
       {
         "id": 53,
         "name": "Tokenham Hotspur",
         "members": 5,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 54,
         "name": "Universe Computing",
         "members": 3,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 55,
         "name": "UPISTAS",
         "members": 4,
-        "tracks": [
-          "maisa"
-        ]
+        "tracks": ["maisa"]
       },
       {
         "id": 56,
         "name": "valte",
         "members": 4,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       },
       {
         "id": 57,
         "name": "vortex",
         "members": 5,
-        "tracks": [
-          "prosper-ai"
-        ]
+        "tracks": ["prosper-ai"]
       },
       {
         "id": 58,
         "name": "xakal",
         "members": 5,
-        "tracks": [
-          "embat"
-        ]
+        "tracks": ["embat"]
       },
       {
         "id": 59,
         "name": "zhivel",
         "members": 5,
-        "tracks": [
-          "happyrobot"
-        ]
+        "tracks": ["happyrobot"]
       }
     ],
     "links": [

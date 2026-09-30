@@ -12,9 +12,15 @@ test("figure keeps slide numbers short, never 'mil M'", () => {
 
 test("totals match the per-bucket series", () => {
   const summary = summarize(demoClosingData());
-  const perBucket = summary.timeline.tokens.reduce((sum, value) => sum + value, 0);
+  const perBucket = summary.timeline.tokens.reduce(
+    (sum, value) => sum + value,
+    0
+  );
   assert.equal(perBucket, summary.usage.tokens);
-  assert.equal(summary.hero.find((stat) => stat.label === "Tokens")?.value, perBucket);
+  assert.equal(
+    summary.hero.find((stat) => stat.label === "Tokens")?.value,
+    perBucket
+  );
 });
 
 test("Madrid's small hours count as night", () => {
@@ -30,7 +36,10 @@ test("every mention names a team, and usage without a team earns none", () => {
   assert.equal(summary.awards.length, 6);
   assert.ok(summary.awards.every((award) => award.team.startsWith("Equipo")));
   const data = demoClosingData();
-  data.insights.samples = data.insights.samples.map((row) => ({ ...row, teamId: "" }));
+  data.insights.samples = data.insights.samples.map((row) => ({
+    ...row,
+    teamId: "",
+  }));
   data.insights.activity = [];
   assert.deepEqual(summarize(data).awards, []);
 });
