@@ -80,7 +80,7 @@ async function applyPlan(
       : c.dim("Not entering any track right now.")
   );
   if (entered.length > 0) {
-    ui.next([["app.hackspain.com/submit", "submit from the dashboard"]]);
+    ui.next([["hackspain open submit", "submit from the dashboard"]]);
   }
 }
 
@@ -140,7 +140,7 @@ export function registerTrack(program: Command): void {
         ["hackspain track register [slug]", "enter a track"],
         ["hackspain track unregister [slug]", "leave a track"],
         [
-          "app.hackspain.com/submit",
+          "hackspain open submit",
           settings.submissionsOpen
             ? "submissions are open on the dashboard"
             : "opens later on the dashboard",
