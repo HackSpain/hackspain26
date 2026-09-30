@@ -4,9 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  ProjectDetails,
-} from "@/components/judging/project-details";
+import { ProjectDetails } from "@/components/judging/project-details";
 import type { ProjectInfo } from "@/components/judging/project-details";
 import { VideoFrame } from "@/components/judging/video-frame";
 import { EmptyState, Page, RecordCard, Skeleton } from "@/components/page";
@@ -56,7 +54,7 @@ function activateOnKey(event: KeyboardEvent<HTMLElement>, open: () => void) {
 export function writeParams(
   pathname: string,
   mutate: (params: URLSearchParams) => void,
-  mode: "push" | "replace",
+  mode: "push" | "replace"
 ) {
   const next = new URLSearchParams(window.location.search);
   mutate(next);
@@ -79,12 +77,12 @@ export function useProjectPicker() {
   const openProject = (id: Id<"submissions">, from: HTMLElement | null) => {
     triggerRef.current = from;
     const alreadyOpen = new URLSearchParams(window.location.search).has(
-      PROJECT_PARAM,
+      PROJECT_PARAM
     );
     writeParams(
       pathname,
       (params) => params.set(PROJECT_PARAM, id),
-      alreadyOpen ? "replace" : "push",
+      alreadyOpen ? "replace" : "push"
     );
     if (!alreadyOpen) {
       pushed.current = true;
@@ -179,8 +177,9 @@ export function ProjectTable({
               badges={badges?.(row)}
             >
               <p className="text-sm font-medium text-hs-brown">
-                {row.challenges.map((challenge) => challenge.label).join(" · ") ||
-                  "Sin retos"}
+                {row.challenges
+                  .map((challenge) => challenge.label)
+                  .join(" · ") || "Sin retos"}
               </p>
             </RecordCard>
           </div>
@@ -208,8 +207,8 @@ export function ProjectTable({
                   onOpen(
                     row._id,
                     event.currentTarget.querySelector<HTMLElement>(
-                      "[data-row-trigger]",
-                    ),
+                      "[data-row-trigger]"
+                    )
                   )
                 }
                 className="h-11 cursor-pointer motion-safe:transition-colors motion-safe:duration-100 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 [&_td]:border-b [&_td]:border-hs-ink/20"
@@ -229,8 +228,9 @@ export function ProjectTable({
                   {row.teamName ?? "—"}
                 </TableCell>
                 <TableCell className="max-w-72 truncate">
-                  {row.challenges.map((challenge) => challenge.label).join(" · ") ||
-                    "—"}
+                  {row.challenges
+                    .map((challenge) => challenge.label)
+                    .join(" · ") || "—"}
                 </TableCell>
                 {extraCell?.(row)}
               </TableRow>

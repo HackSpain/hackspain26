@@ -292,9 +292,19 @@ function RecapVideoTile() {
         src="/recap/poster.jpg"
         width={1920}
       />
-      <span className="relative font-bungee text-[clamp(1rem,3vw,2rem)]">ASÍ FUE HACKSPAIN</span>
+      <span className="relative font-bungee text-[clamp(1rem,3vw,2rem)]">
+        ASÍ FUE HACKSPAIN
+      </span>
       <span aria-hidden="true" className="recap-play">
-        <svg viewBox="0 0 48 48" fill="none"><path d="M18 12 36 24 18 36V12Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="miter" /></svg>
+        <svg aria-hidden="true" fill="none" viewBox="0 0 48 48">
+          <path
+            d="M18 12 36 24 18 36V12Z"
+            fill="currentColor"
+            stroke="currentColor"
+            strokeLinejoin="miter"
+            strokeWidth="2"
+          />
+        </svg>
       </span>
     </button>
   );
@@ -417,7 +427,9 @@ export function buildSections(): Record<string, React.ReactNode>[] {
       r1c: (
         <P bg="bg-hs-paper">
           <p className={`${LBL} text-hs-ink`}>HACKSPAIN 2026</p>
-          <h2 className={`${MOSAIC_HEADLINE_SM} text-center text-hs-red`}>VUESTRAS HISTORIAS</h2>
+          <h2 className={`${MOSAIC_HEADLINE_SM} text-center text-hs-red`}>
+            VUESTRAS HISTORIAS
+          </h2>
         </P>
       ),
       ...bottomRow(1),
@@ -428,8 +440,7 @@ export function buildSections(): Record<string, React.ReactNode>[] {
           <p className={`${LBL} text-hs-gold`}>MISIÓN</p>
           <h2 className={`text-center ${MOSAIC_HERO_LG} text-hs-paper`}>
             ESPAÑA TIENE <span className="text-hs-red">TALENTO.</span>
-            <br />
-            Y LO <span className="text-hs-red">JUNTAMOS.</span>
+            <br />Y LO <span className="text-hs-red">JUNTAMOS.</span>
           </h2>
         </P>
       ),
@@ -574,7 +585,12 @@ export function buildSections(): Record<string, React.ReactNode>[] {
       ),
       r4c: (
         <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-6">
-          <a className="font-bold underline underline-offset-4" href="/comunidad">Revive HackSpain 2026 ↗</a>
+          <a
+            className="font-bold underline underline-offset-4"
+            href="/comunidad"
+          >
+            Revive HackSpain 2026 ↗
+          </a>
         </P>
       ),
       ...bottomRow(6),
@@ -769,7 +785,9 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
       ),
       b2: (
         <P bg="bg-hs-paper" className="!gap-0 !p-0">
-          <div className="min-h-0 w-full flex-1"><RecapVideoTile /></div>
+          <div className="min-h-0 w-full flex-1">
+            <RecapVideoTile />
+          </div>
         </P>
       ),
       ...orn(
@@ -818,8 +836,7 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
             className={`text-center ${CH} text-[clamp(1.35rem,6.2vw,2.6rem)] text-hs-paper`}
           >
             ESPAÑA TIENE <span className="text-hs-red">TALENTO.</span>
-            <br />
-            Y LO <span className="text-hs-red">JUNTAMOS.</span>
+            <br />Y LO <span className="text-hs-red">JUNTAMOS.</span>
           </h2>
         </P>
       ),
@@ -1025,7 +1042,12 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
       ),
       b1: (
         <P bg="bg-hs-paper" className={`${CARD} !justify-evenly`}>
-          <a className="font-bold underline underline-offset-4" href="/comunidad">Revive HackSpain 2026 ↗</a>
+          <a
+            className="font-bold underline underline-offset-4"
+            href="/comunidad"
+          >
+            Revive HackSpain 2026 ↗
+          </a>
         </P>
       ),
       b2: (

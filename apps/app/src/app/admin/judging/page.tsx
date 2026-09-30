@@ -7,10 +7,7 @@ import { Suspense, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import {
-  CRITERIA,
-  CRITERION_LABELS,
-} from "@convex/lib/judging";
+import { CRITERIA, CRITERION_LABELS } from "@convex/lib/judging";
 import { formatScore, ScoreLegend } from "@/components/judging/assessment-form";
 import { ProjectDetails } from "@/components/judging/project-details";
 import { VideoFrame } from "@/components/judging/video-frame";
@@ -82,7 +79,7 @@ function randomSeed(): string {
   const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
-    "",
+    ""
   );
 }
 
@@ -112,7 +109,7 @@ function formatDate(value: number): string {
 function writeParams(
   pathname: string,
   mutate: (params: URLSearchParams) => void,
-  mode: "push" | "replace",
+  mode: "push" | "replace"
 ) {
   const next = new URLSearchParams(window.location.search);
   mutate(next);
@@ -148,12 +145,12 @@ function AdminJudging() {
   const openProject = (id: Id<"submissions">, from: HTMLElement | null) => {
     triggerRef.current = from;
     const alreadyOpen = new URLSearchParams(window.location.search).has(
-      PROJECT_PARAM,
+      PROJECT_PARAM
     );
     writeParams(
       pathname,
       (params) => params.set(PROJECT_PARAM, id),
-      alreadyOpen ? "replace" : "push",
+      alreadyOpen ? "replace" : "push"
     );
     if (!alreadyOpen) {
       pushed.current = true;
@@ -199,13 +196,7 @@ function AdminJudging() {
   );
 }
 
-function CountBadge({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function CountBadge({ label, value }: { label: string; value: number }) {
   return (
     <Badge variant={value > 0 ? "gold" : "default"} className="tabular-nums">
       {label} {value}
@@ -224,7 +215,7 @@ function SetupCard({ overview }: { overview: Overview }) {
   const [unresolved, setUnresolved] = useState<Unresolved | null>(null);
   const preview = useQuery(
     api.judging.previewAssignments,
-    previewSeed ? { seed: previewSeed } : "skip",
+    previewSeed ? { seed: previewSeed } : "skip"
   );
   const { pool, round } = overview;
   const ready = pool.feasible;
@@ -260,9 +251,9 @@ function SetupCard({ overview }: { overview: Overview }) {
             error,
             replace
               ? "No se ha podido volver a repartir"
-              : "No se ha podido generar el reparto",
-          ),
-        ),
+              : "No se ha podido generar el reparto"
+          )
+        )
       )
       .finally(() => setPending(false));
   };
@@ -384,8 +375,11 @@ function SetupCard({ overview }: { overview: Overview }) {
                           .then(() => setPreviewSeed(null))
                           .catch((error: unknown) =>
                             setError(
-                              errorMessage(error, "No se ha podido borrar el reparto"),
-                            ),
+                              errorMessage(
+                                error,
+                                "No se ha podido borrar el reparto"
+                              )
+                            )
                           )
                           .finally(() => setPending(false));
                       }}
@@ -414,13 +408,14 @@ function SetupCard({ overview }: { overview: Overview }) {
         ) : null}
         {!ready ? (
           <p className="text-sm font-medium text-pretty text-hs-brown">
-            {pool.problems.join(". ") ||
-              "Aún no se puede generar el reparto."}
+            {pool.problems.join(". ") || "Aún no se puede generar el reparto."}
           </p>
         ) : null}
         <FormError message={saveError} />
         {previewSeed && preview === undefined ? (
-          <p className="text-sm font-medium text-hs-brown">Calculando prueba…</p>
+          <p className="text-sm font-medium text-hs-brown">
+            Calculando prueba…
+          </p>
         ) : null}
         {previewOk ? <PreviewTable preview={previewOk} /> : null}
         {shownUnresolved && shownUnresolved.length > 0 ? (
@@ -474,7 +469,10 @@ function PreviewTable({
         </TableHeader>
         <TableBody>
           {preview.judges.map((judge) => (
-            <TableRow key={judge._id} className="[&_td]:border-b [&_td]:border-hs-ink/20">
+            <TableRow
+              key={judge._id}
+              className="[&_td]:border-b [&_td]:border-hs-ink/20"
+            >
               <TableCell className="align-top">{judge.name}</TableCell>
               <TableCell className="align-top text-right tabular-nums">
                 {judge.assigned}
@@ -498,8 +496,12 @@ function ConflictsSection({ overview }: { overview: Overview }) {
   const [note, setNote] = useState("");
   const [pending, setPending] = useState(false);
   const [saveError, setError] = useState<string | null>(null);
-  const judges = overview.judges.toSorted((a, b) => a.name.localeCompare(b.name, "es"));
-  const projects = overview.projects.toSorted((a, b) => a.name.localeCompare(b.name, "es"));
+  const judges = overview.judges.toSorted((a, b) =>
+    a.name.localeCompare(b.name, "es")
+  );
+  const projects = overview.projects.toSorted((a, b) =>
+    a.name.localeCompare(b.name, "es")
+  );
 
   return (
     <div className="space-y-3 border-t-[3px] border-hs-ink pt-4">
@@ -535,7 +537,12 @@ function ConflictsSection({ overview }: { overview: Overview }) {
                   setPending(true);
                   void removeConflict({ conflictId: conflict._id })
                     .catch((error: unknown) =>
-                      setError(errorMessage(error, "No se ha podido quitar el conflicto")),
+                      setError(
+                        errorMessage(
+                          error,
+                          "No se ha podido quitar el conflicto"
+                        )
+                      )
                     )
                     .finally(() => setPending(false));
                 }}
@@ -546,7 +553,9 @@ function ConflictsSection({ overview }: { overview: Overview }) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm font-medium text-hs-brown">Sin conflictos declarados.</p>
+        <p className="text-sm font-medium text-hs-brown">
+          Sin conflictos declarados.
+        </p>
       )}
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
         <Field label="Juez" htmlFor="conflict-judge">
@@ -565,7 +574,10 @@ function ConflictsSection({ overview }: { overview: Overview }) {
         </Field>
         <Field label="Proyecto" htmlFor="conflict-project">
           <Select value={submissionId} onValueChange={setSubmissionId}>
-            <SelectTrigger id="conflict-project" aria-label="Proyecto en conflicto">
+            <SelectTrigger
+              id="conflict-project"
+              aria-label="Proyecto en conflicto"
+            >
               <SelectValue placeholder="Elegir proyecto" />
             </SelectTrigger>
             <SelectContent>
@@ -603,7 +615,9 @@ function ConflictsSection({ overview }: { overview: Overview }) {
                 setNote("");
               })
               .catch((error: unknown) =>
-                setError(errorMessage(error, "No se ha podido añadir el conflicto")),
+                setError(
+                  errorMessage(error, "No se ha podido añadir el conflicto")
+                )
               )
               .finally(() => setPending(false));
           }}
@@ -619,7 +633,9 @@ function ConflictsSection({ overview }: { overview: Overview }) {
 function SettingsCard({ settings }: { settings: Overview["settings"] }) {
   const update = useMutation(api.judging.updateSettings);
   const [lambda, setLambda] = useState(String(settings.lambda));
-  const [threshold, setThreshold] = useState(String(settings.disagreementThreshold));
+  const [threshold, setThreshold] = useState(
+    String(settings.disagreementThreshold)
+  );
   const [pending, setPending] = useState(false);
   const [saveError, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -645,10 +661,10 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
         <CardDescription>
           La generosidad de cada juez se estima a partir de la diferencia entre
           las dos notas de cada proyecto. Lambda regulariza esa estimación. El
-          valor 2 es prudente, no óptimo. Puedes cambiarlo en cualquier
-          momento: generosidad, notas calibradas y puestos se recalculan al
-          guardar. El umbral marca los proyectos cuyas dos notas brutas se
-          separan demasiado.
+          valor 2 es prudente, no óptimo. Puedes cambiarlo en cualquier momento:
+          generosidad, notas calibradas y puestos se recalculan al guardar. El
+          umbral marca los proyectos cuyas dos notas brutas se separan
+          demasiado.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -706,9 +722,15 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
               disagreementThreshold: thresholdValue,
               lambda: lambdaValue,
             })
-              .then(() => setNotice("Ajustes guardados. La clasificación ya usa los valores nuevos."))
+              .then(() =>
+                setNotice(
+                  "Ajustes guardados. La clasificación ya usa los valores nuevos."
+                )
+              )
               .catch((error: unknown) =>
-                setError(errorMessage(error, "No se han podido guardar los ajustes")),
+                setError(
+                  errorMessage(error, "No se han podido guardar los ajustes")
+                )
               )
               .finally(() => setPending(false));
           }}
@@ -722,13 +744,17 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
 
 function CompletionCard({ overview }: { overview: Overview }) {
   const { completion } = overview;
-  const fraction = completion.total > 0 ? completion.submitted / completion.total : 0;
+  const fraction =
+    completion.total > 0 ? completion.submitted / completion.total : 0;
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
           Progreso
-          <Badge variant={completion.complete ? "gold" : "default"} className="tabular-nums">
+          <Badge
+            variant={completion.complete ? "gold" : "default"}
+            className="tabular-nums"
+          >
             {completion.submitted}/{completion.total}
           </Badge>
           <Badge variant={completion.complete ? "gold" : "default"}>
@@ -753,8 +779,8 @@ function CompletionCard({ overview }: { overview: Overview }) {
         {completion.complete ? null : (
           <Alert>
             <AlertDescription>
-              Faltan {completion.total - completion.submitted} evaluaciones y
-              la clasificación es provisional. Los proyectos con menos de dos
+              Faltan {completion.total - completion.submitted} evaluaciones y la
+              clasificación es provisional. Los proyectos con menos de dos
               evaluaciones enviadas no puntúan.
               {completion.connected
                 ? ""
@@ -804,9 +830,9 @@ function JudgesCard({ judges }: { judges: JudgeRow[] }) {
           />
         </CardTitle>
         <CardDescription>
-          Una generosidad positiva significa que el juez tiende a puntuar
-          alto, y negativa que tiende a puntuar bajo. Se recalcula con cada
-          evaluación enviada. Los borradores no cuentan.
+          Una generosidad positiva significa que el juez tiende a puntuar alto,
+          y negativa que tiende a puntuar bajo. Se recalcula con cada evaluación
+          enviada. Los borradores no cuentan.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -821,22 +847,33 @@ function JudgesCard({ judges }: { judges: JudgeRow[] }) {
           </TableHeader>
           <TableBody>
             {judges.map((judge) => (
-              <TableRow key={judge._id} className="[&_td]:border-b [&_td]:border-hs-ink/20">
+              <TableRow
+                key={judge._id}
+                className="[&_td]:border-b [&_td]:border-hs-ink/20"
+              >
                 <TableCell>
                   <span className="block truncate">{judge.name}</span>
                   {judge.email ? (
-                    <span className="block truncate text-xs text-hs-brown">{judge.email}</span>
+                    <span className="block truncate text-xs text-hs-brown">
+                      {judge.email}
+                    </span>
                   ) : null}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   <Badge
-                    variant={judge.submitted >= judge.assigned && judge.assigned > 0 ? "gold" : "default"}
+                    variant={
+                      judge.submitted >= judge.assigned && judge.assigned > 0
+                        ? "gold"
+                        : "default"
+                    }
                     className="tabular-nums"
                   >
                     {judge.submitted}/{judge.assigned}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{judge.drafts}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {judge.drafts}
+                </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {formatSigned(judge.generosity)}
                 </TableCell>
@@ -851,13 +888,17 @@ function JudgesCard({ judges }: { judges: JudgeRow[] }) {
 
 function RankMark({ rank }: { rank: number | null }) {
   if (rank === null) {
-    return <span className="inline-block min-w-[2.5ch] text-right text-hs-brown">—</span>;
+    return (
+      <span className="inline-block min-w-[2.5ch] text-right text-hs-brown">
+        —
+      </span>
+    );
   }
   return (
     <span
       className={cn(
         "inline-flex min-h-7 min-w-[2.5ch] items-center justify-end px-1 font-bungee text-sm tabular-nums",
-        rank === 1 && "bg-hs-gold text-hs-ink",
+        rank === 1 && "bg-hs-gold text-hs-ink"
       )}
     >
       {rank}
@@ -912,9 +953,9 @@ function ProjectsCard({
           </span>
         </CardTitle>
         <CardDescription>
-          Orden por media calibrada (nota bruta menos generosidad del juez).
-          Los empates exactos comparten puesto. Se marca para revisar cuando
-          las dos notas brutas difieren al menos{" "}
+          Orden por media calibrada (nota bruta menos generosidad del juez). Los
+          empates exactos comparten puesto. Se marca para revisar cuando las dos
+          notas brutas difieren al menos{" "}
           {overview.settings.disagreementThreshold.toFixed(2)} puntos.
         </CardDescription>
       </CardHeader>
@@ -942,16 +983,20 @@ function ProjectsCard({
               {overview.projects.map((project) => (
                 <TableRow
                   key={project._id}
-                  data-state={project._id === projectId ? "selected" : undefined}
+                  data-state={
+                    project._id === projectId ? "selected" : undefined
+                  }
                   onClick={(event) =>
                     onOpen(
                       project._id,
-                      event.currentTarget.querySelector<HTMLElement>("[data-row-trigger]"),
+                      event.currentTarget.querySelector<HTMLElement>(
+                        "[data-row-trigger]"
+                      )
                     )
                   }
                   className={cn(
                     "h-11 cursor-pointer motion-safe:transition-colors motion-safe:duration-100 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 [&_td]:border-b [&_td]:border-hs-ink/20",
-                    project.flagged && "[&_td]:bg-hs-red/5",
+                    project.flagged && "[&_td]:bg-hs-red/5"
                   )}
                 >
                   <TableCell className="text-right">
@@ -981,7 +1026,7 @@ function ProjectsCard({
                   <TableCell className="text-right tabular-nums">
                     {project.judges.map((judge) => {
                       const row = project.assessments.find(
-                        (assessment) => assessment.judge._id === judge._id,
+                        (assessment) => assessment.judge._id === judge._id
                       );
                       return (
                         <span key={judge._id} className="block text-xs">
@@ -1002,7 +1047,9 @@ function ProjectsCard({
                   <TableCell>
                     <span className="flex flex-wrap items-center gap-1">
                       <Badge
-                        variant={project.submittedCount === 2 ? "gold" : "default"}
+                        variant={
+                          project.submittedCount === 2 ? "gold" : "default"
+                        }
                         className="tabular-nums"
                       >
                         {project.submittedCount}/2
@@ -1068,7 +1115,9 @@ function ProjectSheet({
               <Badge variant="gold">Puesto {item.rank}</Badge>
             ) : null}
             {item?.flagged ? (
-              <Badge className="border-hs-red bg-hs-red/10 text-hs-red">Revisar</Badge>
+              <Badge className="border-hs-red bg-hs-red/10 text-hs-red">
+                Revisar
+              </Badge>
             ) : null}
           </SheetTitle>
           <SheetDescription className="font-medium">
@@ -1082,7 +1131,10 @@ function ProjectSheet({
             <>
               <div className="grid gap-3 sm:grid-cols-3">
                 <Stat label="Media bruta" value={formatScore(item.rawMean)} />
-                <Stat label="Media calibrada" value={formatScore(item.calibratedMean)} />
+                <Stat
+                  label="Media calibrada"
+                  value={formatScore(item.calibratedMean)}
+                />
                 <Stat
                   label="Diferencia"
                   value={formatScore(item.difference)}
@@ -1106,7 +1158,15 @@ function ProjectSheet({
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="border-[3px] border-hs-ink bg-hs-paper px-3 py-2">
       <p className="font-bungee text-xs uppercase text-hs-brown">{label}</p>
@@ -1117,7 +1177,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 }
 
 function noteCopy(
-  assessment: ProjectRow["assessments"][number] | null,
+  assessment: ProjectRow["assessments"][number] | null
 ): string {
   if (assessment?.ownCriteriaComment) {
     return assessment.ownCriteriaComment;
@@ -1133,7 +1193,8 @@ function noteCopy(
 
 function AssessmentBreakdown({ item }: { item: ProjectRow }) {
   const rows = item.judges.map((judge) => ({
-    assessment: item.assessments.find((row) => row.judge._id === judge._id) ?? null,
+    assessment:
+      item.assessments.find((row) => row.judge._id === judge._id) ?? null,
     judge,
   }));
   return (
@@ -1152,7 +1213,10 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
         </TableHeader>
         <TableBody>
           {CRITERIA.map((criterion) => (
-            <TableRow key={criterion} className="[&_td]:border-b [&_td]:border-hs-ink/20">
+            <TableRow
+              key={criterion}
+              className="[&_td]:border-b [&_td]:border-hs-ink/20"
+            >
               <TableCell>{CRITERION_LABELS[criterion]}</TableCell>
               {rows.map(({ judge, assessment }) => (
                 <TableCell key={judge._id} className="text-right tabular-nums">
@@ -1164,7 +1228,9 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
             </TableRow>
           ))}
           <TableRow className="[&_td]:border-b [&_td]:border-hs-ink/20">
-            <TableCell className="font-bungee text-xs uppercase">Nota bruta</TableCell>
+            <TableCell className="font-bungee text-xs uppercase">
+              Nota bruta
+            </TableCell>
             {rows.map(({ judge, assessment }) => (
               <TableCell key={judge._id} className="text-right tabular-nums">
                 {formatScore(assessment?.rawScore)}
@@ -1172,7 +1238,9 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
             ))}
           </TableRow>
           <TableRow className="[&_td]:border-b [&_td]:border-hs-ink/20">
-            <TableCell className="font-bungee text-xs uppercase">Ajustada</TableCell>
+            <TableCell className="font-bungee text-xs uppercase">
+              Ajustada
+            </TableCell>
             {rows.map(({ judge, assessment }) => (
               <TableCell key={judge._id} className="text-right tabular-nums">
                 {formatScore(assessment?.adjustedScore)}
@@ -1180,7 +1248,9 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
             ))}
           </TableRow>
           <TableRow>
-            <TableCell className="font-bungee text-xs uppercase">Estado</TableCell>
+            <TableCell className="font-bungee text-xs uppercase">
+              Estado
+            </TableCell>
             {rows.map(({ judge, assessment }) => (
               <TableCell key={judge._id} className="text-right">
                 {assessment?.status === "submitted" ? (
@@ -1197,7 +1267,10 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
       </Table>
       <div className="grid gap-3 sm:grid-cols-2">
         {rows.map(({ judge, assessment }) => (
-          <div key={judge._id} className="border-[3px] border-hs-ink bg-hs-paper p-3">
+          <div
+            key={judge._id}
+            className="border-[3px] border-hs-ink bg-hs-paper p-3"
+          >
             <p className="font-bungee text-xs uppercase">{judge.name}</p>
             <p className="mt-1 text-sm font-medium text-pretty whitespace-pre-wrap">
               {noteCopy(assessment)}

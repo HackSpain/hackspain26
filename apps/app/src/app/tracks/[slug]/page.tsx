@@ -32,7 +32,10 @@ export default function TrackBriefPage() {
     <Page
       title={
         <h1>
-          <TrackLogo track={track} className="h-10 max-w-72 text-2xl sm:text-3xl" />
+          <TrackLogo
+            track={track}
+            className="h-10 max-w-72 text-2xl sm:text-3xl"
+          />
         </h1>
       }
       description={track.note}

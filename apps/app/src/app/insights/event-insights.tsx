@@ -63,7 +63,14 @@ function SummaryMetric({
   );
 }
 
-const STACK_COLORS = ["#1e3958", "#35858a", "#d96b2a", "#8b6b9f", "#a67516", "#677558"];
+const STACK_COLORS = [
+  "#1e3958",
+  "#35858a",
+  "#d96b2a",
+  "#8b6b9f",
+  "#a67516",
+  "#677558",
+];
 const STACK_PAGE_SIZE = 8;
 
 export function LiveTechnologyStacks() {
@@ -109,11 +116,13 @@ export function LiveTechnologyStacks() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["all", "Frontend", "Backend", "Datos", "Otras"].map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item === "all" ? "Todas" : item}
-                  </SelectItem>
-                ))}
+                {["all", "Frontend", "Backend", "Datos", "Otras"].map(
+                  (item) => (
+                    <SelectItem key={item} value={item}>
+                      {item === "all" ? "Todas" : item}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -121,7 +130,9 @@ export function LiveTechnologyStacks() {
             {visibleRows.map((row, index) => (
               <div key={row.name} className="min-w-0">
                 <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-                  <span className="min-w-0 break-words font-semibold">{row.name}</span>
+                  <span className="min-w-0 break-words font-semibold">
+                    {row.name}
+                  </span>
                   <span className="shrink-0 text-hs-brown tabular-nums">
                     {row.count} {row.count === 1 ? "equipo" : "equipos"} ·{" "}
                     {percent(row.count, total)}
@@ -146,8 +157,12 @@ export function LiveTechnologyStacks() {
             </p>
           ) : (
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-hs-ink/15 pt-3">
-              <p aria-live="polite" className="text-xs text-hs-brown tabular-nums">
-                {pageStart + 1}–{pageStart + visibleRows.length} de {rows.length} tecnologías
+              <p
+                aria-live="polite"
+                className="text-xs text-hs-brown tabular-nums"
+              >
+                {pageStart + 1}–{pageStart + visibleRows.length} de{" "}
+                {rows.length} tecnologías
               </p>
               {pageCount > 1 ? (
                 <nav aria-label="Páginas de tecnologías" className="flex gap-2">
@@ -310,9 +325,13 @@ export function EventInsights({
         </Panel>
       );
     }
-    return <RealEvolution samples={samples} teams={teams} timeline={timeline} />;
+    return (
+      <RealEvolution samples={samples} teams={teams} timeline={timeline} />
+    );
   }
-  return <StaticEvolution samples={samples} teams={teams} onSelect={onSelect} />;
+  return (
+    <StaticEvolution samples={samples} teams={teams} onSelect={onSelect} />
+  );
 }
 
 function StaticEvolution({

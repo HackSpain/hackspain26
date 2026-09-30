@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -159,7 +161,7 @@ export function HomeSplash() {
             variants={copy}
           >
             <motion.h1 className="m-0" variants={item}>
-              <img
+              <Image
                 src="/logo.svg"
                 alt="HackSpain"
                 width={250}

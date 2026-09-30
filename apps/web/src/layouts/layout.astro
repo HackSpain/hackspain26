@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { Font } from "astro:assets";
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
 import CookieConsent from "../components/cookie-consent.astro";
@@ -20,6 +21,7 @@ interface Props {
   canonicalPathOverride?: string;
   description?: string;
   includeStructuredData?: boolean;
+  keywordsOverride?: string;
   ogImage?: { path: string; width: number; height: number };
   ogImageAlt?: string;
   robotsDirectives?: string;
@@ -89,6 +91,7 @@ const webPageJson = JSON.stringify(
     >
     <link rel="canonical" href={canonical.href}>
     <meta name="description" content={description}>
+    {Astro.props.keywordsOverride && <meta content={Astro.props.keywordsOverride} name="keywords" />}
     <meta name="robots" content={robotsDirectives}>
     <meta name="googlebot" content={robotsDirectives}>
     <meta name="author" content="HackSpain">
@@ -128,20 +131,22 @@ const webPageJson = JSON.stringify(
     {bingVerify && <meta content={bingVerify} name="msvalidate.01" />}
     {yandexVerify && <meta content={yandexVerify} name="yandex-verification" />}
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Sans:ital,opsz,wght@0,9..40,100..900;1,9..40,100..900&display=swap"
-      rel="stylesheet"
-    >
+    <Font
+      cssVariable="--hs-dm-sans"
+      preload={[{ subset: "latin", style: "normal" }]}
+    />
+    <Font
+      cssVariable="--hs-bungee"
+      preload={[{ subset: "latin", style: "normal" }]}
+    />
     <meta name="generator" content={Astro.generator}>
     <title>{title}</title>
     {includeStructuredData && (
         <>
-          <script set:html={orgJson} type="application/ld+json" />
-          <script set:html={webSiteJson} type="application/ld+json" />
-          {canonical.pathname === "/" && <script set:html={eventJson} type="application/ld+json" />}
-          <script set:html={webPageJson} type="application/ld+json" />
+          <script set:html={orgJson} is:inline type="application/ld+json" />
+          <script set:html={webSiteJson} is:inline type="application/ld+json" />
+          {canonical.pathname === "/" && <script set:html={eventJson} is:inline type="application/ld+json" />}
+          <script set:html={webPageJson} is:inline type="application/ld+json" />
         </>
       )}
     <script is:inline define:vars={{ ANALYTICS_CONSENT_STORAGE_KEY }}>

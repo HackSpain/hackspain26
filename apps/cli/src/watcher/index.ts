@@ -101,6 +101,8 @@ export type WatchDeps = {
   say: (message: string) => void;
   /** Renders an organiser message; defaults to `say(formatNotification(...))`. */
   announce?: (subject: string, body: string, at: number) => void;
+  /** Reports each completed scan for command-level summaries. */
+  onScan?: (result: ScanResult) => void;
   /** Live-screen state; when given, runWatch keeps it current and honours pause/stop. */
   state?: WatchState;
   toaster?: Toaster;
@@ -822,6 +824,7 @@ export async function runWatch(
         `${scanned.events} event${scanned.events === 1 ? "" : "s"}${parts.length ? ` (${parts.join(", ")})` : ""}${ok ? "" : ", some queued"}`
       );
     }
+    deps.onScan?.(scanned);
     return scanned;
   };
 

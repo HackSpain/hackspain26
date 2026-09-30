@@ -1,6 +1,6 @@
 # HackSpain design guidelines
 
-These guidelines describe the visual system of hackspain.com. They cover colour, typography, spacing, borders, depth, components, motion, accessibility and the brand. Use them for anything that carries the HackSpain name: web pages, dashboards, decks, printed material. Last updated 2026-09-23.
+These guidelines describe the visual system of hackspain.com. They cover colour, typography, spacing, borders, depth, components, motion, accessibility and the brand. Use them for anything that carries the HackSpain name: web pages, dashboards, decks, printed material. Last updated 2026-09-28.
 
 ## Direction
 
@@ -40,7 +40,7 @@ Rules:
 
 ## Typography
 
-Two typefaces, loaded from Google Fonts:
+Two self-hosted typefaces:
 
 - **Bungee** (one weight). Display type: headlines, figures, short calls to action, labels on buttons and index numbers.
 - **DM Sans** (variable, weights 100 to 900, optical sizes 9 to 40). Everything else.

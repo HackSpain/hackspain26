@@ -51,7 +51,12 @@ export type TelemetryEvent = {
   harness: Harness;
   harnessVersion?: string;
   sessionId: string;
-  project?: { dirHash: string; name: string; gitBranch?: string; repo?: string };
+  project?: {
+    dirHash: string;
+    name: string;
+    gitBranch?: string;
+    repo?: string;
+  };
   model?: CanonicalModel;
   tokens?: TokenCounts & { total: number };
   identity: { userId: string; teamId?: string; clientVersion: string };

@@ -57,13 +57,16 @@ export const finalistStatusValidator = v.union(
 export const perkTypeValidator = v.union(
   v.literal("email"),
   v.literal("code"),
-  v.literal("external"),
+  v.literal("external")
 );
 
 export type PerkType = Infer<typeof perkTypeValidator>;
 
 /** Claims are only created for in-app perks. */
-export const claimTypeValidator = v.union(v.literal("email"), v.literal("code"));
+export const claimTypeValidator = v.union(
+  v.literal("email"),
+  v.literal("code")
+);
 
 export type ClaimType = Infer<typeof claimTypeValidator>;
 
@@ -78,7 +81,7 @@ export const perkInputTypeValidator = v.union(
   v.literal("text"),
   v.literal("email"),
   v.literal("url"),
-  v.literal("select"),
+  v.literal("select")
 );
 
 /** A field the participant fills in when claiming a perk. */

@@ -59,9 +59,12 @@ async function main(): Promise<void> {
     throw new Error("MIGRATION_SECRET is not set");
   }
   const convex = new ConvexHttpClient(convexUrl);
-  const pending = await convex.query(api.migrations.listAvatarsWithoutThumbnail, {
-    secret,
-  });
+  const pending = await convex.query(
+    api.migrations.listAvatarsWithoutThumbnail,
+    {
+      secret,
+    }
+  );
   console.log(`${pending.length} pictures without a thumbnail`);
   let done = 0;
   let skipped = 0;

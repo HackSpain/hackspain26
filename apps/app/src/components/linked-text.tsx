@@ -15,6 +15,6 @@ export function LinkedText({ text }: { text: string }) {
       </a>
     ) : (
       <Fragment key={index}>{part.text}</Fragment>
-    ),
+    )
   );
 }

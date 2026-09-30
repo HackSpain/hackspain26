@@ -38,7 +38,13 @@ jobs:
         id: version
         run: |
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            echo "value=${GITHUB_REF_NAME#cli-v}" >> "$GITHUB_OUTPUT"
+            tag_version="${GITHUB_REF_NAME#cli-v}"
+            package_version="$(node -p "require('./apps/cli/package.json').version")"
+            if [[ "$tag_version" != "$package_version" ]]; then
+              echo "::error::Release tag version $tag_version does not match apps/cli/package.json version $package_version" >&2
+              exit 1
+            fi
+            echo "value=$tag_version" >> "$GITHUB_OUTPUT"
           else
             echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
           fi

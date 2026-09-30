@@ -66,7 +66,10 @@ function TrackTeams({
             ? `Completo · ${teamCount}/${teamLimit} equipos`
             : `${teamCount}/${teamLimit} equipos`}
         </span>
-        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Equipos en este reto">
+        <ul
+          className="flex flex-wrap items-center gap-1.5"
+          aria-label="Equipos en este reto"
+        >
           {teams.map((team) => {
             const active = team._id === openId;
             return (
@@ -80,13 +83,17 @@ function TrackTeams({
                   onClick={() => setOpenId(active ? null : team._id)}
                   className={cn(
                     "block outline-none motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.94] focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-paper",
-                    active && "ring-2 ring-hs-navy ring-offset-2 ring-offset-hs-paper",
+                    active &&
+                      "ring-2 ring-hs-navy ring-offset-2 ring-offset-hs-paper"
                   )}
                 >
                   <Avatar
                     name={team.name}
                     src={team.logoUrl}
-                    className={cn("size-8 border-2 text-[11px]", team.isMine && "bg-hs-teal/60")}
+                    className={cn(
+                      "size-8 border-2 text-[11px]",
+                      team.isMine && "bg-hs-teal/60"
+                    )}
                   />
                 </button>
               </li>
@@ -107,10 +114,20 @@ function TrackTeams({
                 </span>
               ) : null}
             </p>
-            <ul className="flex flex-wrap gap-x-4 gap-y-2" aria-label={`Miembros de ${open.name}`}>
+            <ul
+              className="flex flex-wrap gap-x-4 gap-y-2"
+              aria-label={`Miembros de ${open.name}`}
+            >
               {open.members.map((member) => (
-                <li key={member._id} className="flex min-w-0 items-center gap-2 text-sm">
-                  <Avatar name={member.name} src={member.avatarUrl} className="size-7 border-2 text-[10px]" />
+                <li
+                  key={member._id}
+                  className="flex min-w-0 items-center gap-2 text-sm"
+                >
+                  <Avatar
+                    name={member.name}
+                    src={member.avatarUrl}
+                    className="size-7 border-2 text-[10px]"
+                  />
                   <span className="min-w-0 truncate">{member.name}</span>
                   {member.isOwner ? (
                     <span className="text-xs text-hs-brown">· dueño</span>
@@ -118,7 +135,9 @@ function TrackTeams({
                 </li>
               ))}
               {open.members.length === 0 ? (
-                <li className="text-sm text-hs-brown">Sin miembros confirmados.</li>
+                <li className="text-sm text-hs-brown">
+                  Sin miembros confirmados.
+                </li>
               ) : null}
             </ul>
           </div>
@@ -163,8 +182,8 @@ function SubmitCallout() {
       className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
     >
       <p className="text-hs-navy">
-        Entra en el reto desde la CLI. La entrega (vídeo, repo y producto) es
-        en Submit.
+        Entra en el reto desde la CLI. La entrega (vídeo, repo y producto) es en
+        Submit.
       </p>
       <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
         <Button asChild>
@@ -193,11 +212,16 @@ function NoProject({ submissionsOpen }: { submissionsOpen: boolean }) {
       <CardContent className="space-y-3">
         <p className="text-sm text-hs-brown">
           Empieza con{" "}
-          <code className="font-mono text-xs">hackspain track register &lt;slug&gt;</code>
+          <code className="font-mono text-xs">
+            hackspain track register &lt;slug&gt;
+          </code>
           {submissionsOpen
             ? ". Cuando esté listo, entrega en "
             : ". El envío aún no está abierto; cuando lo esté, entrega en "}
-          <Link href="/submit" className="font-medium text-hs-navy underline underline-offset-4">
+          <Link
+            href="/submit"
+            className="font-medium text-hs-navy underline underline-offset-4"
+          >
             /submit
           </Link>
           .
@@ -229,15 +253,22 @@ function MyProject({
   submissionsOpen: boolean;
 }) {
   const submitted = mine.status === "submitted";
-  const entered = tracks.filter((track) => mine.challengeIds.includes(track._id));
-  const perks = (catalog ?? []).filter(({ perk }) => mine.perkIds.includes(perk._id));
+  const entered = tracks.filter((track) =>
+    mine.challengeIds.includes(track._id)
+  );
+  const perks = (catalog ?? []).filter(({ perk }) =>
+    mine.perkIds.includes(perk._id)
+  );
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
           {mine.name || "Proyecto sin nombre"}
-          <Badge variant={submitted ? "gold" : "default"} className="whitespace-nowrap">
+          <Badge
+            variant={submitted ? "gold" : "default"}
+            className="whitespace-nowrap"
+          >
             {submissionStatusLabel(mine.status)}
           </Badge>
         </CardTitle>
@@ -256,8 +287,8 @@ function MyProject({
           </p>
         ) : (
           <p className="text-sm text-hs-brown">
-            Sin notas todavía. El vídeo de Submit cubre qué habéis
-            hecho y por qué.
+            Sin notas todavía. El vídeo de Submit cubre qué habéis hecho y por
+            qué.
           </p>
         )}
 
@@ -272,7 +303,10 @@ function MyProject({
           ) : (
             <p className="text-sm text-hs-brown">
               No está en ningún reto. Entra con{" "}
-              <code className="font-mono text-xs">hackspain track register &lt;slug&gt;</code>.
+              <code className="font-mono text-xs">
+                hackspain track register &lt;slug&gt;
+              </code>
+              .
             </p>
           )}
         </div>
@@ -283,11 +317,16 @@ function MyProject({
             return (
               <MetaRow key={kind} label={urlLabel(kind)}>
                 {entry ? (
-                  <MetaLink href={entry.url}>{urlDisplay(kind, entry.url)}</MetaLink>
+                  <MetaLink href={entry.url}>
+                    {urlDisplay(kind, entry.url)}
+                  </MetaLink>
                 ) : (
                   <span className="text-hs-brown">
                     Sin {urlLabel(kind).toLowerCase()} · se pide en{" "}
-                    <Link href="/submit" className="text-hs-navy underline underline-offset-4">
+                    <Link
+                      href="/submit"
+                      className="text-hs-navy underline underline-offset-4"
+                    >
                       Submit
                     </Link>
                   </span>
@@ -315,7 +354,9 @@ function MyProject({
           {perks.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {perks.map(({ perk }) => (
-                <Badge key={perk._id}>{perkName(perk.company, perk.title)}</Badge>
+                <Badge key={perk._id}>
+                  {perkName(perk.company, perk.title)}
+                </Badge>
               ))}
             </div>
           ) : (
@@ -336,7 +377,8 @@ function MyProject({
 export default function TracksPage() {
   const me = useQuery(api.users.me);
   const skipLive =
-    me == null ||
+    me === null ||
+    me === undefined ||
     !isEventOpen(me.event) ||
     (me.canJudge && !me.sections.includes("tracks"));
   const tracks = useQuery(api.tracks.list);
@@ -351,7 +393,8 @@ export default function TracksPage() {
       return;
     }
     const stale =
-      tracks.length === 0 || tracks.some((track) => PLACEHOLDER_SLUGS.has(track.slug));
+      tracks.length === 0 ||
+      tracks.some((track) => PLACEHOLDER_SLUGS.has(track.slug));
     if (stale) {
       void ensureCatalog({});
     }
@@ -366,7 +409,9 @@ export default function TracksPage() {
   }
 
   const entered = new Set(mine?.challengeIds);
-  const submittedIds = new Set((mine?.submittedTracks ?? []).map((row) => row._id));
+  const submittedIds = new Set(
+    (mine?.submittedTracks ?? []).map((row) => row._id)
+  );
 
   return (
     <Page
@@ -410,7 +455,7 @@ export default function TracksPage() {
                       teamCount={track.teamCount}
                       teamLimit={track.teamLimit}
                       teams={teams.filter((team) =>
-                        team.tracks.some((chosen) => chosen.slug === track.slug),
+                        team.tracks.some((chosen) => chosen.slug === track.slug)
                       )}
                     />
                   )}

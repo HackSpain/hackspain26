@@ -11,7 +11,10 @@ const backend = (...packages: string[]): Tech => ({
   packages,
 });
 const data = (...packages: string[]): Tech => ({ category: "Datos", packages });
-const other = (...packages: string[]): Tech => ({ category: "Otras", packages });
+const other = (...packages: string[]): Tech => ({
+  category: "Otras",
+  packages,
+});
 
 /**
  * Every technology the detector can name, with the package names that give it
@@ -80,7 +83,12 @@ export const CATALOG: Record<string, Tech> = {
 
   // Backend platforms
   Convex: backend("convex"),
-  Supabase: backend("supabase", "@supabase/*", "supabase-flutter", "supabase-swift"),
+  Supabase: backend(
+    "supabase",
+    "@supabase/*",
+    "supabase-flutter",
+    "supabase-swift"
+  ),
   Firebase: backend(
     "firebase",
     "firebase-admin",
@@ -133,7 +141,11 @@ export const CATALOG: Record<string, Tech> = {
   Laravel: backend("laravel/framework"),
   Symfony: backend("symfony/*"),
   Livewire: backend("livewire/livewire"),
-  Inertia: backend("@inertiajs/*", "inertiajs/inertia-laravel", "inertia-rails"),
+  Inertia: backend(
+    "@inertiajs/*",
+    "inertiajs/inertia-laravel",
+    "inertia-rails"
+  ),
   WordPress: backend(),
   Spring: backend(),
   Quarkus: backend(),
@@ -213,7 +225,11 @@ export const CATALOG: Record<string, Tech> = {
     "google.generativeai",
     "google.genai"
   ),
-  "Vertex AI": data("@google-cloud/vertexai", "vertexai", "google-cloud-aiplatform"),
+  "Vertex AI": data(
+    "@google-cloud/vertexai",
+    "vertexai",
+    "google-cloud-aiplatform"
+  ),
   Mistral: data("mistralai", "@mistralai/*", "@ai-sdk/mistral"),
   Groq: data("groq", "groq-sdk", "@ai-sdk/groq"),
   Cohere: data("cohere", "cohere-ai", "@ai-sdk/cohere"),

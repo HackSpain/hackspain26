@@ -1,5 +1,6 @@
 import { ConvexError } from "convex/values";
 import { NextResponse } from "next/server";
+import { isCodedError } from "@convex/lib/errors";
 
 /**
  * Wire format shared with apps/cli/src/lib/api.ts:
@@ -19,6 +20,36 @@ const UNAUTHENTICATED_NEEDLES = [
   "Could not verify token",
   "Invalid token",
 ];
+
+const AUTH_ERROR_MESSAGE = "No has iniciado sesión";
+const SERVER_ERROR_MESSAGE = "Server error. Try again later.";
+
+// These CLI-facing functions still throw plain Error because the dashboard
+// renders their messages directly. Keep only their known public copy until
+// those call sites use coded errors and the dashboard reads the coded message.
+const LEGACY_PUBLIC_MESSAGES = new Set([
+  "Usuario no encontrado",
+  "No hay inscripción a la hackathon con este email",
+  "Aún no te han aceptado",
+  "Confirma tus datos primero",
+  "Se necesita acceso de admin",
+  "Se necesita acceso de juez",
+  "Se necesita acceso de sponsor",
+  "Se necesita acceso al directorio",
+  "Could not verify code",
+  "Introduce un usuario de GitHub, un handle de X o un email válido",
+  "Esa persona ya está en este equipo",
+  "Esa persona ya tiene invitación o membresía en otro equipo",
+  "Esa persona ya pertenece a otro equipo",
+  "El nombre del equipo debe tener al menos 2 caracteres",
+  "Ya perteneces a un equipo",
+  "Equipo no encontrado",
+  "No estás en un equipo",
+  "El dueño no puede salir del equipo",
+  "Reto no encontrado",
+  "Perk de partner no encontrado",
+  "Este proyecto ya está enviado",
+]);
 
 const UNCAUGHT_PATTERN = /Uncaught (?:Convex)?Error: ([^\n]*)/;
 const REQUEST_ID_PREFIX = /^\[Request ID: [^\]]+\] Server Error:?\s*/;
@@ -58,7 +89,7 @@ export function failCoded(
 }
 
 export function fromError(err: unknown): NextResponse {
-  if (err instanceof ConvexError) {
+  if (err instanceof ConvexError && isCodedError(err.data)) {
     const body: CliErrorBody = {
       error: { data: err.data, kind: "convex" },
       ok: false,
@@ -67,12 +98,14 @@ export function fromError(err: unknown): NextResponse {
   }
   const message =
     err instanceof Error ? serverMessage(err.message) : String(err);
-  const status = UNAUTHENTICATED_NEEDLES.some((needle) =>
-    message.includes(needle)
-  )
-    ? 401
-    : 500;
-  return fail(message, status);
+  if (UNAUTHENTICATED_NEEDLES.some((needle) => message.includes(needle))) {
+    return fail(AUTH_ERROR_MESSAGE, 401);
+  }
+  if (LEGACY_PUBLIC_MESSAGES.has(message)) {
+    return fail(message, 500);
+  }
+  console.error("CLI API failed:", err);
+  return fail(SERVER_ERROR_MESSAGE, 500);
 }
 
 export function bearerToken(request: Request): string | null {

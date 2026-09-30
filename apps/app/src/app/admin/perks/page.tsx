@@ -65,8 +65,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   MAX_PERK_INPUTS,
-  type PerkInput,
-  type PerkInputType,
   answerFor,
   downloadCsv,
   fileSlug,
@@ -75,6 +73,7 @@ import {
   slugKey,
   toCsv,
 } from "@/lib/perks";
+import type { PerkInput, PerkInputType } from "@/lib/perks";
 import { claimStatusLabel, cn, perkName, perkTypeLabel } from "@/lib/utils";
 
 type AdminPerk = FunctionReturnType<typeof api.perks.adminList>[number];
@@ -196,7 +195,9 @@ function draftProblem(draft: Draft): string | null {
     return "La URL debe empezar por http:// o https://";
   }
   for (const input of draft.inputs) {
-    if (!input.label.trim()) return "Cada campo necesita una etiqueta";
+    if (!input.label.trim()) {
+      return "Cada campo necesita una etiqueta";
+    }
     if (input.type === "select" && !input.options.trim()) {
       return `El selector "${input.label.trim()}" necesita opciones`;
     }
@@ -238,13 +239,16 @@ export default function AdminPerksPage() {
         type: draft.type,
         sponsorUrl: draft.sponsorUrl.trim() || undefined,
         instructions: draft.instructions.trim() || undefined,
-        inputs: draft.type === "external" ? undefined : inputsFromDraft(draft.inputs),
+        inputs:
+          draft.type === "external" ? undefined : inputsFromDraft(draft.inputs),
         codes: draft.type === "code" ? lines(draft.codes) : undefined,
       });
       setDraft(emptyDraft);
       setCreateOpen(false);
-    } catch (err: unknown) {
-      setCreateError(errorMessage(err, "No se ha podido crear el perk"));
+    } catch (caughtError: unknown) {
+      setCreateError(
+        errorMessage(caughtError, "No se ha podido crear el perk")
+      );
     } finally {
       setCreating(false);
     }
@@ -277,10 +281,16 @@ export default function AdminPerksPage() {
             <Card key={perk._id} className="min-w-0 overflow-hidden">
               <CardHeader className="min-w-0">
                 <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 [&_[data-slot=badge]]:whitespace-nowrap">
-                  <span className="min-w-0 break-words">{perkName(perk.company, perk.title)}</span>
+                  <span className="min-w-0 break-words">
+                    {perkName(perk.company, perk.title)}
+                  </span>
                   <Badge>{perkTypeLabel(perk.type)}</Badge>
-                  {perk.value ? <Badge variant="gold">{perk.value}</Badge> : null}
-                  {perk.active ? null : <Badge className="bg-hs-paper">Inactivo</Badge>}
+                  {perk.value ? (
+                    <Badge variant="gold">{perk.value}</Badge>
+                  ) : null}
+                  {perk.active ? null : (
+                    <Badge className="bg-hs-paper">Inactivo</Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
@@ -294,7 +304,8 @@ export default function AdminPerksPage() {
                     "Se reclama en la web del partner"
                   ) : (
                     <>
-                      {perk.claimCount} {perk.claimCount === 1 ? "solicitud" : "solicitudes"}
+                      {perk.claimCount}{" "}
+                      {perk.claimCount === 1 ? "solicitud" : "solicitudes"}
                       {perk.type === "code"
                         ? ` · ${perk.availableCodes}/${perk.codeCount} códigos libres`
                         : ""}
@@ -312,7 +323,9 @@ export default function AdminPerksPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-0.5 text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
                       >
-                        {perk.type === "external" ? "Enlace para reclamar" : "Web del sponsor"}
+                        {perk.type === "external"
+                          ? "Enlace para reclamar"
+                          : "Web del sponsor"}
                         <ArrowUpRightIcon className="size-3.5" aria-hidden />
                       </a>
                     </>
@@ -340,7 +353,9 @@ export default function AdminPerksPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => void update({ perkId: perk._id, active: !perk.active })}
+                    onClick={() =>
+                      void update({ perkId: perk._id, active: !perk.active })
+                    }
                   >
                     {perk.active ? "Desactivar" : "Activar"}
                   </Button>
@@ -377,7 +392,7 @@ export default function AdminPerksPage() {
                           setExtraCodes((current) => ({
                             ...current,
                             [perk._id]: "",
-                          })),
+                          }))
                         )
                       }
                     >
@@ -397,7 +412,9 @@ export default function AdminPerksPage() {
         open={createOpen}
         onOpenChange={(open) => {
           setCreateOpen(open);
-          if (!open) setCreateError(null);
+          if (!open) {
+            setCreateError(null);
+          }
         }}
       >
         <DialogContent className="max-w-2xl">
@@ -412,7 +429,8 @@ export default function AdminPerksPage() {
             <DialogHeader>
               <DialogTitle>Crear perk</DialogTitle>
               <DialogDescription>
-                Aparece en el catálogo. Elige si se reclama en la app o con un enlace al partner.
+                Aparece en el catálogo. Elige si se reclama en la app o con un
+                enlace al partner.
               </DialogDescription>
             </DialogHeader>
             <FormError message={createError} />
@@ -437,7 +455,9 @@ export default function AdminPerksPage() {
       <Dialog
         open={editing !== null}
         onOpenChange={(open) => {
-          if (!open) setEditing(null);
+          if (!open) {
+            setEditing(null);
+          }
         }}
       >
         <DialogContent className="max-w-2xl">
@@ -454,12 +474,17 @@ export default function AdminPerksPage() {
       <Sheet
         open={viewing !== null}
         onOpenChange={(open) => {
-          if (!open) setViewing(null);
+          if (!open) {
+            setViewing(null);
+          }
         }}
       >
         <SheetContent className="sm:max-w-4xl">
           {viewing?.kind === "requests" ? (
-            <RequestsSheet key={`${viewing.perk._id}-requests`} perk={viewing.perk} />
+            <RequestsSheet
+              key={`${viewing.perk._id}-requests`}
+              perk={viewing.perk}
+            />
           ) : null}
           {viewing?.kind === "codes" ? (
             <CodesSheet key={`${viewing.perk._id}-codes`} perk={viewing.perk} />
@@ -470,7 +495,13 @@ export default function AdminPerksPage() {
   );
 }
 
-function EditPerkForm({ perk, onDone }: { perk: AdminPerk; onDone: () => void }) {
+function EditPerkForm({
+  perk,
+  onDone,
+}: {
+  perk: AdminPerk;
+  onDone: () => void;
+}) {
   const update = useMutation(api.perks.adminUpdate);
   const [draft, setDraft] = useState<Draft>(() => draftFromPerk(perk));
   const [error, setError] = useState<string | null>(null);
@@ -493,11 +524,12 @@ function EditPerkForm({ perk, onDone }: { perk: AdminPerk; onDone: () => void })
         description: draft.description,
         sponsorUrl: draft.sponsorUrl.trim(),
         instructions: draft.instructions.trim(),
-        inputs: perk.type === "external" ? undefined : inputsFromDraft(draft.inputs),
+        inputs:
+          perk.type === "external" ? undefined : inputsFromDraft(draft.inputs),
       });
       onDone();
-    } catch (err: unknown) {
-      setError(errorMessage(err, "No se ha podido guardar"));
+    } catch (caughtError: unknown) {
+      setError(errorMessage(caughtError, "No se ha podido guardar"));
     } finally {
       setSaving(false);
     }
@@ -525,7 +557,12 @@ function EditPerkForm({ perk, onDone }: { perk: AdminPerk; onDone: () => void })
       <FormError message={error} />
       <PerkFields draft={draft} onChange={setDraft} mode="edit" />
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onDone} disabled={saving}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onDone}
+          disabled={saving}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={saving}>
@@ -579,7 +616,11 @@ function PerkFields({
             <Select
               value={draft.type}
               onValueChange={(next) => {
-                if (next === "email" || next === "code" || next === "external") {
+                if (
+                  next === "email" ||
+                  next === "code" ||
+                  next === "external"
+                ) {
                   set("type", next);
                 }
               }}
@@ -602,7 +643,9 @@ function PerkFields({
           </Field>
         )}
         <Field
-          label={draft.type === "external" ? "URL para reclamar" : "URL del sponsor"}
+          label={
+            draft.type === "external" ? "URL para reclamar" : "URL del sponsor"
+          }
           htmlFor={`${ids}-sponsor`}
           hint={
             draft.type === "external"
@@ -661,7 +704,10 @@ function PerkFields({
         </Field>
       ) : null}
       {draft.type === "external" ? null : (
-        <InputsEditor inputs={draft.inputs} onChange={(inputs) => set("inputs", inputs)} />
+        <InputsEditor
+          inputs={draft.inputs}
+          onChange={(inputs) => set("inputs", inputs)}
+        />
       )}
     </>
   );
@@ -679,13 +725,15 @@ function InputsEditor({
   function patch(id: string, changes: Partial<DraftInput>) {
     onChange(
       inputs.map((input) => {
-        if (input.id !== id) return input;
+        if (input.id !== id) {
+          return input;
+        }
         const next = { ...input, ...changes };
         if (changes.label !== undefined && !next.keyTouched) {
           next.key = slugKey(changes.label);
         }
         return next;
-      }),
+      })
     );
   }
 
@@ -695,7 +743,8 @@ function InputsEditor({
         <div>
           <Label>Datos que pide el sponsor</Label>
           <p className="mt-1 text-sm text-hs-brown">
-            El participante los rellena al reclamar. Sin campos, reclama con un clic.
+            El participante los rellena al reclamar. Sin campos, reclama con un
+            clic.
           </p>
         </div>
         <Button
@@ -726,7 +775,9 @@ function InputsEditor({
                     id={`${base}-label`}
                     value={input.label}
                     placeholder={index === 0 ? "Usuario de GitHub" : undefined}
-                    onChange={(event) => patch(input.id, { label: event.target.value })}
+                    onChange={(event) =>
+                      patch(input.id, { label: event.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-1">
@@ -738,7 +789,10 @@ function InputsEditor({
                     value={input.key}
                     className="font-mono text-sm"
                     onChange={(event) =>
-                      patch(input.id, { key: slugKey(event.target.value), keyTouched: true })
+                      patch(input.id, {
+                        key: slugKey(event.target.value),
+                        keyTouched: true,
+                      })
                     }
                   />
                 </div>
@@ -749,13 +803,17 @@ function InputsEditor({
                     </Label>
                     <Select
                       value={input.type}
-                      onValueChange={(next) => patch(input.id, { type: next as PerkInputType })}
+                      onValueChange={(next) =>
+                        patch(input.id, { type: next as PerkInputType })
+                      }
                     >
                       <SelectTrigger id={`${base}-type`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(Object.keys(perkInputTypeLabels) as PerkInputType[]).map((type) => (
+                        {(
+                          Object.keys(perkInputTypeLabels) as PerkInputType[]
+                        ).map((type) => (
                           <SelectItem key={type} value={type}>
                             {perkInputTypeLabels[type]}
                           </SelectItem>
@@ -763,8 +821,12 @@ function InputsEditor({
                       </SelectContent>
                     </Select>
                   </div>
-                  <label className="flex h-11 items-center gap-2 text-sm select-none">
+                  <label
+                    htmlFor={`${base}-required`}
+                    className="flex h-11 items-center gap-2 text-sm select-none"
+                  >
                     <Checkbox
+                      id={`${base}-required`}
                       className="mt-0"
                       checked={input.required}
                       onCheckedChange={(checked) =>
@@ -779,7 +841,9 @@ function InputsEditor({
                     variant="outline"
                     className="ml-auto"
                     aria-label={`Quitar campo ${input.label || index + 1}`}
-                    onClick={() => onChange(inputs.filter((row) => row.id !== input.id))}
+                    onClick={() =>
+                      onChange(inputs.filter((row) => row.id !== input.id))
+                    }
                   >
                     <Trash2Icon aria-hidden />
                   </Button>
@@ -793,7 +857,9 @@ function InputsEditor({
                       id={`${base}-options`}
                       value={input.options}
                       placeholder="S, M, L, XL"
-                      onChange={(event) => patch(input.id, { options: event.target.value })}
+                      onChange={(event) =>
+                        patch(input.id, { options: event.target.value })
+                      }
                     />
                   </div>
                 ) : null}
@@ -806,12 +872,10 @@ function InputsEditor({
   );
 }
 
-function Answers({
-  answers,
-}: {
-  answers: Array<{ label: string; value: string }>;
-}) {
-  if (answers.length === 0) return null;
+function Answers({ answers }: { answers: { label: string; value: string }[] }) {
+  if (answers.length === 0) {
+    return null;
+  }
   return (
     <dl className="mt-1 grid gap-0.5 text-xs">
       {answers.map((answer) => (
@@ -865,9 +929,7 @@ function EmailApplicationsQueue() {
         {!rows ? (
           <LoadingText />
         ) : rows.length === 0 ? (
-          <p className="text-sm text-hs-brown">
-            Nada en este estado todavía.
-          </p>
+          <p className="text-sm text-hs-brown">Nada en este estado todavía.</p>
         ) : (
           <div className="grid min-w-0 gap-3">
             {rows.map((row) => (
@@ -881,7 +943,9 @@ function EmailApplicationsQueue() {
                   {perkName(row.company, row.title)}
                 </p>
                 {row.code ? (
-                  <p className="min-w-0 font-mono text-xs break-all">{row.code}</p>
+                  <p className="min-w-0 font-mono text-xs break-all">
+                    {row.code}
+                  </p>
                 ) : null}
                 <Answers answers={row.answers} />
                 <ReviewActions claimId={row._id} stacked />
@@ -920,8 +984,8 @@ function ReviewActions({
       if (status === "added") {
         setCode("");
       }
-    } catch (err: unknown) {
-      setError(errorMessage(err, "No se ha podido actualizar"));
+    } catch (caughtError: unknown) {
+      setError(errorMessage(caughtError, "No se ha podido actualizar"));
     } finally {
       setPending(false);
     }
@@ -932,7 +996,7 @@ function ReviewActions({
       <div
         className={cn(
           "flex gap-2",
-          stacked ? "flex-col" : "flex-wrap items-center",
+          stacked ? "flex-col" : "flex-wrap items-center"
         )}
       >
         <Input
@@ -942,7 +1006,7 @@ function ReviewActions({
           disabled={pending}
           className={cn(
             "min-w-0 font-mono",
-            compact ? "h-9 flex-1 text-sm" : stacked ? "w-full" : "max-w-48",
+            compact ? "h-9 flex-1 text-sm" : stacked ? "w-full" : "max-w-48"
           )}
           onChange={(event) => setCode(event.target.value)}
         />
@@ -975,7 +1039,9 @@ function CodesSheet({ perk }: { perk: AdminPerk }) {
   const claimed = rows?.filter((row) => !row.available).length ?? 0;
 
   function exportCsv() {
-    if (!rows) return;
+    if (!rows) {
+      return;
+    }
     const header = ["Código", "Estado", "Nombre", "Email", "Equipo", "Fecha"];
     const body = rows.map((row) => [
       row.code,
@@ -1004,7 +1070,9 @@ function CodesSheet({ perk }: { perk: AdminPerk }) {
             <LoadingText />
           </div>
         ) : rows.length === 0 ? (
-          <p className="p-5 text-sm text-hs-brown">Este perk aún no tiene códigos.</p>
+          <p className="p-5 text-sm text-hs-brown">
+            Este perk aún no tiene códigos.
+          </p>
         ) : (
           <Table
             className="border-separate border-spacing-0"
@@ -1022,8 +1090,13 @@ function CodesSheet({ perk }: { perk: AdminPerk }) {
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow key={row._id} className="[&_td]:border-b [&_td]:border-hs-ink/20">
-                  <TableCell className="font-mono text-xs">{row.code}</TableCell>
+                <TableRow
+                  key={row._id}
+                  className="[&_td]:border-b [&_td]:border-hs-ink/20"
+                >
+                  <TableCell className="font-mono text-xs">
+                    {row.code}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={row.available ? "default" : "gold"}>
                       {row.available ? "Libre" : "Reclamado"}
@@ -1044,7 +1117,9 @@ function CodesSheet({ perk }: { perk: AdminPerk }) {
                   <TableCell>{row.email ?? "—"}</TableCell>
                   <TableCell>{row.teamName ?? "—"}</TableCell>
                   <TableCell className="tabular-nums text-hs-brown">
-                    {row.assignedAt ? dateFormat.format(new Date(row.assignedAt)) : "—"}
+                    {row.assignedAt
+                      ? dateFormat.format(new Date(row.assignedAt))
+                      : "—"}
                   </TableCell>
                 </TableRow>
               ))}
@@ -1053,7 +1128,11 @@ function CodesSheet({ perk }: { perk: AdminPerk }) {
         )}
       </SheetBody>
       <SheetFooter>
-        <Button variant="teal" disabled={!rows || rows.length === 0} onClick={exportCsv}>
+        <Button
+          variant="teal"
+          disabled={!rows || rows.length === 0}
+          onClick={exportCsv}
+        >
           Exportar CSV
         </Button>
       </SheetFooter>
@@ -1067,7 +1146,9 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
   const reviewEmail = perk.type === "email";
 
   function exportCsv() {
-    if (!rows) return;
+    if (!rows) {
+      return;
+    }
     const header = [
       "Nombre",
       "Email",
@@ -1108,7 +1189,9 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
             <LoadingText />
           </div>
         ) : rows.length === 0 ? (
-          <p className="p-5 text-sm text-hs-brown">Nadie ha pedido este perk todavía.</p>
+          <p className="p-5 text-sm text-hs-brown">
+            Nadie ha pedido este perk todavía.
+          </p>
         ) : (
           <Table
             className="border-separate border-spacing-0"
@@ -1130,19 +1213,27 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow key={row._id} className="[&_td]:border-b [&_td]:border-hs-ink/20">
+                <TableRow
+                  key={row._id}
+                  className="[&_td]:border-b [&_td]:border-hs-ink/20"
+                >
                   <TableCell>{row.name ?? "—"}</TableCell>
                   <TableCell>{row.email ?? "—"}</TableCell>
                   <TableCell>{row.teamName ?? "—"}</TableCell>
                   {perk.inputs.map((input) => (
-                    <TableCell key={input.key} className="max-w-64 truncate whitespace-normal">
+                    <TableCell
+                      key={input.key}
+                      className="max-w-64 truncate whitespace-normal"
+                    >
                       {answerFor(row.answers, input.key) || "—"}
                     </TableCell>
                   ))}
                   <TableCell>
                     <Badge>{claimStatusLabel(row.status)}</Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{row.code ?? "—"}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {row.code ?? "—"}
+                  </TableCell>
                   <TableCell className="tabular-nums text-hs-brown">
                     {dateFormat.format(new Date(row.createdAt))}
                   </TableCell>
@@ -1158,7 +1249,11 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
         )}
       </SheetBody>
       <SheetFooter>
-        <Button variant="teal" disabled={!rows || rows.length === 0} onClick={exportCsv}>
+        <Button
+          variant="teal"
+          disabled={!rows || rows.length === 0}
+          onClick={exportCsv}
+        >
           Exportar CSV
         </Button>
       </SheetFooter>

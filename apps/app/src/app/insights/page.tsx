@@ -182,7 +182,7 @@ function HarnessUsage({
   onExplore: (id: HarnessId) => void;
 }) {
   const [metric, setMetric] = useState<"tokens" | "sessions">("tokens");
-  const sorted = rows.toSorted((a, b) => b[metric] - a[metric]);
+  const sorted = [...rows].toSorted((a, b) => b[metric] - a[metric]);
   const total = rows.reduce((sum, row) => sum + row[metric], 0);
   return (
     <Panel
@@ -695,8 +695,8 @@ export function InsightsView() {
   const buckets = bucketTotals(samples);
   const trend = (metric: Metric | "sessions") =>
     buckets.map((bucket) => bucket[metric]);
-  const topCommitTeam = teams.toSorted((a, b) => b.commits - a.commits)[0];
-  const leadingTool = tools.toSorted((a, b) => b.tokens - a.tokens)[0];
+  const topCommitTeam = [...teams].toSorted((a, b) => b.commits - a.commits)[0];
+  const leadingTool = [...tools].toSorted((a, b) => b.tokens - a.tokens)[0];
 
   function openTeam(team: TeamRow) {
     returnFocus.current =

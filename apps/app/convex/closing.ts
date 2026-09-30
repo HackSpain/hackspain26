@@ -11,23 +11,31 @@ const FEED_HOURS = 24;
 export const stats = query({
   args: {},
   handler: async (ctx) => {
-    const [passes, teams, memberships, submissions, tracks, posts, social, milestones] =
-      await Promise.all([
-        ctx.db.query("eventPasses").collect(),
-        ctx.db.query("teams").collect(),
-        ctx.db.query("teamMembers").collect(),
-        ctx.db
-          .query("submissions")
-          .withIndex("by_status", (q) => q.eq("status", "submitted"))
-          .collect(),
-        ctx.db.query("tracks").collect(),
-        ctx.db
-          .query("posts")
-          .withIndex("by_kind_created", (q) => q.eq("kind", "post"))
-          .collect(),
-        ctx.db.query("postSocial").collect(),
-        ctx.db.query("milestones").collect(),
-      ]);
+    const [
+      passes,
+      teams,
+      memberships,
+      submissions,
+      tracks,
+      posts,
+      social,
+      milestones,
+    ] = await Promise.all([
+      ctx.db.query("eventPasses").collect(),
+      ctx.db.query("teams").collect(),
+      ctx.db.query("teamMembers").collect(),
+      ctx.db
+        .query("submissions")
+        .withIndex("by_status", (q) => q.eq("status", "submitted"))
+        .collect(),
+      ctx.db.query("tracks").collect(),
+      ctx.db
+        .query("posts")
+        .withIndex("by_kind_created", (q) => q.eq("kind", "post"))
+        .collect(),
+      ctx.db.query("postSocial").collect(),
+      ctx.db.query("milestones").collect(),
+    ]);
 
     const members = memberships.filter((row) => row.status === "member");
     const teamsWithMembers = new Set(members.map((row) => row.teamId));
@@ -62,7 +70,8 @@ export const stats = query({
 
     return {
       feed: {
-        authors: new Set(posts.map((post) => post.authorId).filter(Boolean)).size,
+        authors: new Set(posts.map((post) => post.authorId).filter(Boolean))
+          .size,
         byHour,
         comments,
         emojis: [...emojis]
@@ -76,7 +85,8 @@ export const stats = query({
       },
       milestones: milestones.length,
       people: {
-        checkedIn: passes.filter((pass) => pass.checkedInAt !== undefined).length,
+        checkedIn: passes.filter((pass) => pass.checkedInAt !== undefined)
+          .length,
         inTeams: members.length,
       },
       submissions: {

@@ -14,14 +14,14 @@ import { useDroppedPhoto } from "./use-dropped-photo";
 import { useImageFromSrc } from "./use-image-from-src";
 
 const POST_TEXT_TAIL =
-  " Ya tengo mi acreditación: 48 horas construyendo en Madrid con 250 hackers más. Nos vemos allí.";
+  " 36 horas construyendo en Madrid con 250 hackers más. Esta fue mi acreditación.";
 /**
  * X turns `@hackspain26` into a link to the account, so the post mentions it
  * there. LinkedIn has no plain-text equivalent — a handle typed into the
  * composer's prefilled text stays dead text — so it keeps the readable name.
  */
-const X_POST_TEXT = `¡Voy a @hackspain26!${POST_TEXT_TAIL}`;
-const LINKEDIN_POST_TEXT = `¡Voy a HackSpain 2026!${POST_TEXT_TAIL}`;
+const X_POST_TEXT = `Estuve en @hackspain26.${POST_TEXT_TAIL}`;
+const LINKEDIN_POST_TEXT = `Estuve en HackSpain 2026.${POST_TEXT_TAIL}`;
 /** Keeps the link clear of the text so the post shows it as its own line. */
 const POST_LINK_SEPARATOR = "\n\n";
 const COPIED_RESET_MS = 2000;
@@ -249,8 +249,8 @@ export function ConfirmationPage({
                   about getting the image posted rather than about why. */}
               {!linkedinOpen && (
                 <p className="mt-1 font-sans text-hs-brown text-xs">
-                  Ayuda a que más builders se unan a HackSpain compartiendo tu
-                  participación.
+                  Comparte tu participación en HackSpain 2026 con otros
+                  builders.
                 </p>
               )}
             </div>

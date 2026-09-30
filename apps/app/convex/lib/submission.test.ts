@@ -9,7 +9,9 @@ import {
 
 describe("parseYoutubeWatchUrl", () => {
   test("accepts watch, short and youtu.be links", () => {
-    expect(parseYoutubeWatchUrl("https://www.youtube.com/watch?v=dQw4w9wgGcQ")).toEqual({
+    expect(
+      parseYoutubeWatchUrl("https://www.youtube.com/watch?v=dQw4w9wgGcQ")
+    ).toEqual({
       ok: true,
       value: "https://www.youtube.com/watch?v=dQw4w9wgGcQ",
     });
@@ -17,22 +19,30 @@ describe("parseYoutubeWatchUrl", () => {
       ok: true,
       value: "https://www.youtube.com/watch?v=dQw4w9wgGcQ",
     });
-    expect(parseYoutubeWatchUrl("https://youtube.com/embed/dQw4w9wgGcQ")).toEqual({
+    expect(
+      parseYoutubeWatchUrl("https://youtube.com/embed/dQw4w9wgGcQ")
+    ).toEqual({
       ok: true,
       value: "https://www.youtube.com/watch?v=dQw4w9wgGcQ",
     });
   });
 
   test("rejects loom, files and empty", () => {
-    expect(parseYoutubeWatchUrl("https://www.loom.com/share/abc").ok).toBe(false);
-    expect(parseYoutubeWatchUrl("https://cdn.example.com/demo.mp4").ok).toBe(false);
+    expect(parseYoutubeWatchUrl("https://www.loom.com/share/abc").ok).toBe(
+      false
+    );
+    expect(parseYoutubeWatchUrl("https://cdn.example.com/demo.mp4").ok).toBe(
+      false
+    );
     expect(parseYoutubeWatchUrl("").ok).toBe(false);
   });
 });
 
 describe("parseGithubRepoUrl", () => {
   test("normalizes owner/repo shapes", () => {
-    expect(parseGithubRepoUrl("https://github.com/HackSpain/hackspain26.git")).toEqual({
+    expect(
+      parseGithubRepoUrl("https://github.com/HackSpain/hackspain26.git")
+    ).toEqual({
       ok: true,
       value: "https://github.com/HackSpain/hackspain26",
     });
@@ -43,9 +53,10 @@ describe("parseGithubRepoUrl", () => {
   });
 
   test("rejects trees, blobs and empty", () => {
-    expect(parseGithubRepoUrl("https://github.com/HackSpain/hackspain26/tree/main").ok).toBe(
-      false
-    );
+    expect(
+      parseGithubRepoUrl("https://github.com/HackSpain/hackspain26/tree/main")
+        .ok
+    ).toBe(false);
     expect(parseGithubRepoUrl("").ok).toBe(false);
   });
 });

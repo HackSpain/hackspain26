@@ -11,12 +11,12 @@ import {
 import type { TvFontWeight, TvWidgetKind } from "@/lib/tv";
 import { cn } from "@/lib/utils";
 
-const EDITABLE: readonly TvWidgetKind[] = ["banner", "ticker", "message"];
+const EDITABLE = new Set<TvWidgetKind>(["banner", "ticker", "message"]);
 
 export function isEditableKind(
-  kind: TvWidgetKind,
+  kind: TvWidgetKind
 ): kind is "banner" | "ticker" | "message" {
-  return EDITABLE.includes(kind);
+  return EDITABLE.has(kind);
 }
 
 function editLabel(kind: TvWidgetKind) {
@@ -48,16 +48,23 @@ export function TvInlineEditor({
 
   useEffect(() => {
     const field = fieldRef.current;
-    if (!field) return;
+    if (!field) {
+      return;
+    }
     field.focus();
     field.select();
   }, []);
 
   function finish(save: boolean) {
-    if (done.current) return;
+    if (done.current) {
+      return;
+    }
     done.current = true;
-    if (save) onCommit();
-    else onCancel();
+    if (save) {
+      onCommit();
+    } else {
+      onCancel();
+    }
   }
 
   const multiline = kind === "message";
@@ -74,7 +81,7 @@ export function TvInlineEditor({
         kind === "message" && "items-center p-4",
         kind === "message" &&
           fill &&
-          "border-[3px] border-hs-gold/40 bg-hs-paper/5",
+          "border-[3px] border-hs-gold/40 bg-hs-paper/5"
       )}
     >
       <textarea
@@ -109,7 +116,7 @@ export function TvInlineEditor({
           kind === "ticker" && "font-bungee uppercase",
           kind === "ticker" && (fill ? "text-hs-ink" : "text-hs-gold"),
           kind === "message" &&
-            "whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper",
+            "whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper"
         )}
       />
     </div>

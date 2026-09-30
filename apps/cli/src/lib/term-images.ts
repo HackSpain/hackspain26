@@ -32,14 +32,14 @@ export type ImageBounds = { maxColumns?: number; maxRows?: number };
 /**
  * Which protocol, if any, this terminal understands. Conservative on
  * purpose: an unsupported escape sequence prints garbage, a link never does.
- * tmux swallows both protocols unless passthrough is configured, so it gets
- * the link too.
+ * tmux and GNU screen swallow these sequences without passthrough, so they
+ * get the link too.
  */
 export function detectImageProtocol(
   env: Env,
   isTty: boolean
 ): ImageProtocol | null {
-  if (!isTty || env.HACKSPAIN_NO_IMAGES || env.TMUX) {
+  if (!isTty || env.HACKSPAIN_NO_IMAGES || env.TMUX || env.STY) {
     return null;
   }
   const program = (env.TERM_PROGRAM ?? "").toLowerCase();

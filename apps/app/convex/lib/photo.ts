@@ -27,7 +27,7 @@ export function externalThumbnail(url: string): string {
 }
 
 export function avatarThumbnailFor(
-  user: Pick<Doc<"users">, "avatarId" | "avatarThumbId" | "image">,
+  user: Pick<Doc<"users">, "avatarId" | "avatarThumbId" | "image">
 ): string | undefined {
   if (user.avatarThumbId) {
     return imagePathFor(user.avatarThumbId);

@@ -45,6 +45,14 @@ interface BadgeTextureContent {
   photoInvite: boolean;
 }
 
+function getCanvasFontFamilies() {
+  const style = getComputedStyle(document.documentElement);
+  return {
+    bungee: style.getPropertyValue("--hs-bungee").trim(),
+    sans: style.getPropertyValue("--hs-dm-sans").trim(),
+  };
+}
+
 /** The lanyard slot punched through the top strip of the badge. */
 function drawSlot(ctx: CanvasRenderingContext2D) {
   const x = (BADGE_TEXTURE_WIDTH - SLOT_WIDTH) / 2;
@@ -84,7 +92,7 @@ function drawHeader(
   ctx.fillRect(0, HEADER_BOTTOM, BADGE_TEXTURE_WIDTH, OUTLINE_WIDTH);
 }
 
-function drawStripe(ctx: CanvasRenderingContext2D) {
+function drawStripe(ctx: CanvasRenderingContext2D, bungeeFont: string) {
   const stripeX = BADGE_TEXTURE_WIDTH - BODY_INSET - STRIPE_WIDTH;
   const stripeY = HEADER_BOTTOM + OUTLINE_WIDTH + BODY_INSET;
   const stripeHeight = BADGE_TEXTURE_HEIGHT - BODY_INSET - stripeY;
@@ -101,7 +109,7 @@ function drawStripe(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = BADGE_PALETTE.stripeText;
   // Bungee, the site's display face, and no weight: it ships a single one, so
   // asking for 900 would only get a synthetic bold that distorts the letters.
-  ctx.font = '138px "Bungee", system-ui, sans-serif';
+  ctx.font = `138px ${bungeeFont}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(BADGE_PALETTE.label, 0, 6, stripeHeight - 56);
@@ -142,7 +150,8 @@ function drawPortrait(
  */
 function drawPortraitPlaceholder(
   ctx: CanvasRenderingContext2D,
-  photoInvite: boolean
+  photoInvite: boolean,
+  sansFont: string
 ) {
   ctx.save();
   if (photoInvite) {
@@ -169,7 +178,7 @@ function drawPortraitPlaceholder(
   const textCenterY = BADGE_PORTRAIT_TOP + BADGE_PORTRAIT_SIZE / 2;
   ctx.setLineDash([]);
   ctx.fillStyle = INK;
-  ctx.font = '700 44px "DM Sans", system-ui, sans-serif';
+  ctx.font = `700 44px ${sansFont}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(
@@ -177,7 +186,7 @@ function drawPortraitPlaceholder(
     textX,
     textCenterY - PLACEHOLDER_LINE_GAP / 2
   );
-  ctx.font = '600 26px "DM Sans", system-ui, sans-serif';
+  ctx.font = `600 26px ${sansFont}`;
   ctx.fillText("O HAZ CLIC", textX, textCenterY + PLACEHOLDER_LINE_GAP / 2);
   ctx.restore();
 }
@@ -185,14 +194,15 @@ function drawPortraitPlaceholder(
 function drawName(
   ctx: CanvasRenderingContext2D,
   firstName: string,
-  lastName: string
+  lastName: string,
+  sansFont: string
 ) {
   const textX = BODY_INSET + 42;
   const maxWidth = BADGE_TEXTURE_WIDTH - BODY_INSET * 2 - STRIPE_WIDTH - 84;
   const baseline = BADGE_TEXTURE_HEIGHT - BODY_INSET - NAME_BASELINE_OFFSET;
 
   ctx.fillStyle = BADGE_PALETTE.nameText;
-  ctx.font = '700 96px "DM Sans", system-ui, sans-serif';
+  ctx.font = `700 96px ${sansFont}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.fillText(firstName, textX, baseline - NAME_LINE_HEIGHT, maxWidth);
@@ -231,6 +241,7 @@ export function drawBadgeTexture(
   if (!ctx) {
     return;
   }
+  const { bungee, sans } = getCanvasFontFamilies();
 
   ctx.clearRect(0, 0, BADGE_TEXTURE_WIDTH, BADGE_TEXTURE_HEIGHT);
   ctx.fillStyle = BADGE_PALETTE.background;
@@ -249,13 +260,13 @@ export function drawBadgeTexture(
     BADGE_TEXTURE_HEIGHT - BODY_INSET - bodyY
   );
 
-  drawStripe(ctx);
+  drawStripe(ctx, bungee);
   if (avatar) {
     drawPortrait(ctx, avatar);
   } else {
-    drawPortraitPlaceholder(ctx, photoInvite);
+    drawPortraitPlaceholder(ctx, photoInvite, sans);
   }
-  drawName(ctx, firstName, lastName);
+  drawName(ctx, firstName, lastName, sans);
   drawCardBorder(ctx);
 }
 
@@ -271,10 +282,11 @@ const BACK_BORDER_RADIUS = 29;
 
 /** Event details, so turning the badge around is worth doing. */
 const BACK_LINES = [
-  { font: '30px "Bungee", system-ui, sans-serif', text: "18—20 SEP 2026" },
-  { font: '700 26px "DM Sans", system-ui, sans-serif', text: "UPM · ETSIT" },
+  { font: "30px", family: "bungee", text: "18—20 SEP 2026" },
+  { font: "700 26px", family: "sans", text: "UPM · ETSIT" },
   {
-    font: '700 26px "DM Sans", system-ui, sans-serif',
+    font: "700 26px",
+    family: "sans",
     text: "MADRID · ESPAÑA",
   },
 ] as const;
@@ -287,6 +299,7 @@ export function drawBadgeBackTexture(
   if (!ctx) {
     return;
   }
+  const { bungee, sans } = getCanvasFontFamilies();
 
   ctx.fillStyle = BADGE_PALETTE.background;
   ctx.fillRect(0, 0, BADGE_BACK_TEXTURE_WIDTH, BADGE_BACK_TEXTURE_HEIGHT);
@@ -313,12 +326,12 @@ export function drawBadgeBackTexture(
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const line of BACK_LINES) {
-    ctx.font = line.font;
+    ctx.font = `${line.font} ${line.family === "bungee" ? bungee : sans}`;
     ctx.fillText(line.text, BADGE_BACK_TEXTURE_WIDTH / 2, cursorY);
     cursorY += BACK_LINE_HEIGHT;
   }
 
-  ctx.font = '700 24px "DM Sans", system-ui, sans-serif';
+  ctx.font = `700 24px ${sans}`;
   ctx.fillText(
     "hackspain.com",
     BADGE_BACK_TEXTURE_WIDTH / 2,
@@ -345,6 +358,7 @@ export function drawLanyardTexture(canvas: HTMLCanvasElement) {
   if (!ctx) {
     return;
   }
+  const { sans } = getCanvasFontFamilies();
 
   ctx.fillStyle = "#cc291f";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -359,7 +373,7 @@ export function drawLanyardTexture(canvas: HTMLCanvasElement) {
   );
 
   ctx.fillStyle = "#f4ecd8";
-  ctx.font = '900 30px "DM Sans", system-ui, sans-serif';
+  ctx.font = `900 30px ${sans}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("HACKSPAIN · 2026", canvas.width / 2, canvas.height / 2);

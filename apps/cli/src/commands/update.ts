@@ -22,6 +22,22 @@ const UPDATE_DOWNLOAD_TIMEOUT_MS = 2 * 60 * 1000;
 
 type UpdateState = { checkedAt: number };
 
+const INSTALL_PERMISSION_CODES = new Set(["EACCES", "EPERM", "EROFS"]);
+
+export function installWriteError(error: unknown, target: string): unknown {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? error.code
+      : undefined;
+  if (typeof code !== "string" || !INSTALL_PERMISSION_CODES.has(code)) {
+    return error;
+  }
+  return new CliError(`Cannot update the binary in ${dirname(target)}.`, {
+    code: "UPDATE_NOT_WRITABLE",
+    hint: 'Reinstall into a writable directory in your PATH: curl -fsSL https://hackspain.com/install.sh | HACKSPAIN_INSTALL_DIR="$HOME/.local/bin" sh',
+  });
+}
+
 export function tagFromReleaseAssetUrl(raw: string): string | undefined {
   try {
     const url = new URL(raw);
@@ -217,7 +233,7 @@ async function installRelease(
     } catch {
       // It was already renamed into place.
     }
-    throw error;
+    throw installWriteError(error, target);
   }
   return latest;
 }

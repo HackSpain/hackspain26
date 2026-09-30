@@ -1,16 +1,19 @@
 ---
-export const prerender = true;
-
 import ArrowLeftBold from "phosphor-astro/ArrowLeftBold.astro";
 import { HarnessPollPage } from "../components/pages/harness-poll-page";
+import { hasEventEnded } from "../data/signup-deadline";
 import Layout from "../layouts/layout.astro";
+
+export const prerender = true;
+
+const closed = hasEventEnded();
 ---
 
 <Layout
   sectionIndex={0}
   allowScroll
-  title="Encuesta de harnesses — HackSpain 2026"
-  description="Cuéntanos qué harnesses crees que utilizarás en HackSpain 2026."
+  title={closed ? "Encuesta cerrada — HackSpain 2026" : "Encuesta de harnesses — HackSpain 2026"}
+  description={closed ? "La encuesta de harnesses de HackSpain 2026 ha terminado." : "Cuéntanos qué harnesses crees que utilizarás en HackSpain 2026."}
   canonicalPathOverride="/poll-harness"
   robotsDirectives="noindex, nofollow"
   includeStructuredData={false}
@@ -30,6 +33,26 @@ import Layout from "../layouts/layout.astro";
         <span class="truncate">HackSpain 2026</span>
       </a>
     </nav>
-    <HarnessPollPage client:load />
+    {closed ? (
+      <section
+        class="mx-auto flex min-h-[calc(100dvh-10rem)] max-w-3xl items-center px-4 py-10 sm:px-6"
+      >
+        <div
+          class="w-full border-[3px] border-hs-ink bg-hs-gold p-6 shadow-[8px_8px_0_var(--color-hs-ink)] sm:p-10"
+        >
+          <h1
+            class="text-balance font-bungee text-3xl text-hs-ink leading-tight sm:text-5xl"
+          >
+            Encuesta cerrada
+          </h1>
+          <p class="mt-4 max-w-lg text-pretty font-bold text-hs-brown text-lg">
+            HackSpain 2026 ya terminó. Gracias a quienes compartieron las
+            herramientas que pensaban utilizar.
+          </p>
+        </div>
+      </section>
+    ) : (
+      <HarnessPollPage client:load />
+    )}
   </main>
 </Layout>

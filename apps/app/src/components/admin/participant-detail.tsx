@@ -6,10 +6,22 @@ import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { LinkedText } from "@/components/linked-text";
-import { FormError, MetaLink, MetaRow, SocialMeta, errorMessage } from "@/components/page";
+import {
+  FormError,
+  MetaLink,
+  MetaRow,
+  SocialMeta,
+  errorMessage,
+} from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, Frame } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Frame,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -47,7 +59,10 @@ export type ParticipantDetailData = NonNullable<
   FunctionReturnType<typeof api.admin.getParticipant>
 >;
 
-export function participantRef(kind: string | null, id: string): ParticipantRef {
+export function participantRef(
+  kind: string | null,
+  id: string
+): ParticipantRef {
   return kind === "user"
     ? { kind: "user", id: id as Id<"users"> }
     : { kind: "signup", id: id as Id<"signups"> };
@@ -69,7 +84,7 @@ export function useParticipant(ref: ParticipantRef | null) {
           signupId: ref.kind === "signup" ? ref.id : undefined,
           userId: ref.kind === "user" ? ref.id : undefined,
         }
-      : "skip",
+      : "skip"
   );
 }
 
@@ -101,7 +116,7 @@ export function ParticipantDetail({
   const noteValue = notes ?? detail.user?.adminNotes ?? "";
   const attendance = displayedAttendance(
     detail.user?.attendanceStatus,
-    detail.user?.onboardingComplete === true,
+    detail.user?.onboardingComplete === true
   );
   const signup = detail.signup;
   const user = detail.user;
@@ -123,7 +138,9 @@ export function ParticipantDetail({
         userId: user?._id,
       });
     } catch (error) {
-      setCheckInError(errorMessage(error, "No se ha podido completar el check-in"));
+      setCheckInError(
+        errorMessage(error, "No se ha podido completar el check-in")
+      );
     } finally {
       setCheckInBusy(false);
     }
@@ -176,7 +193,9 @@ export function ParticipantDetail({
     try {
       await undoCheckIn({ passId: pass._id });
     } catch (error) {
-      setCheckInError(errorMessage(error, "No se ha podido deshacer el check-in"));
+      setCheckInError(
+        errorMessage(error, "No se ha podido deshacer el check-in")
+      );
     } finally {
       setCheckInBusy(false);
     }
@@ -196,18 +215,25 @@ export function ParticipantDetail({
                 {signup?.accepted ? "aceptado" : "no aceptado"}
               </Badge>
               {attendance ? (
-                <Badge className="whitespace-nowrap">{attendanceLabel(attendance)}</Badge>
+                <Badge className="whitespace-nowrap">
+                  {attendanceLabel(attendance)}
+                </Badge>
               ) : null}
               {staffRole ? (
                 <Badge className="whitespace-nowrap">{staffRole}</Badge>
               ) : null}
               {user?.userType ? (
-                <Badge className="whitespace-nowrap">{user.userType.label}</Badge>
+                <Badge className="whitespace-nowrap">
+                  {user.userType.label}
+                </Badge>
               ) : null}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
-            <SocialMeta email={signup?.email ?? user?.email} urls={signup?.urls} />
+            <SocialMeta
+              email={signup?.email ?? user?.email}
+              urls={signup?.urls}
+            />
             <MetaRow label="Teléfono">{user?.phone ?? "—"}</MetaRow>
             <MetaRow label="Dieta">{user?.dietaryRestrictions ?? "—"}</MetaRow>
             {user?.dietaryDetails ? (
@@ -228,14 +254,18 @@ export function ParticipantDetail({
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Button
                   className="w-full sm:w-auto"
-                  onClick={() => void setAccepted({ signupId: signup._id, accepted: true })}
+                  onClick={() =>
+                    void setAccepted({ signupId: signup._id, accepted: true })
+                  }
                 >
                   Marcar aceptado
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full sm:w-auto"
-                  onClick={() => void setAccepted({ signupId: signup._id, accepted: false })}
+                  onClick={() =>
+                    void setAccepted({ signupId: signup._id, accepted: false })
+                  }
                 >
                   Marcar no aceptado
                 </Button>
@@ -252,7 +282,9 @@ export function ParticipantDetail({
                   <Frame className="flex flex-col gap-2 border-hs-teal bg-hs-teal/10 sm:flex-row sm:flex-wrap sm:items-center">
                     <p className="text-sm font-medium text-pretty">
                       Dentro ·{" "}
-                      <span className="tabular-nums">{formatCheckInAt(pass.checkedInAt)}</span>
+                      <span className="tabular-nums">
+                        {formatCheckInAt(pass.checkedInAt)}
+                      </span>
                     </p>
                     <Button
                       variant="outline"
@@ -299,12 +331,16 @@ export function ParticipantDetail({
                     disabled={userTypes === undefined}
                     onValueChange={(value) =>
                       void setUserType({
-                        typeId: value === NO_TYPE ? null : (value as Id<"userTypes">),
+                        typeId:
+                          value === NO_TYPE ? null : (value as Id<"userTypes">),
                         userId: user._id,
                       })
                     }
                   >
-                    <SelectTrigger id={`user-type-${user._id}`} aria-label="Tipo de usuario">
+                    <SelectTrigger
+                      id={`user-type-${user._id}`}
+                      aria-label="Tipo de usuario"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -318,7 +354,10 @@ export function ParticipantDetail({
                         <SelectItem key={type._id} value={type._id}>
                           {type.label}
                           {type.isDefault ? (
-                            <span className="text-xs text-hs-brown"> · por defecto</span>
+                            <span className="text-xs text-hs-brown">
+                              {" "}
+                              · por defecto
+                            </span>
                           ) : null}
                         </SelectItem>
                       ))}
@@ -334,21 +373,28 @@ export function ParticipantDetail({
                   <Button
                     variant="outline"
                     className="w-full sm:w-auto"
-                    onClick={() => void setRole({ userId: user._id, role: "admin" })}
+                    onClick={() =>
+                      void setRole({ userId: user._id, role: "admin" })
+                    }
                   >
                     Hacer admin
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full sm:w-auto"
-                    onClick={() => void setRole({ userId: user._id, role: "user" })}
+                    onClick={() =>
+                      void setRole({ userId: user._id, role: "user" })
+                    }
                   >
                     Quitar admin
                   </Button>
                   <Button
                     className="w-full sm:w-auto"
                     onClick={() =>
-                      void setAttendance({ userId: user._id, attendanceStatus: "attending" })
+                      void setAttendance({
+                        userId: user._id,
+                        attendanceStatus: "attending",
+                      })
                     }
                   >
                     Marcar asistiré
@@ -357,7 +403,10 @@ export function ParticipantDetail({
                     variant="teal"
                     className="w-full sm:w-auto"
                     onClick={() =>
-                      void setAttendance({ userId: user._id, attendanceStatus: "cancelled" })
+                      void setAttendance({
+                        userId: user._id,
+                        attendanceStatus: "cancelled",
+                      })
                     }
                   >
                     Marcar cancelado
@@ -371,13 +420,17 @@ export function ParticipantDetail({
                 <Button
                   variant="outline"
                   className="w-full sm:w-auto"
-                  onClick={() => void setNotes({ userId: user._id, notes: noteValue })}
+                  onClick={() =>
+                    void setNotes({ userId: user._id, notes: noteValue })
+                  }
                 >
                   Guardar notas
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-hs-brown">Esta persona aún no ha entrado.</p>
+              <p className="text-sm text-hs-brown">
+                Esta persona aún no ha entrado.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -392,7 +445,9 @@ export function ParticipantDetail({
             <p className="flex flex-wrap items-center gap-2 text-pretty font-medium">
               <span>{team?.name ?? "Sin equipo"}</span>
               {team?.isOwner ? <Badge>dueño</Badge> : null}
-              {team && team.status !== "member" ? <Badge>invitado</Badge> : null}
+              {team && team.status !== "member" ? (
+                <Badge>invitado</Badge>
+              ) : null}
             </p>
             {signup || user ? (
               <div className="space-y-2">
@@ -400,9 +455,14 @@ export function ParticipantDetail({
                   <Select
                     value={selectedTeamId}
                     disabled={teams === undefined || teamBusy}
-                    onValueChange={(value) => setTeamChoice(value as Id<"teams">)}
+                    onValueChange={(value) =>
+                      setTeamChoice(value as Id<"teams">)
+                    }
                   >
-                    <SelectTrigger className="sm:max-w-xs" aria-label="Asignar a un equipo">
+                    <SelectTrigger
+                      className="sm:max-w-xs"
+                      aria-label="Asignar a un equipo"
+                    >
                       <SelectValue placeholder="Elige un equipo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -414,7 +474,9 @@ export function ParticipantDetail({
                     </SelectContent>
                   </Select>
                   {selectedTeamId &&
-                  !(selectedTeamId === team?._id && team.status === "member") ? (
+                  !(
+                    selectedTeamId === team?._id && team.status === "member"
+                  ) ? (
                     <Button
                       className="w-full sm:w-auto"
                       disabled={teamBusy}
@@ -437,7 +499,9 @@ export function ParticipantDetail({
                   ) : null}
                 </div>
                 {teams !== undefined && teams.length === 0 ? (
-                  <p className="text-xs text-pretty text-hs-brown">Aún no hay equipos.</p>
+                  <p className="text-xs text-pretty text-hs-brown">
+                    Aún no hay equipos.
+                  </p>
                 ) : null}
                 <FormError message={teamError} />
               </div>
@@ -448,10 +512,15 @@ export function ParticipantDetail({
               <p>Sin perks reclamados.</p>
             ) : (
               detail.claims.map((claim) => (
-                <Frame key={claim._id} className="flex flex-wrap items-center gap-2">
+                <Frame
+                  key={claim._id}
+                  className="flex flex-wrap items-center gap-2"
+                >
                   <span>{perkName(claim.company, claim.title)}</span>
                   <Badge>{claimStatusLabel(claim.status)}</Badge>
-                  {claim.code ? <code className="break-all">{claim.code}</code> : null}
+                  {claim.code ? (
+                    <code className="break-all">{claim.code}</code>
+                  ) : null}
                 </Frame>
               ))
             )}
@@ -469,7 +538,9 @@ export function ParticipantDetail({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p className="font-bungee text-base">{detail.submission.name || "Sin título"}</p>
+            <p className="font-bungee text-base">
+              {detail.submission.name || "Sin título"}
+            </p>
             {detail.submission.description ? (
               <p className="whitespace-pre-wrap">
                 <LinkedText text={detail.submission.description} />
@@ -490,7 +561,9 @@ export function ParticipantDetail({
             {detail.submission.urls.map((entry) => (
               <p key={entry.kind}>
                 {urlLabel(entry.kind)}:{" "}
-                <MetaLink href={entry.url}>{urlDisplay(entry.kind, entry.url)}</MetaLink>
+                <MetaLink href={entry.url}>
+                  {urlDisplay(entry.kind, entry.url)}
+                </MetaLink>
               </p>
             ))}
           </CardContent>

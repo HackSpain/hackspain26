@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Session } from "../src/lib/api";
-import { EXIT } from "../src/lib/errors";
+import { EXIT, explainError, UNREGISTERED_HINT } from "../src/lib/errors";
 import type { Me } from "../src/lib/me";
 import {
   closedEventMessage,
@@ -70,6 +70,13 @@ function sessionFor(me: Me): Session {
 }
 
 describe("describeGate outside the hackathon window", () => {
+  test("unregistered accounts get the closed-signup hint", () => {
+    const gate = describeGate({ ...after, isRegistered: false });
+    expect(gate.state).toBe("unregistered");
+    expect(gate.hint).toBe(UNREGISTERED_HINT);
+    expect(gate.hint).not.toContain("/signup");
+  });
+
   test("before the start: closed, with the opening date in Madrid time", () => {
     const gate = describeGate(before);
     expect(gate.state).toBe("closed");
@@ -125,6 +132,35 @@ describe("describeGate outside the hackathon window", () => {
       requireOnboarded(sessionFor({ ...after, accepted: false }), {
         allowClosed: true,
       })
-    ).rejects.toMatchObject({ code: "NOT_PENDING" });
+    ).rejects.toMatchObject({ code: "NOT_ACCEPTED" });
+  });
+
+  test("local gate codes match the same server gate failures", async () => {
+    const cases = [
+      {
+        code: "NOT_REGISTERED",
+        me: { ...ready, isRegistered: false },
+        serverMessage: "No hay inscripción a la hackathon con este email",
+      },
+      {
+        code: "NOT_ACCEPTED",
+        me: { ...ready, accepted: false },
+        serverMessage: "Aún no te han aceptado",
+      },
+      {
+        code: "NOT_ONBOARDED",
+        me: { ...ready, onboardingComplete: false },
+        serverMessage: "Confirma tus datos primero",
+      },
+    ];
+
+    for (const { code, me, serverMessage } of cases) {
+      const relayed = explainError(new Error(serverMessage));
+      expect(relayed.code).toBe(code);
+      await expect(requireOnboarded(sessionFor(me))).rejects.toMatchObject({
+        code: relayed.code,
+        exitCode: relayed.exitCode,
+      });
+    }
   });
 });

@@ -74,9 +74,9 @@ export const PHONE_ERROR =
   "Introduce un teléfono válido con el prefijo de tu país, como +34 600 111 222";
 
 /** Distinct calling codes, longest first, so "+351" is not read as "+35" + "1". */
-const CODES = [...new Set(PHONE_COUNTRIES.map((country) => country.code))].toSorted(
-  (a, b) => b.length - a.length,
-);
+const CODES = [
+  ...new Set(PHONE_COUNTRIES.map((country) => country.code)),
+].toSorted((a, b) => b.length - a.length);
 
 /** Every country sharing a calling code (+1 covers several). */
 export function countriesForCode(code: string): PhoneCountry[] {
@@ -84,7 +84,9 @@ export function countriesForCode(code: string): PhoneCountry[] {
 }
 
 /** Split `+34600111222` into its prefix and national part, when we know the prefix. */
-export function splitPhone(e164: string): { code: string; national: string } | null {
+export function splitPhone(
+  e164: string
+): { code: string; national: string } | null {
   const digits = e164.replaceAll(/\D/g, "");
   const code = CODES.find((candidate) => digits.startsWith(candidate));
   if (!code) {
@@ -94,7 +96,10 @@ export function splitPhone(e164: string): { code: string; national: string } | n
 }
 
 /** Why `national` is not a number for `code`, or null when it is fine. */
-export function nationalNumberError(code: string, national: string): string | null {
+export function nationalNumberError(
+  code: string,
+  national: string
+): string | null {
   const digits = national.replaceAll(/\D/g, "");
   if (digits === "") {
     return "Escribe tu número.";
@@ -105,7 +110,9 @@ export function nationalNumberError(code: string, national: string): string | nu
     const total = code.length + digits.length;
     return total >= 8 && total <= 15 ? null : "Ese número no parece válido.";
   }
-  const lengthOk = countries.some((country) => country.lengths.includes(digits.length));
+  const lengthOk = countries.some((country) =>
+    country.lengths.includes(digits.length)
+  );
   if (!lengthOk) {
     const lengths = [
       ...new Set(countries.flatMap((country) => country.lengths)),
@@ -117,7 +124,7 @@ export function nationalNumberError(code: string, national: string): string | nu
     return `Un número con prefijo +${code} tiene ${expected}.`;
   }
   const leadingOk = countries.some(
-    (country) => !country.leading || country.leading.test(digits),
+    (country) => !country.leading || country.leading.test(digits)
   );
   if (!leadingOk) {
     return `Un número con prefijo +${code} no empieza por ${digits[0]}.`;
@@ -150,7 +157,9 @@ export function normalizePhone(input: string): string | null {
   }
   const split = splitPhone(`+${digits}`);
   if (split) {
-    return nationalNumberError(split.code, split.national) === null ? `+${digits}` : null;
+    return nationalNumberError(split.code, split.national) === null
+      ? `+${digits}`
+      : null;
   }
   return digits.length >= 8 && digits.length <= 15 ? `+${digits}` : null;
 }

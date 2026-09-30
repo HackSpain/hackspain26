@@ -93,14 +93,22 @@
 
 .leftRail span:nth-child(1),
 .rightRail span:nth-child(3),
-.footer span:nth-child(3) { background: var(--blue); }
+.footer span:nth-child(3) {
+  background: var(--blue);
+}
 .leftRail span:nth-child(2),
 .rightRail span:nth-child(1),
-.footer span:nth-child(2) { background: var(--paper); }
+.footer span:nth-child(2) {
+  background: var(--paper);
+}
 .leftRail span:nth-child(3),
-.footer span:nth-child(1) { background: var(--yellow); }
+.footer span:nth-child(1) {
+  background: var(--yellow);
+}
 .rightRail span:nth-child(2),
-.footer span:nth-child(4) { background: var(--red); }
+.footer span:nth-child(4) {
+  background: var(--red);
+}
 
 .footer {
   grid-column: 1 / -1;
@@ -109,16 +117,35 @@
   gap: var(--rule);
 }
 
-@media (max-aspect-ratio: 1/1) {
+@media (max-aspect-ratio: 1 / 1) {
   .screen {
     --rule: 0.6vw;
     grid-template-rows: 14dvh minmax(0, 1fr) 4dvh;
   }
 
-  .header { flex-wrap: wrap; gap: 0 4vw; padding-block: 1.5dvh; }
-  .brand { height: 8dvh; max-width: 65%; }
-  .title { order: 1; width: 100%; font-size: 2.5vw; }
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); }
-  .cell { padding: 1.6vmin 4vw; }
-  .logo { max-width: 30vw; max-height: 6dvh; }
+  .header {
+    flex-wrap: wrap;
+    gap: 0 4vw;
+    padding-block: 1.5dvh;
+  }
+  .brand {
+    height: 8dvh;
+    max-width: 65%;
+  }
+  .title {
+    order: 1;
+    width: 100%;
+    font-size: 2.5vw;
+  }
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(8, minmax(0, 1fr));
+  }
+  .cell {
+    padding: 1.6vmin 4vw;
+  }
+  .logo {
+    max-width: 30vw;
+    max-height: 6dvh;
+  }
 }
