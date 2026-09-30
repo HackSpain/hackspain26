@@ -21,11 +21,16 @@ const EVENT_END_ISO = "2026-09-20T23:59:00+02:00";
 
 const EVENT_END_MS = new Date(EVENT_END_ISO).getTime();
 
+/** Server-side gate for 2026-only pages and endpoints after the event. */
+export function hasEventEnded(now: number = Date.now()): boolean {
+  return now >= EVENT_END_MS;
+}
+
 /**
  * Whether the signup window has closed. The single source of truth for the
  * countdown, the CTAs, the page copy and the API gate — a visitor's clock only
  * decides what the browser shows; `/api/signup` re-checks it server-side.
  */
 export function areSignupsClosed(now: number = Date.now()): boolean {
-  return now >= EVENT_END_MS || now >= SIGNUP_DEADLINE_MS;
+  return hasEventEnded(now) || now >= SIGNUP_DEADLINE_MS;
 }
