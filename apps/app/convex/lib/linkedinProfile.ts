@@ -106,7 +106,7 @@ export function normalizeLinkedinSlug(raw: string): string | null {
   }
   try {
     const parsed = new URL(
-      /^https?:\/\//i.test(path) ? path : `https://${path}`,
+      /^https?:\/\//i.test(path) ? path : `https://${path}`
     );
     if (!/(^|\.)linkedin\.com$/i.test(parsed.hostname)) {
       return null;
@@ -134,7 +134,7 @@ export function linkedinUrlFor(slug: string): string {
 
 export function linkedinProfileIsStale(
   profile: { fetchedAt: number } | null,
-  now: number,
+  now: number
 ): boolean {
   if (!profile) {
     return true;
@@ -144,7 +144,7 @@ export function linkedinProfileIsStale(
 
 export function missingLinkedinProfile(
   slug: string,
-  fetchedAt: number,
+  fetchedAt: number
 ): LinkedinProfile {
   return {
     experience: [],
@@ -159,29 +159,35 @@ function experienceFrom(value: unknown): LinkedinExperience[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.flatMap((row) => {
-    if (!row || typeof row !== "object") {
-      return [];
-    }
-    const org = row as { is_current?: unknown; name?: unknown; title?: unknown };
-    const name = optionalString(org.name);
-    if (!name) {
-      return [];
-    }
-    return [
-      {
-        current: org.is_current === true,
-        name,
-        title: optionalString(org.title),
-      },
-    ];
-  }).slice(0, 8);
+  return value
+    .flatMap((row) => {
+      if (!row || typeof row !== "object") {
+        return [];
+      }
+      const org = row as {
+        is_current?: unknown;
+        name?: unknown;
+        title?: unknown;
+      };
+      const name = optionalString(org.name);
+      if (!name) {
+        return [];
+      }
+      return [
+        {
+          current: org.is_current === true,
+          name,
+          title: optionalString(org.title),
+        },
+      ];
+    })
+    .slice(0, 8);
 }
 
 export function profileFromNyne(
   result: Record<string, unknown>,
   slug: string,
-  fetchedAt: number,
+  fetchedAt: number
 ): LinkedinProfile {
   const socials =
     result.social_profiles && typeof result.social_profiles === "object"

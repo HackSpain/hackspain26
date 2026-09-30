@@ -7,7 +7,9 @@ const signIn = mock(async (..._args: unknown[]) => ({
 const report = mock(async () => {});
 
 mock.module("convex/nextjs", () => ({ fetchAction: signIn }));
-mock.module("@/lib/server-observability", () => ({ reportServerEvent: report }));
+mock.module("@/lib/server-observability", () => ({
+  reportServerEvent: report,
+}));
 
 const { POST } = await import("./route");
 

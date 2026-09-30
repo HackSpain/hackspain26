@@ -26,7 +26,9 @@ export const GITHUB_FEED_EVENTS = {
   tag: "tag",
 } as const;
 
-export function githubAuthHeader(userToken?: string | null): Record<string, string> {
+export function githubAuthHeader(
+  userToken?: string | null
+): Record<string, string> {
   if (userToken) {
     return { authorization: `Bearer ${userToken}` };
   }

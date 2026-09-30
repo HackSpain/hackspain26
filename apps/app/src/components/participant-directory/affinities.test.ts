@@ -30,8 +30,10 @@ test("normalizes accents, case and whitespace without counting duplicate skills"
     ["university", "city", "skills", "interests"]
   );
   assert.deepEqual(
-    sharedAffinities(anchor, { ...peer, skills: ["react", "REACT", " "] })
-      .filter((item) => item.kind === "skills"),
+    sharedAffinities(anchor, {
+      ...peer,
+      skills: ["react", "REACT", " "],
+    }).filter((item) => item.kind === "skills"),
     [{ kind: "skills", value: "React" }]
   );
 });

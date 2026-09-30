@@ -135,7 +135,7 @@ export function normalizeGithubLogin(raw: string): string | null {
   let login = trimmed.replace(/^@/, "");
   try {
     const parsed = new URL(
-      /^https?:\/\//i.test(login) ? login : `https://${login}`,
+      /^https?:\/\//i.test(login) ? login : `https://${login}`
     );
     if (/(^|\.)github\.com$/i.test(parsed.hostname)) {
       const first = parsed.pathname.split("/").find(Boolean);
@@ -156,7 +156,7 @@ export function normalizeGithubLogin(raw: string): string | null {
 
 export function githubProfileIsStale(
   profile: { fetchedAt: number; missing: boolean } | null,
-  now: number,
+  now: number
 ): boolean {
   if (!profile) {
     return true;
@@ -168,7 +168,7 @@ export function githubProfileIsStale(
 }
 
 export function aggregateLanguages(
-  repos: { languages: GithubLanguage[] }[],
+  repos: { languages: GithubLanguage[] }[]
 ): GithubLanguage[] {
   const bytes = new Map<string, number>();
   for (const repo of repos) {
@@ -176,7 +176,10 @@ export function aggregateLanguages(
       if (!language.name || language.bytes <= 0) {
         continue;
       }
-      bytes.set(language.name, (bytes.get(language.name) ?? 0) + language.bytes);
+      bytes.set(
+        language.name,
+        (bytes.get(language.name) ?? 0) + language.bytes
+      );
     }
   }
   return [...bytes.entries()]
@@ -185,7 +188,9 @@ export function aggregateLanguages(
     .slice(0, 8);
 }
 
-export function flattenCalendar(weeks: unknown[]): { count: number; date: string }[] {
+export function flattenCalendar(
+  weeks: unknown[]
+): { count: number; date: string }[] {
   return weeks.flatMap((week) => {
     if (!week || typeof week !== "object" || !("contributionDays" in week)) {
       return [];
@@ -212,7 +217,7 @@ export function flattenCalendar(weeks: unknown[]): { count: number; date: string
 
 export function missingGithubProfile(
   username: string,
-  fetchedAt: number,
+  fetchedAt: number
 ): GithubProfile {
   return {
     calendar: [],
@@ -265,8 +270,7 @@ function repoFromNode(node: unknown): GithubRepo | null {
     stargazerCount?: unknown;
     url?: unknown;
   };
-  const name =
-    optionalString(row.nameWithOwner) ?? optionalString(row.name);
+  const name = optionalString(row.nameWithOwner) ?? optionalString(row.name);
   const url = optionalString(row.url);
   if (!name || !url) {
     return null;
@@ -284,7 +288,7 @@ function repoFromNode(node: unknown): GithubRepo | null {
 export function profileFromGraphql(
   user: Record<string, unknown>,
   username: string,
-  fetchedAt: number,
+  fetchedAt: number
 ): GithubProfile {
   const login = optionalString(user.login) ?? username;
   const pinnedNodes =
@@ -329,7 +333,7 @@ export function profileFromGraphql(
           }),
         },
       ];
-    }),
+    })
   );
   const yearRaw =
     user.contributionsCollection &&
@@ -389,10 +393,10 @@ export function profileFromGraphql(
       const loginName = optionalString(
         node && typeof node === "object" && "login" in node
           ? node.login
-          : undefined,
+          : undefined
       );
       const url = optionalString(
-        node && typeof node === "object" && "url" in node ? node.url : undefined,
+        node && typeof node === "object" && "url" in node ? node.url : undefined
       );
       return loginName
         ? [{ login: loginName, url: url ?? `https://github.com/${loginName}` }]
@@ -404,18 +408,20 @@ export function profileFromGraphql(
     }),
     publicGists: countOf(user.gists),
     publicRepos: countOf(user.repositories),
-    repos: repoNodes.flatMap((node) => {
-      if (
-        node &&
-        typeof node === "object" &&
-        "isFork" in node &&
-        node.isFork
-      ) {
-        return [];
-      }
-      const repo = repoFromNode(node);
-      return repo ? [repo] : [];
-    }).slice(0, 6),
+    repos: repoNodes
+      .flatMap((node) => {
+        if (
+          node &&
+          typeof node === "object" &&
+          "isFork" in node &&
+          node.isFork
+        ) {
+          return [];
+        }
+        const repo = repoFromNode(node);
+        return repo ? [repo] : [];
+      })
+      .slice(0, 6),
     twitter: optionalString(user.twitterUsername),
     url: optionalString(user.url) ?? `https://github.com/${login}`,
     username,
@@ -459,11 +465,13 @@ export function profileFromRest(
   repos: unknown[],
   orgs: unknown[],
   username: string,
-  fetchedAt: number,
+  fetchedAt: number
 ): GithubProfile {
   const login = optionalString(user.login) ?? username;
   const createdAt =
-    typeof user.created_at === "string" ? Date.parse(user.created_at) : undefined;
+    typeof user.created_at === "string"
+      ? Date.parse(user.created_at)
+      : undefined;
   return {
     bio: optionalString(user.bio),
     blog: optionalString(user.blog),
@@ -489,7 +497,9 @@ export function profileFromRest(
         ? [
             {
               login: loginName,
-              url: optionalString(row.html_url) ?? `https://github.com/${loginName}`,
+              url:
+                optionalString(row.html_url) ??
+                `https://github.com/${loginName}`,
             },
           ]
         : [];
@@ -497,10 +507,12 @@ export function profileFromRest(
     pinned: [],
     publicGists: typeof user.public_gists === "number" ? user.public_gists : 0,
     publicRepos: typeof user.public_repos === "number" ? user.public_repos : 0,
-    repos: repos.flatMap((node) => {
-      const repo = repoFromRest(node);
-      return repo ? [repo] : [];
-    }).slice(0, 6),
+    repos: repos
+      .flatMap((node) => {
+        const repo = repoFromRest(node);
+        return repo ? [repo] : [];
+      })
+      .slice(0, 6),
     twitter: optionalString(user.twitter_username),
     url: optionalString(user.html_url) ?? `https://github.com/${login}`,
     username,

@@ -181,7 +181,7 @@ function assertPersonUserId(userId: string): string {
 export function personUsageSql(
   table: string,
   window: UsageWindow,
-  userId: string,
+  userId: string
 ): string {
   if (!TABLE_NAME.test(table)) {
     throw new Error("Invalid telemetry table name");
@@ -260,7 +260,9 @@ export function summarizePersonTools(rows: PersonToolRow[]): {
   }
   return {
     harnesses: [...harnesses.values()]
-      .toSorted((a, b) => b.tokens - a.tokens || a.harness.localeCompare(b.harness))
+      .toSorted(
+        (a, b) => b.tokens - a.tokens || a.harness.localeCompare(b.harness)
+      )
       .slice(0, PERSON_HARNESS_ROWS),
     models: [...models.values()]
       .toSorted((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
@@ -271,7 +273,7 @@ export function summarizePersonTools(rows: PersonToolRow[]): {
 export async function fetchPersonUsage(
   userId: string,
   window: UsageWindow,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = fetch
 ): Promise<PersonUsageResult> {
   const apiKey = process.env.RAWTREE_API_KEY;
   const database = process.env.RAWTREE_DATABASE;
@@ -313,9 +315,13 @@ export function parseModelRows(data: unknown[]): ModelRow[] {
       continue;
     }
     rows.push({
-      family: typeof row.family === "string" && row.family ? row.family : "other",
+      family:
+        typeof row.family === "string" && row.family ? row.family : "other",
       name: row.name,
-      provider: typeof row.provider === "string" && row.provider ? row.provider : "unknown",
+      provider:
+        typeof row.provider === "string" && row.provider
+          ? row.provider
+          : "unknown",
       requests: toCount(row.requests),
       tokens: toCount(row.tokens),
     });
@@ -397,7 +403,12 @@ export function parseUsageRows(data: unknown[]): UsageRow[] {
 }
 
 export type UsageResult =
-  | { status: "ok"; rows: UsageRow[]; models: ModelRow[]; people: PersonUsageRow[] }
+  | {
+      status: "ok";
+      rows: UsageRow[];
+      models: ModelRow[];
+      people: PersonUsageRow[];
+    }
   /** No RawTree key on this deployment. */
   | { status: "unconfigured"; rows: []; models: []; people: [] }
   /** The table does not exist until the first event of the hackathon lands. */

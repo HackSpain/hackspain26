@@ -47,7 +47,7 @@ export function searchHaystack(person: DirectoryParticipant): string {
       ...(person.interests ?? []),
     ]
       .filter(Boolean)
-      .join(" "),
+      .join(" ")
   );
 }
 

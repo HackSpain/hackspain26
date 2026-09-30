@@ -19,7 +19,7 @@ function SheetOverlay({
       data-slot="sheet-overlay"
       className={cn(
         "fixed inset-0 z-50 bg-hs-ink/60 motion-safe:duration-[var(--duration-enter)] motion-safe:data-closed:duration-[var(--duration-exit)] motion-safe:ease-[var(--ease-out)] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-        className,
+        className
       )}
       {...props}
     />
@@ -47,7 +47,7 @@ function SheetContent({
             "right-0 border-l-[3px] border-hs-ink motion-safe:data-open:slide-in-from-right motion-safe:data-closed:slide-out-to-right",
           side === "left" &&
             "left-0 border-r-[3px] border-hs-ink motion-safe:data-open:slide-in-from-left motion-safe:data-closed:slide-out-to-left",
-          className,
+          className
         )}
         {...props}
       >
@@ -70,7 +70,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sheet-header"
       className={cn(
         "grid shrink-0 gap-1 border-b-[3px] border-hs-ink bg-hs-sand p-5 pr-14 text-left",
-        className,
+        className
       )}
       {...props}
     />
@@ -81,7 +81,10 @@ function SheetBody({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-body"
-      className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain p-5", className)}
+      className={cn(
+        "min-h-0 flex-1 overflow-y-auto overscroll-contain p-5",
+        className
+      )}
       {...props}
     />
   );
@@ -93,7 +96,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sheet-footer"
       className={cn(
         "flex shrink-0 flex-col-reverse gap-2 border-t-[3px] border-hs-ink p-5 sm:flex-row sm:justify-end",
-        className,
+        className
       )}
       {...props}
     />

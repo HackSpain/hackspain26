@@ -13,10 +13,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  *   { ok: false, code: LoginErrorCode }
  * The page maps `code` to copy; the status is informational.
  */
-export type LoginErrorCode =
-  | "INVALID_EMAIL"
-  | "UNREGISTERED"
-  | "SEND_FAILED";
+export type LoginErrorCode = "INVALID_EMAIL" | "UNREGISTERED" | "SEND_FAILED";
 
 function refuse(code: LoginErrorCode, status: number): NextResponse {
   return NextResponse.json({ code, ok: false }, { status });

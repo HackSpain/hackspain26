@@ -128,9 +128,14 @@ function thumb(kind: TvWidgetKind) {
               ] as const
             ).map(([name, width, color]) => (
               <div key={name} className="space-y-0.5">
-                <p className="truncate font-mono text-[7px] leading-none">{name}</p>
+                <p className="truncate font-mono text-[7px] leading-none">
+                  {name}
+                </p>
                 <span className="block h-1 bg-hs-ink/10">
-                  <span className={cn("block h-full", color)} style={{ width: `${width}%` }} />
+                  <span
+                    className={cn("block h-full", color)}
+                    style={{ width: `${width}%` }}
+                  />
                 </span>
               </div>
             ))}
@@ -172,7 +177,7 @@ function thumb(kind: TvWidgetKind) {
                 <span
                   className={cn(
                     "flex size-3 items-center justify-center font-mono text-[7px] tabular-nums",
-                    index === 0 && "bg-hs-gold",
+                    index === 0 && "bg-hs-gold"
                   )}
                 >
                   {index + 1}
@@ -251,7 +256,7 @@ function thumb(kind: TvWidgetKind) {
                 "flex flex-col justify-between p-1",
                 index === 0
                   ? "bg-hs-gold text-hs-ink"
-                  : "bg-hs-paper text-hs-ink",
+                  : "bg-hs-paper text-hs-ink"
               )}
             >
               <span className="h-1 w-5 bg-current/30" />
@@ -331,7 +336,7 @@ function thumb(kind: TvWidgetKind) {
                 key={height}
                 className={cn(
                   "min-w-0 flex-1",
-                  height === 82 ? "bg-hs-gold" : "bg-hs-navy/55",
+                  height === 82 ? "bg-hs-gold" : "bg-hs-navy/55"
                 )}
                 style={{ height: `${height}%` }}
               />

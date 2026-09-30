@@ -66,9 +66,9 @@ describe("RawTree telemetry", () => {
       schema: "hackspain.telemetry.v1",
       tokens: { cacheRead: 4, cacheWrite: 5, input: 2, output: 3 },
     };
-    expect(parseTelemetryEvent(v1, { teamId: "team-1", userId: "user-1" })).toEqual(
-      { ...event, native: { costUsd: 0.25 } }
-    );
+    expect(
+      parseTelemetryEvent(v1, { teamId: "team-1", userId: "user-1" })
+    ).toEqual({ ...event, native: { costUsd: 0.25 } });
   });
 
   test("derived fields are computed here, never taken from the client", () => {

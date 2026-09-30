@@ -19,7 +19,7 @@ export function TvReloadControl() {
     try {
       await reload({});
       setNotice(
-        "Orden enviada. Las TVs conectadas recargarán; las demás, al reconectar.",
+        "Orden enviada. Las TVs conectadas recargarán; las demás, al reconectar."
       );
       setConfirming(false);
     } catch (error) {

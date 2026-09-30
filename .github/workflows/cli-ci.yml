@@ -38,6 +38,8 @@ jobs:
         run: pnpm --filter cli typecheck
       - name: Lint
         run: pnpm --filter cli lint
+      - name: Format
+        run: pnpm --filter cli exec biome format .
       - name: Test
         run: pnpm --filter cli test
       - name: Compile host binary and smoke it

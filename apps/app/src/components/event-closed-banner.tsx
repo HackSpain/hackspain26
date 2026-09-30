@@ -20,7 +20,10 @@ export function isEventOpen(event: EventInfo | null | undefined): boolean {
 }
 
 /** One line explaining why the dashboard is reduced. Mirrors convex/lib/eventWindow.ts. */
-export function eventClosedCopy(event: EventInfo): { title: string; body: string } {
+export function eventClosedCopy(event: EventInfo): {
+  title: string;
+  body: string;
+} {
   if (event.phase === "before" && event.startsAt !== undefined) {
     return {
       body: "Hasta entonces puedes editar tu perfil, ver el directorio y acceder a los perks.",

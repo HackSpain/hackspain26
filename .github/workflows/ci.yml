@@ -121,6 +121,8 @@ jobs:
         run: pnpm --filter app typecheck
       - name: Lint
         run: pnpm --filter app lint
+      - name: Format
+        run: pnpm --filter app format:check
       - name: Test
         run: pnpm --filter app test
       - name: Build
@@ -145,6 +147,8 @@ jobs:
         run: pnpm --filter web check
       - name: Lint
         run: pnpm --filter web lint
+      - name: Format
+        run: pnpm --filter web format:check
       - name: Unused code and dependencies
         run: pnpm --filter web knip:check
       - name: Test

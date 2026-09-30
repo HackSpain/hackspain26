@@ -7,7 +7,14 @@ import { useRef, useState } from "react";
 import { api } from "@convex/_generated/api";
 import { Avatar } from "@/components/avatar";
 import { TrackTag } from "@/components/track-tag";
-import { errorMessage, FormError, LoadingText, MetaLink, MetaRow, Page } from "@/components/page";
+import {
+  errorMessage,
+  FormError,
+  LoadingText,
+  MetaLink,
+  MetaRow,
+  Page,
+} from "@/components/page";
 import { TeamCliDialog } from "@/components/team-cli-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +57,11 @@ function TeamLogo({ team }: { team: MyTeam }) {
     try {
       const uploadUrl = await generateUploadUrl();
       await setLogo({
-        imageId: await uploadToConvex(uploadUrl, file, "No se pudo subir el logo"),
+        imageId: await uploadToConvex(
+          uploadUrl,
+          file,
+          "No se pudo subir el logo"
+        ),
       });
     } catch (caughtError: unknown) {
       setError(errorMessage(caughtError, "No se pudo subir el logo"));
@@ -74,7 +85,11 @@ function TeamLogo({ team }: { team: MyTeam }) {
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border-[3px] border-hs-ink bg-hs-gold px-5 font-bungee text-sm text-hs-ink hs-hover-bright">
               <ImagePlus className="size-4" aria-hidden />
-              {busy ? "Subiendo…" : team.logoUrl ? "Cambiar logo" : "Subir logo"}
+              {busy
+                ? "Subiendo…"
+                : team.logoUrl
+                  ? "Cambiar logo"
+                  : "Subir logo"}
               <input
                 ref={fileInput}
                 type="file"
@@ -120,28 +135,50 @@ function TeamRow({ team }: { team: TeamSummary }) {
       className={cn(
         "relative grid gap-x-6 gap-y-2 py-3 pr-3 pl-4 md:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]",
         "before:absolute before:inset-y-0 before:left-0 before:w-1",
-        team.isMine ? "before:bg-hs-gold" : inTrack ? "before:bg-hs-teal" : "before:bg-hs-ink/20",
-        "transition-[background-color] duration-150 ease-[var(--ease-out)] hover:bg-hs-sand/50",
+        team.isMine
+          ? "before:bg-hs-gold"
+          : inTrack
+            ? "before:bg-hs-teal"
+            : "before:bg-hs-ink/20",
+        "transition-[background-color] duration-150 ease-[var(--ease-out)] hover:bg-hs-sand/50"
       )}
     >
       <div className="min-w-0 space-y-2">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bungee text-sm leading-tight">
-          <Avatar name={team.name} src={team.logoUrl} className="size-8 border-2 text-[11px]" />
+          <Avatar
+            name={team.name}
+            src={team.logoUrl}
+            className="size-8 border-2 text-[11px]"
+          />
           <span className="min-w-0 break-words">{team.name}</span>
           {team.isMine ? <Badge variant="gold">Tu equipo</Badge> : null}
           {team.pendingCount > 0 ? (
             <Badge className="tabular-nums">
-              {team.pendingCount} {team.pendingCount === 1 ? "invitación" : "invitaciones"}
+              {team.pendingCount}{" "}
+              {team.pendingCount === 1 ? "invitación" : "invitaciones"}
             </Badge>
           ) : null}
         </p>
-        <ul className="flex flex-wrap gap-x-4 gap-y-2" aria-label={`Miembros de ${team.name}`}>
+        <ul
+          className="flex flex-wrap gap-x-4 gap-y-2"
+          aria-label={`Miembros de ${team.name}`}
+        >
           {team.members.map((member) => (
-            <li key={member._id} className="flex min-w-0 items-center gap-2 text-sm">
-              <Avatar name={member.name} src={member.avatarUrl} className="size-7 border-2 text-[10px]" />
+            <li
+              key={member._id}
+              className="flex min-w-0 items-center gap-2 text-sm"
+            >
+              <Avatar
+                name={member.name}
+                src={member.avatarUrl}
+                className="size-7 border-2 text-[10px]"
+              />
               <span className="min-w-0 truncate">{member.name}</span>
               {member.isOwner ? (
-                <span className="text-xs text-hs-brown" title="Dueño del equipo">
+                <span
+                  className="text-xs text-hs-brown"
+                  title="Dueño del equipo"
+                >
                   · dueño
                 </span>
               ) : null}
@@ -169,7 +206,9 @@ function TeamRow({ team }: { team: TeamSummary }) {
           <p className="text-hs-ink">
             <span className="font-medium">{team.projectName}</span>
             <span className="text-hs-brown">
-              {team.submissionStatus === "submitted" ? " · enviado" : " · borrador"}
+              {team.submissionStatus === "submitted"
+                ? " · enviado"
+                : " · borrador"}
             </span>
           </p>
         ) : null}
@@ -180,7 +219,9 @@ function TeamRow({ team }: { team: TeamSummary }) {
 
 function TeamDirectory() {
   const teams = useQuery(api.teams.list);
-  if (teams === undefined) {return <LoadingText />;}
+  if (teams === undefined) {
+    return <LoadingText />;
+  }
   const inTrack = teams.filter((team) => team.tracks.length > 0).length;
   return (
     <Card>
@@ -266,7 +307,9 @@ function NoTeam() {
 export default function TeamsPage() {
   const team = useQuery(api.teams.mine);
 
-  if (team === undefined) {return <LoadingText />;}
+  if (team === undefined) {
+    return <LoadingText />;
+  }
 
   return (
     <Page
@@ -315,11 +358,14 @@ export default function TeamsPage() {
                       {member.name ?? member.identifier}
                     </p>
                     <p className="text-xs break-all text-hs-brown">
-                      {identifierTypeLabel(member.identifierType)}: {member.identifier}
+                      {identifierTypeLabel(member.identifierType)}:{" "}
+                      {member.identifier}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {member.userId === team.ownerId ? <Badge>Dueño</Badge> : null}
+                    {member.userId === team.ownerId ? (
+                      <Badge>Dueño</Badge>
+                    ) : null}
                     <Badge>{teamMemberStatusLabel(member.status)}</Badge>
                   </div>
                 </Frame>

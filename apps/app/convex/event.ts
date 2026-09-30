@@ -7,7 +7,7 @@ const SETTINGS_KEY = "main";
 export const eventPhaseValidator = v.union(
   v.literal("pre_event"),
   v.literal("live"),
-  v.literal("ended"),
+  v.literal("ended")
 );
 
 export const status = onboardedQuery({
@@ -37,7 +37,8 @@ export const status = onboardedQuery({
         .query("eventPasses")
         .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
         .unique());
-    const checkedInAt = pass?.status === "active" ? pass.checkedInAt : undefined;
+    const checkedInAt =
+      pass?.status === "active" ? pass.checkedInAt : undefined;
     return {
       checkedInAt,
       phase,

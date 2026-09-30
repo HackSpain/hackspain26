@@ -41,11 +41,16 @@ export function settle(animation: gsap.core.Animation) {
 /** Kiosks stay open for days: freeze every tween while the tab is hidden. */
 export function useTvVisibilityPause() {
   useEffect(() => {
-    if (visibilityBound) {return;}
+    if (visibilityBound) {
+      return;
+    }
     visibilityBound = true;
     const sync = () => {
-      if (document.visibilityState === "visible") {gsap.globalTimeline.resume();}
-      else {gsap.globalTimeline.pause();}
+      if (document.visibilityState === "visible") {
+        gsap.globalTimeline.resume();
+      } else {
+        gsap.globalTimeline.pause();
+      }
     };
     document.addEventListener("visibilitychange", sync);
   }, []);
@@ -58,7 +63,7 @@ export function useTvVisibilityPause() {
 export function useCountUp<T extends HTMLElement = HTMLSpanElement>(
   value: number,
   format: (value: number) => string,
-  options?: { duration?: number; fromZero?: boolean },
+  options?: { duration?: number; fromZero?: boolean }
 ) {
   const reduced = usePrefersReducedMotion();
   const ref = useRef<T>(null);
@@ -67,7 +72,9 @@ export function useCountUp<T extends HTMLElement = HTMLSpanElement>(
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) {return;}
+    if (!el) {
+      return;
+    }
     if (reduced || shown.current === value) {
       shown.current = value;
       el.textContent = format(value);
@@ -96,7 +103,7 @@ export function useCountUp<T extends HTMLElement = HTMLSpanElement>(
  * full-width; the share is a `scaleX` from the left so only transform changes.
  */
 export function useBarScale<T extends HTMLElement = HTMLDivElement>(
-  ratio: number,
+  ratio: number
 ) {
   const reduced = usePrefersReducedMotion();
   const ref = useRef<T>(null);
@@ -104,7 +111,9 @@ export function useBarScale<T extends HTMLElement = HTMLDivElement>(
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) {return;}
+    if (!el) {
+      return;
+    }
     if (reduced) {
       gsap.set(el, { scaleX, transformOrigin: "0% 50%" });
       return;
@@ -138,10 +147,13 @@ export function useRankRows(order: readonly string[], epoch = 0) {
 
   const register = useCallback(
     (id: string) => (node: HTMLElement | null) => {
-      if (node) {nodes.current.set(id, node);}
-      else {nodes.current.delete(id);}
+      if (node) {
+        nodes.current.set(id, node);
+      } else {
+        nodes.current.delete(id);
+      }
     },
-    [],
+    []
   );
 
   useLayoutEffect(() => {
@@ -154,7 +166,9 @@ export function useRankRows(order: readonly string[], epoch = 0) {
     const tweens: gsap.core.Tween[] = [];
     for (const [rank, id] of ids.entries()) {
       const el = nodes.current.get(id);
-      if (!el) {continue;}
+      if (!el) {
+        continue;
+      }
       const yPercent = rank * 100;
       if (reduced) {
         placed.current.add(id);
@@ -175,7 +189,7 @@ export function useRankRows(order: readonly string[], epoch = 0) {
             ease: TV_EASE_OUT,
             delay: 0.25 + rank * 0.07,
             clearProps: "opacity",
-          }),
+          })
         );
         continue;
       }
@@ -185,11 +199,13 @@ export function useRankRows(order: readonly string[], epoch = 0) {
           duration: 0.7,
           ease: TV_EASE_MOVE,
           overwrite: "auto",
-        }),
+        })
       );
     }
     return () => {
-      for (const tween of tweens) {settle(tween);}
+      for (const tween of tweens) {
+        settle(tween);
+      }
     };
   }, [key, reduced, epoch]);
 
@@ -203,7 +219,7 @@ export function useRankRows(order: readonly string[], epoch = 0) {
 export function useStreamShift(
   listRef: RefObject<HTMLElement | null>,
   ids: readonly string[],
-  onEnter?: (rows: HTMLElement[]) => void,
+  onEnter?: (rows: HTMLElement[]) => void
 ) {
   const reduced = usePrefersReducedMotion();
   const previous = useRef<Set<string> | null>(null);
@@ -211,16 +227,20 @@ export function useStreamShift(
 
   useLayoutEffect(() => {
     const list = listRef.current;
-    if (!list) {return;}
+    if (!list) {
+      return;
+    }
     const current = key ? key.split("|") : [];
     const seen = previous.current;
     previous.current = new Set(current);
     const rows = [...list.children].filter(
-      (node): node is HTMLElement => node instanceof HTMLElement,
+      (node): node is HTMLElement => node instanceof HTMLElement
     );
 
     if (!seen) {
-      if (reduced || rows.length === 0) {return;}
+      if (reduced || rows.length === 0) {
+        return;
+      }
       const tween = gsap.from(rows, {
         opacity: 0,
         y: 14,
@@ -236,15 +256,24 @@ export function useStreamShift(
     }
 
     let fresh = 0;
-    while (fresh < current.length && !seen.has(current[fresh] ?? "")) {fresh += 1;}
-    if (fresh === 0) {return;}
+    while (fresh < current.length && !seen.has(current[fresh] ?? "")) {
+      fresh += 1;
+    }
+    if (fresh === 0) {
+      return;
+    }
 
     const entering = rows.slice(0, fresh);
     if (reduced) {
       const fade = gsap.fromTo(
         entering,
         { opacity: 0 },
-        { opacity: 1, duration: TV_REDUCED_FADE, ease: "none", clearProps: "opacity" },
+        {
+          opacity: 1,
+          duration: TV_REDUCED_FADE,
+          ease: "none",
+          clearProps: "opacity",
+        }
       );
       onEnter?.(entering);
       return () => {
@@ -254,7 +283,9 @@ export function useStreamShift(
 
     const anchor = rows[fresh];
     const first = rows[0];
-    if (!first) {return;}
+    if (!first) {
+      return;
+    }
     const shift = anchor
       ? anchor.getBoundingClientRect().top - first.getBoundingClientRect().top
       : entering.reduce((sum, row) => sum + row.offsetHeight, 0);
@@ -263,11 +294,17 @@ export function useStreamShift(
     timeline.fromTo(
       list,
       { y: -shift },
-      { y: 0, duration: 0.75, ease: TV_EASE_OUT, clearProps: "transform" },
+      { y: 0, duration: 0.75, ease: TV_EASE_OUT, clearProps: "transform" }
     );
     timeline.fromTo(
       entering,
-      { opacity: 0, x: -18, rotationX: -40, transformPerspective: 600, transformOrigin: "0% 0%" },
+      {
+        opacity: 0,
+        x: -18,
+        rotationX: -40,
+        transformPerspective: 600,
+        transformOrigin: "0% 0%",
+      },
       {
         opacity: 1,
         x: 0,
@@ -277,7 +314,7 @@ export function useStreamShift(
         stagger: 0.05,
         clearProps: "opacity,transform",
       },
-      0.1,
+      0.1
     );
     onEnter?.(entering);
     return () => {
@@ -290,12 +327,15 @@ export function useStreamShift(
  * Gold flash through a `[data-flash]` overlay. Tailwind v4 emits `color-mix()`
  * backgrounds, which GSAP cannot interpolate, so we fade a layer instead.
  */
-export function flashGold(targets: HTMLElement | HTMLElement[], duration = 1.4) {
+export function flashGold(
+  targets: HTMLElement | HTMLElement[],
+  duration = 1.4
+) {
   const list = Array.isArray(targets) ? targets : [targets];
   const layers = list.flatMap((el) =>
     el.matches("[data-flash]")
       ? [el]
-      : [...el.querySelectorAll<HTMLElement>("[data-flash]")],
+      : [...el.querySelectorAll<HTMLElement>("[data-flash]")]
   );
   if (layers.length === 0) {
     return null;
@@ -303,7 +343,7 @@ export function flashGold(targets: HTMLElement | HTMLElement[], duration = 1.4) 
   return gsap.fromTo(
     layers,
     { opacity: 0.85 },
-    { opacity: 0, duration, ease: "power2.out" },
+    { opacity: 0, duration, ease: "power2.out" }
   );
 }
 

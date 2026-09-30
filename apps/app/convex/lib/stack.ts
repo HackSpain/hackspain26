@@ -27,10 +27,7 @@ const MAX_SOURCE_FILES = 12;
  * save, a mass re-scan) leave it alone.
  */
 export function isHandSet(
-  doc:
-    | { techStack?: string[]; techStackSource?: "repo" }
-    | null
-    | undefined
+  doc: { techStack?: string[]; techStackSource?: "repo" } | null | undefined
 ): boolean {
   return Boolean(doc?.techStack?.length) && doc?.techStackSource !== "repo";
 }
@@ -515,7 +512,9 @@ function parseRequirements(content: string, tags: Set<string>): void {
 }
 
 function parsePyproject(content: string, tags: Set<string>): void {
-  for (const match of content.matchAll(/["']([A-Za-z0-9_.-]+)(?:[<>=!~].*)?["']/g)) {
+  for (const match of content.matchAll(
+    /["']([A-Za-z0-9_.-]+)(?:[<>=!~].*)?["']/g
+  )) {
     addTag(tags, tagForPackage(match[1] ?? ""));
   }
   const poetry = content.match(
@@ -660,7 +659,9 @@ function parseGradle(content: string, tags: Set<string>): void {
 
 function parsePackageSwift(content: string, tags: Set<string>): void {
   // .package(url: "https://github.com/vapor/vapor.git", from: "4.0.0")
-  for (const match of content.matchAll(/url:\s*"[^"]*\/([^/"]+?)(?:\.git)?"/g)) {
+  for (const match of content.matchAll(
+    /url:\s*"[^"]*\/([^/"]+?)(?:\.git)?"/g
+  )) {
     addTag(tags, tagForPackage(match[1] ?? ""));
   }
 }
@@ -684,9 +685,14 @@ function parseCsproj(content: string, tags: Set<string>): void {
   if (/<UseMaui>\s*true/i.test(content)) {
     addTag(tags, ".NET MAUI");
   }
-  for (const match of content.matchAll(/<PackageReference\s+Include="([^"]+)"/gi)) {
+  for (const match of content.matchAll(
+    /<PackageReference\s+Include="([^"]+)"/gi
+  )) {
     const id = (match[1] ?? "").toLowerCase();
-    addTag(tags, DOTNET_PREFIX_TAGS.find(([prefix]) => id.startsWith(prefix))?.[1]);
+    addTag(
+      tags,
+      DOTNET_PREFIX_TAGS.find(([prefix]) => id.startsWith(prefix))?.[1]
+    );
   }
 }
 

@@ -315,7 +315,9 @@ export function validatePairs(
 ): string[] {
   const problems: string[] = [];
   if (pairs.length !== projectCount) {
-    problems.push(`Hay ${pairs.length} proyectos repartidos, no ${projectCount}`);
+    problems.push(
+      `Hay ${pairs.length} proyectos repartidos, no ${projectCount}`
+    );
   }
   const perJudge = Array.from({ length: judgeCount }, () => 0);
   const seenProjects = new Set<number>();
@@ -326,7 +328,9 @@ export function validatePairs(
     }
     seenProjects.add(pair.project);
     if (a === b) {
-      problems.push(`El proyecto ${pair.project} tiene el mismo juez dos veces`);
+      problems.push(
+        `El proyecto ${pair.project} tiene el mismo juez dos veces`
+      );
     }
     for (const judge of pair.judges) {
       if (judge < 0 || judge >= judgeCount || !Number.isInteger(judge)) {
@@ -508,9 +512,7 @@ export function buildCalibrationSystem<J>(
     index.set(judge, i);
   }
   const n = judges.length;
-  const L = Array.from({ length: n }, () =>
-    Array.from({ length: n }, () => 0)
-  );
+  const L = Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
   const d = Array.from({ length: n }, () => 0);
   for (const observation of observations) {
     const a = index.get(observation.judgeA);
