@@ -175,13 +175,17 @@ async function loadProfile(
 }
 
 export const refresh = action({
-  args: { username: v.string() },
+  args: { participantId: v.id("users"), username: v.string() },
   handler: async (ctx, args): Promise<GithubProfile> => {
-    await ctx.runQuery(internal.directory.assertViewer, {});
     const username = normalizeGithubLogin(args.username);
     if (!username) {
       throw new Error("Ese GitHub no vale.");
     }
+    await ctx.runQuery(internal.directoryProfileSource.assert, {
+      kind: "github",
+      participantId: args.participantId,
+      value: username,
+    });
     const existing: GithubProfile | null = await ctx.runQuery(
       internal.directory.githubCached,
       { username }
