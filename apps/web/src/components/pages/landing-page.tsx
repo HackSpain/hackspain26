@@ -279,21 +279,24 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
     const baseCurrent = sections[section] ?? {};
     // Partner logos fill any empty open-row cells (o1..o5) on every desktop section.
     // Cells already defined by the section are preserved.
-    const current: Record<string, ReactNode> =
-      profile === "compact" || section === COMMUNITY_SECTION_INDEX
-        ? baseCurrent
-        : {
-            o1: <PartnerLogoCell delay={0} partner={partners[0]} />,
-            o2: <PartnerLogoCell delay={0.05} partner={partners[1]} />,
-            o3: <PartnerLogoCell delay={0.1} partner={partners[2]} />,
-            o4: <PartnerLogoCell delay={0.15} partner={partners[3]} />,
-            o5: <PartnerLogoCell delay={0.2} partner={partners[4]} />,
-            ...baseCurrent,
-          };
+    const current = new Map<string, ReactNode>(
+      Object.entries(
+        profile === "compact" || section === COMMUNITY_SECTION_INDEX
+          ? baseCurrent
+          : {
+              o1: <PartnerLogoCell delay={0} partner={partners[0]} />,
+              o2: <PartnerLogoCell delay={0.05} partner={partners[1]} />,
+              o3: <PartnerLogoCell delay={0.1} partner={partners[2]} />,
+              o4: <PartnerLogoCell delay={0.15} partner={partners[3]} />,
+              o5: <PartnerLogoCell delay={0.2} partner={partners[4]} />,
+              ...baseCurrent,
+            }
+      )
+    );
     if (!isCompact && section === INFRA_SECTION_INDEX) {
       // Frame the central headline and copy with all ten infra sponsors.
       for (const id of ["o1", "o2", "o3", "o4", "o5"]) {
-        delete current[id];
+        current.delete(id);
       }
       const sponsorCells = [
         "r1b",
@@ -307,9 +310,9 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
         "o3",
         "o4",
       ];
-      sponsorCells.forEach((id, index) => {
-        current[id] = <PartnerLogoCell partner={INFRA_SPONSORS[index]} />;
-      });
+      for (const [index, id] of sponsorCells.entries()) {
+        current.set(id, <PartnerLogoCell partner={INFRA_SPONSORS[index]} />);
+      }
     }
     const tileMotionClass = "absolute inset-0";
 
@@ -373,7 +376,7 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
         {!isCompact && ills.map(renderIll)}
 
         {cells.map((cell) => {
-          if (isCompact && !current[cell.id]) {
+          if (isCompact && !current.get(cell.id)) {
             return null;
           }
 
@@ -385,7 +388,7 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
 
           const cellInner = (
             <AnimatePresence custom={dir} initial={false} mode="popLayout">
-              {current[cell.id] ? (
+              {current.get(cell.id) ? (
                 <motion.div
                   animate="center"
                   className={tileMotionClass}
@@ -406,7 +409,7 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
                   }
                   variants={variants}
                 >
-                  {current[cell.id]}
+                  {current.get(cell.id)}
                 </motion.div>
               ) : null}
             </AnimatePresence>

@@ -4,8 +4,12 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import { EmptyState, FormError, LoadingText, Page } from "@/components/page";
-import { PerkCard, type PerkCardPerk } from "@/components/perk-card";
-import { PerkClaimDialog, claimErrorMessage } from "@/components/perk-claim-dialog";
+import { PerkCard } from "@/components/perk-card";
+import type { PerkCardPerk } from "@/components/perk-card";
+import {
+  PerkClaimDialog,
+  claimErrorMessage,
+} from "@/components/perk-claim-dialog";
 
 export default function PerksPage() {
   const catalog = useQuery(api.perks.listCatalog);
@@ -13,7 +17,9 @@ export default function PerksPage() {
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState<PerkCardPerk | null>(null);
 
-  if (catalog === undefined) return <LoadingText />;
+  if (catalog === undefined) {
+    return <LoadingText />;
+  }
 
   return (
     <Page
@@ -23,7 +29,8 @@ export default function PerksPage() {
       <FormError message={error} />
       {catalog.length === 0 ? (
         <EmptyState title="Aún no hay perks">
-          Los beneficios de partners aparecerán aquí cuando la organización los publique.
+          Los beneficios de partners aparecerán aquí cuando la organización los
+          publique.
         </EmptyState>
       ) : (
         <div className="hs-stagger grid gap-4 sm:grid-cols-2">
@@ -41,8 +48,10 @@ export default function PerksPage() {
                   setAsking(perk);
                   return;
                 }
-                void claim({ perkId: perk._id }).catch((err: unknown) =>
-                  setError(claimErrorMessage(err, "No se ha podido reclamar")),
+                void claim({ perkId: perk._id }).catch((caughtError: unknown) =>
+                  setError(
+                    claimErrorMessage(caughtError, "No se ha podido reclamar")
+                  )
                 );
               }}
             />
@@ -52,10 +61,14 @@ export default function PerksPage() {
       <PerkClaimDialog
         perk={asking}
         onOpenChange={(open) => {
-          if (!open) setAsking(null);
+          if (!open) {
+            setAsking(null);
+          }
         }}
         onSubmit={async (answers) => {
-          if (!asking) return;
+          if (!asking) {
+            return;
+          }
           await claim({ perkId: asking._id, answers });
           setAsking(null);
         }}

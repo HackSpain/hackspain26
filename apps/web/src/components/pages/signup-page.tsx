@@ -52,7 +52,10 @@ const ASCII_LEFT_ARROW_PREFIX_RE = /^←\s*/;
 const LINE_BREAK_SPLIT_RE = /\r?\n/;
 type FlowStatus = "idle" | "success" | "error" | "alreadyApplied" | "closed";
 
-type HackSpainCheckboxProps = Omit<ComponentPropsWithRef<"input">, "type"> & {
+type HackSpainCheckboxProps = Omit<
+  ComponentPropsWithRef<"input">,
+  "type" | "size"
+> & {
   size?: "default" | "large";
 };
 
@@ -342,15 +345,8 @@ export function SignupPage() {
   const ambassadorPageHref = "/ambassador";
   const privacyHref = "/privacy";
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    setValue,
-    watch,
-    reset,
-    formState,
-  } = useForm<StoredFields>({ defaultValues: { ...EMPTY_FIELDS } });
+  const { register, handleSubmit, control, setValue, watch, reset, formState } =
+    useForm<StoredFields>({ defaultValues: { ...EMPTY_FIELDS } });
   const { isSubmitting } = formState;
   const heardFromSources = watch("heardFromSources");
   const occupationStatuses = watch("occupationStatuses");
@@ -498,7 +494,9 @@ export function SignupPage() {
       if (parsed.code === "heard_from_other") {
         pulseAttention("heard");
         requestAnimationFrame(() => {
-          document.querySelector("#signup-heard-from-other")?.focus();
+          document
+            .querySelector<HTMLInputElement>("#signup-heard-from-other")
+            ?.focus();
         });
         return;
       }
@@ -632,7 +630,9 @@ export function SignupPage() {
         setStatus("error");
         pulseAttention("heard");
         requestAnimationFrame(() => {
-          document.querySelector("#signup-heard-from-other")?.focus();
+          document
+            .querySelector<HTMLInputElement>("#signup-heard-from-other")
+            ?.focus();
         });
         return;
       } else if (resJson.error === "heard_from_required") {
@@ -676,7 +676,7 @@ export function SignupPage() {
   const alreadyDone = status === "success" || status === "alreadyApplied";
   const showClosed = !alreadyDone && (deadlinePassed || status === "closed");
   const showFinalPanel = alreadyDone || showClosed;
-  let finalPanelMessage = t.applicationReceived;
+  let finalPanelMessage: string = t.applicationReceived;
   if (status === "alreadyApplied") {
     finalPanelMessage = t.alreadyApplied;
   } else if (showClosed) {

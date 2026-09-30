@@ -14,6 +14,7 @@ import type { Session } from "../src/lib/api";
 import { stateDir } from "../src/lib/config";
 import { EXIT } from "../src/lib/errors";
 import type { Me } from "../src/lib/me";
+import type { ScanResult } from "../src/watcher/index";
 import { loadRecentIds, runWatch, saveRecentIds } from "../src/watcher/index";
 import { ephemeralMemory } from "../src/watcher/memory";
 import { createState } from "../src/watcher/state";
@@ -144,6 +145,17 @@ test("an empty backfill replaces previously saved recent ids", async () => {
     await runWatch({ ...options, backfill: true, once: true }, dependencies())
   ).toBe(EXIT.OK);
   expect([...loadRecentIds()]).toEqual([]);
+});
+
+test("the watcher reports its completed scan to a command summary", async () => {
+  const scans: ScanResult[] = [];
+  expect(
+    await runWatch(
+      { ...options, once: true },
+      { ...dependencies(), onScan: (result) => scans.push(result) }
+    )
+  ).toBe(EXIT.OK);
+  expect(scans).toEqual([{ byHarness: {}, events: 0, skipped: 0 }]);
 });
 
 test("pending images load in bounded turns, then the loop returns to sleep", async () => {

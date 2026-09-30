@@ -3,7 +3,7 @@ import type { Id } from "@convex/_generated/dataModel";
 export async function uploadToConvex(
   uploadUrl: string,
   file: File,
-  errorMessage: string,
+  errorMessage: string
 ): Promise<Id<"_storage">> {
   const response = await fetch(uploadUrl, {
     method: "POST",

@@ -3,7 +3,11 @@ import { Resend as ResendAPI } from "resend";
 import { internalAction, internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { adminMutation, adminQuery, onboardedQuery } from "./lib/customFunctions";
+import {
+  adminMutation,
+  adminQuery,
+  onboardedQuery,
+} from "./lib/customFunctions";
 import { countsAsAttending } from "./lib/attendance";
 import { getSignupForUser, signupIsAccepted } from "./lib/auth";
 import { resendApiKey, resendFrom } from "./lib/resend";

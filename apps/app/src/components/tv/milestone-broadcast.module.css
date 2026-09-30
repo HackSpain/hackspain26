@@ -155,7 +155,7 @@
   transform-origin: left;
 }
 
-@container (max-aspect-ratio: 1/1) {
+@container (max-aspect-ratio: 1 / 1) {
   .name {
     font-size: min(9cqw, 8cqh);
   }

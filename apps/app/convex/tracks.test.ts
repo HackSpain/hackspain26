@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { isTrackCombinationAllowed, seedDefaults, trackEntryCounts } from "./tracks";
+import {
+  isTrackCombinationAllowed,
+  seedDefaults,
+  trackEntryCounts,
+} from "./tracks";
 
 function ctxWith(submissions: { _id: string; challengeIds: string[] }[]) {
   return {
@@ -64,29 +68,56 @@ function catalogWith(rows: CatalogRow[]) {
     db: {
       query(table: string) {
         return {
-          withIndex(_name: string, filter: (q: { eq: (key: string, value: unknown) => unknown }) => void) {
+          withIndex(
+            _name: string,
+            filter: (q: {
+              eq: (key: string, value: unknown) => unknown;
+            }) => void
+          ) {
             let key = "";
             let value: unknown;
-            const range = { eq(k: string, v: unknown) { key = k; value = v; return range; } };
+            const range = {
+              eq(k: string, v: unknown) {
+                key = k;
+                value = v;
+                return range;
+              },
+            };
             filter(range);
             return {
               unique: async () => {
-                if (table === "settings") { return { _id: "settings", key: value }; }
-                return rows.find((row) => (row as Record<string, unknown>)[key] === value) ?? null;
+                if (table === "settings") {
+                  return { _id: "settings", key: value };
+                }
+                return (
+                  rows.find(
+                    (row) => (row as Record<string, unknown>)[key] === value
+                  ) ?? null
+                );
               },
             };
           },
         };
       },
-      patch: async (id: string, fields: Record<string, unknown>) => { patches.push([id, fields]); },
-      insert: async (_table: string, doc: Record<string, unknown>) => { inserts.push(doc); return `new-${inserts.length}`; },
+      patch: async (id: string, fields: Record<string, unknown>) => {
+        patches.push([id, fields]);
+      },
+      insert: async (_table: string, doc: Record<string, unknown>) => {
+        inserts.push(doc);
+        return `new-${inserts.length}`;
+      },
     },
   } as unknown as MutationCtx;
   return { ctx, inserts, patches };
 }
 
 test("fill mode inserts the missing defaults and leaves admin edits alone", async () => {
-  const edited = { _id: "t1", active: false, label: "Maisa (renamed by admin)", slug: "maisa" };
+  const edited = {
+    _id: "t1",
+    active: false,
+    label: "Maisa (renamed by admin)",
+    slug: "maisa",
+  };
   const { ctx, inserts, patches } = catalogWith([edited]);
   await seedDefaults(ctx, "fill");
   assert.equal(patches.length, 0);
@@ -95,7 +126,12 @@ test("fill mode inserts the missing defaults and leaves admin edits alone", asyn
 });
 
 test("replace mode rewrites the defaults, including activity", async () => {
-  const edited = { _id: "t1", active: false, label: "Maisa (renamed by admin)", slug: "maisa" };
+  const edited = {
+    _id: "t1",
+    active: false,
+    label: "Maisa (renamed by admin)",
+    slug: "maisa",
+  };
   const { ctx, patches } = catalogWith([edited]);
   await seedDefaults(ctx, "replace");
   const [id, fields] = patches.find(([target]) => target === "t1") ?? [];
@@ -105,7 +141,9 @@ test("replace mode rewrites the defaults, including activity", async () => {
 });
 
 test("fill mode still retires the placeholder slugs", async () => {
-  const { ctx, patches } = catalogWith([{ _id: "old", active: true, label: "ML", slug: "ml" }]);
+  const { ctx, patches } = catalogWith([
+    { _id: "old", active: true, label: "ML", slug: "ml" },
+  ]);
   await seedDefaults(ctx, "fill");
   assert.deepEqual(patches, [["old", { active: false }]]);
 });

@@ -108,7 +108,9 @@ export function SubmitFlow({
       next.delete(TRACK_PARAM);
     }
     const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
   }
 
   if (pending.length === 0) {
@@ -121,8 +123,8 @@ export function SubmitFlow({
           <CardHeader>
             <CardTitle>Entra en un reto</CardTitle>
             <CardDescription>
-              Un equipo, un reto. Regístralo en la CLI y vuelve aquí a
-              entregar el vídeo y el repo.
+              Un equipo, un reto. Regístralo en la CLI y vuelve aquí a entregar
+              el vídeo y el repo.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -275,9 +277,7 @@ function SubmitForm({
   const locked = mine?.status === "submitted";
   const [name, setName] = useState(mine?.name ?? "");
   const [videoUrl, setVideoUrl] = useState("");
-  const [repoUrl, setRepoUrl] = useState(
-    urlOf(mine?.urls, "repo") ?? teamRepo,
-  );
+  const [repoUrl, setRepoUrl] = useState(urlOf(mine?.urls, "repo") ?? teamRepo);
   const [demoUrl, setDemoUrl] = useState(urlOf(mine?.urls, "demo") ?? "");
   const [notes, setNotes] = useState(mine?.description ?? "");
   const [perkIds, setPerkIds] = useState<Id<"perks">[]>(mine?.perkIds ?? []);
@@ -303,7 +303,15 @@ function SubmitForm({
       demoParsed.ok &&
       notesParsed.ok
     );
-  }, [demoParsed.ok, name, notesParsed.ok, repoUrl, saving, submissionsOpen, videoUrl]);
+  }, [
+    demoParsed.ok,
+    name,
+    notesParsed.ok,
+    repoUrl,
+    saving,
+    submissionsOpen,
+    videoUrl,
+  ]);
 
   async function onRepoBlur() {
     if (!repoParsed?.ok) {
@@ -337,7 +345,8 @@ function SubmitForm({
           </CardTitle>
           <CardDescription>
             Vídeo de 3 minutos para los jueces de San Francisco: contad el
-            proyecto a fondo (craftsmanship, problem solving, creativity y overall).
+            proyecto a fondo (craftsmanship, problem solving, creativity y
+            overall).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -397,7 +406,7 @@ function SubmitForm({
               <p
                 className={cn(
                   "text-sm",
-                  repoNote === "Repo público" ? "text-hs-teal" : "text-hs-red",
+                  repoNote === "Repo público" ? "text-hs-teal" : "text-hs-red"
                 )}
               >
                 {repoNote}
@@ -449,7 +458,10 @@ function SubmitForm({
                 Opcional. Marca las que hayáis usado de verdad.
               </p>
               {catalog.map(({ perk }) => (
-                <label key={perk._id} className="flex items-start gap-3 text-sm">
+                <label
+                  key={perk._id}
+                  className="flex items-start gap-3 text-sm"
+                >
                   <Checkbox
                     checked={perkIds.includes(perk._id)}
                     disabled={saving}
@@ -457,7 +469,7 @@ function SubmitForm({
                       setPerkIds((current) =>
                         current.includes(perk._id)
                           ? current.filter((id) => id !== perk._id)
-                          : [...current, perk._id],
+                          : [...current, perk._id]
                       )
                     }
                   />
@@ -493,7 +505,7 @@ function SubmitForm({
                 })
                   .then(() => onSubmitted())
                   .catch((error: unknown) =>
-                    setFormError(errorMessage(error, "No se ha podido enviar")),
+                    setFormError(errorMessage(error, "No se ha podido enviar"))
                   )
                   .finally(() => setSaving(false));
               }}

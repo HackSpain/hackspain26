@@ -1,6 +1,7 @@
 ---
 export const prerender = true;
 
+import { HS_PALETTE } from "../components/theme/palette";
 import { brandSeo } from "../data/landing-meta";
 import Layout from "../layouts/layout.astro";
 
@@ -69,10 +70,10 @@ const logoColors = [
 ] as const;
 
 const supportColors = [
-  { hex: "#F4ECD8", name: "Papel", text: "ink" },
-  { hex: "#2A170F", name: "Tinta", text: "white" },
-  { hex: "#EAB619", name: "Oro", text: "ink" },
-  { hex: "#35858A", name: "Turquesa", text: "white" },
+  { hex: HS_PALETTE.paper.toUpperCase(), name: "Papel", text: "ink" },
+  { hex: HS_PALETTE.ink.toUpperCase(), name: "Tinta", text: "white" },
+  { hex: HS_PALETTE.gold.toUpperCase(), name: "Oro", text: "ink" },
+  { hex: HS_PALETTE.teal.toUpperCase(), name: "Turquesa", text: "white" },
 ] as const;
 
 const navItems = [
@@ -171,8 +172,8 @@ const downloadIcon = `
               {navItems.map((item) => (
                 <li class="border-hs-ink/25 border-b">
                   <a
-                    href={item.href}
                     class="brand-index-link flex min-h-14 items-center gap-4 px-6 font-extrabold text-sm"
+                    href={item.href}
                   >
                     <span class="font-bungee text-[0.62rem] text-hs-red">
                       {item.number}
@@ -183,7 +184,9 @@ const downloadIcon = `
               ))}
             </ol>
             <div class="p-6">
-              <p class="text-pretty text-sm font-bold leading-relaxed text-hs-ink/65">
+              <p
+                class="text-pretty text-sm font-bold leading-relaxed text-hs-ink/65"
+              >
                 ¿Tienes un uso que no aparece aquí?
               </p>
               <a
@@ -207,22 +210,24 @@ const downloadIcon = `
             </header>
 
             <div class="px-4 py-8 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
-              <p class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg">
+              <p
+                class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg"
+              >
                 La versión a color es la firma principal. Las versiones en negro
-                y blanco resuelven contextos monocromos o fondos con poco contraste.
-                No reconstruyas ni edites los archivos maestros.
+                y blanco resuelven contextos monocromos o fondos con poco
+                contraste. No reconstruyas ni edites los archivos maestros.
               </p>
 
               {logoGroups.map((group) => (
-                <section class="mt-10" aria-labelledby={`${group.id}-title`}>
+                <section aria-labelledby={`${group.id}-title`} class="mt-10">
                   <div class="mb-4 max-w-2xl">
                     <h3
-                      id={`${group.id}-title`}
                       class="font-bungee text-xl leading-tight sm:text-2xl"
+                      id={`${group.id}-title`}
                     >
                       {group.label}
                     </h3>
-                    <p class="mt-2 text-pretty text-sm font-bold leading-relaxed text-hs-ink/65 sm:text-base">
+                    <p class="mt-2 text-pretty font-bold text-hs-ink/65 text-sm leading-relaxed sm:text-base">
                       {group.description}
                     </p>
                   </div>
@@ -237,30 +242,30 @@ const downloadIcon = `
                           ]}
                         >
                           <img
-                            src={variant.svg}
                             alt={`${group.label} de HackSpain, versión ${variant.label.toLowerCase()}`}
-                            width={group.id === "symbol" ? "275" : "928"}
+                            decoding="async"
                             height={group.id === "symbol" ? "301" : "306"}
                             loading="lazy"
-                            decoding="async"
-                          >
+                            src={variant.svg}
+                            width={group.id === "symbol" ? "275" : "928"}
+                          />
                         </div>
                         <div class="flex min-h-16 items-center justify-between gap-3 bg-hs-paper px-4 py-2.5">
                           <span class="font-black text-sm">{variant.label}</span>
                           <div class="flex items-center gap-1">
                             <a
-                              href={variant.svg}
-                              download
-                              class="brand-format-link"
                               aria-label={`Descargar ${group.label.toLowerCase()} ${variant.label.toLowerCase()} en SVG`}
+                              class="brand-format-link"
+                              download
+                              href={variant.svg}
                             >
                               SVG
                             </a>
                             <a
-                              href={variant.png}
-                              download
-                              class="brand-format-link"
                               aria-label={`Descargar ${group.label.toLowerCase()} ${variant.label.toLowerCase()} en PNG`}
+                              class="brand-format-link"
+                              download
+                              href={variant.png}
                             >
                               PNG
                             </a>
@@ -283,18 +288,22 @@ const downloadIcon = `
                       height="301"
                       loading="lazy"
                       decoding="async"
-                    >
+                    />
                   </div>
                   <figcaption class="mt-6">
                     <h3 class="font-bungee text-lg">Área de seguridad</h3>
-                    <p class="mt-2 text-pretty text-sm font-bold leading-relaxed text-hs-ink/70">
-                      Mantén libre alrededor del logo un espacio mínimo equivalente
-                      a un cuarto de la altura del símbolo.
+                    <p
+                      class="mt-2 text-pretty text-sm font-bold leading-relaxed text-hs-ink/70"
+                    >
+                      Mantén libre alrededor del logo un espacio mínimo
+                      equivalente a un cuarto de la altura del símbolo.
                     </p>
                   </figcaption>
                 </figure>
                 <div class="bg-hs-gold px-5 py-7 sm:px-8 sm:py-9">
-                  <p class="font-black text-[0.65rem] uppercase tracking-[0.16em]">
+                  <p
+                    class="font-black text-[0.65rem] uppercase tracking-[0.16em]"
+                  >
                     Tamaño digital mínimo
                   </p>
                   <div class="mt-8 flex items-end justify-around gap-8">
@@ -307,8 +316,10 @@ const downloadIcon = `
                         class="mx-auto h-auto w-full max-w-[11.25rem]"
                         loading="lazy"
                         decoding="async"
+                      />
+                      <p
+                        class="mt-5 font-black text-xs uppercase tracking-[0.12em]"
                       >
-                      <p class="mt-5 font-black text-xs uppercase tracking-[0.12em]">
                         Logotipo · 180 px
                       </p>
                     </div>
@@ -321,15 +332,19 @@ const downloadIcon = `
                         class="mx-auto h-auto w-12"
                         loading="lazy"
                         decoding="async"
+                      />
+                      <p
+                        class="mt-5 font-black text-xs uppercase tracking-[0.12em]"
                       >
-                      <p class="mt-5 font-black text-xs uppercase tracking-[0.12em]">
                         Símbolo · 48 px
                       </p>
                     </div>
                   </div>
-                  <p class="mt-9 text-pretty text-sm font-bold leading-relaxed text-hs-ink/70">
-                    Si la firma completa pierde legibilidad, cambia al símbolo en
-                    lugar de reducirla más.
+                  <p
+                    class="mt-9 text-pretty text-sm font-bold leading-relaxed text-hs-ink/70"
+                  >
+                    Si la firma completa pierde legibilidad, cambia al símbolo
+                    en lugar de reducirla más.
                   </p>
                 </div>
               </div>
@@ -345,9 +360,12 @@ const downloadIcon = `
               </div>
             </header>
             <div class="px-4 py-8 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
-              <p class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg">
-                Rojo y naranja viven dentro del logo. Papel, tinta, oro y turquesa
-                amplían el sistema para superficies, texto y comunicación digital.
+              <p
+                class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg"
+              >
+                Rojo y naranja viven dentro del logo. Papel, tinta, oro y
+                turquesa amplían el sistema para superficies, texto y
+                comunicación digital.
               </p>
 
               <div class="mt-9">
@@ -355,29 +373,29 @@ const downloadIcon = `
                 <div class="brand-color-grid mt-4">
                   {logoColors.map((color) => (
                     <button
-                      type="button"
+                      aria-label={`Copiar ${color.name}, ${color.hex}`}
+                      data-copy-color={color.hex}
                       class:list={[
                         "brand-color-card",
                         color.text === "white" && "brand-color-card--light-text",
                       ]}
                       style={`--swatch: ${color.hex}`}
-                      data-copy-color={color.hex}
-                      aria-label={`Copiar ${color.name}, ${color.hex}`}
+                      type="button"
                     >
                       <span class="brand-color-name">{color.name}</span>
                       <span class="brand-color-value">
                         <span>{color.hex}</span>
                         <svg
-                          viewBox="0 0 24 24"
+                          aria-hidden="true"
                           fill="none"
                           stroke="currentColor"
-                          stroke-width="2.5"
                           stroke-linecap="square"
                           stroke-linejoin="miter"
-                          aria-hidden="true"
+                          stroke-width="2.5"
+                          viewBox="0 0 24 24"
                         >
-                          <rect x="8" y="8" width="11" height="11"></rect>
-                          <path d="M16 8V5H5v11h3"></path>
+                          <rect height="11" width="11" x="8" y="8" />
+                          <path d="M16 8V5H5v11h3" />
                         </svg>
                       </span>
                     </button>
@@ -390,29 +408,29 @@ const downloadIcon = `
                 <div class="brand-color-grid mt-4">
                   {supportColors.map((color) => (
                     <button
-                      type="button"
+                      aria-label={`Copiar ${color.name}, ${color.hex}`}
+                      data-copy-color={color.hex}
                       class:list={[
                         "brand-color-card",
                         color.text === "white" && "brand-color-card--light-text",
                       ]}
                       style={`--swatch: ${color.hex}`}
-                      data-copy-color={color.hex}
-                      aria-label={`Copiar ${color.name}, ${color.hex}`}
+                      type="button"
                     >
                       <span class="brand-color-name">{color.name}</span>
                       <span class="brand-color-value">
                         <span>{color.hex}</span>
                         <svg
-                          viewBox="0 0 24 24"
+                          aria-hidden="true"
                           fill="none"
                           stroke="currentColor"
-                          stroke-width="2.5"
                           stroke-linecap="square"
                           stroke-linejoin="miter"
-                          aria-hidden="true"
+                          stroke-width="2.5"
+                          viewBox="0 0 24 24"
                         >
-                          <rect x="8" y="8" width="11" height="11"></rect>
-                          <path d="M16 8V5H5v11h3"></path>
+                          <rect height="11" width="11" x="8" y="8" />
+                          <path d="M16 8V5H5v11h3" />
                         </svg>
                       </span>
                     </button>
@@ -435,30 +453,44 @@ const downloadIcon = `
               </div>
             </header>
             <div class="px-4 py-8 sm:px-7 sm:py-10 lg:px-10 lg:py-12">
-              <p class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg">
-                Bungee aporta carácter en titulares breves. DM Sans sostiene todo
-                lo demás con una lectura directa y contemporánea.
+              <p
+                class="max-w-3xl text-pretty text-base font-bold leading-relaxed sm:text-lg"
+              >
+                Bungee aporta carácter en titulares breves. DM Sans sostiene
+                todo lo demás con una lectura directa y contemporánea.
               </p>
               <div class="mt-9 grid gap-[3px] bg-hs-ink lg:grid-cols-2">
-                <article class="flex min-h-[24rem] flex-col justify-between bg-[#CA0005] p-6 text-white sm:p-8">
+                <article
+                  class="flex min-h-[24rem] flex-col justify-between bg-[#CA0005] p-6 text-white sm:p-8"
+                >
                   <div>
-                    <p class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-white/70">
+                    <p
+                      class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-white/70"
+                    >
                       Display · Bungee Regular
                     </p>
-                    <p class="mt-7 text-balance font-bungee text-[clamp(2.3rem,6vw,4.7rem)] leading-[0.98] tracking-[-0.03em]">
+                    <p
+                      class="mt-7 text-balance font-bungee text-[clamp(2.3rem,6vw,4.7rem)] leading-[0.98] tracking-[-0.03em]"
+                    >
                       Ideas con acento propio.
                     </p>
                   </div>
                   <p class="font-bungee text-sm tracking-wide text-white/75">
-                    ABCDEFGHIJKLMNÑOPQRSTUVWXYZ<br>0123456789
+                    ABCDEFGHIJKLMNÑOPQRSTUVWXYZ<br />0123456789
                   </p>
                 </article>
-                <article class="flex min-h-[24rem] flex-col justify-between bg-hs-paper p-6 sm:p-8">
+                <article
+                  class="flex min-h-[24rem] flex-col justify-between bg-hs-paper p-6 sm:p-8"
+                >
                   <div>
-                    <p class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-hs-ink/55">
+                    <p
+                      class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-hs-ink/55"
+                    >
                       Texto · DM Sans
                     </p>
-                    <p class="mt-7 max-w-[19ch] text-pretty text-[clamp(1.7rem,4.5vw,3.4rem)] font-black leading-[1.04] tracking-[-0.035em]">
+                    <p
+                      class="mt-7 max-w-[19ch] text-pretty text-[clamp(1.7rem,4.5vw,3.4rem)] font-black leading-[1.04] tracking-[-0.035em]"
+                    >
                       Construye algo que todavía no existe.
                     </p>
                   </div>
@@ -468,9 +500,11 @@ const downloadIcon = `
                   </div>
                 </article>
               </div>
-              <p class="mt-5 text-pretty text-sm font-bold leading-relaxed text-hs-ink/65">
-                Usa Bungee con moderación: titulares, cifras y llamadas cortas. Para
-                párrafos, navegación y datos, usa DM Sans.
+              <p
+                class="mt-5 text-pretty text-sm font-bold leading-relaxed text-hs-ink/65"
+              >
+                Usa Bungee con moderación: titulares, cifras y llamadas cortas.
+                Para párrafos, navegación y datos, usa DM Sans.
               </p>
             </div>
           </section>
@@ -487,18 +521,31 @@ const downloadIcon = `
               <div class="grid gap-[3px] bg-hs-ink md:grid-cols-2">
                 <article class="bg-hs-teal p-6 text-white sm:p-8">
                   <p class="font-bungee text-xl">Haz</p>
-                  <ul class="mt-5 space-y-3 text-pretty text-sm font-bold leading-relaxed sm:text-base">
-                    <li>Usa los archivos originales sin alterar su proporción.</li>
-                    <li>Elige la versión con mayor contraste sobre el fondo.</li>
+                  <ul
+                    class="mt-5 space-y-3 text-pretty text-sm font-bold leading-relaxed sm:text-base"
+                  >
+                    <li>
+                      Usa los archivos originales sin alterar su proporción.
+                    </li>
+                    <li>
+                      Elige la versión con mayor contraste sobre el fondo.
+                    </li>
                     <li>Reserva aire suficiente alrededor de la marca.</li>
-                    <li>Prioriza el logotipo; recurre al símbolo en formatos compactos.</li>
+                    <li>
+                      Prioriza el logotipo; recurre al símbolo en formatos
+                      compactos.
+                    </li>
                   </ul>
                 </article>
                 <article class="bg-hs-red p-6 text-white sm:p-8">
                   <p class="font-bungee text-xl">Evita</p>
-                  <ul class="mt-5 space-y-3 text-pretty text-sm font-bold leading-relaxed sm:text-base">
+                  <ul
+                    class="mt-5 space-y-3 text-pretty text-sm font-bold leading-relaxed sm:text-base"
+                  >
                     <li>Estirar, comprimir, girar o recortar la marca.</li>
-                    <li>Recolorear partes del logo o cambiar su construcción.</li>
+                    <li>
+                      Recolorear partes del logo o cambiar su construcción.
+                    </li>
                     <li>Añadir sombras, brillos, degradados o contornos.</li>
                     <li>Colocarla sobre fondos que dificulten su lectura.</li>
                   </ul>
@@ -515,12 +562,17 @@ const downloadIcon = `
                       height="306"
                       loading="lazy"
                       decoding="async"
-                    >
+                    />
                   </div>
-                  <figcaption><strong>Sí</strong> · proporción original</figcaption>
+                  <figcaption>
+                    <strong>Sí</strong>
+                    · proporción original
+                  </figcaption>
                 </figure>
                 <figure>
-                  <div class="brand-misuse-preview brand-misuse-preview--squashed bg-hs-paper">
+                  <div
+                    class="brand-misuse-preview brand-misuse-preview--squashed bg-hs-paper"
+                  >
                     <img
                       src="/brand-assets/hackspain-wordmark-color.svg"
                       alt="Ejemplo incorrecto: logotipo comprimido"
@@ -528,13 +580,15 @@ const downloadIcon = `
                       height="306"
                       loading="lazy"
                       decoding="async"
-                    >
+                    />
                     <span aria-hidden="true">No</span>
                   </div>
                   <figcaption><strong>No</strong> · deformar</figcaption>
                 </figure>
                 <figure>
-                  <div class="brand-misuse-preview brand-misuse-preview--effects bg-hs-navy">
+                  <div
+                    class="brand-misuse-preview brand-misuse-preview--effects bg-hs-navy"
+                  >
                     <img
                       src="/brand-assets/hackspain-wordmark-white.svg"
                       alt="Ejemplo incorrecto: logotipo con efectos"
@@ -542,19 +596,27 @@ const downloadIcon = `
                       height="306"
                       loading="lazy"
                       decoding="async"
-                    >
+                    />
                     <span aria-hidden="true">No</span>
                   </div>
                   <figcaption><strong>No</strong> · añadir efectos</figcaption>
                 </figure>
               </div>
 
-              <div class="mt-12 border-[3px] border-hs-ink bg-hs-gold p-6 sm:p-9">
-                <p class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-hs-ink/60">
+              <div
+                class="mt-12 border-[3px] border-hs-ink bg-hs-gold p-6 sm:p-9"
+              >
+                <p
+                  class="font-black text-[0.65rem] uppercase tracking-[0.16em] text-hs-ink/60"
+                >
                   Prensa, partners y colaboraciones
                 </p>
-                <div class="mt-4 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
-                  <h3 class="max-w-[18ch] text-balance font-bungee text-2xl leading-tight sm:text-3xl">
+                <div
+                  class="mt-4 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end"
+                >
+                  <h3
+                    class="max-w-[18ch] text-balance font-bungee text-2xl leading-tight sm:text-3xl"
+                  >
                     ¿Necesitas una adaptación especial?
                   </h3>
                   <a
@@ -577,7 +639,8 @@ const downloadIcon = `
           HackSpain · Madrid 2026
         </p>
         <p class="text-pretty text-xs font-bold text-hs-paper/65">
-          Usa estos activos de forma respetuosa y sin sugerir una colaboración no autorizada.
+          Usa estos activos de forma respetuosa y sin sugerir una colaboración
+          no autorizada.
         </p>
       </footer>
     </main>
@@ -586,9 +649,8 @@ const downloadIcon = `
   <script>
     import { copyToClipboard } from "../lib/copy-to-clipboard";
 
-    const copyButtons = document.querySelectorAll<HTMLButtonElement>(
-      "[data-copy-color]"
-    );
+    const copyButtons =
+      document.querySelectorAll<HTMLButtonElement>("[data-copy-color]");
     const copyStatus = document.querySelector<HTMLElement>("#copy-status");
 
     for (const button of copyButtons) {
@@ -636,9 +698,9 @@ const downloadIcon = `
   .brand-text-link,
   .brand-format-link,
   .brand-contact-link {
-    transition-property: color, background-color;
-    transition-duration: 150ms;
     transition-timing-function: ease-out;
+    transition-duration: 150ms;
+    transition-property: color, background-color;
   }
 
   .brand-text-link:hover {
@@ -646,9 +708,9 @@ const downloadIcon = `
   }
 
   .brand-home-link {
-    transition-property: filter, scale;
-    transition-duration: 150ms;
     transition-timing-function: ease-out;
+    transition-duration: 150ms;
+    transition-property: filter, scale;
   }
 
   .brand-home-link:hover {
@@ -675,9 +737,9 @@ const downloadIcon = `
   .brand-contact-link,
   .brand-format-link,
   .brand-color-card {
-    transition-property: filter, scale, background-color, color;
-    transition-duration: 150ms;
     transition-timing-function: ease-out;
+    transition-duration: 150ms;
+    transition-property: filter, scale, background-color, color;
   }
 
   .brand-download-link:hover,
@@ -701,27 +763,27 @@ const downloadIcon = `
   }
 
   .brand-download-link :global(svg) {
+    flex: 0 0 auto;
     width: 1.15rem;
     height: 1.15rem;
-    flex: 0 0 auto;
   }
 
   .brand-section-header {
     display: grid;
     grid-template-columns: 4.25rem minmax(0, 1fr);
     min-height: 8.25rem;
-    border-bottom: 3px solid var(--color-hs-ink);
     background: var(--color-hs-sand);
+    border-bottom: 3px solid var(--color-hs-ink);
   }
 
   .brand-section-header > span {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-right: 3px solid var(--color-hs-ink);
-    background: var(--color-hs-gold);
     font-family: var(--font-bungee);
     font-size: 0.72rem;
+    background: var(--color-hs-gold);
+    border-right: 3px solid var(--color-hs-ink);
   }
 
   .brand-section-header > div {
@@ -734,9 +796,9 @@ const downloadIcon = `
   .brand-section-header p {
     font-size: 0.65rem;
     font-weight: 900;
+    color: color-mix(in srgb, var(--color-hs-ink) 58%, transparent);
     text-transform: uppercase;
     letter-spacing: 0.16em;
-    color: color-mix(in srgb, var(--color-hs-ink) 58%, transparent);
   }
 
   .brand-section-header h2 {
@@ -750,8 +812,8 @@ const downloadIcon = `
   .brand-asset-grid {
     display: grid;
     gap: 3px;
-    border: 3px solid var(--color-hs-ink);
     background: var(--color-hs-ink);
+    border: 3px solid var(--color-hs-ink);
   }
 
   .brand-asset-card {
@@ -761,9 +823,9 @@ const downloadIcon = `
 
   .brand-asset-preview {
     display: flex;
-    min-height: 12rem;
     align-items: center;
     justify-content: center;
+    min-height: 12rem;
     padding: 2.25rem 1.5rem;
   }
 
@@ -793,10 +855,10 @@ const downloadIcon = `
 
   .brand-format-link {
     display: inline-flex;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
     align-items: center;
     justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
     font-size: 0.68rem;
     font-weight: 900;
     letter-spacing: 0.08em;
@@ -809,15 +871,15 @@ const downloadIcon = `
   .safe-area {
     position: relative;
     display: grid;
+    place-items: center;
     width: min(100%, 16rem);
     aspect-ratio: 1;
-    place-items: center;
-    border: 2px dashed color-mix(in srgb, var(--color-hs-ink) 50%, transparent);
+    padding: 12.5%;
     background:
       linear-gradient(rgba(42, 23, 15, 0.07) 1px, transparent 1px),
       linear-gradient(90deg, rgba(42, 23, 15, 0.07) 1px, transparent 1px);
     background-size: 25% 25%;
-    padding: 12.5%;
+    border: 2px dashed color-mix(in srgb, var(--color-hs-ink) 50%, transparent);
   }
 
   .safe-area > span {
@@ -839,21 +901,21 @@ const downloadIcon = `
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 3px;
-    border: 3px solid var(--color-hs-ink);
     background: var(--color-hs-ink);
+    border: 3px solid var(--color-hs-ink);
   }
 
   .brand-color-card {
     display: flex;
-    min-height: 9.5rem;
     flex-direction: column;
     justify-content: space-between;
+    min-height: 9.5rem;
     padding: 1rem;
-    border: 0;
-    background: var(--swatch);
     color: var(--color-hs-ink);
-    cursor: copy;
     text-align: left;
+    cursor: copy;
+    background: var(--swatch);
+    border: 0;
   }
 
   .brand-color-card:hover {
@@ -865,24 +927,24 @@ const downloadIcon = `
   }
 
   .brand-color-name {
-    font-weight: 900;
     font-size: 0.85rem;
+    font-weight: 900;
   }
 
   .brand-color-value {
     display: flex;
+    gap: 0.75rem;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
     font-size: 0.72rem;
     font-weight: 900;
     letter-spacing: 0.12em;
   }
 
   .brand-color-value svg {
+    flex: 0 0 auto;
     width: 1.1rem;
     height: 1.1rem;
-    flex: 0 0 auto;
   }
 
   .brand-color-card[data-copied="true"] .brand-color-value span::after {
@@ -892,8 +954,8 @@ const downloadIcon = `
   .brand-misuse-grid {
     display: grid;
     gap: 3px;
-    border: 3px solid var(--color-hs-ink);
     background: var(--color-hs-ink);
+    border: 3px solid var(--color-hs-ink);
   }
 
   .brand-misuse-grid figure {
@@ -904,11 +966,11 @@ const downloadIcon = `
   .brand-misuse-preview {
     position: relative;
     display: flex;
-    min-height: 10.5rem;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    min-height: 10.5rem;
     padding: 2rem 1.25rem;
+    overflow: hidden;
   }
 
   .brand-misuse-preview img {
@@ -921,8 +983,8 @@ const downloadIcon = `
   }
 
   .brand-misuse-preview--effects img {
-    transform: rotate(-7deg);
     filter: drop-shadow(0 0 12px #eab619) drop-shadow(8px 10px 0 #ca0005);
+    transform: rotate(-7deg);
   }
 
   .brand-misuse-preview > span {
@@ -930,14 +992,14 @@ const downloadIcon = `
     top: 0.75rem;
     right: 0.75rem;
     display: grid;
+    place-items: center;
     width: 2rem;
     height: 2rem;
-    place-items: center;
-    background: var(--color-hs-red);
-    color: white;
     font-size: 0.62rem;
     font-weight: 900;
+    color: white;
     text-transform: uppercase;
+    background: var(--color-hs-red);
   }
 
   .brand-misuse-grid figcaption {

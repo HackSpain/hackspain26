@@ -48,7 +48,8 @@ export function LinksStep({
   const setTwitterHandle = useMutation(api.users.setTwitterHandle);
   const action = useActionFeedback();
   const [handleDraft, setHandleDraft] = useState<string | undefined>();
-  const handle = handleDraft ?? me.twitterHandle ?? me.suggestedTwitterHandle ?? "";
+  const handle =
+    handleDraft ?? me.twitterHandle ?? me.suggestedTwitterHandle ?? "";
   const handleError = twitterHandleError(handle);
   // First "Continuar" without GitHub only shakes the card and asks; the
   // second one goes through.
@@ -89,7 +90,7 @@ export function LinksStep({
           ref={cardRef}
           className={cn(
             "flex items-center gap-4 border-[3px] border-hs-ink bg-hs-paper p-3",
-            askGithub && "hs-shake",
+            askGithub && "hs-shake"
           )}
         >
           <span
@@ -124,7 +125,9 @@ export function LinksStep({
             </Button>
           )}
         </div>
-        {github.error ? <p className="text-sm text-hs-red">{github.error}</p> : null}
+        {github.error ? (
+          <p className="text-sm text-hs-red">{github.error}</p>
+        ) : null}
         {askGithub && !github.error ? (
           <p className="hs-enter text-sm font-medium text-hs-red" role="status">
             ¿Seguro que no quieres vincular GitHub? El análisis de tus commits

@@ -27,7 +27,10 @@ export function TrackLogo({
     <img
       src={track.logoUrl}
       alt={track.label}
-      className={cn("h-6 w-auto max-w-40 object-contain object-left", className)}
+      className={cn(
+        "h-6 w-auto max-w-40 object-contain object-left",
+        className
+      )}
     />
   );
 }
@@ -49,7 +52,7 @@ export function TrackTag({
       title={track.label}
       className={cn(
         "inline-flex max-w-full items-center border border-hs-ink/30 bg-hs-paper px-1.5 py-0.5 text-[11px] uppercase tracking-wide",
-        className,
+        className
       )}
     >
       {track.logoUrl ? (

@@ -164,7 +164,9 @@ function randomSeed(): string {
   );
 }
 
-async function loadSettingsDoc(ctx: DbCtx): Promise<Doc<"judgingSettings"> | null> {
+async function loadSettingsDoc(
+  ctx: DbCtx
+): Promise<Doc<"judgingSettings"> | null> {
   return await ctx.db
     .query("judgingSettings")
     .withIndex("by_key", (q) => q.eq("key", JUDGING_SETTINGS_KEY))
@@ -273,7 +275,9 @@ function videoForTrack(
   submission: Doc<"submissions">,
   trackId: Id<"tracks">
 ): string | undefined {
-  const recorded = submission.trackVideos?.find((row) => row.trackId === trackId);
+  const recorded = submission.trackVideos?.find(
+    (row) => row.trackId === trackId
+  );
   if (recorded?.videoUrl) {
     return recorded.videoUrl;
   }
@@ -466,7 +470,8 @@ export const trackCatalog = catalogQuery({
     const tracks = [...catalog.tracksById.values()]
       .filter((track) => track.active)
       .toSorted(
-        (a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, "es")
+        (a, b) =>
+          a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, "es")
       );
     const counts = new Map<Id<"tracks">, number>();
     for (const submission of catalog.submitted) {
@@ -595,17 +600,25 @@ export const submit = judgeMutation({
 export const adminOverview = adminQuery({
   args: {},
   handler: async (ctx) => {
-    const [settings, settingsDoc, round, pool, catalog, assignments, assessments, conflicts] =
-      await Promise.all([
-        loadSettings(ctx),
-        loadSettingsDoc(ctx),
-        loadRound(ctx),
-        loadJudgePool(ctx),
-        loadCatalog(ctx),
-        ctx.db.query("assessmentAssignments").collect(),
-        ctx.db.query("assessments").collect(),
-        ctx.db.query("judgingConflicts").collect(),
-      ]);
+    const [
+      settings,
+      settingsDoc,
+      round,
+      pool,
+      catalog,
+      assignments,
+      assessments,
+      conflicts,
+    ] = await Promise.all([
+      loadSettings(ctx),
+      loadSettingsDoc(ctx),
+      loadRound(ctx),
+      loadJudgePool(ctx),
+      loadCatalog(ctx),
+      ctx.db.query("assessmentAssignments").collect(),
+      ctx.db.query("assessments").collect(),
+      ctx.db.query("judgingConflicts").collect(),
+    ]);
 
     const judgeIds: Id<"users">[] = round
       ? round.judgeIds
@@ -616,16 +629,25 @@ export const adminOverview = adminQuery({
       name: judgeName(catalog.usersById.get(judgeId)),
     });
 
-    const assignmentsBySubmission = new Map<Id<"submissions">, Doc<"assessmentAssignments">[]>();
+    const assignmentsBySubmission = new Map<
+      Id<"submissions">,
+      Doc<"assessmentAssignments">[]
+    >();
     const assignedPerJudge = new Map<Id<"users">, number>();
     for (const row of assignments) {
       const list = assignmentsBySubmission.get(row.submissionId) ?? [];
       list.push(row);
       assignmentsBySubmission.set(row.submissionId, list);
-      assignedPerJudge.set(row.judgeId, (assignedPerJudge.get(row.judgeId) ?? 0) + 1);
+      assignedPerJudge.set(
+        row.judgeId,
+        (assignedPerJudge.get(row.judgeId) ?? 0) + 1
+      );
     }
 
-    const assessmentsBySubmission = new Map<Id<"submissions">, Doc<"assessments">[]>();
+    const assessmentsBySubmission = new Map<
+      Id<"submissions">,
+      Doc<"assessments">[]
+    >();
     const submittedPerJudge = new Map<Id<"users">, number>();
     const draftsPerJudge = new Map<Id<"users">, number>();
     let submittedTotal = 0;
@@ -635,9 +657,15 @@ export const adminOverview = adminQuery({
       assessmentsBySubmission.set(row.submissionId, list);
       if (row.status === "submitted") {
         submittedTotal += 1;
-        submittedPerJudge.set(row.judgeId, (submittedPerJudge.get(row.judgeId) ?? 0) + 1);
+        submittedPerJudge.set(
+          row.judgeId,
+          (submittedPerJudge.get(row.judgeId) ?? 0) + 1
+        );
       } else {
-        draftsPerJudge.set(row.judgeId, (draftsPerJudge.get(row.judgeId) ?? 0) + 1);
+        draftsPerJudge.set(
+          row.judgeId,
+          (draftsPerJudge.get(row.judgeId) ?? 0) + 1
+        );
       }
     }
 
@@ -673,7 +701,9 @@ export const adminOverview = adminQuery({
       ? estimateGenerosity(judgeIds, observations, settings.lambda)
       : new Map<Id<"users">, number>();
     const results = rankProjects(scored, generosity);
-    const resultBySubmission = new Map(results.map((result) => [result.project, result]));
+    const resultBySubmission = new Map(
+      results.map((result) => [result.project, result])
+    );
 
     const projects = catalog.submitted.map((submission) => {
       const result = resultBySubmission.get(submission._id);
@@ -702,7 +732,10 @@ export const adminOverview = adminQuery({
         })),
         calibratedMean: result?.calibratedMean ?? null,
         difference: result?.difference ?? null,
-        flagged: isFlagged(result?.difference ?? null, settings.disagreementThreshold),
+        flagged: isFlagged(
+          result?.difference ?? null,
+          settings.disagreementThreshold
+        ),
         judges,
         rank: result?.rank ?? null,
         rawMean: result?.rawMean ?? null,
@@ -746,7 +779,8 @@ export const adminOverview = adminQuery({
 
     return {
       completion: {
-        complete: round !== null && judgingComplete(submittedTotal, assessmentTotal),
+        complete:
+          round !== null && judgingComplete(submittedTotal, assessmentTotal),
         connected:
           round !== null && calibrationConnected(judgeIds, observations),
         submitted: submittedTotal,
@@ -867,7 +901,9 @@ function mapUnresolved(plan: PlannedRound) {
   );
   return plan.unresolved.map((conflict) => {
     const judgeId = plan.judgeIds[conflict.judge] as Id<"users">;
-    const submissionId = plan.submissionIds[conflict.project] as Id<"submissions">;
+    const submissionId = plan.submissionIds[
+      conflict.project
+    ] as Id<"submissions">;
     return {
       judge: { _id: judgeId, name: judgeName(plan.usersById.get(judgeId)) },
       projectName: namesBySubmission.get(submissionId) ?? "Proyecto",
@@ -912,7 +948,10 @@ function previewFromPlan(plan: PlannedRound) {
   };
 }
 
-async function planAssignments(ctx: DbCtx, seed: string): Promise<PlannedRound> {
+async function planAssignments(
+  ctx: DbCtx,
+  seed: string
+): Promise<PlannedRound> {
   const [pool, submitted, conflictRows, users] = await Promise.all([
     loadJudgePool(ctx),
     ctx.db
@@ -953,7 +992,9 @@ async function planAssignments(ctx: DbCtx, seed: string): Promise<PlannedRound> 
   );
   const problems = validatePairs(pairs, judgeIds.length, submissionIds.length);
   if (problems.length > 0) {
-    throw new Error(`El reparto no cumple las garantías: ${problems.join("; ")}`);
+    throw new Error(
+      `El reparto no cumple las garantías: ${problems.join("; ")}`
+    );
   }
 
   return {
@@ -1020,13 +1061,12 @@ export const generateAssignments = adminMutation({
   handler: async (ctx, args) => {
     const existing = await loadRound(ctx);
     if (existing && args.replace !== true) {
-      throw new Error("Las asignaciones ya están generadas. Usa replace para volver a repartir.");
+      throw new Error(
+        "Las asignaciones ya están generadas. Usa replace para volver a repartir."
+      );
     }
 
-    const plan = await planAssignments(
-      ctx,
-      args.seed?.trim() || randomSeed()
-    );
+    const plan = await planAssignments(ctx, args.seed?.trim() || randomSeed());
     if (plan.unresolved.length > 0) {
       return { ok: false as const, unresolved: mapUnresolved(plan) };
     }
@@ -1046,7 +1086,9 @@ export const generateAssignments = adminMutation({
       swaps: plan.swaps,
     });
     for (const pair of plan.pairs) {
-      const submissionId = plan.submissionIds[pair.project] as Id<"submissions">;
+      const submissionId = plan.submissionIds[
+        pair.project
+      ] as Id<"submissions">;
       for (const slot of [0, 1] as const) {
         await ctx.db.insert("assessmentAssignments", {
           createdAt: now,

@@ -111,7 +111,10 @@ export const toggleReaction = onboardedMutation({
       next = reactions
         .map((reaction) =>
           reaction === current
-            ? { emoji, userIds: current.userIds.filter((id) => id !== ctx.user._id) }
+            ? {
+                emoji,
+                userIds: current.userIds.filter((id) => id !== ctx.user._id),
+              }
             : reaction
         )
         .filter((reaction) => reaction.userIds.length > 0);
@@ -123,7 +126,10 @@ export const toggleReaction = onboardedMutation({
       );
     } else {
       if (reactions.length >= MAX_REACTION_KINDS) {
-        fail("VALIDATION", "Esta publicación ya tiene muchas reacciones distintas. Suma la tuya a una de ellas.");
+        fail(
+          "VALIDATION",
+          "Esta publicación ya tiene muchas reacciones distintas. Suma la tuya a una de ellas."
+        );
       }
       next = [...reactions, { emoji, userIds: [ctx.user._id] }];
     }
@@ -161,7 +167,8 @@ async function hydrateComment(
   viewer: Doc<"users">
 ) {
   const author = await ctx.db.get(comment.authorId);
-  const signup = author && !author.name ? await getSignupForUser(ctx, author) : null;
+  const signup =
+    author && !author.name ? await getSignupForUser(ctx, author) : null;
   return {
     _id: comment._id,
     author: {

@@ -8,7 +8,11 @@ import {
   submissionStatusValidator,
 } from "./lib/validators";
 import { countsAsAttending } from "./lib/attendance";
-import { findSignupByEmail, findUserByEmail, getSignupForUser } from "./lib/auth";
+import {
+  findSignupByEmail,
+  findUserByEmail,
+  getSignupForUser,
+} from "./lib/auth";
 import { parseEmailList } from "./lib/normalize";
 import { urlsFromRecord, urlsValidator } from "./lib/urls";
 import {
@@ -287,7 +291,8 @@ export const getParticipant = adminQuery({
     if (!signup && !user) {
       return null;
     }
-    const resolvedSignup = signup ?? (user ? await getSignupForUser(ctx, user) : null);
+    const resolvedSignup =
+      signup ?? (user ? await getSignupForUser(ctx, user) : null);
     const pass =
       (resolvedSignup
         ? await ctx.db

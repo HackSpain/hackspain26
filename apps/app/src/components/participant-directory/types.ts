@@ -37,6 +37,10 @@ export interface DirectoryParticipant {
   urls?: DirectoryUrl[];
 }
 
-export function personHeading(person: Pick<DirectoryParticipant, "displayName" | "role">): string {
-  return person.role ? `${person.displayName} · ${person.role}` : person.displayName;
+export function personHeading(
+  person: Pick<DirectoryParticipant, "displayName" | "role">
+): string {
+  return person.role
+    ? `${person.displayName} · ${person.role}`
+    : person.displayName;
 }

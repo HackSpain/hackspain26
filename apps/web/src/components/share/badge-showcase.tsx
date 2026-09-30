@@ -38,7 +38,7 @@ export function BadgeShowcase({ fullName, githubHandle, photoDataUri }: Props) {
               same scene, so they should be recognisably the same place. */}
           <div className="border-[3px] border-hs-ink bg-hs-cream px-4 py-3 shadow-[6px_6px_0_0_var(--color-hs-ink)]">
             <h1 className="font-bungee text-[clamp(1.35rem,4.6vw,2.4rem)] text-hs-ink leading-none">
-              {firstName} va a HackSpain 2026
+              {firstName} estuvo en HackSpain 2026
             </h1>
             <p className="mt-2 font-sans text-hs-brown text-xs">
               Del 18 al 20 de septiembre en Madrid.
@@ -67,7 +67,7 @@ export function BadgeShowcase({ fullName, githubHandle, photoDataUri }: Props) {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-3 sm:pb-5">
         <div className="pointer-events-auto mx-auto flex max-w-md flex-col items-center gap-3 border-[3px] border-hs-ink bg-hs-cream/95 p-4 text-center shadow-[6px_6px_0_0_var(--color-hs-ink)]">
           <span className="font-sans text-hs-brown text-sm">
-            48 horas construyendo en la UPM, con 250 hackers más.
+            36 horas construyendo en la UPM, con 250 hackers más.
           </span>
           <a className={hsButtonClass("gold", "md", "w-full")} href="/">
             Descubre HackSpain

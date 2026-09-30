@@ -5,7 +5,7 @@ import { isGithubHandle } from "./github-handle";
  * what the record is looked up by, so truncating it here would stop long names
  * from ever matching their own signup.
  */
-export const BADGE_NAME_MAX_LENGTH = 200;
+const BADGE_NAME_MAX_LENGTH = 200;
 
 /** The card size every social network crops its link preview from. */
 export const OG_BADGE_WIDTH = 1200;
@@ -73,7 +73,7 @@ export function badgeSharePath(params: BadgeShareParams): string {
  * design: a redesign kept serving the old picture to every link already shared,
  * and to the person who had just been looking at their own badge.
  */
-export const BADGE_RENDER_VERSION = 2;
+const BADGE_RENDER_VERSION = 2;
 
 /**
  * The social preview image for a given badge. Kept as a path so the layout can

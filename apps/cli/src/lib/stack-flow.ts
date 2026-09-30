@@ -1,7 +1,6 @@
 import type { Session } from "./api";
 import { api } from "./api";
 import type { CliContext } from "./context";
-import { CliError } from "./errors";
 import type { Ui } from "./output";
 import { confirmOrFlag, textOrFlag } from "./prompts";
 import { c, highlight, terminalText } from "./style";
@@ -58,7 +57,8 @@ export async function detectAndConfirmStack(
     stack: edited,
   });
   if (techStack.length === 0) {
-    throw new CliError("Stack cleared.");
+    ui.success("Stack cleared.");
+    return techStack;
   }
   ui.line(
     techStack.map((tag) => highlight(terminalText(tag))).join(c.dim(" · "))

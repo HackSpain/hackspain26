@@ -29,7 +29,7 @@ export const CLI_AUTH_PATH = "/cli-auth";
  * tampered value) is dropped so the redirect never leaves this allowlist.
  */
 export function safeCliAuthReturnTo(
-  raw: string | null | undefined,
+  raw: string | null | undefined
 ): string | null {
   if (!raw || !raw.startsWith(CLI_AUTH_PATH)) {
     return null;
@@ -52,6 +52,6 @@ export function cliAuthReturnTo(location: {
   hash: string;
 }): string | null {
   return safeCliAuthReturnTo(
-    location.pathname + location.search + location.hash,
+    location.pathname + location.search + location.hash
   );
 }

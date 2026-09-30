@@ -16,13 +16,18 @@ test("an uploaded thumbnail wins, then the resizing route, then GitHub", () => {
     "/api/files/kg2avatar?w=128"
   );
   assert.equal(
-    avatarThumbnailFor({ image: "https://avatars.githubusercontent.com/u/1?v=4" }),
+    avatarThumbnailFor({
+      image: "https://avatars.githubusercontent.com/u/1?v=4",
+    }),
     "https://avatars.githubusercontent.com/u/1?v=4&s=128"
   );
   assert.equal(avatarThumbnailFor({}), undefined);
 });
 
 test("other hosts and odd values pass through untouched", () => {
-  assert.equal(externalThumbnail("https://example.com/a.png"), "https://example.com/a.png");
+  assert.equal(
+    externalThumbnail("https://example.com/a.png"),
+    "https://example.com/a.png"
+  );
   assert.equal(externalThumbnail("not a url"), "not a url");
 });

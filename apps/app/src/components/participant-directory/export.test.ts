@@ -43,13 +43,13 @@ test("csv has every directory field, BOM, and quotes commas", () => {
   assert.equal(csv.startsWith("\uFEFF"), true);
   assert.equal(
     row,
-    'u1,ana@example.com,Ana Pérez,Developer,Madrid,UPM,"Acme, Inc.",Informática,Hace cosas,React; TS,IA; Clima,Equipo 1,Nube,Build,ana,https://linkedin.com/in/anaperez,https://x.com/ana,https://ana.dev,"Won ""best demo""",Bici,https://github.com/ana/nube,https://nube.app,',
+    'u1,ana@example.com,Ana Pérez,Developer,Madrid,UPM,"Acme, Inc.",Informática,Hace cosas,React; TS,IA; Clima,Equipo 1,Nube,Build,ana,https://linkedin.com/in/anaperez,https://x.com/ana,https://ana.dev,"Won ""best demo""",Bici,https://github.com/ana/nube,https://nube.app,'
   );
 });
 
 test("file name is dated", () => {
   assert.match(
     directoryCsvFileName(new Date("2026-09-21T12:00:00Z")),
-    /^hackspain-participantes-\d{8}-\d{4}\.csv$/,
+    /^hackspain-participantes-\d{8}-\d{4}\.csv$/
   );
 });

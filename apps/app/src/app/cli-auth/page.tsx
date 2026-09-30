@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { api } from "@convex/_generated/api";
-import { AuthScreen, FormError, LoadingText, errorMessage } from "@/components/page";
+import {
+  AuthScreen,
+  FormError,
+  LoadingText,
+  errorMessage,
+} from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePrivateUrlParameter } from "@/lib/private-url-parameter";
@@ -24,8 +29,8 @@ function CliAuthCard() {
     try {
       await approve({ code });
       setApproved(true);
-    } catch (err) {
-      setError(errorMessage(err, "No se ha podido autorizar la CLI."));
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No se ha podido autorizar la CLI."));
     } finally {
       setPending(false);
     }
@@ -51,8 +56,8 @@ function CliAuthCard() {
         ) : code ? (
           <>
             <p className="text-sm text-hs-brown">
-              Una terminal con la CLI de HackSpain pide entrar con tu cuenta.
-              Si no has ejecutado{" "}
+              Una terminal con la CLI de HackSpain pide entrar con tu cuenta. Si
+              no has ejecutado{" "}
               <code className="text-hs-ink">hackspain auth login</code> ahora
               mismo, no la autorices.
             </p>

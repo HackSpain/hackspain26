@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -24,14 +25,14 @@ export function AppHeader({
       <div
         className={cn(
           contentWidth(pathname),
-          "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 py-3 sm:gap-x-5",
+          "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 py-3 sm:gap-x-5"
         )}
       >
         <Link
           href={homeHref}
           className="inline-flex min-h-11 w-fit shrink-0 items-center motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]"
         >
-          <img
+          <Image
             src="/logo.svg"
             alt="HackSpain"
             width={125}

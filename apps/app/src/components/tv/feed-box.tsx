@@ -2,7 +2,15 @@
 
 import { useQuery } from "convex/react";
 import { ImageIcon } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import type { TvFeedMode, TvFeedSource } from "@/lib/tv";
@@ -26,7 +34,9 @@ function useNow(ms: number) {
   const visible = usePageVisible();
   const [now, setNow] = useState(0);
   useEffect(() => {
-    if (!visible) {return;}
+    if (!visible) {
+      return;
+    }
     const boot = window.setTimeout(() => setNow(Date.now()), 0);
     const timer = window.setInterval(() => setNow(Date.now()), ms);
     return () => {
@@ -38,14 +48,22 @@ function useNow(ms: number) {
 }
 
 function timeAgo(at: number, now: number): string {
-  if (now === 0) {return "";}
+  if (now === 0) {
+    return "";
+  }
   const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
   const seconds = Math.round((at - now) / 1000);
-  if (Math.abs(seconds) < 60) {return "ahora mismo";}
+  if (Math.abs(seconds) < 60) {
+    return "ahora mismo";
+  }
   const minutes = Math.round(seconds / 60);
-  if (Math.abs(minutes) < 60) {return rtf.format(minutes, "minute");}
+  if (Math.abs(minutes) < 60) {
+    return rtf.format(minutes, "minute");
+  }
   const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) {return rtf.format(hours, "hour");}
+  if (Math.abs(hours) < 24) {
+    return rtf.format(hours, "hour");
+  }
   return new Date(at).toLocaleString("es-ES", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -67,7 +85,13 @@ export type FeedPost = {
 /** Demo screens hand the feed canned posts instead of the Convex query. */
 export const FeedDemoContext = createContext<FeedPost[] | null>(null);
 
-function FeedHeader({ title = "Feed", aside }: { title?: string; aside?: string }) {
+function FeedHeader({
+  title = "Feed",
+  aside,
+}: {
+  title?: string;
+  aside?: string;
+}) {
   return (
     <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-hs-ink/15 pb-[0.5cqw]">
       <p className="font-bungee text-[clamp(0.6rem,1.05cqw,1.4rem)] leading-none">
@@ -154,10 +178,16 @@ function FeedStream({
     flashGold(rows, 1.8);
     for (const row of rows) {
       const sha = row.querySelector<HTMLElement>("[data-sha]");
-      if (!sha?.dataset.sha) {continue;}
+      if (!sha?.dataset.sha) {
+        continue;
+      }
       gsap.to(sha, {
         duration: 0.9,
-        scrambleText: { text: sha.dataset.sha, chars: "0123456789abcdef", speed: 0.5 },
+        scrambleText: {
+          text: sha.dataset.sha,
+          chars: "0123456789abcdef",
+          speed: 0.5,
+        },
       });
     }
   }, []);
@@ -172,7 +202,10 @@ function FeedStream({
 
   return (
     <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
-      <FeedHeader title={source === "all" ? "Feed · Commits" : "Feed"} aside={aside} />
+      <FeedHeader
+        title={source === "all" ? "Feed · Commits" : "Feed"}
+        aside={aside}
+      />
       <ol
         ref={listRef}
         className="mt-[0.6cqw] min-h-0 flex-1 space-y-[0.4cqw] overflow-hidden"
@@ -210,7 +243,9 @@ function FeedSpotlight({
   const shownId = shown?._id;
 
   useEffect(() => {
-    if (!target || targetId === shownId) {return;}
+    if (!target || targetId === shownId) {
+      return;
+    }
     if (!card.current) {
       setShown(target);
       return;
@@ -219,7 +254,12 @@ function FeedSpotlight({
     const tween = gsap.to(
       card.current,
       reduced
-        ? { opacity: 0, duration: TV_REDUCED_FADE * 0.75, ease: "none", onComplete: () => setShown(target) }
+        ? {
+            opacity: 0,
+            duration: TV_REDUCED_FADE * 0.75,
+            ease: "none",
+            onComplete: () => setShown(target),
+          }
         : {
             yPercent: -4,
             opacity: 0,
@@ -227,7 +267,7 @@ function FeedSpotlight({
             duration: 0.28,
             ease: "power2.in",
             onComplete: () => setShown(target),
-          },
+          }
     );
     return () => {
       settle(tween);
@@ -237,7 +277,9 @@ function FeedSpotlight({
   useGSAP(
     () => {
       const el = card.current;
-      if (!el) {return;}
+      if (!el) {
+        return;
+      }
       const timeline = gsap.timeline();
       if (bar.current) {
         timeline.fromTo(
@@ -249,7 +291,7 @@ function FeedSpotlight({
             ease: "none",
             transformOrigin: "0% 50%",
           },
-          0,
+          0
         );
       }
       if (reduced) {
@@ -257,7 +299,7 @@ function FeedSpotlight({
           el,
           { opacity: 0 },
           { opacity: 1, duration: TV_REDUCED_FADE, ease: "none" },
-          0,
+          0
         );
         return;
       }
@@ -272,7 +314,7 @@ function FeedSpotlight({
           ease: TV_EASE_OUT,
           clearProps: "filter",
         },
-        0,
+        0
       );
       const author = el.querySelector<HTMLElement>("[data-author]");
       const body = el.querySelector<HTMLElement>("[data-body]");
@@ -307,19 +349,22 @@ function FeedSpotlight({
         });
       }
     },
-    { dependencies: [shownId, reduced], revertOnUpdate: true },
+    { dependencies: [shownId, reduced], revertOnUpdate: true }
   );
 
-  if (!shown) {return null;}
+  if (!shown) {
+    return null;
+  }
   const position = posts.findIndex((post) => post._id === shown._id);
 
   return (
     <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
-      <FeedHeader
-        aside={`${Math.max(position, 0) + 1} / ${posts.length}`}
-      />
+      <FeedHeader aside={`${Math.max(position, 0) + 1} / ${posts.length}`} />
       <div className="mt-[0.5cqw] h-[0.3cqw] shrink-0 bg-hs-ink/10">
-        <div ref={bar} className="h-full w-full origin-left scale-x-0 bg-hs-gold" />
+        <div
+          ref={bar}
+          className="h-full w-full origin-left scale-x-0 bg-hs-gold"
+        />
       </div>
       <div
         key={shown._id}
@@ -368,7 +413,9 @@ export function FeedBox({
   const remote = useQuery(api.tv.listFeed, demo ? "skip" : { source });
   const posts = demo
     ? demo.filter((post) =>
-        source === "all" ? true : post.kind === (source === "github" ? "github" : "post"),
+        source === "all"
+          ? true
+          : post.kind === (source === "github" ? "github" : "post")
       )
     : remote;
   const now = useNow(30_000);
@@ -417,7 +464,7 @@ export function FeedEditor({
 }) {
   const [nextMode, setNextMode] = useState<TvFeedMode>(mode ?? "latest");
   const [nextSource, setNextSource] = useState<TvFeedSource>(
-    source ?? "participants",
+    source ?? "participants"
   );
 
   return (

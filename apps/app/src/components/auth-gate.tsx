@@ -137,7 +137,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     const deadline = transition.startedAt + (unauthenticated ? 1500 : 12_000);
     const timer = setTimeout(
       () => setTransition(null),
-      Math.max(0, deadline - Date.now()),
+      Math.max(0, deadline - Date.now())
     );
     return () => clearTimeout(timer);
   }, [isAuthenticated, isLoading, transition]);
@@ -304,7 +304,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, isLoading, me, pathname, router]);
 
   // These routes render without waiting on auth. The handoff creates its own
-  // session; TV, reception, closing and the finals cancel page are public.
+  // session; TV, closing and the finals cancel page are public.
   if (isPublicAppPath(pathname) || pathname === CLI_HANDOFF_PATH) {
     return <>{children}</>;
   }

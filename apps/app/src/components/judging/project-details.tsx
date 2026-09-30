@@ -32,7 +32,7 @@ export function ProjectDetails({ item }: { item: ProjectInfo }) {
     return entry ? [entry] : [];
   });
   const leftover = item.urls.filter(
-    (entry) => !DETAIL_URL_ORDER.includes(entry.kind),
+    (entry) => !DETAIL_URL_ORDER.includes(entry.kind)
   );
   const urlRows = [...links, ...leftover];
   const hasMeta =

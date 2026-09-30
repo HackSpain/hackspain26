@@ -45,15 +45,75 @@ export function functionName(ref: unknown): string {
 }
 
 /** Response envelope produced by apps/app/src/app/api/cli/_lib/respond.ts. */
-type Envelope<T> =
-  | { ok: true; value: T }
+type Envelope =
+  | { ok: true; value: unknown }
   | { ok: false; error: { kind: "convex"; data: unknown } }
   | { ok: false; error: { kind: "error"; message: string } };
 
 export type FetchLike = typeof fetch;
 
-type PostResult<T> = { status: number; value?: T; error?: Error };
+type PostResult<T> =
+  | { status: number; value: T; error?: never }
+  | { status: number; error: Error; value?: never };
 const REQUEST_TIMEOUT_MS = 15_000;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseEnvelope(value: unknown): Envelope | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  if (value.ok === true && "value" in value) {
+    return { ok: true, value: value.value };
+  }
+  if (value.ok !== false || !isRecord(value.error)) {
+    return null;
+  }
+  if (value.error.kind === "convex" && "data" in value.error) {
+    return { ok: false, error: { kind: "convex", data: value.error.data } };
+  }
+  if (value.error.kind === "error" && typeof value.error.message === "string") {
+    return {
+      ok: false,
+      error: { kind: "error", message: value.error.message },
+    };
+  }
+  return null;
+}
+
+function invalidResponse(url: string, status?: number): CliError {
+  return new CliError(
+    status === undefined
+      ? `Server returned an invalid response from ${url}.`
+      : `Server answered ${status} with an invalid response from ${url}.`,
+    {
+      code: "SERVER",
+      hint: `Is ${url} the dashboard? Pass --url if you are targeting a dev server.`,
+    }
+  );
+}
+
+function isTokens(value: unknown): value is Tokens {
+  return (
+    isRecord(value) &&
+    typeof value.token === "string" &&
+    value.token.length > 0 &&
+    typeof value.refreshToken === "string" &&
+    value.refreshToken.length > 0
+  );
+}
+
+function tokensFrom(value: unknown, url: string): Tokens | null {
+  if (!(isRecord(value) && "tokens" in value)) {
+    throw invalidResponse(url);
+  }
+  if (value.tokens === null || isTokens(value.tokens)) {
+    return value.tokens;
+  }
+  throw invalidResponse(url);
+}
 
 function networkFailure<T>(url: string): PostResult<T> {
   return {
@@ -88,29 +148,23 @@ async function post<T>(
   } catch {
     return networkFailure<T>(url);
   }
-  let envelope: Envelope<T> | null = null;
+  let envelope: Envelope | null = null;
   try {
-    envelope = (await response.json()) as Envelope<T>;
+    envelope = parseEnvelope(await response.json());
   } catch {
     if (signal.aborted) {
       return networkFailure<T>(url);
     }
     envelope = null;
   }
-  if (!envelope) {
+  if (!envelope || envelope.ok !== response.ok) {
     return {
-      error: new CliError(
-        `Server answered ${response.status} without a JSON body.`,
-        {
-          code: "SERVER",
-          hint: `Is ${url} the dashboard? Pass --url if you are targeting a dev server.`,
-        }
-      ),
+      error: invalidResponse(url, response.status),
       status: response.status,
     };
   }
   if (envelope.ok) {
-    return { status: response.status, value: envelope.value };
+    return { status: response.status, value: envelope.value as T };
   }
   if (envelope.error.kind === "convex") {
     return {
@@ -125,7 +179,7 @@ function unwrap<T>(result: PostResult<T>): T {
   if (result.error) {
     throw result.error;
   }
-  return result.value as T;
+  return result.value;
 }
 
 export type Client = {
@@ -183,14 +237,13 @@ export function makeRefresh(
   url: string,
   fetchImpl: FetchLike = fetch
 ): RefreshFn {
-  return async (refreshToken) =>
-    unwrap(
-      await post<{ tokens: Tokens | null }>(
-        fetchImpl,
-        `${url}/api/cli/auth/refresh`,
-        { refreshToken }
-      )
-    ).tokens ?? null;
+  return async (refreshToken) => {
+    const endpoint = `${url}/api/cli/auth/refresh`;
+    const value = unwrap(
+      await post<unknown>(fetchImpl, endpoint, { refreshToken })
+    );
+    return tokensFrom(value, endpoint);
+  };
 }
 
 export async function authStart(
@@ -198,13 +251,12 @@ export async function authStart(
   email: string,
   fetchImpl: FetchLike = fetch
 ): Promise<boolean> {
-  return Boolean(
-    unwrap(
-      await post<{ started: boolean }>(fetchImpl, `${url}/api/cli/auth/start`, {
-        email,
-      })
-    ).started
-  );
+  const endpoint = `${url}/api/cli/auth/start`;
+  const value = unwrap(await post<unknown>(fetchImpl, endpoint, { email }));
+  if (!isRecord(value) || typeof value.started !== "boolean") {
+    throw invalidResponse(endpoint);
+  }
+  return value.started;
 }
 
 export async function authVerify(
@@ -213,15 +265,11 @@ export async function authVerify(
   code: string,
   fetchImpl: FetchLike = fetch
 ): Promise<Tokens | null> {
-  return (
-    unwrap(
-      await post<{ tokens: Tokens | null }>(
-        fetchImpl,
-        `${url}/api/cli/auth/verify`,
-        { code, email }
-      )
-    ).tokens ?? null
+  const endpoint = `${url}/api/cli/auth/verify`;
+  const value = unwrap(
+    await post<unknown>(fetchImpl, endpoint, { code, email })
   );
+  return tokensFrom(value, endpoint);
 }
 
 /**
@@ -234,13 +282,18 @@ export async function deviceStart(
   secret: string,
   fetchImpl: FetchLike = fetch
 ): Promise<{ code: string; expiresAt: number }> {
-  return unwrap(
-    await post<{ code: string; expiresAt: number }>(
-      fetchImpl,
-      `${url}/api/cli/auth/device/start`,
-      { secret }
-    )
-  );
+  const endpoint = `${url}/api/cli/auth/device/start`;
+  const value = unwrap(await post<unknown>(fetchImpl, endpoint, { secret }));
+  if (
+    !isRecord(value) ||
+    typeof value.code !== "string" ||
+    value.code.length === 0 ||
+    typeof value.expiresAt !== "number" ||
+    !Number.isFinite(value.expiresAt)
+  ) {
+    throw invalidResponse(endpoint);
+  }
+  return { code: value.code, expiresAt: value.expiresAt };
 }
 
 export type DevicePoll =
@@ -255,12 +308,27 @@ export async function devicePoll(
   secret: string,
   fetchImpl: FetchLike = fetch
 ): Promise<DevicePoll> {
-  return unwrap(
-    await post<DevicePoll>(fetchImpl, `${url}/api/cli/auth/device/poll`, {
+  const endpoint = `${url}/api/cli/auth/device/poll`;
+  const value = unwrap(
+    await post<unknown>(fetchImpl, endpoint, {
       code,
       secret,
     })
   );
+  if (!isRecord(value)) {
+    throw invalidResponse(endpoint);
+  }
+  if (value.status === "pending" || value.status === "expired") {
+    return { status: value.status };
+  }
+  if (
+    value.status === "approved" &&
+    isTokens(value.tokens) &&
+    (value.email === null || typeof value.email === "string")
+  ) {
+    return { status: "approved", tokens: value.tokens, email: value.email };
+  }
+  throw invalidResponse(endpoint);
 }
 
 export async function authSignOut(
@@ -268,7 +336,11 @@ export async function authSignOut(
   token: string,
   fetchImpl: FetchLike = fetch
 ): Promise<void> {
-  unwrap(await post(fetchImpl, `${url}/api/cli/auth/signout`, {}, token));
+  const endpoint = `${url}/api/cli/auth/signout`;
+  const value = unwrap(await post<unknown>(fetchImpl, endpoint, {}, token));
+  if (!isRecord(value) || value.signedOut !== true) {
+    throw invalidResponse(endpoint);
+  }
 }
 
 /**
@@ -301,18 +373,22 @@ export async function uploadImage(
       exitCode: EXIT.NETWORK,
     });
   }
-  const envelope = (await response.json().catch(() => null)) as Envelope<{
-    imageId: string;
-  }> | null;
-  if (!envelope) {
-    throw new CliError(
-      `Upload answered ${response.status} without a JSON body.`
-    );
+  const endpoint = `${session.url}/api/cli/upload`;
+  const envelope = parseEnvelope(await response.json().catch(() => null));
+  if (!envelope || envelope.ok !== response.ok) {
+    throw invalidResponse(endpoint, response.status);
   }
   if (!envelope.ok) {
     throw envelope.error.kind === "convex"
       ? new RemoteError(envelope.error.data)
       : new Error(envelope.error.message);
+  }
+  if (
+    !isRecord(envelope.value) ||
+    typeof envelope.value.imageId !== "string" ||
+    envelope.value.imageId.length === 0
+  ) {
+    throw invalidResponse(endpoint, response.status);
   }
   return envelope.value.imageId;
 }

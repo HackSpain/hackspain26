@@ -3,8 +3,7 @@ import {
   createRouteMatcher,
   nextjsMiddlewareRedirect,
 } from "@convex-dev/auth/nextjs/server";
-import { CLOSING_PATH } from "@/lib/closing";
-import { RECEPTION_PATH } from "@/lib/reception";
+import { PUBLIC_APP_PATHS } from "@/lib/public-paths";
 
 // /api/cli/* authenticates with a bearer token, not the cookie session.
 // /api/files/* accepts either and does its own redirect, so image links from
@@ -22,25 +21,19 @@ const isPublicRoute = createRouteMatcher([
   "/api/login/otp",
   "/api/cli(.*)",
   "/api/files(.*)",
-  "/tv",
   "/api/tv",
   "/api/tv/insights",
-  "/api/reception",
   "/api/cierre(.*)",
   "/betterstack(.*)",
-  RECEPTION_PATH,
-  CLOSING_PATH,
-  "/final/cancelar",
+  ...PUBLIC_APP_PATHS,
 ]);
 
-export default convexAuthNextjsMiddleware(
-  async (request, { convexAuth }) => {
-    const authenticated = await convexAuth.isAuthenticated();
-    if (!isPublicRoute(request) && !authenticated) {
-      return nextjsMiddlewareRedirect(request, "/login");
-    }
+export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
+  const authenticated = await convexAuth.isAuthenticated();
+  if (!isPublicRoute(request) && !authenticated) {
+    return nextjsMiddlewareRedirect(request, "/login");
   }
-);
+});
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],

@@ -271,6 +271,7 @@ export function FeedTabs({
     <div
       ref={list}
       role="tablist"
+      tabIndex={-1}
       aria-label="Filtrar el feed"
       onKeyDown={onKeyDown}
       className="box-border grid h-11 grid-cols-3 border-[3px] border-hs-ink [&>:not(:last-child)]:border-r-[3px] [&>:not(:last-child)]:border-hs-ink"

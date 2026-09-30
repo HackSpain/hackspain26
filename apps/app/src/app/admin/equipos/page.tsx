@@ -90,7 +90,9 @@ export default function AdminTeamsPage() {
   const countById = new Map(
     data.tracks.map((track) => [track._id, track.teamCount])
   );
-  const untracked = data.teams.filter((team) => team.entered.length === 0).length;
+  const untracked = data.teams.filter(
+    (team) => team.entered.length === 0
+  ).length;
   const filterTrack =
     trackFilter !== ALL && trackFilter !== NONE
       ? (trackFilter as Id<"tracks">)
@@ -150,8 +152,8 @@ export default function AdminTeamsPage() {
         setSelected(new Set());
         setAdding(new Set());
       }
-    } catch (err) {
-      setError(errorMessage(err, "No se pudo cambiar el track."));
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No se pudo cambiar el track."));
     } finally {
       setBusy(null);
     }
@@ -169,8 +171,8 @@ export default function AdminTeamsPage() {
       if (scope === "bulk") {
         setSelected(new Set());
       }
-    } catch (err) {
-      setError(errorMessage(err, "No se pudo quitar el track."));
+    } catch (caughtError) {
+      setError(errorMessage(caughtError, "No se pudo quitar el track."));
     } finally {
       setBusy(null);
     }
@@ -200,9 +202,7 @@ export default function AdminTeamsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>
-              Todos · {data.teams.length}
-            </SelectItem>
+            <SelectItem value={ALL}>Todos · {data.teams.length}</SelectItem>
             <SelectItem value={NONE}>Sin track · {untracked}</SelectItem>
             {data.tracks.map((track) => (
               <SelectItem key={track._id} value={track._id}>
@@ -220,11 +220,7 @@ export default function AdminTeamsPage() {
           <Select
             value={undefined}
             onValueChange={(teamId) =>
-              setAdding((prev) => {
-                const next = new Set(prev);
-                next.add(teamId as Id<"teams">);
-                return next;
-              })
+              setAdding((prev) => new Set([...prev, teamId as Id<"teams">]))
             }
           >
             <SelectTrigger
@@ -308,7 +304,10 @@ export default function AdminTeamsPage() {
             </>
           ) : (
             <>
-              <Select value={bulkTrack || undefined} onValueChange={setBulkTrack}>
+              <Select
+                value={bulkTrack || undefined}
+                onValueChange={setBulkTrack}
+              >
                 <SelectTrigger
                   aria-label="Track para los seleccionados"
                   className="min-w-44"
@@ -350,7 +349,10 @@ export default function AdminTeamsPage() {
           )}
         </div>
       ) : (
-        <p className="shrink-0 text-sm text-hs-brown tabular-nums" aria-live="polite">
+        <p
+          className="shrink-0 text-sm text-hs-brown tabular-nums"
+          aria-live="polite"
+        >
           {teams.length === 1 ? "1 equipo" : `${teams.length} equipos`}
         </p>
       )}
@@ -396,9 +398,7 @@ export default function AdminTeamsPage() {
                 team={team}
                 teamLimit={data.teamLimit}
                 tracks={data.tracks}
-                onChange={(trackId) =>
-                  void save([team._id], trackId, team._id)
-                }
+                onChange={(trackId) => void save([team._id], trackId, team._id)}
                 onCheckedChange={(on) => toggle(team._id, on)}
                 onRemove={(trackId) => void drop([team._id], trackId, team._id)}
               />

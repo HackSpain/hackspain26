@@ -144,7 +144,10 @@ export function periodBuckets(
     return { from: 0, to: 23 };
   }
   const elapsed = (now - timeline.startsAt) / 60_000;
-  const to = Math.min(23, Math.max(0, Math.floor(elapsed / timeline.bucketMinutes)));
+  const to = Math.min(
+    23,
+    Math.max(0, Math.floor(elapsed / timeline.bucketMinutes))
+  );
   const span = Math.max(1, Math.ceil(option.minutes / timeline.bucketMinutes));
   return { from: Math.max(0, to - span + 1), to };
 }
@@ -203,12 +206,12 @@ export function bucketTotals(samples: Sample[]): Totals[] {
 }
 
 export function teamRows(samples: Sample[], teams: Team[] = TEAMS) {
-  return teams.filter((team) =>
-    samples.some((sample) => sample.teamId === team.id)
-  ).map((team) => ({
-    ...team,
-    ...sumSamples(samples.filter((sample) => sample.teamId === team.id)),
-  }));
+  return teams
+    .filter((team) => samples.some((sample) => sample.teamId === team.id))
+    .map((team) => ({
+      ...team,
+      ...sumSamples(samples.filter((sample) => sample.teamId === team.id)),
+    }));
 }
 export type TeamRow = ReturnType<typeof teamRows>[number];
 

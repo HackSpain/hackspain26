@@ -19,10 +19,17 @@ export type FormationEvent = {
 };
 
 /** The map draws directory cards; the screen only fills in what it may show. */
-export function toParticipants(people: FormationPerson[]): DirectoryParticipant[] {
+export function toParticipants(
+  people: FormationPerson[]
+): DirectoryParticipant[] {
   return people.map((person) => ({
-    city: "", displayName: person.name, id: person.id, photoUrl: person.photoUrl,
-    role: "", skills: [], team: person.team,
+    city: "",
+    displayName: person.name,
+    id: person.id,
+    photoUrl: person.photoUrl,
+    role: "",
+    skills: [],
+    team: person.team,
   }));
 }
 
@@ -35,7 +42,12 @@ export function formationStats(people: FormationPerson[]) {
       teams.add(person.team.id);
     }
   }
-  return { loose: people.length - placed, placed, teams: teams.size, total: people.length };
+  return {
+    loose: people.length - placed,
+    placed,
+    teams: teams.size,
+    total: people.length,
+  };
 }
 
 /**
@@ -43,15 +55,32 @@ export function formationStats(people: FormationPerson[]) {
  * a team, and the first of them founding it when nobody was in it before.
  * Leaving a team is not news for a venue screen; the person just drifts back.
  */
-export function formationEvents(before: FormationPerson[], after: FormationPerson[], at: number): FormationEvent[] {
-  const previous = new Map(before.map((person) => [person.id, person.team?.id]));
-  const existing = new Set(before.flatMap((person) => (person.team ? [person.team.id] : [])));
+export function formationEvents(
+  before: FormationPerson[],
+  after: FormationPerson[],
+  at: number
+): FormationEvent[] {
+  const previous = new Map(
+    before.map((person) => [person.id, person.team?.id])
+  );
+  const existing = new Set(
+    before.flatMap((person) => (person.team ? [person.team.id] : []))
+  );
   const events: FormationEvent[] = [];
   for (const person of after) {
-    if (!person.team || previous.get(person.id) === person.team.id) { continue; }
+    if (!person.team || previous.get(person.id) === person.team.id) {
+      continue;
+    }
     const kind = existing.has(person.team.id) ? "join" : "new";
     existing.add(person.team.id);
-    events.push({ at, key: `${person.id}:${person.team.id}:${at}`, kind, person: person.name, personId: person.id, team: person.team.name });
+    events.push({
+      at,
+      key: `${person.id}:${person.team.id}:${at}`,
+      kind,
+      person: person.name,
+      personId: person.id,
+      team: person.team.name,
+    });
   }
   return events;
 }
@@ -59,15 +88,86 @@ export function formationEvents(before: FormationPerson[], after: FormationPerso
 /* ------------------------------------------------------------------ demo */
 
 const DEMO_NAMES = [
-  "Lucía", "Dani", "Irene", "Pablo", "Nuria", "Álex", "Sara", "Jorge", "Marta", "Hugo", "Carla", "Iván", "Elena", "Marcos",
-  "Aitana", "Bruno", "Noa", "Leo", "Vera", "Adrián", "Julia", "Mateo", "Alba", "Nico", "Laia", "Óscar", "Claudia", "Rubén",
-  "Inés", "Samuel", "Paula", "Guille", "Carmen", "Diego", "Olivia", "Martín", "Sofía", "Andrés", "Lola", "Raúl",
+  "Lucía",
+  "Dani",
+  "Irene",
+  "Pablo",
+  "Nuria",
+  "Álex",
+  "Sara",
+  "Jorge",
+  "Marta",
+  "Hugo",
+  "Carla",
+  "Iván",
+  "Elena",
+  "Marcos",
+  "Aitana",
+  "Bruno",
+  "Noa",
+  "Leo",
+  "Vera",
+  "Adrián",
+  "Julia",
+  "Mateo",
+  "Alba",
+  "Nico",
+  "Laia",
+  "Óscar",
+  "Claudia",
+  "Rubén",
+  "Inés",
+  "Samuel",
+  "Paula",
+  "Guille",
+  "Carmen",
+  "Diego",
+  "Olivia",
+  "Martín",
+  "Sofía",
+  "Andrés",
+  "Lola",
+  "Raúl",
 ];
-const DEMO_SURNAMES = ["Fernández", "Ruiz", "Vega", "Molina", "Serrano", "Ortega", "Cano", "Prieto", "Gil", "Marín", "Pascual", "Soler"];
+const DEMO_SURNAMES = [
+  "Fernández",
+  "Ruiz",
+  "Vega",
+  "Molina",
+  "Serrano",
+  "Ortega",
+  "Cano",
+  "Prieto",
+  "Gil",
+  "Marín",
+  "Pascual",
+  "Soler",
+];
 const DEMO_TEAMS = [
-  "Los Molinos", "Rocinante Labs", "Dulcinea", "Sancho Stack", "La Mancha ML", "Clavileño", "Barataria", "Yelmo de Mambrino",
-  "Maese Pedro", "Cueva de Montesinos", "Bachiller Carrasco", "Tizona", "Venta del Puerto", "Alcalá Bytes", "Galeotes",
-  "Toboso Tech", "Babieca", "Ínsula", "Rucio", "Mambrino", "Altisidora", "Micomicona", "Caraculiambro", "Frestón",
+  "Los Molinos",
+  "Rocinante Labs",
+  "Dulcinea",
+  "Sancho Stack",
+  "La Mancha ML",
+  "Clavileño",
+  "Barataria",
+  "Yelmo de Mambrino",
+  "Maese Pedro",
+  "Cueva de Montesinos",
+  "Bachiller Carrasco",
+  "Tizona",
+  "Venta del Puerto",
+  "Alcalá Bytes",
+  "Galeotes",
+  "Toboso Tech",
+  "Babieca",
+  "Ínsula",
+  "Rucio",
+  "Mambrino",
+  "Altisidora",
+  "Micomicona",
+  "Caraculiambro",
+  "Frestón",
 ];
 const DEMO_PEOPLE = 96;
 const DEMO_TEAM_SIZE = 4;
@@ -86,7 +186,14 @@ export function demoFormation(step: number): FormationPerson[] {
     return {
       id: `demo-${index}`,
       name: `${DEMO_NAMES[index % DEMO_NAMES.length]} ${DEMO_SURNAMES[(index * 5) % DEMO_SURNAMES.length]}`,
-      team: turn < placed ? { id: `demo-team-${team}`, name: DEMO_TEAMS[team % DEMO_TEAMS.length] ?? `Equipo ${team + 1}` } : undefined,
+      team:
+        turn < placed
+          ? {
+              id: `demo-team-${team}`,
+              name:
+                DEMO_TEAMS[team % DEMO_TEAMS.length] ?? `Equipo ${team + 1}`,
+            }
+          : undefined,
     };
   });
 }

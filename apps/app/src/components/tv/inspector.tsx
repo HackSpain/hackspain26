@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,27 +56,29 @@ export function TvInspector({
             <div key={group}>
               <p className="mb-2 font-bungee text-xs">{label}</p>
               <div className="grid grid-cols-2 gap-2">
-                {TV_PALETTE.filter((item) => item.group === group).map((item) => (
-                  <button
-                    key={item.kind}
-                    type="button"
-                    disabled={pending}
-                    onClick={() => onAdd(item.kind)}
-                    className="overflow-hidden border-[3px] border-hs-ink bg-hs-paper text-left outline-none motion-safe:transition-[transform,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:not-disabled:scale-[0.96] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/70 focus-visible:border-hs-navy disabled:opacity-50"
-                  >
-                    <span className="block aspect-[5/3] w-full">
-                      <PaletteThumb kind={item.kind} />
-                    </span>
-                    <span className="block border-t-[3px] border-hs-ink px-2 py-1.5">
-                      <span className="block font-bungee text-[11px] leading-tight uppercase">
-                        {item.label}
+                {TV_PALETTE.filter((item) => item.group === group).map(
+                  (item) => (
+                    <button
+                      key={item.kind}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => onAdd(item.kind)}
+                      className="overflow-hidden border-[3px] border-hs-ink bg-hs-paper text-left outline-none motion-safe:transition-[transform,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:not-disabled:scale-[0.96] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/70 focus-visible:border-hs-navy disabled:opacity-50"
+                    >
+                      <span className="block aspect-[5/3] w-full">
+                        <PaletteThumb kind={item.kind} />
                       </span>
-                      <span className="mt-0.5 block text-[11px] leading-snug text-hs-brown">
-                        {item.hint}
+                      <span className="block border-t-[3px] border-hs-ink px-2 py-1.5">
+                        <span className="block font-bungee text-[11px] leading-tight uppercase">
+                          {item.label}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] leading-snug text-hs-brown">
+                          {item.hint}
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                ))}
+                    </button>
+                  )
+                )}
               </div>
             </div>
           ))}
@@ -102,17 +104,13 @@ export function TvInspector({
       <div className="shrink-0 border-b-[3px] border-hs-ink bg-hs-sand px-4 py-3">
         <p className="font-bungee text-sm">{widgetLabel(widget.kind)}</p>
         <p className="mt-1 text-xs text-hs-brown tabular-nums">
-          {Math.round(widget.x)}×{Math.round(widget.y)} · {Math.round(widget.w)}×
-          {Math.round(widget.h)}
+          {Math.round(widget.x)}×{Math.round(widget.y)} · {Math.round(widget.w)}
+          ×{Math.round(widget.h)}
         </p>
       </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
         {isEditableKind(widget.kind) ? (
-          <TextFields
-            key={widget._id}
-            widget={widget}
-            onPatch={onPatch}
-          />
+          <TextFields key={widget._id} widget={widget} onPatch={onPatch} />
         ) : null}
         {widget.kind === "clock" ? (
           <FontSizeField
@@ -191,7 +189,9 @@ function TextFields({
           onChange={(event) => setText(event.target.value)}
           onBlur={() => {
             const next = text.trim();
-            if (!next || next === widget.text) {return;}
+            if (!next || next === widget.text) {
+              return;
+            }
             onPatch(widget._id, { text: next });
           }}
           className="mt-1 min-h-11 w-full resize-y border-[3px] border-hs-ink bg-hs-paper px-3 py-2 text-sm text-hs-ink outline-none focus-visible:border-hs-navy"
@@ -248,6 +248,7 @@ function FontSizeField({
   widget: TvWidget;
   onPatch: (id: string, patch: Partial<TvWidget>) => void;
 }) {
+  const id = useId();
   const pixels = tvFontSizePixels(widget.kind, widget.fontSize);
   const [value, setValue] = useState(String(pixels));
   const [seen, setSeen] = useState(pixels);
@@ -256,9 +257,10 @@ function FontSizeField({
     setValue(String(pixels));
   }
   return (
-    <label className="block text-xs text-hs-brown">
+    <label htmlFor={id} className="block text-xs text-hs-brown">
       Tamaño de texto (px)
       <Input
+        id={id}
         type="number"
         min={8}
         max={240}
@@ -283,7 +285,9 @@ function FontSizeField({
         }}
         className="mt-1 tabular-nums"
       />
-      <span className="mt-1 block text-xs">8–240 px sobre 1920 px de ancho. Se adapta a la pantalla.</span>
+      <span className="mt-1 block text-xs">
+        8–240 px sobre 1920 px de ancho. Se adapta a la pantalla.
+      </span>
     </label>
   );
 }
