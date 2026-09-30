@@ -200,11 +200,17 @@ function GithubCard({
           void xAction.run(async () => {
             const saved = await setTwitterHandle({ handle });
             setHandleDraft(undefined);
-            return saved ? `Usuario de X guardado: @${saved}.` : "Usuario de X eliminado.";
+            return saved
+              ? `Usuario de X guardado: @${saved}.`
+              : "Usuario de X eliminado.";
           });
         }}
       >
-        <Field label="Usuario de X" htmlFor="twitter-handle" hint="Sin la @. Vacío si no tienes cuenta.">
+        <Field
+          label="Usuario de X"
+          htmlFor="twitter-handle"
+          hint="Sin la @. Vacío si no tienes cuenta."
+        >
           <Input
             id="twitter-handle"
             autoComplete="off"
@@ -245,15 +251,14 @@ function DirectoryCard() {
           <LoadingText />
         ) : (
           <>
-            <DirectoryForm
-              me={directory}
-              bare
-              onSaved={() => setSaved(true)}
-            />
+            <DirectoryForm me={directory} bare onSaved={() => setSaved(true)} />
             <div role="status" aria-live="polite" aria-atomic="true">
               {saved ? (
                 <p className="flex items-start gap-2 text-sm text-hs-navy">
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  <CheckCircle2
+                    className="mt-0.5 size-4 shrink-0"
+                    aria-hidden
+                  />
                   Ficha guardada.
                 </p>
               ) : null}

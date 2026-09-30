@@ -70,7 +70,9 @@ export function SectionTiles({
     const granted = sections?.includes(key) || (canJudge && key === "tracks");
     return Boolean(
       granted &&
-        (eventOpen || CLOSED_SECTIONS.has(key) || (canJudge && key === "tracks"))
+        (eventOpen ||
+          CLOSED_SECTIONS.has(key) ||
+          (canJudge && key === "tracks"))
     );
   };
   const tiles: Tile[] = [
@@ -90,7 +92,12 @@ export function SectionTiles({
       ...SECTION_NAV[key],
       icon: SECTION_ICONS[key],
     })),
-    { href: "/profile", label: "Perfil", hint: "Nombre, foto, ficha y teléfono.", icon: CircleUserRound },
+    {
+      href: "/profile",
+      label: "Perfil",
+      hint: "Nombre, foto, ficha y teléfono.",
+      icon: CircleUserRound,
+    },
   ];
 
   return (
@@ -112,10 +119,14 @@ export function SectionTiles({
                   "motion-safe:transition-[transform,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.96]",
                   "hover:bg-hs-gold focus-visible:bg-hs-gold focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-paper",
                   featured &&
-                    "hs-submit-featured min-h-32 border-hs-red bg-hs-gold hover:bg-hs-gold",
+                    "hs-submit-featured min-h-32 border-hs-red bg-hs-gold hover:bg-hs-gold"
                 )}
               >
-                <Icon className="size-7 shrink-0" strokeWidth={1.75} aria-hidden />
+                <Icon
+                  className="size-7 shrink-0"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
                 <span className="w-full truncate font-bungee text-[11px] uppercase leading-tight sm:text-xs">
                   {featured ? "Ahora · Submit" : tile.label}
                 </span>

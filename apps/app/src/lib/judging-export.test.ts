@@ -48,7 +48,13 @@ function rows(csv: string): string[] {
 
 test("csv has a BOM, CRLF rows, and quotes only what needs it", () => {
   assert.equal(
-    toCsv(["a", "b"], [[1, 'say "hi"'], [null, "y,z"]]),
+    toCsv(
+      ["a", "b"],
+      [
+        [1, 'say "hi"'],
+        [null, "y,z"],
+      ]
+    ),
     '\uFEFFa,b\r\n1,"say ""hi"""\r\n,"y,z"\r\n'
   );
 });
@@ -67,5 +73,8 @@ test("assessment rows cover every assigned judge, drafts without a score", () =>
     ana1,
     'p1,Proyecto Uno,Equipo 1,Track A,Ana,Enviada,5,5,4,4,"Buen ""pitch""",4.5,4.25,2026-09-19T10:00:00.000Z'
   );
-  assert.equal(bruno1, 'p1,Proyecto Uno,Equipo 1,Track A,"Bruno, B.",Borrador,2,,,,,,,');
+  assert.equal(
+    bruno1,
+    'p1,Proyecto Uno,Equipo 1,Track A,"Bruno, B.",Borrador,2,,,,,,,'
+  );
 });

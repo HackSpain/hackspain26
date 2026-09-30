@@ -21,15 +21,17 @@ export function ProjectCliDialog({ children }: { children: ReactNode }) {
         <DialogHeader>
           <DialogTitle>Retos desde la CLI</DialogTitle>
           <DialogDescription>
-            El equipo se apunta a un reto con la CLI de hackspain, con la
-            misma cuenta que este dashboard. La entrega es en Submit.
+            El equipo se apunta a un reto con la CLI de hackspain, con la misma
+            cuenta que este dashboard. La entrega es en Submit.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
           <p className="font-bungee text-xs">1 · Instala e inicia sesión</p>
           <CodeBlock>
-            {"curl -fsSL https://hackspain.com/install.sh | sh\nhackspain auth login"}
+            {
+              "curl -fsSL https://hackspain.com/install.sh | sh\nhackspain auth login"
+            }
           </CodeBlock>
         </div>
 
@@ -41,8 +43,8 @@ export function ProjectCliDialog({ children }: { children: ReactNode }) {
             }
           </CodeBlock>
           <p className="text-sm text-hs-brown">
-            Un equipo entra en un reto, o en dos si uno es THEKER. El slug es el de{" "}
-            <code className="font-mono text-xs">hackspain track list</code>.
+            Un equipo entra en un reto, o en dos si uno es THEKER. El slug es el
+            de <code className="font-mono text-xs">hackspain track list</code>.
           </p>
         </div>
 

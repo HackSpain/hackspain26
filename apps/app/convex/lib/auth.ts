@@ -2,7 +2,11 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { requireEventOpen } from "./eventWindow";
-import { canJudge, canBrowseSponsorCatalog, canBrowseDirectory } from "./userTypes";
+import {
+  canJudge,
+  canBrowseSponsorCatalog,
+  canBrowseDirectory,
+} from "./userTypes";
 import type { Role } from "./validators";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -99,9 +103,7 @@ export async function requireTracksViewer(ctx: Ctx): Promise<Doc<"users">> {
   return await requireInEvent(ctx);
 }
 
-export async function requireSponsorCatalog(
-  ctx: Ctx
-): Promise<Doc<"users">> {
+export async function requireSponsorCatalog(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
   if (!(await canBrowseSponsorCatalog(ctx, user))) {
     throw new Error("Se necesita acceso de sponsor");
@@ -109,9 +111,7 @@ export async function requireSponsorCatalog(
   return user;
 }
 
-export async function requireDirectoryViewer(
-  ctx: Ctx
-): Promise<Doc<"users">> {
+export async function requireDirectoryViewer(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
   if (!(await canBrowseDirectory(ctx, user))) {
     throw new Error("Se necesita acceso al directorio");
@@ -128,7 +128,10 @@ export async function requireSponsorCatalogInEvent(
 }
 
 /** Boolean form of `requireOnboarded` for callers that degrade instead of throwing. */
-export async function isOnboarded(ctx: Ctx, user: Doc<"users">): Promise<boolean> {
+export async function isOnboarded(
+  ctx: Ctx,
+  user: Doc<"users">
+): Promise<boolean> {
   if (user.role === "admin") {
     return true;
   }

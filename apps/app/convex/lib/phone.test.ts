@@ -37,8 +37,14 @@ describe("normalizePhone", () => {
 
 describe("splitPhone", () => {
   test("prefers the longest matching prefix", () => {
-    expect(splitPhone("+351912345678")).toEqual({ code: "351", national: "912345678" });
-    expect(splitPhone("+34600111222")).toEqual({ code: "34", national: "600111222" });
+    expect(splitPhone("+351912345678")).toEqual({
+      code: "351",
+      national: "912345678",
+    });
+    expect(splitPhone("+34600111222")).toEqual({
+      code: "34",
+      national: "600111222",
+    });
     expect(splitPhone("+819012345678")).toBeNull();
   });
 });
@@ -47,7 +53,9 @@ describe("nationalNumberError", () => {
   test("explains what is wrong", () => {
     expect(nationalNumberError("34", "")).toBe("Escribe tu número.");
     expect(nationalNumberError("34", "60011122")).toContain("9 cifras");
-    expect(nationalNumberError("34", "100111222")).toContain("no empieza por 1");
+    expect(nationalNumberError("34", "100111222")).toContain(
+      "no empieza por 1"
+    );
     expect(nationalNumberError("49", "1234")).toContain("entre 7 y 12");
     expect(nationalNumberError("34", "600 111 222")).toBeNull();
   });

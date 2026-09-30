@@ -180,7 +180,9 @@ async function resolveChallengeIds(
   );
   const counts =
     added.length > 0 ? await trackEntryCounts(ctx, existing?._id) : null;
-  const tracks = await Promise.all(unique.map((trackId) => ctx.db.get(trackId)));
+  const tracks = await Promise.all(
+    unique.map((trackId) => ctx.db.get(trackId))
+  );
   if (tracks.some((track) => !track)) {
     throw new Error("Reto no encontrado");
   }

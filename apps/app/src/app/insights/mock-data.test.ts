@@ -40,7 +40,13 @@ test("bucket totals keep first-seen order, combine repeats and handle no samples
 
 test("unconnected insights have no fictional teams or activity and numeric zero totals", () => {
   const samples = filterSamples(getSamples(), "event", "all");
-  const zero = { cachedTokens: 0, commits: 0, pullRequests: 0, sessions: 0, tokens: 0 };
+  const zero = {
+    cachedTokens: 0,
+    commits: 0,
+    pullRequests: 0,
+    sessions: 0,
+    tokens: 0,
+  };
   assert.deepEqual(samples, []);
   assert.deepEqual(TEAMS, []);
   assert.deepEqual(teamRows(samples), []);

@@ -45,7 +45,9 @@ function parseDescription(raw: string | undefined): string | undefined {
     return undefined;
   }
   if (description.length > MAX_DESCRIPTION) {
-    throw new Error(`La descripción no puede superar ${MAX_DESCRIPTION} caracteres`);
+    throw new Error(
+      `La descripción no puede superar ${MAX_DESCRIPTION} caracteres`
+    );
   }
   return description;
 }
@@ -86,7 +88,10 @@ async function clearDefault(ctx: MutationCtx, except?: Id<"userTypes">) {
 async function seedType(
   ctx: MutationCtx,
   adminId: Id<"users">,
-  fields: Pick<Doc<"userTypes">, "label" | "description" | "sections" | "isDefault">
+  fields: Pick<
+    Doc<"userTypes">,
+    "label" | "description" | "sections" | "isDefault"
+  >
 ): Promise<Id<"userTypes">> {
   const slug = slugify(fields.label);
   const existing = await ctx.db
@@ -249,7 +254,10 @@ export const update = adminMutation({
 });
 
 export const move = adminMutation({
-  args: { direction: v.union(v.literal("up"), v.literal("down")), typeId: v.id("userTypes") },
+  args: {
+    direction: v.union(v.literal("up"), v.literal("down")),
+    typeId: v.id("userTypes"),
+  },
   handler: async (ctx, args) => {
     const rows = await allTypes(ctx);
     const index = rows.findIndex((row) => row._id === args.typeId);

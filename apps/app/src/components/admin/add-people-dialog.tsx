@@ -39,22 +39,18 @@ function resultMessage(result: {
     parts.push(
       result.added === 1
         ? "1 persona añadida"
-        : `${result.added} personas añadidas`,
+        : `${result.added} personas añadidas`
     );
   }
   if (result.updated > 0) {
     parts.push(
       result.updated === 1
         ? "1 persona actualizada"
-        : `${result.updated} personas actualizadas`,
+        : `${result.updated} personas actualizadas`
     );
   }
   if (parts.length === 0 && result.skipped > 0) {
-    parts.push(
-      result.skipped === 1
-        ? "Ya estaba así"
-        : "Ya estaban así",
-    );
+    parts.push(result.skipped === 1 ? "Ya estaba así" : "Ya estaban así");
   }
   if (result.invalid.length > 0) {
     parts.push(`No válidos: ${result.invalid.join(", ")}`);
@@ -102,13 +98,9 @@ export function AddPeopleDialog() {
         emails: parsed.emails,
         role,
         userTypeId:
-          userTypeId === NO_TYPE
-            ? undefined
-            : (userTypeId as Id<"userTypes">),
+          userTypeId === NO_TYPE ? undefined : (userTypeId as Id<"userTypes">),
         name:
-          parsed.emails.length === 1 && name.trim()
-            ? name.trim()
-            : undefined,
+          parsed.emails.length === 1 && name.trim() ? name.trim() : undefined,
       });
       setNotice(resultMessage(result));
       setEmails("");
@@ -194,7 +186,10 @@ export function AddPeopleDialog() {
                   <SelectItem key={type._id} value={type._id}>
                     {type.label}
                     {type.isDefault ? (
-                      <span className="text-xs text-hs-brown"> · por defecto</span>
+                      <span className="text-xs text-hs-brown">
+                        {" "}
+                        · por defecto
+                      </span>
                     ) : null}
                   </SelectItem>
                 ))}

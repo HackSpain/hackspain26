@@ -116,7 +116,11 @@ export default function OnboardingPage() {
             }
           >
             <div ref={bodyRef}>
-              <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+              <AnimatePresence
+                mode="popLayout"
+                initial={false}
+                custom={direction}
+              >
                 <motion.div
                   key={panelKey}
                   custom={direction}

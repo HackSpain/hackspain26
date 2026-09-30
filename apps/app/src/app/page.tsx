@@ -5,7 +5,10 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { FeedTab } from "@convex/lib/feedTabs";
 import { DeliveryBriefing } from "@/components/delivery-briefing";
-import { EventClosedNotice, isEventOpen } from "@/components/event-closed-banner";
+import {
+  EventClosedNotice,
+  isEventOpen,
+} from "@/components/event-closed-banner";
 import { FeedComposer } from "@/components/feed-composer";
 import {
   FEED_PANEL_ID,
@@ -41,7 +44,7 @@ export default function HomePage() {
   const eventOpen = isEventOpen(me?.event);
   const project = useQuery(
     api.submissions.mine,
-    eligible && eventOpen ? {} : "skip",
+    eligible && eventOpen ? {} : "skip"
   );
   if (!me) {
     return <LoadingText />;

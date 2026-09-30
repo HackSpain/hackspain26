@@ -7,7 +7,12 @@ import {
   linkedinUrlFor,
   normalizeLinkedinSlug,
 } from "@convex/lib/linkedinProfile";
-import { errorMessage, LoadingText, MetaLink, MetaRow } from "@/components/page";
+import {
+  errorMessage,
+  LoadingText,
+  MetaLink,
+  MetaRow,
+} from "@/components/page";
 import type { DirectoryParticipant } from "./types";
 
 export function linkedinSlugOf(person: DirectoryParticipant): string | null {
@@ -17,10 +22,7 @@ export function linkedinSlugOf(person: DirectoryParticipant): string | null {
 
 export function LinkedinPanel({ person }: { person: DirectoryParticipant }) {
   const slug = linkedinSlugOf(person);
-  const data = useQuery(
-    api.directory.linkedin,
-    slug ? { slug } : "skip",
-  );
+  const data = useQuery(api.directory.linkedin, slug ? { slug } : "skip");
   const refresh = useAction(api.directoryLinkedin.refresh);
   const [loadError, setLoadError] = useState<string | null>(null);
   const enabled = data?.enabled === true;
@@ -54,9 +56,7 @@ export function LinkedinPanel({ person }: { person: DirectoryParticipant }) {
       {loading ? <LoadingText /> : null}
       {loadError ? <p className="text-sm text-hs-red">{loadError}</p> : null}
       {profile?.missing ? (
-        <p className="text-sm text-hs-brown">
-          Este LinkedIn no aparece.
-        </p>
+        <p className="text-sm text-hs-brown">Este LinkedIn no aparece.</p>
       ) : null}
       <div className="min-w-0">
         <MetaLink href={url}>{profile?.name ?? slug}</MetaLink>
@@ -95,7 +95,10 @@ export function LinkedinPanel({ person }: { person: DirectoryParticipant }) {
                       {job.title ?? job.name}
                     </span>
                     <span className="block text-sm text-hs-brown">
-                      {[job.title ? job.name : null, job.current ? "Actual" : null]
+                      {[
+                        job.title ? job.name : null,
+                        job.current ? "Actual" : null,
+                      ]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>

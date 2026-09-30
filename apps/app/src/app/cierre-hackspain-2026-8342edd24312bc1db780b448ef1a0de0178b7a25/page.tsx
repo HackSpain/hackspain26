@@ -10,8 +10,13 @@ import { demoClosingData, summarize } from "@/lib/closing-summary";
 
 const POLL_MS = 60_000;
 
-function useClosingData(demo: boolean): { data: ClosingData | null; failed: boolean } {
-  const [data, setData] = useState<ClosingData | null>(() => (demo ? demoClosingData() : null));
+function useClosingData(demo: boolean): {
+  data: ClosingData | null;
+  failed: boolean;
+} {
+  const [data, setData] = useState<ClosingData | null>(() =>
+    demo ? demoClosingData() : null
+  );
   const [failed, setFailed] = useState(false);
   const refresh = useCallback(() => {
     if (demo) {
@@ -41,20 +46,27 @@ function ClosingRoute() {
   const router = useRouter();
   const demo = params.get("demo") === "1";
   const slideParam = params.get("slide");
-  const single = slideParam === null ? null : Math.min(Math.max(Number(slideParam) || 1, 1), CLOSING_SLIDES.length) - 1;
+  const single =
+    slideParam === null
+      ? null
+      : Math.min(Math.max(Number(slideParam) || 1, 1), CLOSING_SLIDES.length) -
+        1;
   const { data, failed } = useClosingData(demo);
   const summary = useMemo(() => (data ? summarize(data) : null), [data]);
 
-  const go = useCallback((index: number | null) => {
-    const next = new URLSearchParams(params.toString());
-    if (index === null) {
-      next.delete("slide");
-    } else {
-      next.set("slide", String(index + 1));
-    }
-    const query = next.toString();
-    router.replace(query ? `${CLOSING_PATH}?${query}` : CLOSING_PATH);
-  }, [params, router]);
+  const go = useCallback(
+    (index: number | null) => {
+      const next = new URLSearchParams(params.toString());
+      if (index === null) {
+        next.delete("slide");
+      } else {
+        next.set("slide", String(index + 1));
+      }
+      const query = next.toString();
+      router.replace(query ? `${CLOSING_PATH}?${query}` : CLOSING_PATH);
+    },
+    [params, router]
+  );
 
   useEffect(() => {
     if (single === null) {
@@ -76,7 +88,9 @@ function ClosingRoute() {
   if (!summary) {
     return (
       <div className="flex h-dvh items-center justify-center bg-hs-ink p-8 text-hs-paper">
-        {failed ? "No se han podido cargar los datos. Reintentando cada minuto." : "Cargando datos…"}
+        {failed
+          ? "No se han podido cargar los datos. Reintentando cada minuto."
+          : "Cargando datos…"}
       </div>
     );
   }
@@ -93,9 +107,19 @@ function ClosingRoute() {
   }
 
   const stepParam = params.get("step");
-  return <ClosingPanel summary={summary} demo={demo} step={stepParam === null ? null : Math.max(Number(stepParam) || 1, 1) - 1} />;
+  return (
+    <ClosingPanel
+      summary={summary}
+      demo={demo}
+      step={stepParam === null ? null : Math.max(Number(stepParam) || 1, 1) - 1}
+    />
+  );
 }
 
 export default function ClosingPage() {
-  return <Suspense fallback={<div className="h-dvh bg-hs-ink" />}><ClosingRoute /></Suspense>;
+  return (
+    <Suspense fallback={<div className="h-dvh bg-hs-ink" />}>
+      <ClosingRoute />
+    </Suspense>
+  );
 }

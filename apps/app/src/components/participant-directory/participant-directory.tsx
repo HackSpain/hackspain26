@@ -44,9 +44,9 @@ function ParticipantList({
   const filtered = useMemo(
     () =>
       participants.filter((participant) =>
-        searchHaystack(participant).includes(search),
+        searchHaystack(participant).includes(search)
       ),
-    [participants, search],
+    [participants, search]
   );
 
   return (
@@ -196,13 +196,13 @@ export function ParticipantDirectory({
         persona
           ? `${pathname}?${DIRECTORY_PARAM}&${PERSON_PARAM}=${persona}`
           : `${pathname}?${DIRECTORY_PARAM}`,
-        { scroll: false },
+        { scroll: false }
       );
       return;
     }
     router.replace(
       persona ? `${pathname}?${PERSON_PARAM}=${persona}` : pathname,
-      { scroll: false },
+      { scroll: false }
     );
   }
 

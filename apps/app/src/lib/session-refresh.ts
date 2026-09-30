@@ -1,11 +1,16 @@
-type TokenFetcher = (args: { forceRefreshToken: boolean }) => Promise<string | null>;
+type TokenFetcher = (args: {
+  forceRefreshToken: boolean;
+}) => Promise<string | null>;
 
 function isNetworkError(error: unknown): boolean {
-  return error instanceof TypeError && [
-    "Failed to fetch",
-    "Load failed",
-    "NetworkError when attempting to fetch resource.",
-  ].includes(error.message);
+  return (
+    error instanceof TypeError &&
+    [
+      "Failed to fetch",
+      "Load failed",
+      "NetworkError when attempting to fetch resource.",
+    ].includes(error.message)
+  );
 }
 
 /** Retry on a browser online event, or after a delay for outages that do not emit one. */
@@ -20,7 +25,9 @@ export function waitForSessionRetry(signal: AbortSignal): Promise<void> {
     const timer = setTimeout(finish, 15_000);
     window.addEventListener("online", finish, { once: true });
     signal.addEventListener("abort", finish, { once: true });
-    if (signal.aborted) { finish(); }
+    if (signal.aborted) {
+      finish();
+    }
   });
 }
 
@@ -30,11 +37,17 @@ export function recoveringTokenFetcher(
   report: (error: unknown) => void,
   wait = waitForSessionRetry
 ) {
-  let pending: { controller: AbortController; promise: Promise<string | null> } | undefined;
+  let pending:
+    | { controller: AbortController; promise: Promise<string | null> }
+    | undefined;
   return {
     fetch(args: { forceRefreshToken: boolean }): Promise<string | null> {
-      if (!args.forceRefreshToken) { return fetchToken(args); }
-      if (pending) { return pending.promise; }
+      if (!args.forceRefreshToken) {
+        return fetchToken(args);
+      }
+      if (pending) {
+        return pending.promise;
+      }
       const controller = new AbortController();
       const promise = (async () => {
         let reported = false;
@@ -43,8 +56,12 @@ export function recoveringTokenFetcher(
             const token = await fetchToken(args);
             return controller.signal.aborted ? null : token;
           } catch (error) {
-            if (controller.signal.aborted) { return null; }
-            if (!isNetworkError(error)) { throw error; }
+            if (controller.signal.aborted) {
+              return null;
+            }
+            if (!isNetworkError(error)) {
+              throw error;
+            }
             if (!reported) {
               report(error);
               reported = true;
@@ -54,7 +71,9 @@ export function recoveringTokenFetcher(
         }
         return null;
       })().finally(() => {
-        if (pending?.controller === controller) { pending = undefined; }
+        if (pending?.controller === controller) {
+          pending = undefined;
+        }
       });
       pending = { controller, promise };
       return promise;

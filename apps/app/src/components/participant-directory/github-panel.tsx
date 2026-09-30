@@ -8,7 +8,12 @@ import {
   GITHUB_REPOS_SHOWN,
   normalizeGithubLogin,
 } from "@convex/lib/githubProfile";
-import { errorMessage, LoadingText, MetaLink, MetaRow } from "@/components/page";
+import {
+  errorMessage,
+  LoadingText,
+  MetaLink,
+  MetaRow,
+} from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import type { DirectoryParticipant } from "./types";
 
@@ -25,7 +30,7 @@ export function githubLoginOf(person: DirectoryParticipant): string | null {
   return (
     normalizeGithubLogin(person.githubUsername ?? "") ??
     normalizeGithubLogin(
-      person.urls?.find((entry) => entry.kind === "github")?.url ?? "",
+      person.urls?.find((entry) => entry.kind === "github")?.url ?? ""
     )
   );
 }
@@ -40,17 +45,14 @@ function heatFill(count: number, max: number): string {
   }
   const rank = Math.min(
     HEAT.length - 1,
-    Math.ceil((count / max) * (HEAT.length - 1)),
+    Math.ceil((count / max) * (HEAT.length - 1))
   );
   return HEAT[rank] ?? "#35858a";
 }
 
 export function GithubPanel({ person }: { person: DirectoryParticipant }) {
   const username = githubLoginOf(person);
-  const data = useQuery(
-    api.directory.github,
-    username ? { username } : "skip",
-  );
+  const data = useQuery(api.directory.github, username ? { username } : "skip");
   const refresh = useAction(api.directoryGithub.refresh);
   const [errorFor, setErrorFor] = useState<{
     message: string;
@@ -92,7 +94,7 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
     profile?.languages.reduce((sum, language) => sum + language.bytes, 0) ?? 0;
   const heatMax = Math.max(
     1,
-    ...(profile?.calendar.map((day) => day.count) ?? [0]),
+    ...(profile?.calendar.map((day) => day.count) ?? [0])
   );
   const repos = (
     (profile?.pinned.length ? profile.pinned : profile?.repos) ?? []
@@ -105,9 +107,7 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
       {loading ? <LoadingText /> : null}
       {loadError ? <p className="text-sm text-hs-red">{loadError}</p> : null}
       {profile?.missing ? (
-        <p className="text-sm text-hs-brown">
-          No sale @{username} en GitHub.
-        </p>
+        <p className="text-sm text-hs-brown">No sale @{username} en GitHub.</p>
       ) : null}
       {profile && !profile.missing ? (
         <>
@@ -116,9 +116,7 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
             {profile.name && profile.name !== profile.login ? (
               <span className="text-sm text-hs-brown">{profile.name}</span>
             ) : null}
-            {profile.hireable ? (
-              <Badge variant="gold">Disponible</Badge>
-            ) : null}
+            {profile.hireable ? <Badge variant="gold">Disponible</Badge> : null}
           </div>
           {profile.bio ? (
             <p className="text-sm leading-relaxed text-pretty">{profile.bio}</p>
@@ -204,7 +202,9 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
                     <li key={language.name}>
                       <div className="flex justify-between gap-3 text-sm">
                         <span>{language.name}</span>
-                        <span className="tabular-nums text-hs-brown">{pct}%</span>
+                        <span className="tabular-nums text-hs-brown">
+                          {pct}%
+                        </span>
                       </div>
                       <div className="mt-1 h-1.5 bg-hs-sand">
                         <div
@@ -236,9 +236,7 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
                       <span className="block text-sm text-hs-brown">
                         {[
                           repo.language,
-                          repo.stars
-                            ? `${formatCount(repo.stars)} ★`
-                            : null,
+                          repo.stars ? `${formatCount(repo.stars)} ★` : null,
                           repo.description,
                         ]
                           .filter(Boolean)
@@ -259,7 +257,7 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
             {data.hackathon.events
               .map(
                 (row) =>
-                  `${formatCount(row.count)} ${EVENT_LABELS[row.event] ?? row.event}`,
+                  `${formatCount(row.count)} ${EVENT_LABELS[row.event] ?? row.event}`
               )
               .join(" · ")}
           </p>

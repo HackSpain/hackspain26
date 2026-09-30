@@ -13,16 +13,16 @@ import {
 test("linkedin slugs come from /in/ urls, not company pages", () => {
   assert.equal(
     normalizeLinkedinSlug("https://www.linkedin.com/in/SatyaNadella/"),
-    "satyanadella",
+    "satyanadella"
   );
   assert.equal(
     normalizeLinkedinSlug("es.linkedin.com/in/satyanadella/en"),
-    "satyanadella",
+    "satyanadella"
   );
   assert.equal(normalizeLinkedinSlug("satyanadella"), "satyanadella");
   assert.equal(
     normalizeLinkedinSlug("https://www.linkedin.com/company/microsoft"),
-    null,
+    null
   );
 });
 
@@ -42,7 +42,7 @@ test("a Nyne person result becomes the directory LinkedIn card", () => {
       total_experience_years: 12,
     },
     "janedoe",
-    10,
+    10
   );
   assert.equal(profile.missing, false);
   assert.equal(profile.name, "Jane Doe");
@@ -57,7 +57,7 @@ test("an empty Nyne result is stored as missing", () => {
   assert.equal(linkedinProfileIsStale(null, 1), true);
   assert.equal(
     linkedinProfileIsStale({ fetchedAt: 1 }, 1 + LINKEDIN_PROFILE_FRESH_MS),
-    true,
+    true
   );
   assert.equal(missingLinkedinProfile("x", 1).slug, "x");
 });
@@ -69,7 +69,10 @@ test("the table validator accepts the rows production already holds", () => {
   const stored = {
     about: "Builds payment rails.",
     company: "Acme",
-    education: [{ name: "Universidad de Oviedo" }, { detail: "MSc", name: "UPM" }],
+    education: [
+      { name: "Universidad de Oviedo" },
+      { detail: "MSc", name: "UPM" },
+    ],
     experience: [{ current: true, name: "Acme", title: "CTO" }],
     fetchedAt: 1,
     followers: 10,
@@ -85,10 +88,10 @@ test("the table validator accepts the rows production already holds", () => {
   assert.equal(validate(linkedinProfileValidator, stored), true);
   assert.equal(
     validate(linkedinProfileValidator, missingLinkedinProfile("x", 1)),
-    true,
+    true
   );
   assert.equal(
     validate(linkedinProfileValidator, { ...stored, summary: "unknown field" }),
-    false,
+    false
   );
 });
