@@ -94,6 +94,60 @@ export function installClaudeOtel(
   return "installed";
 }
 
+/** Remove only exporter values that still match this installation's receiver. */
+export function uninstallClaudeOtel(
+  path = join(claudeConfigDir(), "settings.json"),
+  configPath = join(stateDir(), "claude-otel.json")
+): "removed" | "absent" | "unverified" {
+  if (!existsSync(path)) {
+    return "absent";
+  }
+  const settings: unknown = JSON.parse(readFileSync(path, "utf8"));
+  if (
+    !record(settings) ||
+    (settings.env !== undefined && !record(settings.env))
+  ) {
+    throw new Error("Invalid Claude settings");
+  }
+  const env = settings.env as Record<string, unknown> | undefined;
+  if (!env) {
+    return "absent";
+  }
+  if (
+    env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT === undefined &&
+    env.OTEL_EXPORTER_OTLP_LOGS_HEADERS === undefined
+  ) {
+    return "absent";
+  }
+  const config = readJsonFile<ReceiverConfig>(configPath);
+  if (
+    config?.version !== 1 ||
+    !Number.isInteger(config.port) ||
+    config.port <= 0 ||
+    config.port > 65_535 ||
+    typeof config.token !== "string" ||
+    !TOKEN_PATTERN.test(config.token)
+  ) {
+    return "unverified";
+  }
+  const own = environment(config);
+  if (
+    env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT !==
+      own.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT ||
+    env.OTEL_EXPORTER_OTLP_LOGS_HEADERS !== own.OTEL_EXPORTER_OTLP_LOGS_HEADERS
+  ) {
+    return "unverified";
+  }
+  const nextEnv = Object.fromEntries(
+    Object.entries(env).filter(([key, value]) => own[key] !== value)
+  );
+  writeFileAtomic(
+    path,
+    `${JSON.stringify({ ...settings, env: nextEnv }, null, 2)}\n`
+  );
+  return "removed";
+}
+
 function addressInUse(error: unknown): boolean {
   return record(error) && error.code === "EADDRINUSE";
 }

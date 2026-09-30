@@ -167,6 +167,11 @@ local database. Native collection is currently implemented for Claude Code only.
 
 For Cursor, `hackspain watch` installs user-level `afterAgentResponse` and `stop` recorders in
 `~/.cursor/hooks.json`, preserving unrelated hooks and replacing obsolete HackSpain commands.
+Run `hackspain watch --uninstall` before removing the CLI to delete its Cursor recorders and
+Claude Code exporter settings. This works without signing in and preserves other hooks and
+environment settings. It removes Claude values only when the saved receiver token and endpoint
+still identify this installation; otherwise it leaves the settings for manual review. Stop a
+running watcher first. Local telemetry files are retained.
 Both hooks share the same event id, so one turn counts once. The command pins the absolute
 recorder and window paths so a GUI-launched Cursor uses the same state as the watcher. Cursor invokes the installed
 HackSpain binary after each response; it retains only the model, version, conversation and

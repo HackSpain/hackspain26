@@ -11,6 +11,8 @@ import { c, terminalText } from "../lib/style";
 import { detectImageProtocol } from "../lib/term-images";
 import type { ScanResult } from "../watcher";
 import { acquireWatchLock, runWatch } from "../watcher";
+import { uninstallClaudeOtel } from "../watcher/collectors/claude-otel";
+import { uninstallCursorHook } from "../watcher/collectors/cursor";
 import { openMemory } from "../watcher/memory";
 import { startScreen, summaryLines } from "../watcher/screen";
 import { createState, feedLive, scrollFeed } from "../watcher/state";
@@ -18,6 +20,7 @@ import { collectionWindow, windowNotice } from "../watcher/window";
 import { autoUpdate, restartCurrentCommand } from "./update";
 
 type WatchFlags = {
+  uninstall?: boolean;
   once?: boolean;
   interval: string;
   toast: boolean;
@@ -86,6 +89,10 @@ export function registerWatch(program: Command): void {
       "Keep this open during the hackathon: live usage board and organiser messages"
     )
     .option("--once", "scan once, flush, and exit")
+    .option(
+      "--uninstall",
+      "remove HackSpain Cursor hooks and Claude exporter settings"
+    )
     .option("-i, --interval <seconds>", "seconds between scans", "30")
     .option("--no-toast", "print notifications only, no desktop toast")
     .option("--no-upload", "keep events in the local spool only")
@@ -99,6 +106,47 @@ export function registerWatch(program: Command): void {
     .action(async (flags: WatchFlags, command: Command) => {
       const ctx = contextFor(command);
       const ui = uiFor(ctx);
+      if (flags.uninstall) {
+        const releaseLock = acquireWatchLock();
+        try {
+          const failures: string[] = [];
+          let cursor: ReturnType<typeof uninstallCursorHook> | "error" =
+            "error";
+          let claude: ReturnType<typeof uninstallClaudeOtel> | "error" =
+            "error";
+          try {
+            cursor = uninstallCursorHook();
+          } catch (error) {
+            failures.push(`Cursor: ${String(error)}`);
+          }
+          try {
+            claude = uninstallClaudeOtel();
+          } catch (error) {
+            failures.push(`Claude Code: ${String(error)}`);
+          }
+          if (ctx.json) {
+            ui.result({ claude, cursor, failures });
+          } else {
+            ui.intro("watch · uninstall");
+            ui.line(`Cursor hooks: ${cursor}`);
+            ui.line(`Claude exporter: ${claude}`);
+            for (const failure of failures) {
+              ui.warn(failure);
+            }
+            if (claude === "unverified") {
+              ui.warn(
+                "Claude settings were kept because their ownership could not be verified."
+              );
+            }
+            ui.outro("Local telemetry and saved sessions remain available.");
+          }
+          process.exitCode =
+            failures.length > 0 || claude === "unverified" ? 1 : 0;
+        } finally {
+          releaseLock();
+        }
+        return;
+      }
       const jsonReporter = ctx.json ? createJsonWatchReporter(ui) : undefined;
       const intervalMs = positiveNumber("--interval", flags.interval) * 1000;
       const memory = openMemory();

@@ -15,6 +15,7 @@ import {
   normalizeCursorHook,
   recordCursorHook,
   setCursorCollectionWindow,
+  uninstallCursorHook,
 } from "../src/watcher/collectors/cursor";
 import { memoryCursorStore } from "../src/watcher/cursor-store";
 import { stamp } from "../src/watcher/index";
@@ -201,6 +202,61 @@ test("replaces obsolete recorder commands and preserves unrelated hook options",
     { command: "./stop.sh", loop_limit: 2 },
     { command },
   ]);
+});
+
+test("uninstalls only HackSpain recorders, including obsolete commands", () => {
+  const path = join(dir, "hooks.json");
+  const custom = { command: "./after.sh", timeout: 10 };
+  writeFileSync(
+    path,
+    JSON.stringify({
+      custom: true,
+      hooks: {
+        afterAgentResponse: [
+          custom,
+          { command: "./other-tool --note _cursor-hook" },
+          { command: "'/old/hackspain' '_cursor-hook'" },
+        ],
+        afterFileEdit: [{ command: "./format.sh" }],
+        stop: [
+          { command: "/bin/hackspain _cursor-hook" },
+          {
+            command:
+              "'/opt/custom-binary' '_cursor-hook' '--event-log' '/state/events' '--window-file' '/state/window'",
+          },
+        ],
+      },
+      version: 1,
+    })
+  );
+  expect(uninstallCursorHook(dir)).toBe("removed");
+  expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
+    custom: true,
+    hooks: {
+      afterAgentResponse: [
+        custom,
+        { command: "./other-tool --note _cursor-hook" },
+      ],
+      afterFileEdit: [{ command: "./format.sh" }],
+    },
+    version: 1,
+  });
+  const cleaned = readFileSync(path, "utf8");
+  expect(uninstallCursorHook(dir)).toBe("absent");
+  expect(readFileSync(path, "utf8")).toBe(cleaned);
+});
+
+test("invalid Cursor hooks do not cause a partial uninstall", () => {
+  const path = join(dir, "hooks.json");
+  const original = JSON.stringify({
+    hooks: {
+      afterAgentResponse: [{ command: "/bin/hackspain _cursor-hook" }],
+      stop: {},
+    },
+  });
+  writeFileSync(path, original);
+  expect(() => uninstallCursorHook(dir)).toThrow("stop must be an array");
+  expect(readFileSync(path, "utf8")).toBe(original);
 });
 
 test("does not partially rewrite config when the fallback hook is invalid", () => {
