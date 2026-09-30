@@ -215,9 +215,10 @@ and served from `https://hackspain.app/api/files/<id>` (needs a dashboard login;
 open feed` gets you one). In terminals that speak the Kitty graphics protocol (kitty, Ghostty,
 WezTerm, Konsole 22.04+) or the iTerm2 inline-image protocol (iTerm2, Warp, VS Code) the picture
 is drawn inline: the CLI asks the server for a PNG thumbnail (`?w=576`) and hands the bytes to
-the terminal, so it ships no image decoders. Everywhere else, in tmux, when piped, with `--json`,
-`--no-images` or `HACKSPAIN_NO_IMAGES=1`, you get the link. Pictures are capped at 36 columns by
-12 rows in `hackspain feed` and 30 by 6 in the watcher band; tall photos shrink to fit the row cap.
+the terminal, so it ships no image decoders. Everywhere else, in tmux or GNU screen, when piped,
+with `--json`, `--no-images` or `HACKSPAIN_NO_IMAGES=1`, you get the link. Pictures are capped at
+36 columns by 12 rows in `hackspain feed` and 30 by 6 in the watcher band; tall photos shrink to
+fit the row cap.
 
 Pages are 20 posts by default (`-n`). On a TTY the feed asks "Show older posts?" after a full
 page; piped or `--json` it prints the cursor to pass as `--before` (the oldest post's `createdAt`,
