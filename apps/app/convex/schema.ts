@@ -439,6 +439,15 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_expires", ["expiresAt"]),
 
+  /** Opaque per-IP counters for the public CLI device-login bridge. */
+  cliAuthStartLimits: defineTable({
+    key: v.string(),
+    windowStartedAt: v.number(),
+    count: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_window", ["windowStartedAt"]),
+
   // Single-use tokens a signed-in CLI mints so `hackspain open` can sign the
   // browser in (convex/cliAuth.ts, /cli-auth/handoff).
   cliWebHandoffs: defineTable({

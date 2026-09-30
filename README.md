@@ -83,11 +83,23 @@ pnpm dev:all    # public site, dashboard and Convex
 
 See [`package.json`](package.json) for the other scripts and the [CLI README](apps/cli/README.md) for CLI usage and releases.
 
+Browser-assisted CLI login needs `CLI_AUTH_BRIDGE_SECRET` in both
+`apps/app/.env.local` and the Convex development deployment. Generate one value
+with `openssl rand -hex 32`, then set that same value in Convex from `apps/app`
+with `pnpm exec convex env set CLI_AUTH_BRIDGE_SECRET "<value>"`. The start route
+returns 503 until both sides are configured.
+
 ## Deploy
 
 <img src="docs/readme/illustration-deploy.webp" alt="" width="140" align="right">
 
 The public site and dashboard run as separate Vercel projects. The dashboard's Vercel build also deploys Convex. Do not deploy a branch to production by hand: the next build replaces its functions, and incompatible rows can block the schema push.
+
+Before deploying the CLI login bridge, set the same `CLI_AUTH_BRIDGE_SECRET`
+value in the dashboard Vercel Production environment and the production Convex
+deployment. Use a separate matching pair for Preview deployments that support
+CLI login. The route fails closed if the secret or Vercel's client address
+header is unavailable; do not reuse `MIGRATION_SECRET`.
 
 ## Project docs
 

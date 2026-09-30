@@ -2,6 +2,11 @@ import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { authedMutation } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
+import {
+  START_LIMIT_PER_IP,
+  START_WINDOW_MS,
+  validStartProof,
+} from "./lib/cliAuthStart";
 
 /**
  * Device-code login for the CLI. `hackspain auth login` calls
@@ -32,22 +37,77 @@ function randomCode(): string {
 }
 
 export const start = mutation({
-  args: { secret: v.string() },
+  args: {
+    secret: v.string(),
+    identityKey: v.string(),
+    issuedAt: v.number(),
+    signature: v.string(),
+  },
   returns: v.object({ code: v.string(), expiresAt: v.number() }),
   handler: async (ctx, args) => {
     if (!SECRET_PATTERN.test(args.secret)) {
       fail("VALIDATION", "Secret inválido");
     }
+    const bridgeSecret = process.env.CLI_AUTH_BRIDGE_SECRET;
+    if (!bridgeSecret || bridgeSecret.length < 32) {
+      throw new Error("CLI_AUTH_BRIDGE_SECRET is not configured on Convex");
+    }
+    const now = Date.now();
+    if (
+      !validStartProof(
+        bridgeSecret,
+        args.secret,
+        args.identityKey,
+        args.issuedAt,
+        args.signature,
+        now
+      )
+    ) {
+      fail("VALIDATION", "Solicitud no autorizada");
+    }
+
+    const limit = await ctx.db
+      .query("cliAuthStartLimits")
+      .withIndex("by_key", (q) => q.eq("key", args.identityKey))
+      .unique();
+    if (limit && now - limit.windowStartedAt < START_WINDOW_MS) {
+      if (limit.count >= START_LIMIT_PER_IP) {
+        fail(
+          "TOO_MANY_ATTEMPTS",
+          "Demasiados inicios de sesión. Espera un minuto."
+        );
+      }
+      await ctx.db.patch(limit._id, { count: limit.count + 1 });
+    } else if (limit) {
+      await ctx.db.patch(limit._id, { windowStartedAt: now, count: 1 });
+    } else {
+      await ctx.db.insert("cliAuthStartLimits", {
+        key: args.identityKey,
+        windowStartedAt: now,
+        count: 1,
+      });
+    }
+
+    // The counters are only needed for the current window. Bound the sweep so
+    // each accepted request remains cheap, even after a long idle period.
+    const oldLimits = await ctx.db
+      .query("cliAuthStartLimits")
+      .withIndex("by_window", (q) =>
+        q.lt("windowStartedAt", now - 2 * START_WINDOW_MS)
+      )
+      .take(EXPIRED_SWEEP_LIMIT);
+    for (const old of oldLimits) {
+      await ctx.db.delete(old._id);
+    }
     // Opportunistic cleanup so abandoned requests do not pile up.
     const stale = await ctx.db
       .query("cliAuthRequests")
-      .withIndex("by_expires", (q) => q.lt("expiresAt", Date.now()))
+      .withIndex("by_expires", (q) => q.lt("expiresAt", now))
       .take(EXPIRED_SWEEP_LIMIT);
     for (const row of stale) {
       await ctx.db.delete(row._id);
     }
     const code = randomCode();
-    const now = Date.now();
     const expiresAt = now + REQUEST_TTL_MS;
     await ctx.db.insert("cliAuthRequests", {
       code,
