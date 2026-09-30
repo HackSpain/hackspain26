@@ -28,7 +28,15 @@ function panelLeft(): number | null {
 function Portrait({ person }: { person: DirectoryParticipant }) {
   return person.photoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element -- profile images may use authenticated app URLs or GitHub avatars.
-    <img className="pg-portrait" src={person.photoUrl} alt="" />
+    <img
+      className="pg-portrait"
+      src={person.photoUrl}
+      alt=""
+      width={52}
+      height={52}
+      loading="lazy"
+      decoding="async"
+    />
   ) : (
     <span className="pg-portrait" aria-hidden="true">
       {initialsOf(person.displayName)}

@@ -39,7 +39,15 @@ export function Avatar({
     >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="size-full object-cover" />
+        <img
+          src={src}
+          alt=""
+          width={40}
+          height={40}
+          loading="lazy"
+          decoding="async"
+          className="size-full object-cover"
+        />
       ) : initials ? (
         <span className={textClassName}>{initials}</span>
       ) : (

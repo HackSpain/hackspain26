@@ -83,6 +83,10 @@ function Portrait({
     <img
       src={person.photoUrl}
       alt=""
+      width={size === "sm" ? 40 : 64}
+      height={size === "sm" ? 40 : 64}
+      loading="lazy"
+      decoding="async"
       className={`${box} shrink-0 rounded-full border-[3px] border-hs-ink object-cover outline outline-1 outline-black/10`}
     />
   ) : (
