@@ -220,6 +220,11 @@ async function resolveIdentifier(
       .query("users")
       .withIndex("by_github", (q) => q.eq("githubUsername", identifier))
       .first();
+  } else {
+    user = await ctx.db
+      .query("users")
+      .withIndex("by_twitter", (q) => q.eq("twitterHandle", identifier))
+      .first();
   }
   if (!user && signup) {
     user = await ctx.db
@@ -605,6 +610,12 @@ async function clearPendingInvites(
       type: "github",
       value: user.githubUsername
         ? normalizeGithub(user.githubUsername)
+        : undefined,
+    },
+    {
+      type: "twitter",
+      value: user.twitterHandle
+        ? normalizeTwitter(user.twitterHandle)
         : undefined,
     },
   ];

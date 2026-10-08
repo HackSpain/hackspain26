@@ -423,6 +423,7 @@ export default defineSchema({
     .index("by_attendance", ["attendanceStatus"])
     .index("by_github_id", ["githubId"])
     .index("by_github", ["githubUsername"])
+    .index("by_twitter", ["twitterHandle"])
     .index("by_avatar", ["avatarId"])
     .index("by_avatar_thumb", ["avatarThumbId"])
     .index("by_user_type", ["userTypeId"]),
