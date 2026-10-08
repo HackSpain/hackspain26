@@ -4,10 +4,7 @@ import { readFileSync } from "node:fs";
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 // Next statically reads this literal too. Reading it avoids loading the
 // server-only auth runtime while exercising Next's actual matching engine.
-const source = readFileSync(
-  new URL("middleware.ts", import.meta.url),
-  "utf8"
-);
+const source = readFileSync(new URL("middleware.ts", import.meta.url), "utf8");
 const matcher = source.match(/matcher:\s*(\[[\s\S]*?\])/);
 assert.ok(matcher, "Middleware must declare a static matcher");
 const config = {
