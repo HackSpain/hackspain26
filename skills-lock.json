@@ -80,13 +80,13 @@
       "source": "emilkowalski/skills",
       "sourceType": "github",
       "skillPath": "skills/pick-ui-library/SKILL.md",
-      "computedHash": "c9c074152ad59badb8c0f94574f23f796d6667225469ed5e9b2263936ec57219"
+      "computedHash": "2b68bb9f0b5212b74d69a1295a93211404b499e6989848cc041ee63fbdef649a"
     },
     "prototype": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
       "skillPath": "skills/prototype/SKILL.md",
-      "computedHash": "2a4171d270ce9bf941b6ea6d97498288d5da56765eae94df51446aba746d9afe"
+      "computedHash": "3ca93038dd842a8ff02624b6640553d53f95ccf856b330b4f7ac7724d62d7c59"
     },
     "quiver": {
       "source": "mrloldev/quiver-ai",
@@ -103,7 +103,7 @@
       "source": "emilkowalski/skills",
       "sourceType": "github",
       "skillPath": "skills/review-animations/SKILL.md",
-      "computedHash": "422a75978df35b56f77797202ad06627827623ca420951091048fb69ced28f6a"
+      "computedHash": "b9ec840b4013e3c516ceba1723387ac5af1665545ddd5df67a616cb28da82e75"
     },
     "seo-aeo-best-practices": {
       "source": "sanity-io/agent-toolkit",

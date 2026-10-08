@@ -5,7 +5,7 @@ Keep instructions here only when they prevent a mistake that is easy to make aft
 ## Scope and shared skills
 
 - Before planning or implementing code, read and use [Ponytail](.agents/skills/ponytail/SKILL.md), including for fixes, refactors, architecture and dependency choices. Default to `full` unless the user chooses another mode. Before finalizing or reviewing a code change, also read and use [Ponytail Review](.agents/skills/ponytail-review/SKILL.md); complexity review complements correctness, security and accessibility review.
-- Shared skills live in `.agents/skills/`. Codex reads that source; `.claude/skills/` and `.cursor/skills/` link to it. The three explicit-only Emil entrypoints under `.claude/skills/` carry native invocation frontmatter and delegate to the canonical instructions; Cursor links to those entrypoints. Edit the source, never a separate copy. If a tool does not surface a skill, read it by path rather than skipping it.
+- Shared skills live in `.agents/skills/`. Codex reads that source; `.claude/skills/` and `.cursor/skills/` link to it. Edit the source, never a separate copy. If a tool does not surface a skill, read it by path rather than skipping it.
 - Keep one objective per change. Preserve user-owned work and exclude unrelated linting, formatting, refactoring and imports. Review findings outside the objective are observations, not permission for a cleanup.
 - Name new branches `samuel/feature-name` unless the user requests another name.
 - Read the nearest applicable `AGENTS.md` before editing below it, even when the session starts at the root; nested instructions may not have been loaded. Use the existing README and task-specific docs for setup, commands and product rules.
