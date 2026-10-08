@@ -348,19 +348,6 @@ export const removeAvatar = authedMutation({
   returns: v.null(),
 });
 
-export const setAttendance = profileMutation({
-  args: {
-    attendanceStatus: v.union(v.literal("attending"), v.literal("cancelled")),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(ctx.user._id, {
-      attendanceStatus: args.attendanceStatus,
-    });
-    return null;
-  },
-  returns: v.null(),
-});
-
 export const setNotificationConsent = profileMutation({
   args: { consent: v.boolean() },
   handler: async (ctx, args) => {
