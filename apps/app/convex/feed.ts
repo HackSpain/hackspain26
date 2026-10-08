@@ -16,6 +16,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 
 export const MAX_TEXT = 500;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
@@ -208,6 +209,9 @@ export const post = onboardedMutation({
       }
       if (!meta.contentType?.startsWith("image/")) {
         fail("VALIDATION", "Solo se admiten imágenes");
+      }
+      if (meta.size > MAX_IMAGE_BYTES) {
+        fail("VALIDATION", "La imagen no puede superar 5 MB");
       }
     }
     const membership = await membershipForUser(ctx, ctx.user._id);
