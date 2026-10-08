@@ -50,26 +50,6 @@ export const snapshot = query({
   },
 });
 
-export const reload = adminMutation({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx) => {
-    const row = await ctx.db
-      .query("tvPlaybackControl")
-      .withIndex("by_key", (q) => q.eq("key", "main"))
-      .unique();
-    if (row) {
-      await ctx.db.patch(row._id, { reloadVersion: row.reloadVersion + 1 });
-    } else {
-      await ctx.db.insert("tvPlaybackControl", {
-        key: "main",
-        reloadVersion: 1,
-      });
-    }
-    return null;
-  },
-});
-
 // Only configuration changes invalidate this subscription; presence is a separate table.
 export const screenConfiguration = query({
   args: { key: v.string() },
