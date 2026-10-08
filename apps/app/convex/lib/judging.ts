@@ -687,19 +687,6 @@ export function rankProjects<P, J>(
   return results;
 }
 
-export function compareByRank<P, J>(
-  a: ProjectResult<P, J>,
-  b: ProjectResult<P, J>
-): number {
-  if ((a.rank === null) !== (b.rank === null)) {
-    return a.rank === null ? 1 : -1;
-  }
-  if (a.rank !== null && b.rank !== null && a.rank !== b.rank) {
-    return a.rank - b.rank;
-  }
-  return 0;
-}
-
 export function isFlagged(
   difference: number | null,
   threshold: number

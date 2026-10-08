@@ -24,10 +24,6 @@ export const TV_EASE_MOVE = brandEase("hs-in-out", "0.77,0,0.175,1");
 export const TV_EASE_POP = "back.out(1.4)";
 /** Reduced motion keeps short opacity fades so changes stay legible. */
 export const TV_REDUCED_FADE = 0.2;
-export const TV_GOLD = "#eab619";
-export const TV_INK = "#2a170f";
-export const TV_PAPER = "#f4ecd8";
-
 let visibilityBound = false;
 
 /**

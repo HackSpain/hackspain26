@@ -3,7 +3,6 @@ import {
   cancel,
   confirm,
   isCancel,
-  multiselect,
   password,
   select,
   text,
@@ -120,39 +119,6 @@ export async function pickOne<T extends string>(
       initialValue: options.initialValue,
       message: options.message,
       options: options.choices,
-    })
-  );
-}
-
-export async function pickMany<T extends string>(
-  ctx: CliContext,
-  flagValues: T[] | undefined,
-  options: {
-    flag: string;
-    message: string;
-    choices: Option<T>[];
-    initial?: T[];
-    required?: boolean;
-  }
-): Promise<T[]> {
-  if (flagValues !== undefined) {
-    return flagValues;
-  }
-  if (!ctx.interactive) {
-    if (options.required && (options.initial ?? []).length === 0) {
-      requireInteractive(ctx, options.flag);
-    }
-    return options.initial ?? [];
-  }
-  if (options.choices.length === 0) {
-    return [];
-  }
-  return guard(
-    await multiselect<T>({
-      initialValues: options.initial,
-      message: options.message,
-      options: options.choices,
-      required: options.required ?? false,
     })
   );
 }
