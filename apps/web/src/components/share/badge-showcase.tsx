@@ -7,6 +7,7 @@ import { useDeviceTilt } from "./use-device-tilt";
 import { useImageFromSrc } from "./use-image-from-src";
 
 interface Props {
+  badgeImagePath: string;
   fullName: string;
   githubHandle: string | null;
   /** The photo they put on their badge, when they chose one over their avatar. */
@@ -18,7 +19,12 @@ interface Props {
  * throwing the card around is the whole appeal, but it offers nothing to edit
  * and nothing to share: the only way on from here is into the event itself.
  */
-export function BadgeShowcase({ fullName, githubHandle, photoDataUri }: Props) {
+export function BadgeShowcase({
+  badgeImagePath,
+  fullName,
+  githubHandle,
+  photoDataUri,
+}: Props) {
   const { tilt, needsPermission, requestAccess } = useDeviceTilt();
   const wind = useRef(0);
   const { firstName, lastName } = splitBadgeName(fullName);
@@ -59,6 +65,7 @@ export function BadgeShowcase({ fullName, githubHandle, photoDataUri }: Props) {
       <div className="absolute inset-0 z-10">
         <LanyardBadge
           content={{ droppedPhoto: photo, firstName, githubHandle, lastName }}
+          staticImageSrc={badgeImagePath}
           tilt={tilt}
           wind={wind}
         />

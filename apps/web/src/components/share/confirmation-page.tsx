@@ -225,6 +225,7 @@ export function ConfirmationPage({
             lastName,
           }}
           onPhotoClick={() => fileInput.current?.click()}
+          staticImageSrc={badgeImageSrc}
           tilt={tilt}
           wind={wind}
         />
