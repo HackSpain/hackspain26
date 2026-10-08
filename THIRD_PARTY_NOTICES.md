@@ -44,7 +44,7 @@ SOFTWARE.
 
 ### Emil Kowalski skills
 
-The 14 skills from [emilkowalski/skills](https://github.com/emilkowalski/skills/tree/e8a175de22ae1e49370fc144c1f3bb9aeedf988d/skills) in `.agents/skills/` are vendored from revision `e8a175de22ae1e49370fc144c1f3bb9aeedf988d`, including their referenced resources. Claude and Cursor link to the same source. Skill bodies are unchanged apart from removing a trailing blank line in `write-swift`. For Codex compatibility, `pick-ui-library`, `prototype` and `review-animations` move their upstream explicit-invocation flag from `SKILL.md` to `agents/openai.yaml` (`allow_implicit_invocation: false`); AGENTS.md preserves that routing for all agents. The existing `animate` lock entry now points to this collection. Other installed skill entries are unchanged.
+The 14 skills from [emilkowalski/skills](https://github.com/emilkowalski/skills/tree/e8a175de22ae1e49370fc144c1f3bb9aeedf988d/skills) in `.agents/skills/` are vendored from revision `e8a175de22ae1e49370fc144c1f3bb9aeedf988d`, including their referenced resources. Claude and Cursor use the same instruction source. Skill bodies are unchanged apart from removing a trailing blank line in `write-swift`. For Codex compatibility, `pick-ui-library`, `prototype` and `review-animations` move their upstream explicit-invocation flag from the canonical `SKILL.md` to `agents/openai.yaml` (`allow_implicit_invocation: false`). Their thin entrypoints under `.claude/skills/` retain native `disable-model-invocation: true` frontmatter and delegate to the canonical bodies; Cursor links to those entrypoints. The existing `animate` lock entry now points to this collection. Other installed skill entries are unchanged.
 
 ```
 MIT License
