@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import type { ReactNode, RefObject } from "react";
+import type { RefObject } from "react";
 import type { TvWidget } from "@/lib/tv";
 import { cn } from "@/lib/utils";
 import {
@@ -107,29 +107,22 @@ function useStageEntrance(
 export function TvStage({
   widgets,
   fill = false,
-  className,
-  children,
-  renderWidget,
   enter = false,
 }: {
   widgets: TvWidget[];
   fill?: boolean;
-  className?: string;
-  children?: ReactNode;
-  renderWidget?: (widget: TvWidget) => ReactNode;
   /** Play the mosaic-style entrance when the layout mounts. */
   enter?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  useStageEntrance(root, widgets, enter && !renderWidget);
+  useStageEntrance(root, widgets, enter);
 
   return (
     <div
       ref={root}
       className={cn(
         "relative overflow-hidden bg-hs-ink [container-type:size]",
-        fill ? "h-full w-full" : "aspect-video w-full",
-        className
+        fill ? "h-full w-full" : "aspect-video w-full"
       )}
     >
       {widgets.length === 0 ? (
@@ -139,35 +132,30 @@ export function TvStage({
           </p>
         </div>
       ) : (
-        widgets.map((widget) =>
-          renderWidget ? (
-            renderWidget(widget)
-          ) : (
-            <div
-              key={widget._id}
-              data-tv-box={widget._id}
-              className="absolute overflow-hidden"
-              style={{
-                left: `${widget.x}%`,
-                top: `${widget.y}%`,
-                width: `${widget.w}%`,
-                height: `${widget.h}%`,
-                zIndex: widget.z,
-              }}
-            >
-              <TvWidgetView widget={widget} />
-            </div>
-          )
-        )
+        widgets.map((widget) => (
+          <div
+            key={widget._id}
+            data-tv-box={widget._id}
+            className="absolute overflow-hidden"
+            style={{
+              left: `${widget.x}%`,
+              top: `${widget.y}%`,
+              width: `${widget.w}%`,
+              height: `${widget.h}%`,
+              zIndex: widget.z,
+            }}
+          >
+            <TvWidgetView widget={widget} />
+          </div>
+        ))
       )}
-      {enter && !renderWidget && widgets.length > 0 ? (
+      {enter && widgets.length > 0 ? (
         <div
           data-tv-sweep
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 z-50 h-[1%] bg-hs-gold opacity-0 shadow-[0_0_2cqw_0.3cqw_rgba(234,182,25,0.45)]"
         />
       ) : null}
-      {children}
     </div>
   );
 }

@@ -264,13 +264,7 @@ function MessageWidget({
   );
 }
 
-export function TvWidgetView({
-  widget,
-  editor = false,
-}: {
-  widget: TvWidget;
-  editor?: boolean;
-}) {
+export function TvWidgetView({ widget }: { widget: TvWidget }) {
   switch (widget.kind) {
     case "banner": {
       return (
@@ -349,16 +343,13 @@ export function TvWidgetView({
       return <FeedBox mode={widget.feedMode} source={widget.feedSource} />;
     }
     case "sponsorGrid": {
-      return (
-        <SponsorGridBox sponsors={widget.sponsors ?? []} editor={editor} />
-      );
+      return <SponsorGridBox sponsors={widget.sponsors ?? []} />;
     }
     case "sponsorTicker": {
       return (
         <SponsorTickerBox
           sponsors={widget.sponsors ?? []}
           speed={widget.tickerSpeed}
-          editor={editor}
           logosOnly={widget.text === "logos"}
         />
       );

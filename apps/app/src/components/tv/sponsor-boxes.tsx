@@ -16,15 +16,7 @@ const TIER_LABEL: Record<TvSponsor["tier"], string> = {
   community: "Community",
 };
 
-function SponsorLogo({
-  sources,
-  name,
-  editor,
-}: {
-  sources: string[];
-  name: string;
-  editor?: boolean;
-}) {
+function SponsorLogo({ sources, name }: { sources: string[]; name: string }) {
   const [failed, setFailed] = useState(0);
   const src = sources[failed];
   if (!src) {
@@ -40,9 +32,7 @@ function SponsorLogo({
         referrerPolicy="no-referrer"
         className={cn(
           "h-8 w-auto max-w-24 object-contain outline outline-1 -outline-offset-1 outline-black/10",
-          src.startsWith("/sponsors/") && "brightness-0",
-          editor &&
-            "grayscale motion-safe:transition-[filter] motion-safe:duration-150 group-hover:grayscale-0"
+          src.startsWith("/sponsors/") && "brightness-0"
         )}
         onError={() => setFailed((count) => count + 1)}
       />
@@ -51,32 +41,19 @@ function SponsorLogo({
   );
 }
 
-function SponsorMark({
-  sponsor,
-  editor,
-}: {
-  sponsor: TvSponsor;
-  editor?: boolean;
-}) {
+function SponsorMark({ sponsor }: { sponsor: TvSponsor }) {
   return (
     <span className="flex items-center gap-2">
       <SponsorLogo
         key={`${sponsor.logoUrl}|${sponsor.href}`}
         sources={sponsorLogoSources(sponsor)}
         name={sponsor.name}
-        editor={editor}
       />
     </span>
   );
 }
 
-export function SponsorGridBox({
-  sponsors,
-  editor = false,
-}: {
-  sponsors: TvSponsor[];
-  editor?: boolean;
-}) {
+export function SponsorGridBox({ sponsors }: { sponsors: TvSponsor[] }) {
   const rows = resolveTvSponsors(sponsors);
   return (
     <div className="grid h-full grid-cols-2 content-start gap-2 bg-hs-paper p-3 text-hs-ink sm:grid-cols-3">
@@ -85,7 +62,7 @@ export function SponsorGridBox({
           key={`${sponsor.name}-${sponsor.href}`}
           className="flex flex-col justify-center border-[3px] border-hs-ink/15 px-2 py-2"
         >
-          <SponsorMark sponsor={sponsor} editor={editor} />
+          <SponsorMark sponsor={sponsor} />
           <p className="mt-1 text-[10px] text-hs-brown">
             {TIER_LABEL[sponsor.tier]}
             {sponsor.href
@@ -171,12 +148,10 @@ function SponsorLogoStrip({
 export function SponsorTickerBox({
   sponsors,
   speed = "normal",
-  editor = false,
   logosOnly = false,
 }: {
   sponsors: TvSponsor[];
   speed?: TvTickerSpeed;
-  editor?: boolean;
   logosOnly?: boolean;
 }) {
   const items = resolveTvSponsors(sponsors);
@@ -196,20 +171,15 @@ export function SponsorTickerBox({
     return (
       <div className="flex h-full flex-wrap items-center gap-6 overflow-hidden bg-hs-gold px-4">
         {items.map((sponsor) => (
-          <SponsorMark key={sponsor.name} sponsor={sponsor} editor={editor} />
+          <SponsorMark key={sponsor.name} sponsor={sponsor} />
         ))}
       </div>
     );
   }
   return (
-    <div
-      className={cn(
-        "flex h-full items-center overflow-hidden bg-hs-gold",
-        editor && "group"
-      )}
-    >
+    <div className="flex h-full items-center overflow-hidden bg-hs-gold">
       <div
-        className="tv-ticker flex w-max group-hover:[animation-play-state:paused]"
+        className="tv-ticker flex w-max"
         style={{
           animationDuration: TICKER_DURATION[speed],
           animationPlayState: visible ? "running" : "paused",
@@ -226,7 +196,7 @@ export function SponsorTickerBox({
                 key={`${copy}-${sponsor.name}`}
                 className="inline-flex items-center px-8"
               >
-                <SponsorMark sponsor={sponsor} editor={editor} />
+                <SponsorMark sponsor={sponsor} />
                 <span aria-hidden className="ml-3">
                   ✦
                 </span>

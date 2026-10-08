@@ -1,8 +1,9 @@
 # Pantallas del evento
 
-`/admin/tv` administra pantallas identificadas por URL. Sustituye al editor de cajas
-como interfaz de operación. Las tablas y funciones del antiguo canvas se conservan
-para no borrar composiciones guardadas, pero `/tv` utiliza vistas predefinidas.
+`/admin/tv` administra pantallas identificadas por URL y permite elegir una vista
+para cada una. El editor de cajas arrastrables y sus endpoints de edición y
+publicación se han retirado. Las tablas y la lectura compatible del antiguo canvas
+se conservan para no borrar composiciones guardadas; `/tv` utiliza vistas predefinidas.
 
 ## Conectar y controlar
 
