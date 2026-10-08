@@ -54,9 +54,19 @@ const ogImage = {
   <main class="relative min-h-0 w-full flex-1" id="main">
     <BadgeShowcase
       client:only="react"
+      badgeImagePath={ogImagePath}
       fullName={fullName}
       githubHandle={githubHandle}
       photoDataUri={photoDataUri}
-    />
+    >
+      <img
+        slot="fallback"
+        src={ogImagePath}
+        alt={`Acreditación de HackSpain 2026 a nombre de ${fullName}`}
+        width={OG_BADGE_WIDTH}
+        height={OG_BADGE_HEIGHT}
+        class="mx-auto h-auto w-full max-w-2xl px-4 py-36"
+      >
+    </BadgeShowcase>
   </main>
 </Layout>

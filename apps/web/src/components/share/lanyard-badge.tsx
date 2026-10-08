@@ -12,8 +12,16 @@ import {
   useSphericalJoint,
 } from "@react-three/rapier";
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
-import type { RefObject } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useReducedMotion } from "motion/react";
+import type { ReactNode, RefObject } from "react";
+import {
+  Component,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { BufferGeometry, Mesh } from "three";
 import {
   CanvasTexture,
@@ -27,7 +35,9 @@ import {
   Vector2,
   Vector3,
 } from "three";
+import { OG_BADGE_HEIGHT, OG_BADGE_WIDTH } from "../../lib/badge-share-params";
 import { BADGE_PALETTE } from "./badge-roles";
+import { supportsBadgeWebGL } from "./badge-webgl";
 import {
   CARD_BACK_MATERIAL,
   CARD_EDGE_MATERIAL,
@@ -178,6 +188,7 @@ interface BadgeProps {
 }
 
 interface LanyardBadgeProps extends BadgeProps {
+  staticImageSrc: string;
   tilt: RefObject<number | null>;
 }
 
@@ -844,51 +855,108 @@ function ResponsiveCamera() {
   return null;
 }
 
+// biome-ignore lint/style/useReactFunctionComponents: React error boundaries require a class with getDerivedStateFromError.
+class BadgeRenderBoundary extends Component<{
+  children: ReactNode;
+  fallback: ReactNode;
+}> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
 export default function LanyardBadge({
   content,
   onPhotoClick,
+  staticImageSrc,
   tilt,
   wind,
 }: LanyardBadgeProps) {
+  const reducedMotion = useReducedMotion();
+  const [webglReady, setWebglReady] = useState(false);
+  useEffect(() => {
+    if (reducedMotion === false) {
+      setWebglReady(supportsBadgeWebGL(document.createElement("canvas")));
+    }
+  }, [reducedMotion]);
+
+  const image = (
+    <img
+      alt={`Acreditación de HackSpain 2026 a nombre de ${content.firstName} ${content.lastName}`}
+      className="h-auto max-h-full w-full object-contain"
+      height={OG_BADGE_HEIGHT}
+      src={staticImageSrc}
+      width={OG_BADGE_WIDTH}
+    />
+  );
+  const fallback = (
+    <div className="flex h-full items-center justify-center px-4 py-36 sm:px-8">
+      {onPhotoClick ? (
+        <button
+          aria-label="Cambiar la foto de tu acreditación"
+          className="w-full max-w-2xl focus-visible:outline-2 focus-visible:outline-hs-navy focus-visible:outline-offset-4"
+          onClick={onPhotoClick}
+          type="button"
+        >
+          {image}
+        </button>
+      ) : (
+        <div className="w-full max-w-2xl">{image}</div>
+      )}
+    </div>
+  );
+  if (reducedMotion !== false || !webglReady) {
+    return fallback;
+  }
   return (
-    <Canvas
-      camera={{ fov: CAMERA_FOV, position: [0, 0, BASE_CAMERA_DISTANCE] }}
-      flat
-      gl={{ alpha: true, antialias: true }}
-      style={{ touchAction: "none" }}
-    >
-      <ResponsiveCamera />
-      <ambientLight intensity={AMBIENT_INTENSITY} />
-      <Physics gravity={[0, -GRAVITY, 0]} interpolate timeStep={1 / 60}>
-        <TiltGravity tilt={tilt} />
-        <Badge content={content} onPhotoClick={onPhotoClick} wind={wind} />
-      </Physics>
-      <Environment blur={0.75} environmentIntensity={ENVIRONMENT_INTENSITY}>
-        <Lightformer
-          intensity={2}
-          position={[0, -1, 5]}
-          rotation={[0, 0, Math.PI / 3]}
-          scale={[100, 0.1, 1]}
-        />
-        <Lightformer
-          intensity={3}
-          position={[-1, -1, 1]}
-          rotation={[0, 0, Math.PI / 3]}
-          scale={[100, 0.1, 1]}
-        />
-        <Lightformer
-          intensity={3}
-          position={[1, 1, 1]}
-          rotation={[0, 0, Math.PI / 3]}
-          scale={[100, 0.1, 1]}
-        />
-        <Lightformer
-          intensity={10}
-          position={[-10, 0, 14]}
-          rotation={[0, Math.PI / 2, Math.PI / 3]}
-          scale={[100, 10, 1]}
-        />
-      </Environment>
-    </Canvas>
+    <BadgeRenderBoundary fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <Canvas
+          camera={{ fov: CAMERA_FOV, position: [0, 0, BASE_CAMERA_DISTANCE] }}
+          flat
+          gl={{ alpha: true, antialias: true }}
+          style={{ touchAction: "none" }}
+        >
+          <ResponsiveCamera />
+          <ambientLight intensity={AMBIENT_INTENSITY} />
+          <Physics gravity={[0, -GRAVITY, 0]} interpolate timeStep={1 / 60}>
+            <TiltGravity tilt={tilt} />
+            <Badge content={content} onPhotoClick={onPhotoClick} wind={wind} />
+          </Physics>
+          <Environment blur={0.75} environmentIntensity={ENVIRONMENT_INTENSITY}>
+            <Lightformer
+              intensity={2}
+              position={[0, -1, 5]}
+              rotation={[0, 0, Math.PI / 3]}
+              scale={[100, 0.1, 1]}
+            />
+            <Lightformer
+              intensity={3}
+              position={[-1, -1, 1]}
+              rotation={[0, 0, Math.PI / 3]}
+              scale={[100, 0.1, 1]}
+            />
+            <Lightformer
+              intensity={3}
+              position={[1, 1, 1]}
+              rotation={[0, 0, Math.PI / 3]}
+              scale={[100, 0.1, 1]}
+            />
+            <Lightformer
+              intensity={10}
+              position={[-10, 0, 14]}
+              rotation={[0, Math.PI / 2, Math.PI / 3]}
+              scale={[100, 10, 1]}
+            />
+          </Environment>
+        </Canvas>
+      </Suspense>
+    </BadgeRenderBoundary>
   );
 }
