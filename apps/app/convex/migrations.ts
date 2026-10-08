@@ -309,7 +309,7 @@ export const dropPhoneVerification = mutation({
       usersCleared += 1;
     }
     // The table is gone from the schema, so it is queried untyped.
-    const untyped = ctx.db as unknown as GenericMutationCtx<AnyDataModel>["db"];
+    const untyped = ctx.db as GenericMutationCtx<AnyDataModel>["db"];
     let challengesDeleted = 0;
     for (const row of await untyped.query("phoneChallenges").collect()) {
       await untyped.delete(row._id);
