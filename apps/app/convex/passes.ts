@@ -9,11 +9,7 @@ import {
   accessCodeEmailHtml,
   accessCodeEmailText,
 } from "./lib/accessCodeEmail";
-import {
-  adminMutation,
-  adminQuery,
-  onboardedQuery,
-} from "./lib/customFunctions";
+import { adminMutation, adminQuery } from "./lib/customFunctions";
 import {
   findUserByEmail,
   getSignupForUser,
@@ -22,16 +18,6 @@ import {
 import { resendApiKey, resendFrom } from "./lib/resend";
 const PASS_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const PASS_CODE_LENGTH = 4;
-
-const passReturn = v.object({
-  _id: v.id("eventPasses"),
-  checkedInAt: v.optional(v.number()),
-  code: v.string(),
-  createdAt: v.number(),
-  email: v.string(),
-  name: v.string(),
-  status: v.union(v.literal("active"), v.literal("revoked")),
-});
 
 const scanReturn = v.object({
   checkedInAt: v.number(),
@@ -63,50 +49,6 @@ async function uniqueCode(ctx: MutationCtx): Promise<string> {
   }
   throw new Error("No se ha podido generar un código de acceso único");
 }
-
-async function passDetails(
-  ctx: QueryCtx | MutationCtx,
-  pass: Doc<"eventPasses">,
-  user: Doc<"users"> | null,
-  knownSignup?: Doc<"signups"> | null
-) {
-  const signup =
-    knownSignup ??
-    (pass.signupId ? await ctx.db.get(pass.signupId) : null) ??
-    (user ? await getSignupForUser(ctx, user) : null);
-  if (!signup || !signupIsAccepted(signup)) {
-    throw new Error("La acreditación no pertenece a un hacker aceptado");
-  }
-  return {
-    _id: pass._id,
-    checkedInAt: pass.checkedInAt,
-    code: pass.code,
-    createdAt: pass.createdAt,
-    email: user?.email ?? signup.email,
-    name: user?.name ?? signup.fullName,
-    status: pass.status,
-  };
-}
-
-export const mine = onboardedQuery({
-  args: {},
-  handler: async (ctx) => {
-    const signup = await getSignupForUser(ctx, ctx.user);
-    const pass =
-      (signup
-        ? await ctx.db
-            .query("eventPasses")
-            .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
-            .unique()
-        : null) ??
-      (await ctx.db
-        .query("eventPasses")
-        .withIndex("by_user", (q) => q.eq("userId", ctx.user._id))
-        .unique());
-    return pass ? await passDetails(ctx, pass, ctx.user, signup) : null;
-  },
-  returns: v.union(passReturn, v.null()),
-});
 
 export async function findEventPass(
   ctx: QueryCtx | MutationCtx,

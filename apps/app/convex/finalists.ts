@@ -27,11 +27,9 @@ import {
   rankProjects,
 } from "./lib/judging";
 import type { PairedObservation } from "./lib/judging";
-import { membershipForUser } from "./lib/team";
 import { finalistStatusValidator } from "./lib/validators";
 
 const RESEND_BATCH_LIMIT = 100;
-const SEARCH_LIMIT = 20;
 
 const personRefValidator = v.object({
   signupId: v.optional(v.id("signups")),
@@ -164,51 +162,6 @@ async function upsertIn(
   return "added";
 }
 
-async function hydrateFinalist(
-  ctx: QueryCtx | MutationCtx,
-  row: Doc<"finalists">
-) {
-  const person = await resolvePerson(ctx, {
-    signupId: row.signupId,
-    userId: row.userId,
-  });
-  let teamName: string | undefined;
-  if (row.userId) {
-    const membership = await membershipForUser(ctx, row.userId);
-    if (membership) {
-      const team = await ctx.db.get(membership.teamId);
-      teamName = team?.name;
-    }
-  }
-  return {
-    _id: row._id,
-    addedAt: row.addedAt,
-    canceledAt: row.canceledAt,
-    email: person?.email ?? "",
-    emailedAt: row.emailedAt,
-    deliveryError: row.deliveryError,
-    name: person?.name ?? "Sin nombre",
-    signupId: row.signupId,
-    status: row.status,
-    teamName,
-    userId: row.userId,
-  };
-}
-
-const finalistRowValidator = v.object({
-  _id: v.id("finalists"),
-  addedAt: v.number(),
-  canceledAt: v.optional(v.number()),
-  email: v.string(),
-  emailedAt: v.optional(v.number()),
-  deliveryError: v.optional(v.string()),
-  name: v.string(),
-  signupId: v.optional(v.id("signups")),
-  status: finalistStatusValidator,
-  teamName: v.optional(v.string()),
-  userId: v.optional(v.id("users")),
-});
-
 export const counts = adminQuery({
   args: {},
   handler: async (ctx) => {
@@ -234,141 +187,6 @@ export const counts = adminQuery({
     pendingEmail: v.number(),
     total: v.number(),
   }),
-});
-
-export const list = adminQuery({
-  args: {},
-  handler: async (ctx) => {
-    const rows = await ctx.db.query("finalists").collect();
-    const items = [];
-    for (const row of rows) {
-      items.push(await hydrateFinalist(ctx, row));
-    }
-    return items.toSorted((a, b) => {
-      if (a.status !== b.status) {
-        return a.status === "in" ? -1 : 1;
-      }
-      return a.name.localeCompare(b.name, "es");
-    });
-  },
-  returns: v.array(finalistRowValidator),
-});
-
-export const searchPeople = adminQuery({
-  args: { search: v.string() },
-  handler: async (ctx, args) => {
-    const needle = args.search.trim().toLowerCase();
-    if (needle.length < 2) {
-      return [];
-    }
-    const [signups, users, finalists] = await Promise.all([
-      ctx.db.query("signups").collect(),
-      ctx.db.query("users").collect(),
-      ctx.db.query("finalists").collect(),
-    ]);
-    const inUserIds = new Set(
-      finalists
-        .filter((row) => row.status === "in" && row.userId)
-        .map((row) => row.userId as Id<"users">)
-    );
-    const inSignupIds = new Set(
-      finalists
-        .filter((row) => row.status === "in" && row.signupId)
-        .map((row) => row.signupId as Id<"signups">)
-    );
-
-    const seen = new Set<string>();
-    const matches: {
-      email: string;
-      name: string;
-      signupId?: Id<"signups">;
-      teamName?: string;
-      userId?: Id<"users">;
-    }[] = [];
-
-    const usersBySignup = new Map(
-      users
-        .filter((user) => user.signupId !== undefined)
-        .map((user) => [user.signupId as Id<"signups">, user])
-    );
-    const usersByEmail = new Map(
-      users
-        .filter((user) => user.email)
-        .map((user) => [user.email as string, user])
-    );
-
-    const consider = async (input: {
-      email: string;
-      name: string;
-      signupId?: Id<"signups">;
-      userId?: Id<"users">;
-    }) => {
-      const key = input.userId ?? input.signupId ?? input.email;
-      if (seen.has(key)) {
-        return;
-      }
-      if (input.userId && inUserIds.has(input.userId)) {
-        return;
-      }
-      if (input.signupId && inSignupIds.has(input.signupId)) {
-        return;
-      }
-      const haystack = `${input.name} ${input.email}`.toLowerCase();
-      if (!haystack.includes(needle)) {
-        return;
-      }
-      seen.add(key);
-      let teamName: string | undefined;
-      if (input.userId) {
-        const membership = await membershipForUser(ctx, input.userId);
-        if (membership) {
-          const team = await ctx.db.get(membership.teamId);
-          teamName = team?.name;
-        }
-      }
-      matches.push({ ...input, teamName });
-    };
-
-    for (const signup of signups) {
-      const user =
-        usersBySignup.get(signup._id) ?? usersByEmail.get(signup.email);
-      await consider({
-        email: signup.email,
-        name: user?.name ?? signup.fullName,
-        signupId: signup._id,
-        userId: user?._id,
-      });
-      if (matches.length >= SEARCH_LIMIT) {
-        break;
-      }
-    }
-    if (matches.length < SEARCH_LIMIT) {
-      for (const user of users) {
-        if (!user.email) {
-          continue;
-        }
-        await consider({
-          email: user.email,
-          name: user.name ?? user.email,
-          signupId: user.signupId,
-          userId: user._id,
-        });
-        if (matches.length >= SEARCH_LIMIT) {
-          break;
-        }
-      }
-    }
-    return matches.slice(0, SEARCH_LIMIT);
-  },
-  returns: v.array(
-    v.object({
-      email: v.string(),
-      name: v.string(),
-      signupId: v.optional(v.id("signups")),
-      teamName: v.optional(v.string()),
-      userId: v.optional(v.id("users")),
-    })
-  ),
 });
 
 const personRowValidator = v.object({

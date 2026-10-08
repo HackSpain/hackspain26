@@ -5,7 +5,6 @@ import {
   authedQuery,
   directoryQuery,
 } from "./lib/customFunctions";
-import { requireDirectoryViewer } from "./lib/auth";
 import { getEventWindow } from "./lib/eventWindow";
 import {
   directoryFieldValidator,
@@ -302,15 +301,6 @@ function profileFields(row: Doc<"githubProfiles">) {
   const { _creationTime: _c, _id: _i, ...profile } = row;
   return profile;
 }
-
-export const assertViewer = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    await requireDirectoryViewer(ctx);
-    return null;
-  },
-  returns: v.null(),
-});
 
 export const githubCached = internalQuery({
   args: { username: v.string() },
