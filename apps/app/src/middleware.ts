@@ -37,5 +37,8 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
 });
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|.*\\.(?:avif|css|gif|ico|jpe?g|js|map|png|svg|webp|woff2?)$).*)",
+    "/api(.*)",
+  ],
 };

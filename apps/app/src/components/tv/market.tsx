@@ -46,8 +46,6 @@ import { MilestoneBroadcast } from "./milestone-broadcast";
 const SLIDE_MS = 12_000;
 const SIDE_MS = 10_000;
 const MINI_SLIDE_MS = 5000;
-// Submission deadline: 20 September 2026, 11:00 in Europe/Madrid (UTC+02:00).
-const SUBMISSION_DEADLINE = Date.parse("2026-09-20T11:00:00+02:00");
 const RANKING_ROWS = 7;
 const FEED_ROWS = 6;
 const PEOPLE_ROWS = 8;
@@ -165,17 +163,22 @@ function Move({ move }: { move: number }) {
   );
 }
 
-function Clock() {
+function Clock({ endsAt }: { endsAt?: number }) {
   const now = useClock();
-  const left = now
-    ? Math.max(0, Math.floor((SUBMISSION_DEADLINE - now.getTime()) / 1000))
-    : null;
+  const left =
+    now && endsAt !== undefined
+      ? Math.max(0, Math.floor((endsAt - now.getTime()) / 1000))
+      : null;
   const pad = (value: number) => String(value).padStart(2, "0");
   return (
     <>
       <div className="flex flex-col items-center justify-center bg-hs-gold leading-none text-hs-ink">
         <span className="hsx-label">
-          {left === 0 ? "Plazo terminado" : "Quedan"}
+          {left === null
+            ? "Sin plazo"
+            : left === 0
+              ? "Plazo terminado"
+              : "Quedan"}
         </span>
         {left !== null ? (
           <span className="hsx-title hsx-num hsx-xl mt-[calc(var(--u)*0.4)]">
@@ -1184,7 +1187,7 @@ function MiniMarketStage({
               )}
             </span>
           </div>
-          <Clock />
+          <Clock endsAt={data.endsAt} />
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,0.8fr)_minmax(0,1.5fr)]">
@@ -1402,7 +1405,7 @@ function MarketStage({
               />
             </div>
           </div>
-          <Clock />
+          <Clock endsAt={data.endsAt} />
         </header>
         <TeamTape teams={teams} />
         <div className="relative min-h-0 flex-1">
