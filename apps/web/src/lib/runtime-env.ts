@@ -1,17 +1,11 @@
 export function envFromRuntime(name: string): string | undefined {
-  const proc = (
-    globalThis as unknown as {
-      process?: { env?: Record<string, string | undefined> };
-    }
-  ).process;
+  const proc = globalThis.process;
   const processValue = proc?.env?.[name];
   if (typeof processValue === "string" && processValue.trim()) {
     return processValue.trim();
   }
 
-  const importMetaEnv = (
-    import.meta as unknown as { env?: Record<string, string | undefined> }
-  ).env;
+  const importMetaEnv = import.meta.env;
   const importMetaValue = importMetaEnv?.[name];
   return typeof importMetaValue === "string" && importMetaValue.trim()
     ? importMetaValue.trim()

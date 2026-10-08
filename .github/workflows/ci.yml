@@ -11,6 +11,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "oxlint.config.mjs"
+      - "scripts/anti-slop.test.mjs"
       - ".github/workflows/ci.yml"
 
 permissions:
@@ -64,6 +65,8 @@ jobs:
           node-version: "22.13"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify anti-slop rules and workspace inheritance
+        run: pnpm lint:anti-slop:test
       - name: Check formatting and lint on changed files
         shell: bash
         env:
@@ -95,8 +98,8 @@ jobs:
             )
           fi
 
-          if ! git diff --quiet "$BASE_SHA"...HEAD -- oxlint.config.mjs; then
-            pnpm exec oxlint -c oxlint.config.mjs --deny-warnings --report-unused-disable-directives-severity=error oxlint.config.mjs
+          if ! git diff --quiet "$BASE_SHA"...HEAD -- oxlint.config.mjs scripts/anti-slop.test.mjs; then
+            pnpm exec oxlint -c oxlint.config.mjs --deny-warnings --report-unused-disable-directives-severity=error oxlint.config.mjs scripts/anti-slop.test.mjs
           fi
 
   app:

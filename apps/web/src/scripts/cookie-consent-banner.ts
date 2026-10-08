@@ -24,15 +24,13 @@ export function initCookieConsentBanner(): void {
     banner?.classList.remove("hidden");
   }
 
-  function persist(value: string): void {
+  function persist(value: NonNullable<Window["__hsAnalyticsConsent"]>): void {
     try {
       localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, value);
     } catch {
       /* ignore */
     }
-    (
-      window as unknown as { __hsAnalyticsConsent?: string }
-    ).__hsAnalyticsConsent = value;
+    window.__hsAnalyticsConsent = value;
     hideBanner();
   }
 

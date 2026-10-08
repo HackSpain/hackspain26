@@ -1,10 +1,32 @@
 import { defineConfig } from "oxlint";
 import core from "ultracite/oxlint/core";
+import antiSlop from "ultracite-anti-slop/oxlint/anti-slop";
 
 export default defineConfig({
   extends: [core],
+  // The alias supplies only the bundled plugin; existing presets stay on Ultracite 7.6.2.
+  // Rule selection and the complete audit are documented in docs/anti-slop.md.
+  jsPlugins: antiSlop.jsPlugins,
   ignorePatterns: core.ignorePatterns,
+  overrides: [
+    {
+      // Partial contexts and deliberately invalid values are intentional test fixtures.
+      // This new rule protects production contracts; tests keep the existing lint checks.
+      files: ["**/*.{test,spec}.{ts,tsx,js,jsx}", "**/test/**", "**/__tests__/**"],
+      rules: {
+        "anti-slop/no-chained-type-assertions": "off",
+      },
+    },
+  ],
   rules: {
+    "anti-slop/no-chained-type-assertions": "error",
+    "anti-slop/no-object-parameters": "error",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    "anti-slop/no-unknown-type-aliases": "error",
+    "anti-slop/no-widen-then-assert": "error",
+    // Direct typed calls avoid both reflective access and the conflicting core suggestion.
+    "unicorn/prefer-reflect-apply": "off",
     // Preserve the project's established style where Ultracite is opinionated
     // but does not identify a correctness, safety, or accessibility problem.
     complexity: "off",

@@ -322,7 +322,18 @@ export function validateEvent(value: unknown): string[] {
     }
     if (
       problems.length === 0 &&
-      t?.total !== totalTokens(t as unknown as TokenCounts)
+      t &&
+      isInt(t.input) &&
+      isInt(t.output) &&
+      isInt(t.cacheRead) &&
+      isInt(t.cacheWrite) &&
+      t.total !==
+        totalTokens({
+          input: t.input,
+          output: t.output,
+          cacheRead: t.cacheRead,
+          cacheWrite: t.cacheWrite,
+        })
     ) {
       problems.push(
         "tokens.total must be input + output + cacheRead + cacheWrite"

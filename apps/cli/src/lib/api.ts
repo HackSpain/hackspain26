@@ -34,7 +34,7 @@ export const api = new Proxy(
   {
     get: (_target, module) => moduleProxy(String(module)),
   }
-) as unknown as typeof AppApi;
+) as typeof AppApi;
 
 export function functionName(ref: unknown): string {
   const name = (ref as Ref | undefined)?.name;
