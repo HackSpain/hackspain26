@@ -45,4 +45,6 @@ Keep instructions here only when they prevent a mistake that is easy to make aft
 
 ## UI consistency
 
+- For every UI change, read and use [Emil Design Engineering](.agents/skills/emil-design-eng/SKILL.md) before planning or editing and when reviewing the result. For web motion use [Animate](.agents/skills/animate/SKILL.md); for mobile web behavior use [Mobile Native](.agents/skills/mobile-native/SKILL.md); for Sonner use [Ask Sonner](.agents/skills/ask-sonner/SKILL.md). Read only the companion skills relevant to the task; this does not authorize adding motion, dependencies, demos or an audit beyond the requested scope. Preserve the existing design system, accessibility and reduced-motion behavior.
+- Use the remaining Emil skills for their stated task and platform. `prototype`, `pick-ui-library` and `review-animations` require explicit invocation; general UI work does not start their specialized workflows.
 - Follow the existing design rules. Brand tokens have separate representations in the landing and dashboard; update them together. Keep machine-readable public content synchronized with visible copy.
