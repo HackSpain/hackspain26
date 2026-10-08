@@ -6,7 +6,6 @@ dist/
 !.agents/skills/ponytail/
 !.agents/skills/ponytail-review/
 !.agents/skills/animate/
-!.agents/skills/animate-expo/
 !.agents/skills/animation-vocabulary/
 !.agents/skills/apple-design/
 !.agents/skills/ask-sonner/
@@ -15,10 +14,7 @@ dist/
 !.agents/skills/find-animation-opportunities/
 !.agents/skills/improve-animations/
 !.agents/skills/mobile-native/
-!.agents/skills/pick-ui-library/
-!.agents/skills/prototype/
 !.agents/skills/review-animations/
-!.agents/skills/write-swift/
 .next/
 out/
 
