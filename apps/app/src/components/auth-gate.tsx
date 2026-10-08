@@ -2,16 +2,14 @@
 
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { Role } from "@convex/lib/validators";
 import { api } from "@convex/_generated/api";
 import { isEventOpen } from "@/components/event-closed-banner";
 import { HomeSplash } from "@/components/home-splash";
-import {
-  LoginTransition,
-  LoginTransitionProvider,
-} from "@/components/login-transition";
+import { LoginTransitionProvider } from "@/components/login-transition-context";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +32,24 @@ import {
   JUDGING_SPONSORS_PATH,
   sectionForPath,
 } from "@/lib/sections";
+
+const LoginTransition = dynamic(
+  () =>
+    import("@/components/login-transition").then((mod) => mod.LoginTransition),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-hs-paper">
+        <p
+          role="status"
+          className="font-bungee text-xs tracking-wide text-hs-brown"
+        >
+          Entrando…
+        </p>
+      </div>
+    ),
+  }
+);
 
 function destination(me: {
   role: Role;

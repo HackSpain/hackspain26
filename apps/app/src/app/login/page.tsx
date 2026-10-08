@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import type { LoginErrorCode } from "@/app/api/login/otp/route";
-import { useBeginLoginTransition } from "@/components/login-transition";
+import { useBeginLoginTransition } from "@/components/login-transition-context";
 import { AuthScreen, Field, FormError, FormNotice } from "@/components/page";
 import {
   EASE_OUT,
