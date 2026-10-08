@@ -1,9 +1,9 @@
-/**
- * Sunday 20 Sep 2026, 08:00 Europe/Madrid (CEST). The Submit tile
- * becomes the featured home card from this instant.
- */
-export const SUBMIT_FEATURED_AT_MS = Date.parse("2026-09-20T08:00:00+02:00");
-
-export function isSubmitFeatured(now = Date.now()): boolean {
-  return now >= SUBMIT_FEATURED_AT_MS;
+/** Highlight delivery during the final three hours of the configured event. */
+export function isSubmitFeatured(
+  endsAt: number | undefined,
+  now = Date.now()
+): boolean {
+  return (
+    endsAt !== undefined && now >= endsAt - 3 * 60 * 60 * 1000 && now < endsAt
+  );
 }

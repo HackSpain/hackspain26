@@ -53,7 +53,7 @@ export default function HomePage() {
   const featuredSubmit =
     eventOpen &&
     project !== undefined &&
-    isSubmitFeatured(now) &&
+    isSubmitFeatured(me.event.endsAt, now) &&
     project?.status !== "submitted";
 
   return (
