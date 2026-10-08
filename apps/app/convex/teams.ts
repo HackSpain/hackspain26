@@ -888,6 +888,9 @@ async function deleteTeamWithoutMembers(
   for (const member of members) {
     await ctx.db.delete(member._id);
   }
+  if (team.logoId) {
+    await ctx.storage.delete(team.logoId);
+  }
   await ctx.db.delete(team._id);
 }
 
