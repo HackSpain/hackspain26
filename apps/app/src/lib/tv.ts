@@ -13,7 +13,6 @@ export { layoutTvBox } from "../../convex/lib/tvLayout";
 
 export type TvWidgetKind = Infer<typeof tvWidgetKindValidator>;
 export type TvSponsor = Infer<typeof tvSponsorValidator>;
-export type TvSponsorTier = TvSponsor["tier"];
 export type TvTickerSpeed = Infer<typeof tvTickerSpeedValidator>;
 export type TvFeedMode = Infer<typeof tvFeedModeValidator>;
 export type TvFeedSource = Infer<typeof tvFeedSourceValidator>;

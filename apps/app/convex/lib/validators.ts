@@ -62,8 +62,6 @@ export const claimTypeValidator = v.union(
   v.literal("code")
 );
 
-export type ClaimType = Infer<typeof claimTypeValidator>;
-
 export const claimStatusValidator = v.union(
   v.literal("pending"),
   v.literal("added"),
