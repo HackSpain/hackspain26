@@ -88,12 +88,6 @@ export async function requireInEvent(ctx: Ctx): Promise<Doc<"users">> {
   return user;
 }
 
-export async function requireJudgeInEvent(ctx: Ctx): Promise<Doc<"users">> {
-  const user = await requireJudge(ctx);
-  await requireEventOpen(ctx, user);
-  return user;
-}
-
 /** Challenge catalog: judges may read it outside the window and without a signup. */
 export async function requireTracksViewer(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
@@ -116,14 +110,6 @@ export async function requireDirectoryViewer(ctx: Ctx): Promise<Doc<"users">> {
   if (!(await canBrowseDirectory(ctx, user))) {
     throw new Error("Se necesita acceso al directorio");
   }
-  return user;
-}
-
-export async function requireSponsorCatalogInEvent(
-  ctx: Ctx
-): Promise<Doc<"users">> {
-  const user = await requireSponsorCatalog(ctx);
-  await requireEventOpen(ctx, user);
   return user;
 }
 

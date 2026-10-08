@@ -21,16 +21,6 @@ export const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
 export type TvFontSize = (typeof TV_FONT_SIZES)[number];
 export type TvFontWeight = Infer<typeof tvFontWeightValidator>;
 
-export const TV_FONT_WEIGHT_OPTIONS: readonly {
-  value: TvFontWeight;
-  label: string;
-}[] = [
-  { value: "normal", label: "Regular" },
-  { value: "medium", label: "Medium" },
-  { value: "semibold", label: "Semibold" },
-  { value: "bold", label: "Bold" },
-];
-
 const TV_FONT_SIZE_CLASS: Record<TvFontSize, string> = {
   0.85: "text-[clamp(0.7rem,1.6cqw,1.2rem)]",
   1.1: "text-[clamp(0.85rem,2.2cqw,1.75rem)]",
@@ -55,15 +45,6 @@ const TV_FONT_WEIGHT_CLASS: Record<TvFontWeight, string> = {
 
 export function isTvFontSize(value: number): value is TvFontSize {
   return (TV_FONT_SIZES as readonly number[]).includes(value);
-}
-
-export function isTvFontWeight(value: string): value is TvFontWeight {
-  return (
-    value === "normal" ||
-    value === "medium" ||
-    value === "semibold" ||
-    value === "bold"
-  );
 }
 
 export function tvHasBackground(background?: boolean): boolean {
@@ -230,10 +211,6 @@ export function resolveTvSponsors(sponsors?: TvSponsor[]): TvSponsor[] {
   return custom.length > 0 ? custom : DEFAULT_TV_SPONSORS;
 }
 
-export function usingDefaultTvSponsors(sponsors?: TvSponsor[]): boolean {
-  return (sponsors ?? []).every((row) => !row.name.trim());
-}
-
 export function sponsorSiteOrigin(href: string): string | null {
   const raw = href.trim();
   if (!raw) {
@@ -269,108 +246,6 @@ export function sponsorLogoSources(sponsor: {
 }
 
 export type TvWidget = Infer<typeof tvWidgetValidator> & { _id: string };
-
-export const TV_PALETTE: readonly {
-  kind: TvWidgetKind;
-  label: string;
-  hint: string;
-  group: "tv" | "insights" | "live" | "sponsors";
-}[] = [
-  { kind: "banner", label: "Banner", hint: "Titular grande", group: "tv" },
-  { kind: "ticker", label: "Ticker", hint: "Cinta en movimiento", group: "tv" },
-  { kind: "clock", label: "Reloj", hint: "Hora en vivo", group: "tv" },
-  { kind: "message", label: "Mensaje", hint: "Tarjeta de aviso", group: "tv" },
-  {
-    kind: "insightsStats",
-    label: "Cifras",
-    hint: "Tokens, commits, PRs",
-    group: "insights",
-  },
-  {
-    kind: "insightsActivity",
-    label: "Actividad",
-    hint: "Gráfico del evento",
-    group: "insights",
-  },
-  {
-    kind: "insightsHarness",
-    label: "Harnesses",
-    hint: "Cuota por herramienta",
-    group: "insights",
-  },
-  {
-    kind: "insightsStacks",
-    label: "Stacks",
-    hint: "Tecnologías declaradas",
-    group: "insights",
-  },
-  {
-    kind: "insightsScatter",
-    label: "Tokens vs commits",
-    hint: "Dispersión por equipo",
-    group: "insights",
-  },
-  {
-    kind: "insightsLeaderboard",
-    label: "Leaderboard",
-    hint: "Clasificación",
-    group: "insights",
-  },
-  {
-    kind: "insightsEvolution",
-    label: "Evolución",
-    hint: "Consumo por fase",
-    group: "insights",
-  },
-  {
-    kind: "liveCommits",
-    label: "Commits en vivo",
-    hint: "Stream de GitHub",
-    group: "live",
-  },
-  {
-    kind: "liveAgents",
-    label: "Agentes activos",
-    hint: "Harnesses en pulso",
-    group: "live",
-  },
-  {
-    kind: "liveTokens",
-    label: "Tokens",
-    hint: "Contador + sparkline",
-    group: "live",
-  },
-  {
-    kind: "liveModels",
-    label: "Modelos",
-    hint: "Ranking de modelos por tokens",
-    group: "live",
-  },
-  {
-    kind: "liveLeaderboard",
-    label: "Equipos",
-    hint: "Clasificación animada",
-    group: "live",
-  },
-  {
-    kind: "feed",
-    label: "Feed",
-    hint: "Publicaciones de los participantes",
-    group: "live",
-  },
-  {
-    kind: "sponsorGrid",
-    label: "Sponsors",
-    hint: "Rejilla de logos",
-    group: "sponsors",
-  },
-  {
-    kind: "sponsorTicker",
-    label: "Ticker sponsors",
-    hint: "Marquesina",
-    group: "sponsors",
-  },
-];
 
 export const TICKER_DURATION: Record<TvTickerSpeed, string> = {
   slow: "40s",

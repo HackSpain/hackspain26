@@ -12,7 +12,6 @@ import {
   useState,
 } from "react";
 import { api } from "@convex/_generated/api";
-import { Button } from "@/components/ui/button";
 import type { TvFeedMode, TvFeedSource } from "@/lib/tv";
 import {
   FLASH_LAYER_CLASS,
@@ -438,85 +437,4 @@ export function FeedBox({
   }
 
   return <FeedStream posts={posts} now={now} source={source} />;
-}
-
-const MODES: { id: TvFeedMode; label: string }[] = [
-  { id: "latest", label: "Últimas" },
-  { id: "rotate", label: "Una a una" },
-];
-
-const SOURCES: { id: TvFeedSource; label: string }[] = [
-  { id: "participants", label: "Participantes" },
-  { id: "github", label: "GitHub" },
-  { id: "all", label: "Todas" },
-];
-
-export function FeedEditor({
-  mode,
-  source,
-  onSave,
-  onClose,
-}: {
-  mode?: TvFeedMode;
-  source?: TvFeedSource;
-  onSave: (next: { feedMode: TvFeedMode; feedSource: TvFeedSource }) => void;
-  onClose?: () => void;
-}) {
-  const [nextMode, setNextMode] = useState<TvFeedMode>(mode ?? "latest");
-  const [nextSource, setNextSource] = useState<TvFeedSource>(
-    source ?? "participants"
-  );
-
-  return (
-    <div
-      className="text-hs-ink"
-      onPointerDown={(event) => event.stopPropagation()}
-    >
-      <p className="font-bungee text-sm">Feed</p>
-      <label className="mt-3 block text-xs text-hs-brown">
-        Modo
-        <select
-          value={nextMode}
-          onChange={(event) => setNextMode(event.target.value as TvFeedMode)}
-          className="mt-1 min-h-11 w-full border-[3px] border-hs-ink bg-hs-paper px-2 text-sm text-hs-ink"
-        >
-          {MODES.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="mt-3 block text-xs text-hs-brown">
-        Fuente
-        <select
-          value={nextSource}
-          onChange={(event) =>
-            setNextSource(event.target.value as TvFeedSource)
-          }
-          className="mt-1 min-h-11 w-full border-[3px] border-hs-ink bg-hs-paper px-2 text-sm text-hs-ink"
-        >
-          {SOURCES.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => onSave({ feedMode: nextMode, feedSource: nextSource })}
-        >
-          Guardar
-        </Button>
-        {onClose ? (
-          <Button type="button" size="sm" variant="outline" onClick={onClose}>
-            Cerrar
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
 }
