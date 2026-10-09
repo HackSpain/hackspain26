@@ -165,7 +165,6 @@ export function registerWatch(program: Command): void {
             session.client.query(api.submissions.mine, {}),
           ])
         : [null, null];
-      const releaseLock = acquireWatchLock();
       const uploadUrl = flags.upload
         ? (flags.sinkUrl ??
           readConfig().telemetry?.url ??
@@ -232,25 +231,27 @@ export function registerWatch(program: Command): void {
           uploadEnabled: Boolean(uploadUrl),
           window,
         });
-        const screen = startScreen(state, {
-          intervalMs,
-          onQuit: () => {
-            state.stopRequested = true;
-            state.wake?.();
-          },
-          onFeedLive: () => feedLive(state),
-          onFeedScroll: (delta) => {
-            scrollFeed(state, delta);
-            if (state.feedNeedOlder) {
-              state.wake?.();
-            }
-          },
-          onTogglePause: () => {
-            state.paused = !state.paused;
-            state.wake?.();
-          },
-        });
+        const releaseLock = acquireWatchLock();
+        let screen: ReturnType<typeof startScreen> | undefined;
         try {
+          screen = startScreen(state, {
+            intervalMs,
+            onQuit: () => {
+              state.stopRequested = true;
+              state.wake?.();
+            },
+            onFeedLive: () => feedLive(state),
+            onFeedScroll: (delta) => {
+              scrollFeed(state, delta);
+              if (state.feedNeedOlder) {
+                state.wake?.();
+              }
+            },
+            onTogglePause: () => {
+              state.paused = !state.paused;
+              state.wake?.();
+            },
+          });
           await runWatch(options, {
             announce: () => process.stdout.write("\x07"),
             checkForUpdate,
@@ -263,8 +264,11 @@ export function registerWatch(program: Command): void {
             teamId: team?._id,
           });
         } finally {
-          screen.stop();
-          releaseLock();
+          try {
+            screen?.stop();
+          } finally {
+            releaseLock();
+          }
         }
         await restartAfterUpdate();
         console.log();
@@ -299,6 +303,7 @@ export function registerWatch(program: Command): void {
         );
       };
       let code: number;
+      const releaseLock = acquireWatchLock();
       try {
         ui.intro(
           flags.once

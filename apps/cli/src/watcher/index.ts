@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   rememberTelemetry,
@@ -190,28 +191,31 @@ function lockPath(): string {
 export function acquireWatchLock(): () => void {
   ensureDir(stateDir(), 0o700);
   const path = lockPath();
-  if (existsSync(path)) {
-    const pid = Number(readFileSync(path, "utf8").trim());
-    let alive = false;
-    try {
-      process.kill(pid, 0);
-      alive = true;
-    } catch {
-      alive = false;
+  const owner = `${process.pid}:${randomUUID()}\n`;
+  try {
+    writeFileSync(path, owner, { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    if (
+      !(error instanceof Error && "code" in error && error.code === "EEXIST")
+    ) {
+      throw error;
     }
-    if (alive && pid !== process.pid) {
-      throw new CliError(`Another watcher is running (pid ${pid}).`, {
-        code: "WATCHER_RUNNING",
-        hint: `Stop it first, or delete ${path} if it is stale.`,
-      });
-    }
+    throw new CliError("Another watcher owns the lock.", {
+      code: "WATCHER_RUNNING",
+      hint: `Stop the running watcher first. After an unexpected exit, remove ${path} only after confirming no watcher is running.`,
+    });
   }
-  writeFileSync(path, `${process.pid}\n`, { mode: 0o600 });
   return () => {
     try {
-      unlinkSync(path);
-    } catch {
-      // Already gone.
+      if (readFileSync(path, "utf8") === owner) {
+        unlinkSync(path);
+      }
+    } catch (error) {
+      if (
+        !(error instanceof Error && "code" in error && error.code === "ENOENT")
+      ) {
+        throw error;
+      }
     }
   };
 }
