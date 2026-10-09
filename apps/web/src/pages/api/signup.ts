@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { areSignupsClosed } from "../../data/signup-deadline";
 import { getDb } from "../../db";
 import { hackathonPreSignups, hackathonSignups } from "../../db/schema";
+import { isPostgresUniqueViolation } from "../../lib/postgres-errors";
 import { sendSignupConfirmationEmail } from "../../lib/signup-confirmation-email";
 import { parseSignupBody } from "../../lib/signup-validation";
 
@@ -21,44 +22,6 @@ function safeSentry(report: () => void): void {
 
 function emptyToNull(s: string): string | null {
   return s.length === 0 ? null : s;
-}
-
-/** Drizzle wraps Postgres/Neon errors; `23505` unique violation lives on `cause`. */
-function isPostgresUniqueViolation(e: unknown): boolean {
-  const seen = new Set<unknown>();
-  let cur: unknown = e;
-  for (
-    let depth = 0;
-    depth < 14 && cur !== null && cur !== undefined;
-    depth++
-  ) {
-    if (seen.has(cur)) {
-      break;
-    }
-    seen.add(cur);
-    if (
-      typeof cur === "object" &&
-      cur !== null &&
-      "code" in cur &&
-      (cur as { code: unknown }).code === "23505"
-    ) {
-      return true;
-    }
-    if (cur instanceof Error && cur.cause !== null && cur.cause !== undefined) {
-      cur = cur.cause;
-      continue;
-    }
-    if (typeof cur === "object" && cur !== null && "cause" in cur) {
-      const next = (cur as { cause: unknown }).cause;
-      if (next === null || next === undefined) {
-        break;
-      }
-      cur = next;
-      continue;
-    }
-    break;
-  }
-  return false;
 }
 
 export const POST: APIRoute = async ({ request }) => {
