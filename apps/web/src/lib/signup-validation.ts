@@ -527,112 +527,67 @@ const signupBodySchema = z
 
 export type SignupBodyParsed = z.infer<typeof signupBodySchema>;
 
+const CLIENT_ERROR_CODES = {
+  ambassador_motivation_required: "ambassador_motivation",
+  dietary_consent_required: "dietary_consent",
+  employer_required: "employer",
+  fullName_required: "fullName",
+  heard_from_other_required: "heard_from_other",
+  heard_from_required: "heard_from",
+  invalid_email: "invalid_email",
+  invalid_invitation: "generic",
+  invalid_request: "generic",
+  invalid_social_url: "invalid_social_url",
+  social_required: "social_required",
+  study_institution_required: "study_institution",
+  under_thirty_required: "under_thirty",
+} as const;
+
+type SignupError = keyof typeof CLIENT_ERROR_CODES;
+
 export function parseSignupBody(
   body: unknown
 ):
   | { ok: true; data: SignupBodyParsed }
-  | { ok: false; error: string; status: number } {
+  | { ok: false; error: SignupError; status: number } {
   const r = signupBodySchema.safeParse(body);
   if (r.success) {
     return { data: r.data, ok: true };
   }
-  const { issues } = r.error;
-  const first = issues[0];
-  const msg = first?.message ?? "validation_error";
-  if (msg === "social_required") {
-    return { error: "social_required", ok: false, status: 400 };
+  const msg = r.error.issues[0]?.message;
+  switch (msg) {
+    case "social_required":
+    case "invalid_social_url":
+    case "invalid_email":
+    case "fullName_required":
+    case "study_institution_required":
+    case "employer_required":
+    case "dietary_consent_required":
+    case "under_thirty_required":
+    case "heard_from_required":
+    case "ambassador_motivation_required":
+    case "heard_from_other_required":
+    case "invalid_invitation": {
+      return { error: msg, ok: false, status: 400 };
+    }
+    case "heard_from_invalid": {
+      return { error: "heard_from_required", ok: false, status: 400 };
+    }
+    default: {
+      return { error: "invalid_request", ok: false, status: 400 };
+    }
   }
-  if (msg === "invalid_social_url") {
-    return { error: "invalid_social_url", ok: false, status: 400 };
-  }
-  if (msg === "invalid_email") {
-    return { error: "invalid_email", ok: false, status: 400 };
-  }
-  if (msg === "fullName_required") {
-    return { error: "fullName_required", ok: false, status: 400 };
-  }
-  if (msg === "study_institution_required") {
-    return { error: "study_institution_required", ok: false, status: 400 };
-  }
-  if (msg === "employer_required") {
-    return { error: "employer_required", ok: false, status: 400 };
-  }
-  if (msg === "dietary_consent_required") {
-    return { error: "dietary_consent_required", ok: false, status: 400 };
-  }
-  if (msg === "under_thirty_required") {
-    return { error: "under_thirty_required", ok: false, status: 400 };
-  }
-  if (msg === "heard_from_required" || msg === "heard_from_invalid") {
-    return { error: "heard_from_required", ok: false, status: 400 };
-  }
-  if (msg === "ambassador_motivation_required") {
-    return { error: "ambassador_motivation_required", ok: false, status: 400 };
-  }
-  if (msg === "heard_from_other_required") {
-    return { error: "heard_from_other_required", ok: false, status: 400 };
-  }
-  if (msg === "invalid_invitation") {
-    return { error: "invalid_invitation", ok: false, status: 400 };
-  }
-  return { error: "invalid_request", ok: false, status: 400 };
 }
 
 export function parseSignupBodyClient(body: unknown):
   | { ok: true; data: SignupBodyParsed }
   | {
       ok: false;
-      code:
-        | "social_required"
-        | "invalid_social_url"
-        | "invalid_email"
-        | "fullName"
-        | "study_institution"
-        | "employer"
-        | "dietary_consent"
-        | "under_thirty"
-        | "ambassador_motivation"
-        | "heard_from"
-        | "heard_from_other"
-        | "generic";
+      code: (typeof CLIENT_ERROR_CODES)[SignupError];
     } {
-  const r = signupBodySchema.safeParse(body);
-  if (r.success) {
-    return { data: r.data, ok: true };
+  const result = parseSignupBody(body);
+  if (result.ok) {
+    return result;
   }
-  const msg = r.error.issues[0]?.message;
-  if (msg === "social_required") {
-    return { code: "social_required", ok: false };
-  }
-  if (msg === "invalid_social_url") {
-    return { code: "invalid_social_url", ok: false };
-  }
-  if (msg === "invalid_email") {
-    return { code: "invalid_email", ok: false };
-  }
-  if (msg === "fullName_required") {
-    return { code: "fullName", ok: false };
-  }
-  if (msg === "study_institution_required") {
-    return { code: "study_institution", ok: false };
-  }
-  if (msg === "employer_required") {
-    return { code: "employer", ok: false };
-  }
-  if (msg === "dietary_consent_required") {
-    return { code: "dietary_consent", ok: false };
-  }
-  if (msg === "under_thirty_required") {
-    return { code: "under_thirty", ok: false };
-  }
-  if (msg === "heard_from_required" || msg === "heard_from_invalid") {
-    return { code: "heard_from", ok: false };
-  }
-  if (msg === "ambassador_motivation_required") {
-    return { code: "ambassador_motivation", ok: false };
-  }
-  if (msg === "heard_from_other_required") {
-    return { code: "heard_from_other", ok: false };
-  }
-  return { code: "generic", ok: false };
+  return { code: CLIENT_ERROR_CODES[result.error], ok: false };
 }
