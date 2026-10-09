@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 const BRIEF_URL = /^https?:\/\/\S+$/i;
 
 /** Lone http(s) URL in the brief field; otherwise the value is markdown. */
-export function trackBriefUrl(source?: string): string | undefined {
+function trackBriefUrl(source?: string): string | undefined {
   const value = source?.trim() ?? "";
   return BRIEF_URL.test(value) ? value : undefined;
 }
@@ -108,7 +108,7 @@ const components: Components = {
   },
 };
 
-export function TrackMarkdown({
+function TrackMarkdown({
   source,
   className,
 }: {

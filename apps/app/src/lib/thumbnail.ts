@@ -3,8 +3,8 @@
  * to a terminal's image protocol. Bounded so nobody turns the route into a
  * free resizing service, and PNG-only so the CLI needs no decoders.
  */
-export const MIN_THUMBNAIL_WIDTH = 16;
-export const MAX_THUMBNAIL_WIDTH = 1024;
+const MIN_THUMBNAIL_WIDTH = 16;
+const MAX_THUMBNAIL_WIDTH = 1024;
 
 export function parseThumbnailWidth(raw: string | null): number | null {
   if (raw === null || raw.trim() === "") {

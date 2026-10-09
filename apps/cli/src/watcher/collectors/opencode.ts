@@ -8,7 +8,7 @@ import { eventId, modelFamily, outputWithReasoning } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { openReadOnly } from "./sqlite";
 
-export const OPENCODE = "opencode" as const;
+const OPENCODE = "opencode" as const;
 
 /**
  * Recent OpenCode versions keep everything in SQLite. Assistant messages carry
@@ -95,7 +95,7 @@ export function normalizeOpenCode(
   };
 }
 
-export function openCodeDbPath(): string {
+function openCodeDbPath(): string {
   const data =
     process.env.XDG_DATA_HOME?.trim() || join(homedir(), ".local", "share");
   return join(data, "opencode", "opencode.db");

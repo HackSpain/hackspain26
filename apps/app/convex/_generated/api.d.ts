@@ -57,7 +57,6 @@ import type * as lib_stack from "../lib/stack.js";
 import type * as lib_stackCatalog from "../lib/stackCatalog.js";
 import type * as lib_submission from "../lib/submission.js";
 import type * as lib_team from "../lib/team.js";
-import type * as lib_tvLayout from "../lib/tvLayout.js";
 import type * as lib_tvLayouts from "../lib/tvLayouts.js";
 import type * as lib_tvScreens from "../lib/tvScreens.js";
 import type * as lib_tvValidators from "../lib/tvValidators.js";
@@ -139,7 +138,6 @@ declare const fullApi: ApiFromModules<{
   "lib/stackCatalog": typeof lib_stackCatalog;
   "lib/submission": typeof lib_submission;
   "lib/team": typeof lib_team;
-  "lib/tvLayout": typeof lib_tvLayout;
   "lib/tvLayouts": typeof lib_tvLayouts;
   "lib/tvScreens": typeof lib_tvScreens;
   "lib/tvValidators": typeof lib_tvValidators;

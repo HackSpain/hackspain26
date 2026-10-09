@@ -1,7 +1,7 @@
 import { TEAMS, sumSamples } from "./mock-data";
 import type { Sample, Totals } from "./mock-data";
 
-export const EVENT_MINUTES = 720;
+const EVENT_MINUTES = 720;
 export const SNAPSHOT_MINUTE = 705;
 export const PHASES = [
   { color: "#35858a", end: 120, id: "start", name: "Arranque", start: 0 },
@@ -55,7 +55,7 @@ export function phaseRows(samples: Sample[]) {
   });
 }
 
-export function agentSessions(samples: Sample[]) {
+function agentSessions(samples: Sample[]) {
   return samples.flatMap((sample) => {
     const teamIndex = TEAMS.findIndex((team) => team.id === sample.teamId);
     return Array.from({ length: sample.sessions }, (_, index) => {

@@ -1,6 +1,6 @@
 import type { DirectoryParticipant } from "./types";
 
-export const AFFINITY_KINDS = [
+const AFFINITY_KINDS = [
   "university",
   "city",
   "company",

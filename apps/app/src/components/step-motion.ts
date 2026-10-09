@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
  * the new step.
  */
 export const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-export const SLIDE_PX = 24;
+const SLIDE_PX = 24;
 
 export type Direction = 1 | -1;
 

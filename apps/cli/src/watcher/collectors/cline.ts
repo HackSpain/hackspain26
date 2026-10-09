@@ -7,7 +7,7 @@ import type { RawEvent } from "../schema";
 import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 
-export const CLINE = "cline" as const;
+const CLINE = "cline" as const;
 
 /**
  * Cline keeps one folder per task under the VS Code global storage:

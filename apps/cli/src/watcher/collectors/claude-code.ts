@@ -7,7 +7,7 @@ import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
-export const CLAUDE_CODE = "claude-code" as const;
+const CLAUDE_CODE = "claude-code" as const;
 
 type AssistantLine = {
   type: "assistant";

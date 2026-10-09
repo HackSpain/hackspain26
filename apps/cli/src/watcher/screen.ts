@@ -106,7 +106,7 @@ function harnessLabelForLogo(id: string, muted: boolean): string {
 }
 
 /** Header picture: the wordmark over the rows the ASCII version would take. */
-export const LOGO_ROWS = 6;
+const LOGO_ROWS = 6;
 
 function rgb(color: Rgb, text: string): string {
   if (!colorEnabled) {

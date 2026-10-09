@@ -8,7 +8,6 @@ export type {
 export {
   MAX_PERK_INPUTS,
   answerFor,
-  isEmail,
   isHttpUrl,
   perkInputTypeLabels,
   slugKey,

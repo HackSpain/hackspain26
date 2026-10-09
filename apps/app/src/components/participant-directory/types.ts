@@ -1,4 +1,4 @@
-export interface DirectoryUrl {
+interface DirectoryUrl {
   kind: "x" | "linkedin" | "github" | "web" | "repo" | "demo" | "video";
   url: string;
 }

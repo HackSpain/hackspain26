@@ -7,7 +7,7 @@ import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
-export const CODEX = "codex" as const;
+const CODEX = "codex" as const;
 
 /**
  * Rollout lines are `{ timestamp, type, payload }`. Three types matter:
@@ -175,7 +175,7 @@ export function normalizeCodex(
   };
 }
 
-export function codexHome(): string {
+function codexHome(): string {
   return process.env.CODEX_HOME?.trim() || join(homedir(), ".codex");
 }
 

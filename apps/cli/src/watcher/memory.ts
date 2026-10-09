@@ -37,7 +37,7 @@ export type MemoryStore = {
   save(): void;
 };
 
-export function memoryPath(): string {
+function memoryPath(): string {
   return join(stateDir(), "watch-memory.json");
 }
 

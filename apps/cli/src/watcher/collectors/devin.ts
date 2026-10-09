@@ -8,7 +8,7 @@ import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { openReadOnly } from "./sqlite";
 
-export const DEVIN = "devin" as const;
+const DEVIN = "devin" as const;
 
 /**
  * The Devin CLI keeps every session in `~/.local/share/devin/cli/sessions.db`:

@@ -60,7 +60,7 @@ async function thumbnailOf(file: File): Promise<File | undefined> {
 }
 
 /** Uploads a picture to Convex storage and makes it the profile photo. */
-export function useAvatarUpload(): (file: File) => Promise<void> {
+function useAvatarUpload(): (file: File) => Promise<void> {
   const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
   const setAvatar = useMutation(api.users.setAvatar);
 

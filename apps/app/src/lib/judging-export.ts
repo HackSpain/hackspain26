@@ -7,9 +7,9 @@ import type { PartialScores } from "@convex/lib/judging";
  * builders stay testable without Convex.
  */
 
-export type ExportJudgeRef = { _id: string; name: string };
+type ExportJudgeRef = { _id: string; name: string };
 
-export type ExportAssessment = PartialScores & {
+type ExportAssessment = PartialScores & {
   adjustedScore: number | null;
   judge: ExportJudgeRef;
   ownCriteriaComment: string;
@@ -47,7 +47,7 @@ type CsvValue = string | number | boolean | null | undefined;
 const BOM = "\uFEFF";
 const NEEDS_QUOTES = /[",\r\n]/;
 
-export function csvCell(value: CsvValue): string {
+function csvCell(value: CsvValue): string {
   if (value === null || value === undefined) {
     return "";
   }

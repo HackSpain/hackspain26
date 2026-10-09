@@ -90,12 +90,12 @@ export function renderTable(rows: string[][], header?: string[]): string {
   return lines.join("\n");
 }
 
-export function renderKv(rows: [string, string][]): string {
+function renderKv(rows: [string, string][]): string {
   const keyWidth = Math.max(0, ...rows.map(([k]) => width(k)));
   return rows.map(([k, v]) => `${c.dim(pad(k, keyWidth))}  ${v}`).join("\n");
 }
 
-export function renderNext(steps: [string, string][]): string {
+function renderNext(steps: [string, string][]): string {
   const cmdWidth = Math.max(0, ...steps.map(([command]) => width(command)));
   return steps
     .map(([command, why]) => `${cmd(pad(command, cmdWidth))}  ${c.dim(why)}`)

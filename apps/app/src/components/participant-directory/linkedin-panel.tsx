@@ -16,7 +16,7 @@ import {
 import type { DirectoryParticipant } from "./types";
 import type { Id } from "@convex/_generated/dataModel";
 
-export function linkedinSlugOf(person: DirectoryParticipant): string | null {
+function linkedinSlugOf(person: DirectoryParticipant): string | null {
   const url = person.urls?.find((entry) => entry.kind === "linkedin")?.url;
   return url ? normalizeLinkedinSlug(url) : null;
 }

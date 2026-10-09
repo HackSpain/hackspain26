@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Id } from "../_generated/dataModel";
 import type { DirectoryCard } from "./directory";
-import { isProfileComplete, missingProfileFields } from "./profile";
+import { missingProfileFields } from "./profile";
 
 const card: DirectoryCard = {
   city: "Madrid",
@@ -22,7 +22,6 @@ const complete = {
 describe("missingProfileFields", () => {
   test("a GitHub avatar counts as the photo", () => {
     expect(missingProfileFields(complete)).toEqual([]);
-    expect(isProfileComplete(complete)).toBe(true);
   });
 
   test("an uploaded avatar counts as the photo", () => {

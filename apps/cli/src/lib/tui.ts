@@ -45,7 +45,7 @@ export function wrap(text: string, w: number): string[] {
   return lines.length ? lines : [""];
 }
 
-export type BoxAccent = "gold" | "orange" | "teal";
+type BoxAccent = "gold" | "orange" | "teal";
 
 export type BoxOptions = {
   title: string;
@@ -96,14 +96,14 @@ export function kvLines(rows: [string, string][], inner: number): string[] {
 }
 
 /** Two-space inset so stacked cards sit like the watcher grid, not flush. */
-export const CARD_INDENT = "  ";
+const CARD_INDENT = "  ";
 
 /** Box width for the home board and the menu: nearly full terminal, like watch. */
 export function cardWidth(columns = process.stdout.columns ?? 80): number {
   return Math.max(40, columns - CARD_INDENT.length * 2);
 }
 
-export function indentLines(lines: string[], indent = CARD_INDENT): string[] {
+function indentLines(lines: string[], indent = CARD_INDENT): string[] {
   return lines.map((line) => `${indent}${line}`);
 }
 

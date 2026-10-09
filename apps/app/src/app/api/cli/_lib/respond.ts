@@ -10,7 +10,7 @@ import { isCodedError } from "@convex/lib/errors";
  * Status: 200, 400 (bad request / ConvexError), 401 (no or rejected session),
  * 404 (unknown function), 500 (unexpected).
  */
-export type CliErrorBody =
+type CliErrorBody =
   | { ok: false; error: { kind: "convex"; data: unknown } }
   | { ok: false; error: { kind: "error"; message: string } };
 

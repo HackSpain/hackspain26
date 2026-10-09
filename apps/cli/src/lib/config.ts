@@ -75,7 +75,7 @@ export type CliConfig = {
   telemetry?: { url?: string };
 };
 
-export function configPath(): string {
+function configPath(): string {
   return join(configDir(), "config.json");
 }
 

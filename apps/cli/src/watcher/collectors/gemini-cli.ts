@@ -7,7 +7,7 @@ import { eventId, modelFamily, outputWithReasoning } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
-export const GEMINI_CLI = "gemini-cli" as const;
+const GEMINI_CLI = "gemini-cli" as const;
 
 /**
  * Gemini CLI records every conversation as JSONL under
@@ -145,7 +145,7 @@ export function normalizeGeminiCli(
   };
 }
 
-export function geminiHome(): string {
+function geminiHome(): string {
   const home = process.env.GEMINI_CLI_HOME?.trim() || homedir();
   return join(home, ".gemini");
 }

@@ -109,10 +109,7 @@ export function normalizePi(
 }
 
 /** Walk session buckets and nested subagent sessions, without following symlinks. */
-export function listPiSessions(
-  root: string,
-  log: CollectorContext["log"]
-): string[] {
+function listPiSessions(root: string, log: CollectorContext["log"]): string[] {
   if (!existsSync(root)) {
     return [];
   }

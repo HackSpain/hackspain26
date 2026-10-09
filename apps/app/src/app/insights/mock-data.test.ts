@@ -5,7 +5,6 @@ import {
   bucketSpan,
   bucketTotals,
   filterSamples,
-  getSamples,
   harnessRows,
   periodBuckets,
   TEAMS,
@@ -39,7 +38,7 @@ test("bucket totals keep first-seen order, combine repeats and handle no samples
 });
 
 test("unconnected insights have no fictional teams or activity and numeric zero totals", () => {
-  const samples = filterSamples(getSamples(), "event", "all");
+  const samples = filterSamples([], "event", "all");
   const zero = {
     cachedTokens: 0,
     commits: 0,

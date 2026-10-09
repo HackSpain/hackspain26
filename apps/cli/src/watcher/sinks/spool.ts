@@ -19,7 +19,7 @@ export type Sink = {
   pending?(): number;
 };
 
-export const SPOOL_CAP_BYTES = 50 * 1024 * 1024;
+const SPOOL_CAP_BYTES = 50 * 1024 * 1024;
 
 export function spoolDir(): string {
   return join(stateDir(), "telemetry");
