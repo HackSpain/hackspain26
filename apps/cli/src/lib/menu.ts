@@ -52,8 +52,6 @@ export type MenuStatus = {
 type MenuInput = {
   message: string;
   placeholder?: string;
-  /** Split the answer on whitespace into several argv tokens. */
-  split?: boolean;
 };
 
 export type MenuItem = {
@@ -652,8 +650,6 @@ async function navigate(
   }
 }
 
-const SPACES = /\s+/;
-
 /** Turn a leaf into argv, asking for the missing input when the item needs one. */
 async function resolveArgv(item: MenuItem): Promise<string[] | null> {
   if (!item.argv) {
@@ -672,8 +668,7 @@ async function resolveArgv(item: MenuItem): Promise<string[] | null> {
     return null;
   }
   const trimmed = String(answer).trim();
-  const extra = item.input.split ? trimmed.split(SPACES) : [trimmed];
-  return [...item.argv, ...extra];
+  return [...item.argv, trimmed];
 }
 
 /**
