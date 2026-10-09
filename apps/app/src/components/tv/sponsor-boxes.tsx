@@ -10,12 +10,6 @@ import type { TvSponsor, TvTickerSpeed } from "@/lib/tv";
 import { cn } from "@/lib/utils";
 import { usePageVisible, usePrefersReducedMotion } from "./motion";
 
-const TIER_LABEL: Record<TvSponsor["tier"], string> = {
-  gold: "Gold",
-  silver: "Silver",
-  community: "Community",
-};
-
 function SponsorLogo({ sources, name }: { sources: string[]; name: string }) {
   const [failed, setFailed] = useState(0);
   const src = sources[failed];
@@ -50,28 +44,6 @@ function SponsorMark({ sponsor }: { sponsor: TvSponsor }) {
         name={sponsor.name}
       />
     </span>
-  );
-}
-
-export function SponsorGridBox({ sponsors }: { sponsors: TvSponsor[] }) {
-  const rows = resolveTvSponsors(sponsors);
-  return (
-    <div className="grid h-full grid-cols-2 content-start gap-2 bg-hs-paper p-3 text-hs-ink sm:grid-cols-3">
-      {rows.map((sponsor) => (
-        <div
-          key={`${sponsor.name}-${sponsor.href}`}
-          className="flex flex-col justify-center border-[3px] border-hs-ink/15 px-2 py-2"
-        >
-          <SponsorMark sponsor={sponsor} />
-          <p className="mt-1 text-[10px] text-hs-brown">
-            {TIER_LABEL[sponsor.tier]}
-            {sponsor.href
-              ? ` · ${sponsor.href.replace(/^https?:\/\//, "")}`
-              : ""}
-          </p>
-        </div>
-      ))}
-    </div>
   );
 }
 

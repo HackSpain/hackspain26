@@ -12,24 +12,14 @@ import {
 import { cn } from "@/lib/utils";
 import { gsap, SplitText, TV_EASE_OUT, useGSAP } from "./gsap";
 import { useClock, usePrefersReducedMotion } from "./motion";
-import {
-  InsightsActivityBox,
-  InsightsEvolutionBox,
-  InsightsHarnessBox,
-  InsightsLeaderboardBox,
-  InsightsScatterBox,
-  InsightsStacksBox,
-  InsightsStatsBox,
-} from "./insights-boxes";
 import { FeedBox } from "./feed-box";
 import {
   LiveAgentsBox,
-  LiveCommitsBox,
   LiveLeaderboardBox,
   LiveModelsBox,
   LiveTokensBox,
 } from "./live-boxes";
-import { SponsorGridBox, SponsorTickerBox } from "./sponsor-boxes";
+import { SponsorTickerBox } from "./sponsor-boxes";
 
 function BannerWidget({
   text,
@@ -86,58 +76,6 @@ function BannerWidget({
       >
         {text}
       </p>
-    </div>
-  );
-}
-
-function TickerWidget({
-  text,
-  fontSize,
-  fontWeight,
-  background,
-}: {
-  text: string;
-  fontSize?: number;
-  fontWeight?: TvFontWeight;
-  background?: boolean;
-}) {
-  const fill = tvHasBackground(background);
-  const parts = text
-    .split("·")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const items = parts.length > 0 ? parts : [text];
-  return (
-    <div
-      className={cn(
-        "flex h-full items-center overflow-hidden",
-        fill && "bg-hs-gold"
-      )}
-    >
-      <div
-        className="tv-ticker flex w-max"
-        style={{ animationDuration: `${Math.max(18, items.length * 8)}s` }}
-      >
-        {[0, 1].map((copy) => (
-          <p
-            key={copy}
-            aria-hidden={copy === 1}
-            style={tvFontSizeStyle(fontSize)}
-            className={cn(
-              "flex shrink-0 whitespace-nowrap font-bungee uppercase",
-              fill ? "text-hs-ink" : "text-hs-gold",
-              tvFontSizeClass("ticker", fontSize),
-              tvFontWeightClass(fontWeight)
-            )}
-          >
-            {items.map((item, index) => (
-              <span key={index} className="px-8">
-                {item} <span aria-hidden>✦</span>
-              </span>
-            ))}
-          </p>
-        ))}
-      </div>
     </div>
   );
 }
@@ -208,62 +146,6 @@ function EventClock() {
   );
 }
 
-function ClockWidget({ fontSize }: { fontSize?: number }) {
-  const now = useClock();
-  return (
-    <div className="flex h-full items-center justify-center bg-hs-ink px-3">
-      <p
-        style={tvFontSizeStyle(fontSize)}
-        className={cn(
-          "font-bungee tabular-nums text-hs-paper",
-          tvFontSizeClass("clock", fontSize)
-        )}
-        aria-label="Hora actual"
-      >
-        {now
-          ? now.toLocaleTimeString("es-ES", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : ""}
-      </p>
-    </div>
-  );
-}
-
-function MessageWidget({
-  text,
-  fontSize,
-  fontWeight,
-  background,
-}: {
-  text: string;
-  fontSize?: number;
-  fontWeight?: TvFontWeight;
-  background?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex h-full flex-col justify-center p-4",
-        tvHasBackground(background) &&
-          "border-[3px] border-hs-gold/40 bg-hs-paper/5"
-      )}
-    >
-      <p
-        style={tvFontSizeStyle(fontSize)}
-        className={cn(
-          "whitespace-pre-wrap break-words leading-snug text-pretty text-hs-paper",
-          tvFontSizeClass("message", fontSize),
-          tvFontWeightClass(fontWeight)
-        )}
-      >
-        {text}
-      </p>
-    </div>
-  );
-}
-
 export function TvWidgetView({ widget }: { widget: TvWidget }) {
   switch (widget.kind) {
     case "banner": {
@@ -276,56 +158,8 @@ export function TvWidgetView({ widget }: { widget: TvWidget }) {
         />
       );
     }
-    case "ticker": {
-      return (
-        <TickerWidget
-          text={widget.text}
-          fontSize={widget.fontSize}
-          fontWeight={widget.fontWeight}
-          background={widget.background}
-        />
-      );
-    }
     case "clock": {
-      return widget.text === "event" ? (
-        <EventClock />
-      ) : (
-        <ClockWidget fontSize={widget.fontSize} />
-      );
-    }
-    case "message": {
-      return (
-        <MessageWidget
-          text={widget.text}
-          fontSize={widget.fontSize}
-          fontWeight={widget.fontWeight}
-          background={widget.background}
-        />
-      );
-    }
-    case "insightsStats": {
-      return <InsightsStatsBox />;
-    }
-    case "insightsActivity": {
-      return <InsightsActivityBox />;
-    }
-    case "insightsHarness": {
-      return <InsightsHarnessBox />;
-    }
-    case "insightsStacks": {
-      return <InsightsStacksBox />;
-    }
-    case "insightsScatter": {
-      return <InsightsScatterBox />;
-    }
-    case "insightsLeaderboard": {
-      return <InsightsLeaderboardBox />;
-    }
-    case "insightsEvolution": {
-      return <InsightsEvolutionBox />;
-    }
-    case "liveCommits": {
-      return <LiveCommitsBox />;
+      return <EventClock />;
     }
     case "liveAgents": {
       return <LiveAgentsBox />;
@@ -342,9 +176,6 @@ export function TvWidgetView({ widget }: { widget: TvWidget }) {
     case "feed": {
       return <FeedBox mode={widget.feedMode} source={widget.feedSource} />;
     }
-    case "sponsorGrid": {
-      return <SponsorGridBox sponsors={widget.sponsors ?? []} />;
-    }
     case "sponsorTicker": {
       return (
         <SponsorTickerBox
@@ -353,6 +184,9 @@ export function TvWidgetView({ widget }: { widget: TvWidget }) {
           logosOnly={widget.text === "logos"}
         />
       );
+    }
+    default: {
+      throw new Error(`Unsupported panel widget: ${widget.kind}`);
     }
   }
 }

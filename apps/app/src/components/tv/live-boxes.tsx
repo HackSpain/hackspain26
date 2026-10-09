@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "convex/react";
 import {
   useCallback,
   useEffect,
@@ -10,7 +9,6 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { api } from "@convex/_generated/api";
 import { INSIGHT_BUCKETS } from "@convex/tvPlayback";
 import {
   compact,
@@ -36,7 +34,6 @@ import {
   useCountUp,
   useGSAP,
   useRankRows,
-  useStreamShift,
 } from "./gsap";
 import { usePrefersReducedMotion, useTick } from "./motion";
 
@@ -65,113 +62,6 @@ function LiveHeader({
         </p>
       ) : null}
     </header>
-  );
-}
-
-type CommitRow = {
-  instance: string;
-  id: string;
-  repo: string;
-  actor: string;
-  text: string;
-  sha: string;
-};
-
-export function LiveCommitsBox() {
-  const tick = useTick(3200);
-  const remote = useQuery(api.tv.listGithubActivity);
-  const listRef = useRef<HTMLOListElement>(null);
-  const source = useMemo(
-    () =>
-      (remote ?? []).map((row) => ({
-        id: row._id,
-        repo: row.repo || "repo",
-        actor: row.actor || "github",
-        text: row.text,
-        sha: row.sha,
-      })),
-    [remote]
-  );
-  const queue = useMemo(() => {
-    if (source.length === 0) {
-      return [];
-    }
-    const count = Math.min(6, source.length);
-    const rows: CommitRow[] = [];
-    for (let index = 0; index < count; index += 1) {
-      const appearAt = tick - index;
-      const srcIndex =
-        ((appearAt % source.length) + source.length) % source.length;
-      const row = source[srcIndex];
-      if (!row) {
-        continue;
-      }
-      rows.push({ ...row, instance: `${row.id}-${appearAt}` });
-    }
-    return rows;
-  }, [source, tick]);
-  const ids = useMemo(() => queue.map((row) => row.instance), [queue]);
-  const repos = useMemo(
-    () => new Set(source.map((row) => row.repo)).size,
-    [source]
-  );
-
-  const onEnter = useCallback((rows: HTMLElement[]) => {
-    flashGold(rows);
-    for (const row of rows) {
-      const sha = row.querySelector<HTMLElement>("[data-sha]");
-      if (!sha?.dataset.sha) {
-        continue;
-      }
-      gsap.to(sha, {
-        duration: 0.9,
-        scrambleText: {
-          text: sha.dataset.sha,
-          chars: "0123456789abcdef",
-          speed: 0.5,
-        },
-      });
-    }
-  }, []);
-  useStreamShift(listRef, ids, onEnter);
-
-  return (
-    <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
-      <LiveHeader title="Commits en vivo" aside={`${repos} repos`} />
-      {queue.length === 0 ? (
-        <p className="mt-[0.6cqw] text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
-          {remote === undefined
-            ? "Cargando actividad…"
-            : "Sin commits todavía."}
-        </p>
-      ) : null}
-      <ol
-        ref={listRef}
-        className="mt-[0.6cqw] min-h-0 flex-1 space-y-[0.4cqw] overflow-hidden"
-      >
-        {queue.map((row, index) => (
-          <li
-            key={row.instance}
-            className="relative border-l-[3px] border-hs-ink/15 bg-hs-sand/40 px-[0.7cqw] py-[0.45cqw]"
-            style={{ opacity: Math.max(0.35, 1 - index * 0.12) }}
-          >
-            <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
-            <p className="truncate text-[clamp(0.5rem,0.7cqw,0.95rem)] text-hs-brown">
-              {row.repo} · {row.actor}
-            </p>
-            <p className="truncate text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold">
-              {row.text}
-            </p>
-            <p
-              data-sha={row.sha}
-              className="font-mono text-[clamp(0.5rem,0.65cqw,0.9rem)] tabular-nums text-hs-navy"
-            >
-              {row.sha}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </div>
   );
 }
 
