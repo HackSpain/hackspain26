@@ -1,84 +1,81 @@
-export const HARNESSES = [
-  {
+import { HARNESSES as CANONICAL_HARNESSES } from "@/app/api/cli/telemetry/canonical";
+import type { HarnessId } from "@/app/api/cli/telemetry/canonical";
+
+export type { HarnessId } from "@/app/api/cli/telemetry/canonical";
+
+const HARNESS_DISPLAY = {
+  "claude-code": {
     color: "#d96b2a",
-    id: "claude-code",
     mark: "CC",
     name: "Claude Code",
   },
-  {
+  codex: {
     color: "#35858a",
-    id: "codex",
     mark: ">_",
     name: "Codex",
   },
-  {
+  cursor: {
     color: "#1e3958",
-    id: "cursor",
     mark: "Cu",
     name: "Cursor",
   },
-  {
+  opencode: {
     color: "#8b6b9f",
-    id: "opencode",
     mark: "OC",
     name: "OpenCode",
   },
-  {
+  cline: {
     color: "#a67516",
-    id: "cline",
     mark: "Cl",
     name: "Cline",
   },
-  {
+  copilot: {
     color: "#677558",
-    id: "copilot",
     mark: "Co",
     name: "Copilot",
   },
   // The rest of the harnesses the watcher collects (apps/cli/src/watcher).
-  {
+  "gemini-cli": {
     color: "#3f6fd1",
-    id: "gemini-cli",
     mark: "Ge",
     name: "Gemini CLI",
   },
-  {
+  "qwen-code": {
     color: "#6a4bc4",
-    id: "qwen-code",
     mark: "Qw",
     name: "Qwen Code",
   },
-  {
+  "kilo-code": {
     color: "#b8432f",
-    id: "kilo-code",
     mark: "Ki",
     name: "Kilo Code",
   },
-  {
+  pi: {
     color: "#d97757",
-    id: "pi",
     mark: "Pi",
     name: "Pi",
   },
-  {
+  omp: {
     color: "#8b5cf6",
-    id: "omp",
     mark: "Om",
     name: "Oh My Pi",
   },
-  {
+  antigravity: {
     color: "#6a4fd8",
-    id: "antigravity",
     mark: "Ag",
     name: "Antigravity",
   },
-  {
+  devin: {
     color: "#2f63c9",
-    id: "devin",
     mark: "Dv",
     name: "Devin",
   },
-] as const;
+} satisfies Record<HarnessId, { color: string; mark: string; name: string }>;
+
+export const HARNESSES = CANONICAL_HARNESSES.map((id) => ({
+  id,
+  ...HARNESS_DISPLAY[id],
+}));
 
 const TRACKS: string[] = [];
 export const PERIODS = [
@@ -89,7 +86,6 @@ export const PERIODS = [
 
 export type Period = (typeof PERIODS)[number]["id"];
 type Track = (typeof TRACKS)[number];
-export type HarnessId = (typeof HARNESSES)[number]["id"];
 export type Metric = "tokens" | "commits" | "pullRequests";
 
 export interface Team {

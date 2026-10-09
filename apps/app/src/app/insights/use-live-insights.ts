@@ -43,7 +43,6 @@ const EMPTY: LiveInsightData = {
   teams: [],
 };
 
-const HARNESS_IDS = new Set<string>(HARNESSES.map((harness) => harness.id));
 const TEAM_COLORS = [
   "#d96b2a",
   "#35858a",
@@ -77,10 +76,10 @@ export function toInsightData(payload: TvInsights): LiveInsightData {
 
   const usageByTeam = new Map<string, Map<HarnessId, number>>();
   for (const row of payload.samples) {
-    if (!HARNESS_IDS.has(row.harness)) {
+    const harness = HARNESSES.find((item) => item.id === row.harness)?.id;
+    if (!harness) {
       continue;
     }
-    const harness = row.harness as HarnessId;
     const teamId = known.has(row.teamId) ? row.teamId : NO_TEAM_ID;
     const sample = sampleFor(teamId, harness, row.bucket);
     sample.tokens += row.tokens;
