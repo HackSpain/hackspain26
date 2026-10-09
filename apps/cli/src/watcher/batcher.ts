@@ -1,7 +1,8 @@
+import { TELEMETRY_BATCH_MAX } from "../../../app/src/app/api/cli/telemetry/canonical";
 import type { TelemetryEvent } from "./schema";
 import type { Sink } from "./sinks/spool";
 
-export const BATCH_MAX = 200;
+export const BATCH_MAX = TELEMETRY_BATCH_MAX;
 export const BUFFER_CAP = 5000;
 const BACKOFF_MIN_MS = 5000;
 const BACKOFF_MAX_MS = 60_000;

@@ -181,3 +181,68 @@ export type TokenCounts = {
 export function totalTokens(tokens: TokenCounts): number {
   return tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
 }
+
+export const HARNESSES = [
+  "claude-code",
+  "codex",
+  "cursor",
+  "opencode",
+  "cline",
+  "copilot",
+  "gemini-cli",
+  "qwen-code",
+  "kilo-code",
+  "pi",
+  "omp",
+  "antigravity",
+  "devin",
+] as const;
+export type HarnessId = (typeof HARNESSES)[number];
+
+export const EVENT_TYPES = ["usage", "session.start", "session.end"] as const;
+type EventType = (typeof EVENT_TYPES)[number];
+
+export const TELEMETRY_BATCH_MAX = 200;
+export const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
+
+export const MAX_EVENT_ID_LENGTH = 512;
+export const MAX_SESSION_ID_LENGTH = 256;
+export const MAX_SHORT_STRING_LENGTH = 256;
+export const MAX_VERSION_LENGTH = 64;
+
+export type TelemetryEvent = {
+  schema: typeof TELEMETRY_SCHEMA;
+  type: EventType;
+  /** `${harness}:${sessionId}:${nativeId}`; global dedupe key. */
+  eventId: string;
+  /** ISO-8601 UTC, when the harness recorded it. */
+  occurredAt: string;
+  /** ISO-8601 UTC, when the watcher read it. */
+  observedAt: string;
+  harness: HarnessId;
+  harnessVersion?: string;
+  sessionId: string;
+  /** Sanitized project identity; never a full path or raw Git remote URL. */
+  project?: {
+    dirHash: string;
+    name: string;
+    gitBranch?: string;
+    repo?: string;
+  };
+  /** Derived from what the harness logged, the same way for every harness. */
+  model?: CanonicalModel;
+  /**
+   * For every harness: `input` excludes cache reads, `output` includes
+   * `reasoning` (a breakdown, absent when the harness does not report it),
+   * and `total` is input + output + cacheRead + cacheWrite.
+   */
+  tokens?: TokenCounts & { total: number };
+  /** Stamped by the CLI at flush time, never by collectors. */
+  identity: { userId: string; teamId?: string; clientVersion: string };
+  /**
+   * What only some harnesses report, so never comparable across them:
+   * Claude Code's `requestId`, and the `costUsd` OpenCode, Kilo Code,
+   * Cline, Pi and Oh My Pi compute themselves. Allowlisted here and on the server.
+   */
+  native?: { requestId?: string; costUsd?: number };
+};
