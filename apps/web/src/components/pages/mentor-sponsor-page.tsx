@@ -7,7 +7,6 @@ import {
   withScope,
 } from "@sentry/astro";
 import { initBotId } from "botid/client/core";
-import type { ComponentPropsWithRef } from "react";
 import { useEffect, useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
 import { Controller, useForm } from "react-hook-form";
@@ -21,6 +20,7 @@ import {
 } from "../../lib/mentor-sponsor-validation";
 import type { DietaryRestrictionId } from "../../lib/signup-validation";
 import { DIETARY_RESTRICTION_OPTIONS } from "../../lib/signup-validation";
+import { HackSpainCheckbox } from "../form/checkbox";
 import { hsControlBaseClass } from "../form/field-classes";
 import { FormField } from "../form/form-field";
 import { Input } from "../form/input";
@@ -33,51 +33,6 @@ import { Button, ButtonLink } from "../ui/button";
 const OTHER_COMPANY_ID = "__other__";
 
 type FlowStatus = "idle" | "success" | "error" | "alreadyConfirmed";
-
-/** Same brutalist checkbox as the hacker signup form (kept local there too). */
-function HackSpainCheckbox({
-  size = "default",
-  ...inputProps
-}: Omit<ComponentPropsWithRef<"input">, "type" | "size"> & {
-  size?: "default" | "large";
-}) {
-  const isLarge = size === "large";
-  const sizeClass = isLarge ? "h-6 w-6" : "h-4 w-4";
-  const borderClass = isLarge
-    ? "border-[3px] shadow-[2px_2px_0_0_var(--color-hs-ink)]"
-    : "border-2";
-
-  return (
-    <span className={`relative mt-px ${sizeClass} shrink-0`}>
-      <input
-        {...inputProps}
-        className={`peer absolute inset-0 z-10 ${sizeClass} cursor-pointer appearance-none opacity-0`}
-        type="checkbox"
-      />
-      <span
-        aria-hidden
-        className={`pointer-events-none flex ${sizeClass} items-center justify-center rounded-sm border-hs-ink bg-hs-paper ${borderClass} transition-colors peer-checked:bg-hs-gold peer-hover:bg-hs-sand/55 peer-focus-visible:border-hs-navy [&_svg]:opacity-0 peer-checked:[&_svg]:opacity-100`}
-      >
-        <svg
-          fill="none"
-          height={isLarge ? 14 : 10}
-          viewBox="0 0 14 14"
-          width={isLarge ? 14 : 10}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <title>Marca de verificación</title>
-          <path
-            d="M2.5 7.2 5.6 10.3 11.5 3.8"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={isLarge ? 2.2 : 1.8}
-          />
-        </svg>
-      </span>
-    </span>
-  );
-}
 
 interface FormValues {
   attendanceSlots: AttendanceSlotId[];
