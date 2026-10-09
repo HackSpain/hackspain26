@@ -39,12 +39,15 @@ const validBody = {
   githubUrl: "samuel",
   heardFromSources: ["x"],
   isUnderThirty: true,
+  linkedinUrl: "",
+  webUrl: "",
+  xUrl: "",
 };
 
 const errorCases = [
   [{ githubUrl: "" }, "social_required", "social_required"],
   [
-    { githubUrl: "javascript:alert(1)" },
+    { githubUrl: "ftp://github.com/samuel" },
     "invalid_social_url",
     "invalid_social_url",
   ],
@@ -120,9 +123,8 @@ test("both signup adapters preserve normalization and optional defaults", () => 
   const client = parseSignupBodyClient(body);
   assert.equal(server.ok, true);
   assert.equal(client.ok, true);
-  // The schema creates arrays in the isolated VM; compare their serialized data.
-  const data = JSON.parse(JSON.stringify(server.data));
-  assert.deepEqual(JSON.parse(JSON.stringify(client.data)), data);
+  const data = structuredClone(server.data);
+  assert.deepEqual(structuredClone(client.data), data);
   assert.equal(data.fullName, "Samuel");
   assert.equal(data.email, "samuel@example.com");
   assert.equal(data.githubUrl, "https://github.com/samuel");
