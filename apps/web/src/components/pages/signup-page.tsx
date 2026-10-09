@@ -8,7 +8,6 @@ import {
 } from "@sentry/astro";
 import { initBotId } from "botid/client/core";
 import { AnimatePresence, motion } from "motion/react";
-import type { ComponentPropsWithRef } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -32,6 +31,7 @@ import {
   OCCUPATION_STATUS_OPTIONS,
   parseSignupBodyClient,
 } from "../../lib/signup-validation";
+import { HackSpainCheckbox } from "../form/checkbox";
 import { FormField } from "../form/form-field";
 import { Input } from "../form/input";
 import { SocialPrefixInput } from "../form/social-prefix-input";
@@ -51,55 +51,6 @@ const UNICODE_LEFT_ARROW_PREFIX_RE = /^\u2190\s*/;
 const ASCII_LEFT_ARROW_PREFIX_RE = /^←\s*/;
 const LINE_BREAK_SPLIT_RE = /\r?\n/;
 type FlowStatus = "idle" | "success" | "error" | "alreadyApplied" | "closed";
-
-type HackSpainCheckboxProps = Omit<
-  ComponentPropsWithRef<"input">,
-  "type" | "size"
-> & {
-  size?: "default" | "large";
-};
-
-function HackSpainCheckbox({
-  size = "default",
-  ...inputProps
-}: HackSpainCheckboxProps) {
-  const isLarge = size === "large";
-  const sizeClass = isLarge ? "h-6 w-6" : "h-4 w-4";
-  const borderClass = isLarge
-    ? "border-[3px] shadow-[2px_2px_0_0_var(--color-hs-ink)]"
-    : "border-2";
-
-  return (
-    <span className={`relative mt-px ${sizeClass} shrink-0`}>
-      <input
-        {...inputProps}
-        className={`peer absolute inset-0 z-10 ${sizeClass} cursor-pointer appearance-none opacity-0`}
-        type="checkbox"
-      />
-      <span
-        aria-hidden
-        className={`pointer-events-none flex ${sizeClass} items-center justify-center rounded-sm border-hs-ink bg-hs-paper ${borderClass} transition-colors peer-checked:bg-hs-gold peer-hover:bg-hs-sand/55 peer-focus-visible:border-hs-navy [&_svg]:opacity-0 peer-checked:[&_svg]:opacity-100`}
-      >
-        <svg
-          fill="none"
-          height={isLarge ? 14 : 10}
-          viewBox="0 0 14 14"
-          width={isLarge ? 14 : 10}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <title>Marca de verificación</title>
-          <path
-            d="M2.5 7.2 5.6 10.3 11.5 3.8"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={isLarge ? 2.2 : 1.8}
-          />
-        </svg>
-      </span>
-    </span>
-  );
-}
 
 function readAppliedFlag(): boolean {
   if (typeof window === "undefined") {
