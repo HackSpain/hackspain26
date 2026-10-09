@@ -1,7 +1,7 @@
 export type CsvValue = string | number | boolean | null | undefined;
 
 const BOM = "\uFEFF";
-const NEEDS_QUOTES = /[",;\r\n]/;
+const NEEDS_QUOTES = /[",\r\n]/;
 
 function csvCell(value: CsvValue): string {
   if (value === null || value === undefined) {
