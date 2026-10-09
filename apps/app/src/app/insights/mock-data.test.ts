@@ -7,7 +7,6 @@ import {
   filterSamples,
   harnessRows,
   periodBuckets,
-  TEAMS,
   sumSamples,
   teamRows,
   timeLabel,
@@ -38,7 +37,7 @@ test("bucket totals keep first-seen order, combine repeats and handle no samples
 });
 
 test("unconnected insights have no fictional teams or activity and numeric zero totals", () => {
-  const samples = filterSamples([], "event", "all");
+  const samples = filterSamples([], "event", []);
   const zero = {
     cachedTokens: 0,
     commits: 0,
@@ -47,8 +46,7 @@ test("unconnected insights have no fictional teams or activity and numeric zero 
     tokens: 0,
   };
   assert.deepEqual(samples, []);
-  assert.deepEqual(TEAMS, []);
-  assert.deepEqual(teamRows(samples), []);
+  assert.deepEqual(teamRows(samples, []), []);
   assert.deepEqual(sumSamples(samples), zero);
   for (const tool of harnessRows(samples)) {
     for (const metric of Object.keys(zero) as (keyof typeof zero)[]) {

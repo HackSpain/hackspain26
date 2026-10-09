@@ -192,7 +192,7 @@ export function LiveAgentsBox() {
   const reduced = usePrefersReducedMotion();
   const root = useRef<HTMLDivElement>(null);
   const data = useLiveInsights();
-  const samples = filterSamples(data.samples, "event", "all", data.teams);
+  const samples = filterSamples(data.samples, "event", data.teams);
   const tools = harnessRows(samples)
     .filter((row) => row.sessions > 0)
     .toSorted(
@@ -797,7 +797,7 @@ export function LiveTokensBox() {
   const ring = useRef<HTMLSpanElement>(null);
   const sweep = useRef<HTMLSpanElement>(null);
   const data = useLiveInsights();
-  const samples = filterSamples(data.samples, "event", "all", data.teams);
+  const samples = filterSamples(data.samples, "event", data.teams);
   const totals = sumSamples(samples);
   const previous = useRef<number | null>(null);
   const perBucket = useMemo(() => {
@@ -1024,7 +1024,7 @@ export function LiveLeaderboardBox() {
   const reduced = usePrefersReducedMotion();
   const data = useLiveInsights();
   const ranked = teamRows(
-    filterSamples(data.samples, "event", "all", data.teams),
+    filterSamples(data.samples, "event", data.teams),
     data.teams
   )
     .filter((team) => team.id !== NO_TEAM_ID)

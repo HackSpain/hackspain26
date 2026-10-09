@@ -13,14 +13,12 @@ import {
 
 const team = (id: string, name: string): Team => ({
   color: "#000",
-  description: "",
   id,
   members: 3,
   name,
   primary: "claude-code",
   project: "",
   secondary: "cursor",
-  track: "",
 });
 const sample = (
   teamId: string,

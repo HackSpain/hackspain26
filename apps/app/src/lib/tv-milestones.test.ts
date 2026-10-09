@@ -12,25 +12,21 @@ import {
 const teams: Team[] = [
   {
     color: "#000",
-    description: "",
     id: "x",
     members: 3,
     name: "Equipo X",
     primary: "codex",
     project: "X",
     secondary: "claude-code",
-    track: "",
   },
   {
     color: "#000",
-    description: "",
     id: "y",
     members: 2,
     name: "Equipo Y",
     primary: "codex",
     project: "Y",
     secondary: "claude-code",
-    track: "",
   },
 ];
 

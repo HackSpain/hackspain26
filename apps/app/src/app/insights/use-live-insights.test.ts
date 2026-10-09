@@ -95,7 +95,7 @@ const payload: TvInsights = {
 
 describe("toInsightData", () => {
   const data = toInsightData(payload);
-  const samples = filterSamples(data.samples, "event", "all", data.teams);
+  const samples = filterSamples(data.samples, "event", data.teams);
 
   test("totals count every known harness, teamless usage included", () => {
     const totals = sumSamples(samples);

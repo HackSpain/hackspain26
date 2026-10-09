@@ -331,14 +331,12 @@ export function demoInsights(step: number, now: number): LiveInsightData {
   const samples: Sample[] = [];
   const teams: Team[] = DEMO_TEAMS.map(([name, project], index) => ({
     color: HARNESSES[index % HARNESSES.length]?.color ?? "#d96b2a",
-    description: "",
     id: `demo-${index}`,
     members: 3 + (index % 3),
     name,
     primary: "claude-code",
     project,
     secondary: "cursor",
-    track: "",
   }));
   for (const [index, team] of teams.entries()) {
     const appetite = 0.35 + random() * 1.6;
