@@ -20,7 +20,7 @@ export function isEventOpen(event: EventInfo | null | undefined): boolean {
 }
 
 /** One line explaining why the dashboard is reduced. Mirrors convex/lib/eventWindow.ts. */
-export function eventClosedCopy(event: EventInfo): {
+function eventClosedCopy(event: EventInfo): {
   title: string;
   body: string;
 } {

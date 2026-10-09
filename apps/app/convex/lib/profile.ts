@@ -36,7 +36,3 @@ export function missingProfileFields(user: ProfileUser): ProfileField[] {
   }
   return missing;
 }
-
-export function isProfileComplete(user: ProfileUser): boolean {
-  return missingProfileFields(user).length === 0;
-}

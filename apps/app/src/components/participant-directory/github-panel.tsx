@@ -27,7 +27,7 @@ const EVENT_LABELS: Record<string, string> = {
 
 const HEAT = ["#e8dcc4", "#eab61966", "#eab619", "#d96b2a", "#35858a"];
 
-export function githubLoginOf(person: DirectoryParticipant): string | null {
+function githubLoginOf(person: DirectoryParticipant): string | null {
   return (
     normalizeGithubLogin(person.githubUsername ?? "") ??
     normalizeGithubLogin(

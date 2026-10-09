@@ -212,7 +212,7 @@ async function setNotify(
 }
 
 /** Save the contact number; shared by `profile phone` and the post-login check. */
-export async function savePhone(
+async function savePhone(
   ctx: CliContext,
   ui: Ui,
   session: Session,

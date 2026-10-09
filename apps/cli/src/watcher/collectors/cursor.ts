@@ -13,7 +13,7 @@ import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
-export const CURSOR = "cursor" as const;
+const CURSOR = "cursor" as const;
 const SCRIPT_EXTENSION = /\.[cm]?[jt]s$/;
 const RECORDER_COMMAND = /(?:^|\s)['"]?_cursor-hook['"]?(?:\s|$)/;
 const HACKSPAIN_BINARY_COMMAND =
@@ -71,20 +71,20 @@ function token(value: unknown): number {
     : 0;
 }
 
-export function cursorHome(): string {
+function cursorHome(): string {
   return (
     process.env.HACKSPAIN_CURSOR_HOME?.trim() || join(homedir(), ".cursor")
   );
 }
 
-export function cursorEventPath(): string {
+function cursorEventPath(): string {
   return (
     process.env.HACKSPAIN_CURSOR_EVENT_LOG?.trim() ||
     join(stateDir(), "cursor-events.jsonl")
   );
 }
 
-export function cursorWindowPath(): string {
+function cursorWindowPath(): string {
   return join(stateDir(), "cursor-window.json");
 }
 

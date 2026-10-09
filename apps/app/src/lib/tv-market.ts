@@ -185,10 +185,7 @@ export function marketSlides(
 export type MarketPerson = LiveInsightData["people"][number];
 export type MarketPeopleMetric = "tokens" | "git";
 
-export function personScore(
-  person: MarketPerson,
-  metric: MarketPeopleMetric
-): number {
+function personScore(person: MarketPerson, metric: MarketPeopleMetric): number {
   return metric === "tokens"
     ? person.tokens
     : person.pushes + person.pullRequests;

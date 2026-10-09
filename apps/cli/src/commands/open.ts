@@ -13,7 +13,7 @@ import { c, cmd } from "../lib/style";
  * dashboard cookies. Logging in here is therefore enough for the web too.
  */
 
-export const HANDOFF_PATH = "/cli-auth/handoff";
+const HANDOFF_PATH = "/cli-auth/handoff";
 
 /** Friendly names people type; anything else must be a `/path`. */
 const PAGE_ALIASES: Record<string, string> = {
@@ -38,7 +38,7 @@ const PAGE_ALIASES: Record<string, string> = {
   admin: "/admin",
 };
 
-export function pageAliases(): string[] {
+function pageAliases(): string[] {
   return Object.keys(PAGE_ALIASES);
 }
 

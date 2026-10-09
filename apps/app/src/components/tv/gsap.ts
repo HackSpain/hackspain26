@@ -20,7 +20,7 @@ function brandEase(name: string, curve: string) {
 }
 
 export const TV_EASE_OUT = brandEase("hs-out", "0.23,1,0.32,1");
-export const TV_EASE_MOVE = brandEase("hs-in-out", "0.77,0,0.175,1");
+const TV_EASE_MOVE = brandEase("hs-in-out", "0.77,0,0.175,1");
 export const TV_EASE_POP = "back.out(1.4)";
 /** Reduced motion keeps short opacity fades so changes stay legible. */
 export const TV_REDUCED_FADE = 0.2;

@@ -183,7 +183,7 @@ export async function withCredentialsLock<T>(fn: () => Promise<T>): Promise<T> {
 
 export type RefreshFn = (refreshToken: string) => Promise<Tokens | null>;
 
-export function sessionExpired(): CliError {
+function sessionExpired(): CliError {
   return new CliError("Your session has expired.", {
     code: "SESSION_EXPIRED",
     exitCode: EXIT.AUTH,

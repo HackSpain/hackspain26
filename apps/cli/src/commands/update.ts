@@ -8,7 +8,7 @@ import type { Ui } from "../lib/output";
 import { uiFor } from "../lib/output";
 import { VERSION } from "../version";
 
-export const REPO = "HackSpain/hackspain26";
+const REPO = "HackSpain/hackspain26";
 
 const TAG_PREFIX = /^cli-v/;
 const RELEASE_TAG = /^cli-v\d+\.\d+\.\d+$/;

@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { INSIGHTS_LAYOUT, PANEL_V2_LAYOUT } from "../../convex/lib/tvLayouts";
-import {
-  layoutTvBox,
-  tvFontSizeClass,
-  tvFontSizePixels,
-  tvFontSizeStyle,
-} from "./tv";
+import { tvFontSizeClass, tvFontSizeStyle } from "./tv";
 
 test("custom pixels scale from the same 1920px canvas in preview and TV", () => {
   assert.deepEqual(tvFontSizeStyle(48), { fontSize: "2.5cqw" });
@@ -19,8 +14,6 @@ test("custom pixels scale from the same 1920px canvas in preview and TV", () => 
 test("legacy text presets keep their classes until edited", () => {
   assert.equal(tvFontSizeStyle(1.1), undefined);
   assert.ok(tvFontSizeClass("banner", 1.1).includes("clamp"));
-  assert.equal(tvFontSizePixels("banner", 1.1), 28);
-  assert.equal(tvFontSizePixels("clock", 55), 55);
 });
 
 test("default reset layout fits the canvas and has no team leaderboards", () => {
@@ -28,7 +21,11 @@ test("default reset layout fits the canvas and has no team leaderboards", () => 
   for (const widget of INSIGHTS_LAYOUT) {
     assert.ok(!widget.kind.toLowerCase().includes("leaderboard"));
     const { x, y, w, h } = widget;
-    assert.deepEqual(layoutTvBox(widget), { x, y, w, h });
+    assert.ok([x, y, w, h].every(Number.isFinite));
+    assert.ok(w >= 8 && w <= 100);
+    assert.ok(h >= 8 && h <= 100);
+    assert.ok(x >= 0 && x + w <= 100);
+    assert.ok(y >= 0 && y + h <= 100);
   }
 });
 
@@ -66,6 +63,10 @@ test("panelv2 layout fits the canvas and keeps live CLI widgets", () => {
   );
   for (const widget of PANEL_V2_LAYOUT) {
     const { x, y, w, h } = widget;
-    assert.deepEqual(layoutTvBox(widget), { x, y, w, h });
+    assert.ok([x, y, w, h].every(Number.isFinite));
+    assert.ok(w >= 8 && w <= 100);
+    assert.ok(h >= 8 && h <= 100);
+    assert.ok(x >= 0 && x + w <= 100);
+    assert.ok(y >= 0 && y + h <= 100);
   }
 });

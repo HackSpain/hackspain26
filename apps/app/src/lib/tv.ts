@@ -9,15 +9,13 @@ import type {
   tvWidgetValidator,
 } from "@convex/lib/tvValidators";
 
-export { layoutTvBox } from "../../convex/lib/tvLayout";
-
 export type TvWidgetKind = Infer<typeof tvWidgetKindValidator>;
 export type TvSponsor = Infer<typeof tvSponsorValidator>;
 export type TvTickerSpeed = Infer<typeof tvTickerSpeedValidator>;
 export type TvFeedMode = Infer<typeof tvFeedModeValidator>;
 export type TvFeedSource = Infer<typeof tvFeedSourceValidator>;
-export const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
-export type TvFontSize = (typeof TV_FONT_SIZES)[number];
+const TV_FONT_SIZES = [0.85, 1.1, 1.5, 2, 2.75] as const;
+type TvFontSize = (typeof TV_FONT_SIZES)[number];
 export type TvFontWeight = Infer<typeof tvFontWeightValidator>;
 
 const TV_FONT_SIZE_CLASS: Record<TvFontSize, string> = {
@@ -42,7 +40,7 @@ const TV_FONT_WEIGHT_CLASS: Record<TvFontWeight, string> = {
   bold: "font-bold",
 };
 
-export function isTvFontSize(value: number): value is TvFontSize {
+function isTvFontSize(value: number): value is TvFontSize {
   return (TV_FONT_SIZES as readonly number[]).includes(value);
 }
 
@@ -68,36 +66,6 @@ export function tvFontSizeStyle(fontSize?: number) {
     fontSize <= 240
     ? { fontSize: `${fontSize / 19.2}cqw` }
     : undefined;
-}
-
-export function tvFontSizePixels(kind: TvWidgetKind, value?: number): number {
-  if (value !== undefined && value >= 8) {
-    return value;
-  }
-  const legacy: Record<number, number> = {
-    0.85: 19,
-    1.1: 28,
-    1.5: 32,
-    2: 48,
-    2.75: 72,
-  };
-  if (value !== undefined) {
-    return legacy[value] ?? 28;
-  }
-  switch (kind) {
-    case "clock": {
-      return 80;
-    }
-    case "banner": {
-      return 72;
-    }
-    case "ticker": {
-      return 32;
-    }
-    default: {
-      return 28;
-    }
-  }
 }
 
 export function tvFontWeightClass(
@@ -210,7 +178,7 @@ export function resolveTvSponsors(sponsors?: TvSponsor[]): TvSponsor[] {
   return custom.length > 0 ? custom : DEFAULT_TV_SPONSORS;
 }
 
-export function sponsorSiteOrigin(href: string): string | null {
+function sponsorSiteOrigin(href: string): string | null {
   const raw = href.trim();
   if (!raw) {
     return null;

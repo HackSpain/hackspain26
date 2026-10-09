@@ -9,7 +9,7 @@ import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { lastWriteMs, openReadOnly } from "./sqlite";
 
-export const ANTIGRAVITY = "antigravity" as const;
+const ANTIGRAVITY = "antigravity" as const;
 
 /**
  * Antigravity CLI, desktop and IDE keep SQLite conversation databases under

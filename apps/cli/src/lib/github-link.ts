@@ -10,7 +10,7 @@ import { cmd } from "./style";
 const POLL_MS = 2000;
 const WAIT_MS = 3 * 60 * 1000;
 
-export function canReadGithubRepos(me: Me): boolean {
+function canReadGithubRepos(me: Me): boolean {
   return me.githubCanReadRepos;
 }
 

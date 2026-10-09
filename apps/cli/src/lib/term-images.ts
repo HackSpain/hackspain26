@@ -12,7 +12,7 @@ export type ImageProtocol = "kitty" | "iterm";
 /** Columns an inline image may take in `hackspain feed`. */
 export const IMAGE_COLUMNS = 36;
 /** Rows an inline image may take; wider-than-tall pictures hit the columns first. */
-export const IMAGE_MAX_ROWS = 12;
+const IMAGE_MAX_ROWS = 12;
 /** Pixels asked from the server per column; ~cell width on a HiDPI screen. */
 export const PIXELS_PER_COLUMN = 16;
 /** A terminal cell is roughly twice as tall as it is wide. */

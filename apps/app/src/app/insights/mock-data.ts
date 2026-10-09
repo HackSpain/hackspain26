@@ -80,7 +80,7 @@ export const HARNESSES = [
   },
 ] as const;
 
-export const TRACKS: string[] = [];
+const TRACKS: string[] = [];
 export const PERIODS = [
   { buckets: 24, id: "event", label: "Todo el evento", minutes: 0 },
   { buckets: 12, id: "6h", label: "Últimas 6 horas", minutes: 360 },
@@ -88,7 +88,7 @@ export const PERIODS = [
 ] as const;
 
 export type Period = (typeof PERIODS)[number]["id"];
-export type Track = (typeof TRACKS)[number];
+type Track = (typeof TRACKS)[number];
 export type HarnessId = (typeof HARNESSES)[number]["id"];
 export type Metric = "tokens" | "commits" | "pullRequests";
 
@@ -118,11 +118,6 @@ export interface Sample {
   pullRequests: number;
   sessions: number;
   cachedTokens: number;
-}
-
-// Keep metrics at zero until an actual telemetry source is connected.
-export function getSamples(): Sample[] {
-  return [];
 }
 
 /**

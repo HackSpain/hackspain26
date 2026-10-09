@@ -23,7 +23,7 @@ import { cardWidth, isPickCancel, pickInBox } from "./tui";
  * snapshot, which keeps it testable.
  */
 
-export type MenuTeam = {
+type MenuTeam = {
   name: string;
   isOwner: boolean;
   members: number;
@@ -31,7 +31,7 @@ export type MenuTeam = {
   repoUrl?: string | null;
 };
 
-export type MenuProject = {
+type MenuProject = {
   name: string | null;
   submitted: boolean;
   tracks: number;
@@ -49,7 +49,7 @@ export type MenuStatus = {
   project?: MenuProject | null;
 };
 
-export type MenuInput = {
+type MenuInput = {
   message: string;
   placeholder?: string;
   /** Split the answer on whitespace into several argv tokens. */
@@ -491,7 +491,7 @@ export function menuStatusFrom(
 }
 
 /** Fresh status snapshot, used to refresh the menu after each action. */
-export async function fetchMenuStatus(ctx: CliContext): Promise<MenuStatus> {
+async function fetchMenuStatus(ctx: CliContext): Promise<MenuStatus> {
   const { url } = resolveAppUrl(ctx.urlOverride);
   const creds = readCredentials();
   if (!creds || creds.appUrl !== url) {

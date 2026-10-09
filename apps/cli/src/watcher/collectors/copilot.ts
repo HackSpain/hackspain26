@@ -7,7 +7,7 @@ import { eventId, modelFamily } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
-export const COPILOT = "copilot" as const;
+const COPILOT = "copilot" as const;
 
 type CopilotUsage = {
   cacheReadTokens: number;
@@ -88,7 +88,7 @@ function delta(
   };
 }
 
-export function copilotHome(): string {
+function copilotHome(): string {
   return process.env.COPILOT_HOME?.trim() || join(homedir(), ".copilot");
 }
 

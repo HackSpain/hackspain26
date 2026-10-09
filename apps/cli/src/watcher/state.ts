@@ -72,7 +72,7 @@ export type WatchState = {
   log: string[];
 };
 
-export type FeedImage = { png: Uint8Array; width: number; height: number };
+type FeedImage = { png: Uint8Array; width: number; height: number };
 
 /** Posts per page, both for the live refresh and for older pages. */
 export const FEED_PAGE = 15;
@@ -85,7 +85,7 @@ export const WATCH_IMAGE_BOUNDS: Required<ImageBounds> = {
   maxRows: 6,
 };
 
-export type RecentRequest = {
+type RecentRequest = {
   at: number;
   harness: HarnessId;
   model: string;
@@ -95,7 +95,7 @@ export type RecentRequest = {
   sessionId: string;
 };
 
-export const RECENT_KEPT = 60;
+const RECENT_KEPT = 60;
 
 export const NOTIFICATIONS_KEPT = 20;
 const LOG_KEPT = 6;

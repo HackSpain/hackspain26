@@ -34,7 +34,7 @@ import type { Mode, NodeState } from "./people-visuals";
 import type { DirectoryParticipant } from "./types";
 import { personHeading } from "./types";
 
-export const CONNECTION_STYLES: Record<
+const CONNECTION_STYLES: Record<
   AffinityKind,
   { label: string; color: string }
 > = {

@@ -45,9 +45,9 @@ export const HARNESSES = [
 ] as const;
 export type HarnessId = (typeof HARNESSES)[number];
 
-export type EventType = "usage" | "session.start" | "session.end";
+type EventType = "usage" | "session.start" | "session.end";
 
-export const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
+const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
 
 const MAX_EVENT_ID_LENGTH = 512;
 const MAX_SESSION_ID_LENGTH = 256;

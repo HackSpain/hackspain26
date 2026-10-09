@@ -87,10 +87,7 @@ const LOGO_KITTY_ID = 9001;
  * The wordmark as a picture, drawn at the cursor, for terminals that can.
  * Null when the terminal is too narrow for it to read.
  */
-export function logoBanner(
-  protocol: ImageProtocol,
-  columns: number
-): string | null {
+function logoBanner(protocol: ImageProtocol, columns: number): string | null {
   if (columns < LOGO_MIN_COLUMNS) {
     return null;
   }

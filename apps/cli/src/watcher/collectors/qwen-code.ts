@@ -7,7 +7,7 @@ import { eventId, modelFamily, outputWithReasoning } from "../schema";
 import type { Collector, CollectorContext } from "../types";
 import { parseJsonLine, tailJsonl } from "./jsonl-tail";
 
-export const QWEN_CODE = "qwen-code" as const;
+const QWEN_CODE = "qwen-code" as const;
 
 /**
  * Qwen Code (a Gemini CLI fork with its own recorder) appends one JSON
@@ -109,7 +109,7 @@ export function normalizeQwenCode(value: unknown): RawEvent | null {
   };
 }
 
-export function qwenHome(): string {
+function qwenHome(): string {
   return process.env.QWEN_HOME?.trim() || join(homedir(), ".qwen");
 }
 

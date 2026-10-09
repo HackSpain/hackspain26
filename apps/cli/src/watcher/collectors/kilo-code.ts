@@ -15,7 +15,7 @@ export const KILO_CODE = "kilo-code" as const;
  */
 const DB_NAME = /^(kilo|opencode)(-[A-Za-z0-9._-]+)?\.db$/;
 
-export function kiloDataDir(): string {
+function kiloDataDir(): string {
   const data =
     process.env.XDG_DATA_HOME?.trim() || join(homedir(), ".local", "share");
   return join(data, "kilo");

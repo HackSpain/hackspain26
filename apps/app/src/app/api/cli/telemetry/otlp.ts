@@ -21,7 +21,7 @@ type AnyValue =
   | { doubleValue: number };
 type KeyValue = { key: string; value: AnyValue };
 
-export type OtlpLogRecord = {
+type OtlpLogRecord = {
   timeUnixNano: string;
   observedTimeUnixNano: string;
   severityNumber: number;
@@ -69,7 +69,7 @@ function attributes(
   return result;
 }
 
-export function toOtlpLogRecord(event: TelemetryEvent): OtlpLogRecord {
+function toOtlpLogRecord(event: TelemetryEvent): OtlpLogRecord {
   const { tokens, model, project } = event;
   return {
     attributes: attributes([

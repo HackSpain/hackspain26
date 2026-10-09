@@ -38,7 +38,7 @@ export interface Palette {
   nameFont: string;
 }
 
-export interface Scene {
+interface Scene {
   camera: Camera;
   hoveredId: string | null;
   /** Snap transitions instead of easing them (reduced motion). */

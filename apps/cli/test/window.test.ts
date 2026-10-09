@@ -4,7 +4,6 @@ import { outputWithReasoning } from "../src/watcher/schema";
 import {
   collectionWindow,
   inWindow,
-  isRecording,
   windowNotice,
   windowPhase,
 } from "../src/watcher/window";
@@ -46,7 +45,7 @@ describe("collectionWindow", () => {
   });
 });
 
-describe("windowPhase, isRecording and windowNotice", () => {
+describe("windowPhase and windowNotice", () => {
   const window = { since: START, until: END };
   const date = (ms: number) => `<${new Date(ms).toISOString()}>`;
 
@@ -56,13 +55,6 @@ describe("windowPhase, isRecording and windowNotice", () => {
     expect(windowPhase(window, END)).toBe("after");
     expect(windowPhase(null, START)).toBe("unscheduled");
     expect(windowPhase(undefined, START)).toBeUndefined();
-  });
-
-  test("recording happens only during the hackathon, for everybody", () => {
-    expect(isRecording(window, START - 1)).toBe(false);
-    expect(isRecording(window, START)).toBe(true);
-    expect(isRecording(window, END)).toBe(false);
-    expect(isRecording(null, START)).toBe(false);
   });
 
   test("a notice whenever it is not recording, with the date that matters", () => {

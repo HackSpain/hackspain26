@@ -16,7 +16,7 @@ export type Bar = {
   detail?: string;
 };
 
-export type Award = { title: string; team: string; detail: string };
+type Award = { title: string; team: string; detail: string };
 
 export type ClosingSummary = {
   hero: { label: string; value: number }[];

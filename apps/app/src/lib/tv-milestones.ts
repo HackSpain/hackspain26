@@ -1,7 +1,7 @@
 import type { Sample, Team } from "@/app/insights/mock-data";
 
-export const EVENT_TOKEN_STEP = 1_000_000_000;
-export const TEAM_TOKEN_THRESHOLDS = [
+const EVENT_TOKEN_STEP = 1_000_000_000;
+const TEAM_TOKEN_THRESHOLDS = [
   50_000_000, 100_000_000, 250_000_000, 500_000_000,
 ];
 export const BROADCAST_MS = 9000;

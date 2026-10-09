@@ -40,14 +40,6 @@ export function windowPhase(
   return now < window.until ? "during" : "after";
 }
 
-/** Whether usage happening right now is recorded: only during the hackathon. */
-export function isRecording(
-  window: CollectionWindow | null | undefined,
-  now: number
-): boolean {
-  return windowPhase(window, now) === "during";
-}
-
 /**
  * What the watcher shows while the clock is outside the window, so nobody
  * leaves it running believing it records. `formatDate` is injected to keep
