@@ -1,68 +1,22 @@
-import type { CanonicalModel, TokenCounts } from "./canonical";
+import type { HarnessId as Harness, TelemetryEvent } from "./canonical";
 import { telemetryWindow } from "./window";
 import {
   canonicalModel,
+  EVENT_TYPES,
+  HARNESSES,
+  MAX_EVENT_ID_LENGTH,
+  MAX_SESSION_ID_LENGTH,
+  MAX_SHORT_STRING_LENGTH,
+  MAX_VERSION_LENGTH,
   TELEMETRY_SCHEMA,
   TELEMETRY_SCHEMA_V1,
   totalTokens,
 } from "./canonical";
 
-export const TELEMETRY_BATCH_MAX = 200;
-export const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
+export type { TelemetryEvent } from "./canonical";
+export { TELEMETRY_BATCH_MAX, TELEMETRY_EVENT_MAX_BYTES } from "./canonical";
 
-const MAX_EVENT_ID_LENGTH = 512;
-const MAX_SESSION_ID_LENGTH = 256;
-const MAX_SHORT_STRING_LENGTH = 256;
-const MAX_VERSION_LENGTH = 64;
-
-const EVENT_TYPES = ["usage", "session.start", "session.end"] as const;
-const HARNESSES = [
-  "claude-code",
-  "codex",
-  "cursor",
-  "opencode",
-  "cline",
-  "copilot",
-  "gemini-cli",
-  "qwen-code",
-  "kilo-code",
-  "pi",
-  "omp",
-  "antigravity",
-  "devin",
-] as const;
-
-type EventType = (typeof EVENT_TYPES)[number];
-type Harness = (typeof HARNESSES)[number];
-
-/**
- * What is stored: always `hackspain.telemetry.v2`, with every derived field
- * (`model.name`, `model.family`, `model.provider`, `tokens.total`) computed
- * here by `./canonical`, never trusted from the client. A v1 event from an
- * older binary goes through the same code, so rows do not differ by harness
- * or by CLI version.
- */
-export type TelemetryEvent = {
-  schema: typeof TELEMETRY_SCHEMA;
-  type: EventType;
-  eventId: string;
-  occurredAt: string;
-  observedAt: string;
-  harness: Harness;
-  harnessVersion?: string;
-  sessionId: string;
-  project?: {
-    dirHash: string;
-    name: string;
-    gitBranch?: string;
-    repo?: string;
-  };
-  model?: CanonicalModel;
-  tokens?: TokenCounts & { total: number };
-  identity: { userId: string; teamId?: string; clientVersion: string };
-  /** Harness-specific, never comparable across harnesses. */
-  native?: { requestId?: string; costUsd?: number };
-};
+type EventType = TelemetryEvent["type"];
 
 const REPO_SLUG_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 

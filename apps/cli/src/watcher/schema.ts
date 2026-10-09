@@ -1,16 +1,29 @@
 import type {
   ModelFamily as CanonicalFamily,
-  CanonicalModel,
+  HarnessId,
+  TelemetryEvent,
   TokenCounts,
 } from "../../../app/src/app/api/cli/telemetry/canonical";
 import {
   modelFamily as canonicalFamily,
+  HARNESSES as canonicalHarnesses,
   canonicalModel,
+  MAX_EVENT_ID_LENGTH,
+  MAX_SESSION_ID_LENGTH,
+  MAX_SHORT_STRING_LENGTH,
+  MAX_VERSION_LENGTH,
   MODEL_FAMILIES,
+  TELEMETRY_EVENT_MAX_BYTES,
   TELEMETRY_SCHEMA,
   TELEMETRY_SCHEMA_V1,
   totalTokens,
 } from "../../../app/src/app/api/cli/telemetry/canonical";
+
+export type {
+  HarnessId,
+  TelemetryEvent,
+} from "../../../app/src/app/api/cli/telemetry/canonical";
+export const HARNESSES = canonicalHarnesses;
 
 /**
  * Canonical telemetry event: the one shape every harness collector produces
@@ -28,70 +41,8 @@ export function modelFamily(raw: string): ModelFamily {
   return canonicalFamily(raw);
 }
 
-export const HARNESSES = [
-  "claude-code",
-  "codex",
-  "cursor",
-  "opencode",
-  "cline",
-  "copilot",
-  "gemini-cli",
-  "qwen-code",
-  "kilo-code",
-  "pi",
-  "omp",
-  "antigravity",
-  "devin",
-] as const;
-export type HarnessId = (typeof HARNESSES)[number];
-
-type EventType = "usage" | "session.start" | "session.end";
-
-const TELEMETRY_EVENT_MAX_BYTES = 32 * 1024;
-
-const MAX_EVENT_ID_LENGTH = 512;
-const MAX_SESSION_ID_LENGTH = 256;
-const MAX_SHORT_STRING_LENGTH = 256;
-const MAX_VERSION_LENGTH = 64;
 const DIR_HASH_PATTERN = /^[a-f\d]{16}$/i;
 const REPO_SLUG_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-
-export type TelemetryEvent = {
-  schema: typeof SCHEMA;
-  type: EventType;
-  /** `${harness}:${sessionId}:${nativeId}`; global dedupe key. */
-  eventId: string;
-  /** ISO-8601 UTC, when the harness recorded it. */
-  occurredAt: string;
-  /** ISO-8601 UTC, when the watcher read it. */
-  observedAt: string;
-  harness: HarnessId;
-  harnessVersion?: string;
-  sessionId: string;
-  /** Sanitized project identity; never a full path or raw Git remote URL. */
-  project?: {
-    dirHash: string;
-    name: string;
-    gitBranch?: string;
-    repo?: string;
-  };
-  /** Derived from what the harness logged, the same way for every harness. */
-  model?: CanonicalModel;
-  /**
-   * For every harness: `input` excludes cache reads, `output` includes
-   * `reasoning` (a breakdown, absent when the harness does not report it),
-   * and `total` is input + output + cacheRead + cacheWrite.
-   */
-  tokens?: TokenCounts & { total: number };
-  /** Stamped by the CLI at flush time, never by collectors. */
-  identity: { userId: string; teamId?: string; clientVersion: string };
-  /**
-   * What only some harnesses report, so never comparable across them:
-   * Claude Code's `requestId`, and the `costUsd` OpenCode, Kilo Code,
-   * Cline, Pi and Oh My Pi compute themselves. Allowlisted here and on the server.
-   */
-  native?: { requestId?: string; costUsd?: number };
-};
 
 /**
  * What a collector yields: the facts as the harness logged them. `stamp`
