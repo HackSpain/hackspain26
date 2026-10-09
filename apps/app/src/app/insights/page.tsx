@@ -896,7 +896,6 @@ export function InsightsView() {
             <EventInsights
               samples={eventSamples}
               teams={eventTeams}
-              onSelect={openTeam}
               timeline={timeline}
             />
           </Tabs.Content>

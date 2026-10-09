@@ -327,7 +327,7 @@ export function InsightsEvolutionBox() {
   return (
     <Panel
       title="Evolución del evento"
-      eyebrow="Consumo por fase"
+      eyebrow="Consumo del evento"
       className="h-full overflow-hidden border-hs-ink/20 py-3"
     >
       {samples.length ? (
