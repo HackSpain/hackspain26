@@ -1,41 +1,21 @@
-interface DirectoryUrl {
-  kind: "x" | "linkedin" | "github" | "web" | "repo" | "demo" | "video";
-  url: string;
-}
+import type { FunctionReturnType } from "convex/server";
+import type { api } from "@convex/_generated/api";
 
-export interface DirectoryParticipant {
-  achievements?: string;
-  bio?: string;
-  city: string;
-  university?: string;
-  company?: string;
-  degree?: string;
-  freeTime?: string;
-  githubUsername?: string;
-  project?: {
-    description: string;
+type Participant = FunctionReturnType<typeof api.directory.list>[number];
+type CardFields = "city" | "displayName" | "role" | "skills";
+type Track = Participant["tracks"][number];
+
+/** Cards accept partial enrichment and public string IDs, including TV demo cards. */
+export type DirectoryParticipant = Pick<Participant, CardFields> &
+  Partial<
+    Omit<Participant, CardFields | "id" | "team" | "project" | "tracks">
+  > & {
     id: string;
-    name: string;
-    techStack: string[];
-    urls: DirectoryUrl[];
+    team?: Omit<NonNullable<Participant["team"]>, "id"> & { id: string };
+    project?: Omit<NonNullable<Participant["project"]>, "id"> & { id: string };
+    tracks?: (Omit<Track, "id" | "slug"> &
+      Partial<Pick<Track, "slug">> & { id: string })[];
   };
-  projectName?: string;
-  team?: { id: string; name: string };
-  /** The team's chosen challenges; `logoUrl` is the sponsor wordmark, `slug` finds its symbol. */
-  tracks?: { id: string; label: string; logoUrl?: string; slug?: string }[];
-  interests?: string[];
-  displayName: string;
-  email?: string;
-  /** Stable public identifier used in shareable links. Never use an email. */
-  id: string;
-  /** True for the viewer's own card. */
-  isMe?: boolean;
-  /** Already small (convex/lib/photo.ts): the map and lists never need more than 128px. */
-  photoUrl?: string;
-  role: string;
-  skills: string[];
-  urls?: DirectoryUrl[];
-}
 
 export function personHeading(
   person: Pick<DirectoryParticipant, "displayName" | "role">
