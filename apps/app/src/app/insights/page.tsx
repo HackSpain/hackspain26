@@ -283,7 +283,8 @@ function downloadCsv(rows: TeamRow[]) {
       rows.map((row) => [
         row.name,
         row.project,
-        row.track,
+        // Preserve the existing empty "Reto" column for CSV compatibility.
+        "",
         row.tokens,
         row.commits,
         row.pullRequests,
@@ -453,7 +454,7 @@ function Leaderboard({
                         {team.name}
                       </span>
                       <span className="mt-0.5 block text-[11px] text-hs-brown">
-                        {[team.project, team.track].filter(Boolean).join(" · ")}
+                        {team.project}
                       </span>
                     </span>
                   </button>
@@ -569,16 +570,11 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
         </p>
         <DialogTitle>{team.name}</DialogTitle>
         <DialogDescription>
-          {[team.project, team.track, `${team.members} personas`]
+          {[team.project, `${team.members} personas`]
             .filter(Boolean)
             .join(" · ")}
         </DialogDescription>
       </DialogHeader>
-      {team.description.trim() ? (
-        <p className="border-y border-hs-ink/15 py-4 leading-relaxed">
-          {team.description}
-        </p>
-      ) : null}
       <div className="grid grid-cols-3 gap-3">
         {METRICS.map((metric) => (
           <div
@@ -667,11 +663,11 @@ export function InsightsView() {
 
   const allSamples = live.samples;
   const samples = useMemo(
-    () => filterSamples(allSamples, period, "all", live.teams, timeline),
+    () => filterSamples(allSamples, period, live.teams, timeline),
     [allSamples, period, live.teams, timeline]
   );
   const eventSamples = useMemo(
-    () => filterSamples(allSamples, "event", "all", live.teams, timeline),
+    () => filterSamples(allSamples, "event", live.teams, timeline),
     [allSamples, live.teams, timeline]
   );
   // People without a team count in every total and never in a team list.

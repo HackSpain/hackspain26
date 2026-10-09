@@ -77,7 +77,6 @@ export const HARNESSES = CANONICAL_HARNESSES.map((id) => ({
   ...HARNESS_DISPLAY[id],
 }));
 
-const TRACKS: string[] = [];
 export const PERIODS = [
   { buckets: 24, id: "event", label: "Todo el evento", minutes: 0 },
   { buckets: 12, id: "6h", label: "Últimas 6 horas", minutes: 360 },
@@ -85,15 +84,12 @@ export const PERIODS = [
 ] as const;
 
 export type Period = (typeof PERIODS)[number]["id"];
-type Track = (typeof TRACKS)[number];
 export type Metric = "tokens" | "commits" | "pullRequests";
 
 export interface Team {
   id: string;
   name: string;
   project: string;
-  description: string;
-  track: Track;
   members: number;
   primary: HarnessId;
   secondary: HarnessId;
@@ -101,9 +97,6 @@ export interface Team {
   /** Team logo, when the owner uploaded one. */
   logoUrl?: string;
 }
-
-// Insights telemetry is not connected yet. Never substitute fictional teams.
-export const TEAMS: Team[] = [];
 
 export interface Sample {
   teamId: string;
@@ -143,20 +136,14 @@ export function periodBuckets(
   return { from: Math.max(0, to - span + 1), to };
 }
 
-/** `teams` defaults to the static list; live callers pass the real ones. */
 export function filterSamples(
   samples: Sample[],
   period: Period,
-  track: string,
-  teams: Team[] = TEAMS,
+  teams: Team[],
   timeline?: Timeline
 ): Sample[] {
   const { from, to } = periodBuckets(period, timeline);
-  const ids = new Set(
-    teams
-      .filter((team) => track === "all" || team.track === track)
-      .map((team) => team.id)
-  );
+  const ids = new Set(teams.map((team) => team.id));
   return samples.filter(
     (sample) =>
       sample.bucket >= from && sample.bucket <= to && ids.has(sample.teamId)
@@ -196,7 +183,7 @@ export function bucketTotals(samples: Sample[]): Totals[] {
   );
 }
 
-export function teamRows(samples: Sample[], teams: Team[] = TEAMS) {
+export function teamRows(samples: Sample[], teams: Team[]) {
   return teams
     .filter((team) => samples.some((sample) => sample.teamId === team.id))
     .map((team) => ({

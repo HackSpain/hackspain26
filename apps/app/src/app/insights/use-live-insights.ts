@@ -111,7 +111,6 @@ export function toInsightData(payload: TvInsights): LiveInsightData {
 
   const teams: Team[] = payload.teams.map((team, index) => ({
     color: TEAM_COLORS[index % TEAM_COLORS.length] ?? "#d96b2a",
-    description: "",
     id: team.id,
     ...(team.logoUrl ? { logoUrl: team.logoUrl } : {}),
     members: team.members,
@@ -119,19 +118,16 @@ export function toInsightData(payload: TvInsights): LiveInsightData {
     primary: mainHarness(team.id, 0),
     project: team.project,
     secondary: mainHarness(team.id, 1),
-    track: "",
   }));
   if (usageByTeam.has(NO_TEAM_ID)) {
     teams.push({
       color: "#8a7a6a",
-      description: "",
       id: NO_TEAM_ID,
       members: 0,
       name: "Sin equipo",
       primary: mainHarness(NO_TEAM_ID, 0),
       project: "",
       secondary: mainHarness(NO_TEAM_ID, 1),
-      track: "",
     });
   }
 
