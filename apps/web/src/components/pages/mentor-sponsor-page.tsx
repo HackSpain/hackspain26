@@ -20,8 +20,8 @@ import {
 } from "../../lib/mentor-sponsor-validation";
 import type { DietaryRestrictionId } from "../../lib/signup-validation";
 import { DIETARY_RESTRICTION_OPTIONS } from "../../lib/signup-validation";
-import { hsControlBaseClass } from "../form/field-classes";
 import { HackSpainCheckbox } from "../form/checkbox";
+import { hsControlBaseClass } from "../form/field-classes";
 import { FormField } from "../form/form-field";
 import { Input } from "../form/input";
 import { Textarea } from "../form/textarea";
