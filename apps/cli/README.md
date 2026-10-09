@@ -210,7 +210,7 @@ Harnesses box says "since …"), the last announcements are back on screen, and 
 harness logs written while the watcher was closed instead of skipping them. Announcements caught up on start stay on screen but do not
 toast; only ones from the last ten minutes do.
 
-One watcher per machine (`watch.lock`); Ctrl+C flushes and exits.
+One watcher per machine (`watch.lock`); Ctrl+C flushes and exits. After an unexpected process exit, confirm no watcher is running before removing the lock file named in the error.
 
 ## Feed
 
