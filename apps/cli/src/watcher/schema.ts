@@ -8,6 +8,7 @@ import {
   modelFamily as canonicalFamily,
   HARNESSES as canonicalHarnesses,
   canonicalModel,
+  EVENT_TYPES,
   MAX_EVENT_ID_LENGTH,
   MAX_SESSION_ID_LENGTH,
   MAX_SHORT_STRING_LENGTH,
@@ -213,7 +214,7 @@ export function validateEvent(value: unknown): string[] {
   if (e.schema !== SCHEMA) {
     problems.push(`schema must be ${SCHEMA}`);
   }
-  if (!["usage", "session.start", "session.end"].includes(String(e.type))) {
+  if (!EVENT_TYPES.some((type) => type === e.type)) {
     problems.push("type must be usage | session.start | session.end");
   }
   if (!isBoundedString(e.eventId, MAX_EVENT_ID_LENGTH)) {
