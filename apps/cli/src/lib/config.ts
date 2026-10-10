@@ -79,8 +79,56 @@ function configPath(): string {
   return join(configDir(), "config.json");
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function readConfig(): CliConfig {
-  return readJsonFile<CliConfig>(configPath()) ?? {};
+  let contents: string;
+  try {
+    contents = readFileSync(configPath(), "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return {};
+    }
+    throw usageError(
+      "Cannot read CLI configuration.",
+      `Check access to ${configPath()}`
+    );
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(contents);
+  } catch {
+    throw usageError(
+      "Invalid JSON in CLI configuration.",
+      `Correct ${configPath()}`
+    );
+  }
+  const invalid = () =>
+    usageError(
+      "Invalid CLI configuration: appUrl and telemetry.url must be strings.",
+      `Correct ${configPath()}`
+    );
+  if (!isRecord(value)) {
+    throw invalid();
+  }
+  const appUrl = value.appUrl;
+  if (appUrl !== undefined && typeof appUrl !== "string") {
+    throw invalid();
+  }
+  let telemetry: CliConfig["telemetry"];
+  if (value.telemetry !== undefined) {
+    if (!isRecord(value.telemetry)) {
+      throw invalid();
+    }
+    const url = value.telemetry.url;
+    if (url !== undefined && typeof url !== "string") {
+      throw invalid();
+    }
+    telemetry = { url };
+  }
+  return { appUrl, telemetry };
 }
 
 export type UrlSource = "flag" | "env" | "config" | "default";
@@ -89,14 +137,14 @@ export function resolveAppUrl(override?: string): {
   url: string;
   source: UrlSource;
 } {
-  const candidates: [string | undefined, UrlSource][] = [
-    [override, "flag"],
-    [process.env.HACKSPAIN_APP_URL, "env"],
-    [readConfig().appUrl, "config"],
-    [DEFAULT_APP_URL, "default"],
+  const candidates: [() => string | undefined, UrlSource][] = [
+    [() => override, "flag"],
+    [() => process.env.HACKSPAIN_APP_URL, "env"],
+    [() => readConfig().appUrl, "config"],
+    [() => DEFAULT_APP_URL, "default"],
   ];
   for (const [value, source] of candidates) {
-    const url = value?.trim();
+    const url = value()?.trim();
     if (!url) {
       continue;
     }
