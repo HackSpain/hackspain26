@@ -101,6 +101,33 @@ const tickTextAnchor = (index: number) => {
   }
   return "middle";
 };
+const PUBLISHED_DATE = "2026-09-24";
+const MODIFIED_DATE = "2026-09-29";
+const DESCRIPTION =
+  "HackSpain fue fundado por Leonardo Ollero y Samuel Cordero Sánchez, con la colaboración de The Exponential Fellowship. Así fue su primera edición en Madrid.";
+const pageUrl = new URL("/cronica", Astro.site).href;
+const articleJson = JSON.stringify({
+  "@context": "https://schema.org",
+  "@id": `${pageUrl}#article`,
+  "@type": "Article",
+  alternativeHeadline: "Así fue HackSpain 2026",
+  author: {
+    "@type": "Person",
+    name: "Samuel Cordero",
+    url: "https://x.com/disamdev",
+  },
+  dateModified: MODIFIED_DATE,
+  datePublished: PUBLISHED_DATE,
+  description: DESCRIPTION,
+  headline: "El fin de semana que Madrid no durmió",
+  image: [
+    new URL("/images/2026-insights/entrega-premios.webp", Astro.site).href,
+  ],
+  inLanguage: "es",
+  isPartOf: { "@id": new URL("/#website", Astro.site).href },
+  mainEntityOfPage: { "@id": `${pageUrl}#webpage` },
+  publisher: { "@id": new URL("/#organization", Astro.site).href },
+});
 const publishedAt = dateTime(insightData.snapshotAt, {
   day: "numeric",
   month: "long",
@@ -203,12 +230,12 @@ const matrixTint = (count: number, total: number) =>
 <Layout
   allowScroll
   canonicalPathOverride="/cronica"
-  description="HackSpain fue fundado por Leonardo Ollero y Samuel Cordero Sánchez, con la colaboración de The Exponential Fellowship. Así fue su primera edición en Madrid."
-  includeStructuredData={false}
+  description={DESCRIPTION}
   keywordsOverride="HackSpain 2026, crónica hackathon Madrid, resultados HackSpain, datos hackathon, proyectos, GitHub, IA"
   ogImageAlt="HackSpain 2026 — Madrid, 18 al 20 de septiembre"
   title="Así fue HackSpain 2026 | HackSpain"
 >
+  <script set:html={articleJson} is:inline type="application/ld+json" />
   <main id="main" class="article-page">
     <article>
       <InsightsOpening />
@@ -229,7 +256,7 @@ const matrixTint = (count: number, total: number) =>
       <div class="reading-width prose intro">
         <div class="byline">
           <span>By Samuel Cordero</span
-          ><time datetime="2026-09-24">{publishedAt}</time>
+          ><time datetime={PUBLISHED_DATE}>{publishedAt}</time>
         </div>
         <p>
           El viernes llegaron con ideas. El domingo se fueron con proyectos,

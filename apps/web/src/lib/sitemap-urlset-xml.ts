@@ -1,3 +1,5 @@
+import type { SitemapPage } from "../data/sitemap-pages";
+
 function esc(s: string): string {
   return s
     .replaceAll("&", "&amp;")
@@ -7,19 +9,20 @@ function esc(s: string): string {
 }
 
 export function buildSitemapUrlsetXml(
-  pageUrls: string[],
+  pages: SitemapPage[],
   _siteOrigin: string
 ): string {
-  const urls = [...pageUrls].toSorted((a, b) =>
-    a.localeCompare(b, "es", { numeric: true })
+  const sorted = [...pages].toSorted((a, b) =>
+    a.url.localeCompare(b.url, "es", { numeric: true })
   );
   const lines: string[] = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
   ];
-  for (const url of urls) {
+  for (const page of sorted) {
     lines.push("  <url>");
-    lines.push(`    <loc>${esc(url)}</loc>`);
+    lines.push(`    <loc>${esc(page.url)}</loc>`);
+    lines.push(`    <lastmod>${esc(page.lastmod)}</lastmod>`);
     lines.push("  </url>");
   }
   lines.push("</urlset>");

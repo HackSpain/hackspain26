@@ -124,6 +124,12 @@
   font-style: normal;
   color: var(--color-hs-red);
 }
+.cinema-link {
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .cinema-screen {
   position: relative;
   display: flex;

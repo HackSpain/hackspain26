@@ -99,6 +99,9 @@ export function CommunityHeading() {
       <h2>
         ASÍ FUE <em>HACKSPAIN.</em>
       </h2>
+      <a className="cinema-link" href="/cronica">
+        Lee la crónica completa ↗
+      </a>
     </header>
   );
 }
