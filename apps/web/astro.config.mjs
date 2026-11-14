@@ -52,4 +52,6 @@ export default defineConfig({
   output: "server",
   site: "https://hackspain.com",
   trailingSlash: "never",
+  // react-tweet ships CSS modules, which only Vite can load during SSR.
+  vite: { resolve: { noExternal: ["react-tweet"] } },
 });

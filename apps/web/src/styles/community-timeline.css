@@ -332,19 +332,28 @@
   }
 }
 
-a.reel-tweet {
-  display: block;
+.reel-embed {
+  --tweet-container-margin: 0;
+  min-width: 0;
 }
-.reel-text {
-  margin-top: 12px;
-  font-size: 12px;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-  white-space: pre-line;
+.reel-embed .react-tweet-theme {
+  --tweet-body-font-size: 0.875rem;
+  --tweet-body-line-height: 1.3rem;
+  --tweet-header-font-size: 0.8125rem;
+  --tweet-header-line-height: 1.1rem;
+  --tweet-info-font-size: 0.75rem;
+  --tweet-actions-font-size: 0.75rem;
+  --tweet-replies-font-size: 0.75rem;
+  --tweet-quoted-body-font-size: 0.8125rem;
+  --tweet-quoted-body-line-height: 1.15rem;
+  min-width: 0;
+  border: 2px solid var(--color-hs-ink);
+  border-radius: 0;
 }
-@media (hover: hover) and (pointer: fine) {
-  a.reel-tweet:hover .reel-author strong {
-    text-decoration: underline;
+@media (max-width: 767px) {
+  .reel-embed .react-tweet-theme {
+    --tweet-body-font-size: 0.8125rem;
+    --tweet-body-line-height: 1.2rem;
   }
 }
 

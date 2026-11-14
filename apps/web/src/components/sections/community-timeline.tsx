@@ -1,32 +1,22 @@
 import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
-import type { CommunityPost } from "../../data/recap";
-import { communityPosts } from "../../data/recap";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { EmbeddedTweet } from "react-tweet";
+import type { Tweet } from "react-tweet/api";
+import { communityTweets } from "../../data/community-tweets";
+import { COMMUNITY_SECTION_INDEX } from "../../data/section-routes";
+import { SPRING } from "../theme/constants";
 import "../../styles/community-timeline.css";
 
 const EMPTY_CARDS = [0, 1, 2, 3];
+const tweets = communityTweets;
 
-function TweetCard({ post }: { post: CommunityPost }) {
-  return (
-    <a
-      className="reel-tweet"
-      href={post.url}
-      rel="noopener noreferrer"
-      target="_blank"
-    >
-      <div className="reel-author">
-        <span aria-hidden="true" className="reel-avatar">
-          {post.author.charAt(0)}
-        </span>
-        <div>
-          <strong>{post.author}</strong>
-          <span>@{post.handle}</span>
-        </div>
-        <span aria-hidden="true">𝕏</span>
-      </div>
-      <p className="reel-text">{post.text}</p>
-    </a>
-  );
+function subscribeToPageLoad(onChange: () => void): () => void {
+  window.addEventListener("load", onChange);
+  return () => window.removeEventListener("load", onChange);
+}
+
+function isPageLoaded(): boolean {
+  return document.readyState === "complete";
 }
 
 function TweetReel({
@@ -34,7 +24,7 @@ function TweetReel({
   reverse,
   label,
 }: {
-  posts: CommunityPost[];
+  posts: Tweet[];
   reverse?: boolean;
   label: string;
 }) {
@@ -44,12 +34,16 @@ function TweetReel({
       ? Array.from(
           { length: Math.max(1, Math.ceil(2 / posts.length)) },
           (_, repeat) =>
-            posts.map((post) => ({ post, key: `${repeat}-${post.url}` }))
+            posts.map((post) => ({ post, key: `${repeat}-${post.id_str}` }))
         ).flat()
       : [];
   const cards =
     sequence.length > 0
-      ? sequence.map(({ post, key }) => <TweetCard key={key} post={post} />)
+      ? sequence.map(({ post, key }) => (
+          <div className="reel-embed" key={key}>
+            <EmbeddedTweet tweet={post} />
+          </div>
+        ))
       : EMPTY_CARDS.map((id) => (
           <div
             aria-hidden="true"
@@ -96,24 +90,27 @@ function TweetReel({
 }
 
 export function CommunityTimeline({
-  isActive,
+  section,
   onNext,
   onPrevious,
   reducedMotion,
 }: {
-  isActive: boolean;
+  section: number;
   onNext: () => void;
   onPrevious: () => void;
   reducedMotion: boolean;
 }) {
+  const isActive = section === COMMUNITY_SECTION_INDEX;
+  // Tweet images would otherwise compete with the visible page's own loading.
+  const reelsReady =
+    useSyncExternalStore(subscribeToPageLoad, isPageLoaded, () => false) ||
+    isActive;
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hidden, setHidden] = useState(false);
   const [blocked, setBlocked] = useState(false);
-  const leftPosts = communityPosts.filter((_, index) => index % 2 === 0);
+  const leftPosts = tweets.filter((_, index) => index % 2 === 0);
   const rightPosts =
-    communityPosts.length > 1
-      ? communityPosts.filter((_, index) => index % 2 === 1)
-      : communityPosts;
+    tweets.length > 1 ? tweets.filter((_, index) => index % 2 === 1) : tweets;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -170,27 +167,34 @@ export function CommunityTimeline({
 
   return (
     <motion.section
-      animate={{
-        opacity: isActive ? 1 : 0,
-        y: isActive || reducedMotion ? 0 : "100%",
-      }}
+      animate={
+        isActive
+          ? { opacity: 1, visibility: "visible", y: "0%" }
+          : {
+              opacity: reducedMotion ? 0 : 1,
+              // Park the panel on the side the visitor scrolled away from, so
+              // it leaves and returns in the same direction as the mosaic.
+              y: reducedMotion
+                ? "0%"
+                : `${section < COMMUNITY_SECTION_INDEX ? 100 : -100}%`,
+              transitionEnd: { visibility: "hidden" },
+            }
+      }
       aria-hidden={!isActive}
       aria-labelledby="cinema-heading"
       className="recap-cinema"
       data-hidden={hidden || !isActive}
       data-paused={reducedMotion}
+      data-theme="light"
       inert={!isActive}
-      initial={{ opacity: 0, y: reducedMotion ? 0 : "100%" }}
-      style={{
-        visibility: isActive ? "visible" : "hidden",
-        pointerEvents: isActive ? "auto" : "none",
-      }}
-      transition={{
-        duration: reducedMotion ? 0.15 : 0.5,
-        ease: [0.22, 1, 0.36, 1],
-      }}
+      initial={false}
+      style={{ pointerEvents: isActive ? "auto" : "none" }}
+      transition={reducedMotion ? { duration: 0.2, type: "tween" } : SPRING}
     >
-      <TweetReel label="VUESTRAS HISTORIAS" posts={leftPosts} />
+      <TweetReel
+        label="VUESTRAS HISTORIAS"
+        posts={reelsReady ? leftPosts : []}
+      />
       <div className="cinema-center">
         <header className="cinema-heading">
           <span>MADRID · 18—20 SEPTIEMBRE 2026</span>
@@ -216,7 +220,7 @@ export function CommunityTimeline({
           </video>
         </div>
         <div className="cinema-note">
-          {communityPosts.length === 0 && (
+          {tweets.length === 0 && (
             <span>Tweets de la comunidad · Próximamente</span>
           )}
           {blocked && (
@@ -224,7 +228,11 @@ export function CommunityTimeline({
           )}
         </div>
       </div>
-      <TweetReel label="LO QUE NOS LLEVAMOS" posts={rightPosts} reverse />
+      <TweetReel
+        label="LO QUE NOS LLEVAMOS"
+        posts={reelsReady ? rightPosts : []}
+        reverse
+      />
       <nav aria-label="Secciones de HackSpain" className="cinema-nav">
         <button onClick={onPrevious} type="button">
           ↑ Volver al inicio

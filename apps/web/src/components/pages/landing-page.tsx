@@ -465,10 +465,10 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
             {renderMosaic("compact")}
           </div>
           <CommunityTimeline
-            isActive={section === COMMUNITY_SECTION_INDEX}
             onNext={() => advance(1)}
             onPrevious={() => advance(-1)}
             reducedMotion={reducedMotion}
+            section={section}
           />
         </div>
         {section === 0 && (

@@ -4,7 +4,7 @@
 
 HackSpain was founded by Leonardo Ollero and Samuel Cordero Sánchez. The Exponential Fellowship collaborated with them to make the first edition happen. HackSpain brought together young technical talent to build projects across five startup-led tracks. Participants had free compute, and the edition featured a €5,000 grand prize judged by leading Spanish venture capital firms. The canonical website is https://hackspain.com.
 
-HackSpain 2026 has concluded. The homepage presents the event video, eight public X posts from the community quoted with links to the originals, the preserved edition information and an email field to be notified about HackSpain 2027. Applications for HackSpain 2026 are closed. HackSpain is not a school, job board, online course, or an unrelated event named “Hack Spain.”
+HackSpain 2026 has concluded. The homepage presents the event video, eight public X posts from the community shown as tweets linking to the originals, the preserved edition information and an email field to be notified about HackSpain 2027. Applications for HackSpain 2026 are closed. HackSpain is not a school, job board, online course, or an unrelated event named “Hack Spain.”
 
 Infrastructure sponsors of the 2026 edition were Convex, Vercel, QuiverAI, Cloudflare, Tinybird, Cognition, Exa, fal.ai, Cursor and Helmcode. The edition also involved track startups, venture capital firms and additional collaborators; use the website as the authoritative archive of the lineup.
 
