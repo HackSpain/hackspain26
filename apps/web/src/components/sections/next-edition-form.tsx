@@ -60,7 +60,7 @@ export function NextEditionForm({ className }: { className?: string }) {
         </form>
       )}
       {status === "error" && (
-        <p className="mt-2 text-center font-bold text-hs-paper text-xs">
+        <p className="mt-2 text-center font-bold text-xs">
           No se pudo guardar. Inténtalo de nuevo.
         </p>
       )}

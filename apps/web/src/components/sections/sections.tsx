@@ -597,6 +597,12 @@ export function buildSections(): Record<string, React.ReactNode>[] {
       ),
       r4c: (
         <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-6">
+          <div className="flex w-full max-w-[420px] flex-col items-center gap-2">
+            <p className={`${LBL} text-center text-hs-ink`}>
+              ¿Te avisamos de HackSpain '27?
+            </p>
+            <NextEditionForm className="w-full text-hs-ink" />
+          </div>
           <a
             className="font-bold underline underline-offset-4"
             href="/comunidad"
@@ -1068,6 +1074,12 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
       ),
       b1: (
         <P bg="bg-hs-paper" className={`${CARD} !justify-evenly`}>
+          <div className="flex w-full max-w-[420px] flex-col items-center gap-2">
+            <p className={`${CLBL} text-center text-hs-ink`}>
+              ¿Te avisamos de HackSpain '27?
+            </p>
+            <NextEditionForm className="w-full text-hs-ink" />
+          </div>
           <a
             className="font-bold underline underline-offset-4"
             href="/comunidad"
