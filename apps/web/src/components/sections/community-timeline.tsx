@@ -1,143 +1,72 @@
-import { motion } from "motion/react";
+import { useReducedMotion } from "motion/react";
+import type { ComponentProps } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { CommunityPost } from "../../data/recap";
-import { communityPosts } from "../../data/recap";
-import { loadXWidgets } from "../../lib/x-widgets";
+import { EmbeddedTweet } from "react-tweet";
+import { communityTweets } from "../../data/community-tweets";
 import "../../styles/community-timeline.css";
 
-const EMPTY_CARDS = [0, 1, 2, 3];
+type TweetComponents = NonNullable<
+  ComponentProps<typeof EmbeddedTweet>["components"]
+>;
+type MediaImgProps = Parameters<NonNullable<TweetComponents["MediaImg"]>>[0];
 
-function TweetCard({ post }: { post: CommunityPost }) {
-  const frameRef = useRef<HTMLElement>(null);
-  const embedRef = useRef<HTMLDivElement>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [width, setWidth] = useState(250);
-  const scale = Math.min(1, width / 250);
-
-  useEffect(() => {
-    const frame = frameRef.current;
-    const container = embedRef.current;
-    if (!(frame && container)) {
-      return;
-    }
-    let active = true;
-    const observer = new ResizeObserver(() => {
-      if (frame.clientWidth > 0) {
-        setWidth(frame.clientWidth);
-      }
-    });
-    observer.observe(frame);
-    // Each effect owns its target, so late widget responses cannot duplicate it.
-    const target = document.createElement("div");
-    container.append(target);
-    const timeout = window.setTimeout(() => {
-      if (active) {
-        setFailed(true);
-      }
-    }, 20_000);
-    loadXWidgets()
-      .then((api) => {
-        if (!active) {
-          return;
-        }
-        return api.widgets.createTweet(
-          post.url.split("/").at(-1) ?? "",
-          target,
-          {
-            theme: "light",
-            lang: "es",
-            dnt: true,
-            conversation: "none",
-          }
-        );
-      })
-      .then((element) => {
-        if (active) {
-          window.clearTimeout(timeout);
-          setLoaded(Boolean(element));
-          setFailed(!element);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          window.clearTimeout(timeout);
-          setFailed(true);
-        }
-      });
-    return () => {
-      active = false;
-      window.clearTimeout(timeout);
-      observer.disconnect();
-      target.remove();
-    };
-  }, [post.url]);
-
+/** Reel columns are under 300px wide; X's "small" photos are about 680px JPEGs. */
+function ReelMediaImg({ alt, src, ...props }: MediaImgProps) {
+  const url = new URL(src);
+  url.searchParams.set("format", "webp");
+  url.searchParams.set("name", "360x360");
   return (
-    <article className="reel-embed" ref={frameRef}>
-      <div
-        className="reel-embed-content"
-        ref={embedRef}
-        style={{ width: Math.max(250, width), zoom: scale }}
-      />
-      {!loaded && (
-        <div className="reel-embed-fallback">
-          <span>
-            {failed ? "Ver publicación original" : "Cargando publicación de X…"}
-          </span>
-          <a href={post.url} rel="noopener noreferrer" target="_blank">
-            {post.author} · @{post.handle} ↗
-          </a>
-        </div>
-      )}
-    </article>
+    <img
+      alt={alt}
+      decoding="async"
+      height={360}
+      loading="lazy"
+      src={url.toString()}
+      width={360}
+      {...props}
+    />
   );
 }
 
-function TweetReel({
-  posts,
-  reverse,
-  label,
-}: {
-  posts: CommunityPost[];
-  reverse?: boolean;
-  label: string;
-}) {
-  // Repeat short collections to fill tall screens without an empty seam.
-  const sequence =
-    posts.length > 0
-      ? Array.from(
-          { length: Math.max(1, Math.ceil(2 / posts.length)) },
-          (_, repeat) =>
-            posts.map((post) => ({ post, key: `${repeat}-${post.url}` }))
-        ).flat()
-      : [];
-  const cards =
-    sequence.length > 0
-      ? sequence.map(({ post, key }) => <TweetCard key={key} post={post} />)
-      : EMPTY_CARDS.map((id) => (
-          <div
-            aria-hidden="true"
-            className="reel-tweet reel-placeholder"
-            key={id}
-          >
-            <div className="reel-author">
-              <span className="reel-avatar" />
-              <span className="reel-ghost-name" />
-              <span>𝕏</span>
-            </div>
-            <div className="reel-ghost-lines">
-              <span />
-              <span />
-              <span />
-            </div>
-            <span className="reel-pending-label">TWEET PENDIENTE</span>
-          </div>
-        ));
+const TWEET_COMPONENTS: TweetComponents = { MediaImg: ReelMediaImg };
+
+const REELS = {
+  left: {
+    label: "VUESTRAS HISTORIAS",
+    posts: communityTweets.filter((_, index) => index % 2 === 0),
+  },
+  right: {
+    label: "LO QUE NOS LLEVAMOS",
+    posts: communityTweets.filter((_, index) => index % 2 === 1),
+  },
+};
+
+/**
+ * The loop's second copy only scrolls into view seconds later, so it mounts
+ * after the section transition instead of doubling the tweets laid out
+ * during it; the scroll waits for it so the track height never jumps.
+ */
+const REEL_START_MS = 1000;
+
+export function CommunityReel({ side }: { side: keyof typeof REELS }) {
+  const { label, posts } = REELS[side];
+  const [looping, setLooping] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setLooping(true), REEL_START_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const cards = posts.map((post) => (
+    <div className="reel-embed" key={post.id_str}>
+      <EmbeddedTweet components={TWEET_COMPONENTS} tweet={post} />
+    </div>
+  ));
   return (
     <section
       aria-label={label}
-      className={`tweet-reel ${reverse ? "tweet-reel-reverse" : ""}`}
+      className={`tweet-reel ${side === "right" ? "tweet-reel-reverse" : ""}`}
+      data-theme="light"
     >
       <div className="reel-label">
         <span>{label}</span>
@@ -147,42 +76,44 @@ function TweetReel({
         <div
           className="reel-track"
           style={{
-            animationDuration: `${Math.max(48, sequence.length * 20)}s`,
+            animationDelay: `${REEL_START_MS}ms`,
+            animationDuration: `${Math.max(48, posts.length * 20)}s`,
           }}
         >
           <div className="reel-set">{cards}</div>
-          <div aria-hidden="true" className="reel-set reel-copy" inert>
-            {cards}
-          </div>
+          {looping && (
+            <div aria-hidden="true" className="reel-set reel-copy" inert>
+              {cards}
+            </div>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-export function CommunityTimeline({
-  isActive,
-  onNext,
-  onPrevious,
-  reducedMotion,
-}: {
-  isActive: boolean;
-  onNext: () => void;
-  onPrevious: () => void;
-  reducedMotion: boolean;
-}) {
+export function CommunityHeading() {
+  return (
+    <header className="cinema-heading">
+      <span>MADRID · 18—20 SEPTIEMBRE 2026</span>
+      <h2>
+        ASÍ FUE <em>HACKSPAIN.</em>
+      </h2>
+      <a className="cinema-link" href="/cronica">
+        Lee la crónica completa ↗
+      </a>
+    </header>
+  );
+}
+
+export function CommunityVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [hidden, setHidden] = useState(false);
+  const reducedMotion = useReducedMotion();
   const [blocked, setBlocked] = useState(false);
-  const leftPosts = communityPosts.filter((_, index) => index % 2 === 0);
-  const rightPosts =
-    communityPosts.length > 1
-      ? communityPosts.filter((_, index) => index % 2 === 1)
-      : communityPosts;
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!(video && isActive)) {
+    if (!video) {
       return;
     }
     let active = true;
@@ -217,7 +148,6 @@ export function CommunityTimeline({
       play();
     }
     const onVisibility = () => {
-      setHidden(document.hidden);
       if (document.hidden) {
         resume = !video.paused;
         video.pause();
@@ -231,74 +161,28 @@ export function CommunityTimeline({
       video.pause();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [reducedMotion, isActive]);
+  }, [reducedMotion]);
 
   return (
-    <motion.section
-      animate={{
-        opacity: isActive ? 1 : 0,
-        y: isActive || reducedMotion ? 0 : "100%",
-      }}
-      aria-hidden={!isActive}
-      aria-labelledby="cinema-heading"
-      className="recap-cinema"
-      data-hidden={hidden || !isActive}
-      data-paused={reducedMotion}
-      inert={!isActive}
-      initial={{ opacity: 0, y: reducedMotion ? 0 : "100%" }}
-      style={{
-        visibility: isActive ? "visible" : "hidden",
-        pointerEvents: isActive ? "auto" : "none",
-      }}
-      transition={{
-        duration: reducedMotion ? 0.15 : 0.5,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-    >
-      <TweetReel label="VUESTRAS HISTORIAS" posts={leftPosts} />
-      <div className="cinema-center">
-        <header className="cinema-heading">
-          <span>MADRID · 18—20 SEPTIEMBRE 2026</span>
-          <h2 id="cinema-heading">
-            ASÍ FUE <br />
-            <em>HACKSPAIN.</em>
-          </h2>
-        </header>
-        <div className="cinema-screen">
-          <video
-            aria-label="Vídeo de HackSpain 2026"
-            autoPlay={isActive && !reducedMotion}
-            controls
-            loop
-            muted
-            onPlay={() => setBlocked(false)}
-            playsInline
-            poster="/recap/poster.jpg"
-            preload="metadata"
-            ref={videoRef}
-          >
-            <source src="/recap/hackspain-2026.mp4" type="video/mp4" />
-          </video>
-        </div>
-        <div className="cinema-note">
-          {communityPosts.length === 0 && (
-            <span>Tweets de la comunidad · Próximamente</span>
-          )}
-          {blocked && (
-            <span role="status">Pulsa play en el vídeo para reproducirlo.</span>
-          )}
-        </div>
-      </div>
-      <TweetReel label="LO QUE NOS LLEVAMOS" posts={rightPosts} reverse />
-      <nav aria-label="Secciones de HackSpain" className="cinema-nav">
-        <button onClick={onPrevious} type="button">
-          ↑ Volver al inicio
-        </button>
-        <span>GRACIAS POR HACERLO POSIBLE.</span>
-        <button onClick={onNext} type="button">
-          La misión →
-        </button>
-      </nav>
-    </motion.section>
+    <div className="cinema-screen">
+      <video
+        aria-label="Vídeo de HackSpain 2026"
+        controls
+        loop
+        muted
+        onPlay={() => setBlocked(false)}
+        playsInline
+        poster="/recap/poster.webp"
+        preload="metadata"
+        ref={videoRef}
+      >
+        <source src="/recap/hackspain-2026.mp4" type="video/mp4" />
+      </video>
+      {blocked && (
+        <span className="cinema-note" role="status">
+          Pulsa play en el vídeo para reproducirlo.
+        </span>
+      )}
+    </div>
   );
 }

@@ -25,8 +25,14 @@ import {
 import { GITHUB_SVG, INSTAGRAM_SVG, X_SVG } from "../theme/constants";
 import { Button } from "../ui/button";
 import { P } from "../ui/panel";
+import {
+  CommunityHeading,
+  CommunityReel,
+  CommunityVideo,
+} from "./community-timeline";
 import { JudgesOverlay } from "./judges-overlay";
 import { MentorsOverlay } from "./mentors-overlay";
+import { NextEditionForm } from "./next-edition-form";
 import {
   GRAND_PRIZE_SPONSORS,
   INFRA_SPONSORS,
@@ -288,9 +294,10 @@ function RecapVideoTile() {
       <img
         alt="Participantes de HackSpain en UPM–ETSIT"
         className="absolute inset-0 h-full w-full object-cover opacity-55"
-        height={1080}
-        src="/recap/poster.jpg"
-        width={1920}
+        fetchPriority="high"
+        height={720}
+        src="/recap/poster.webp"
+        width={1280}
       />
       <span className="relative font-bungee text-[clamp(1rem,3vw,2rem)]">
         ASÍ FUE HACKSPAIN
@@ -375,6 +382,15 @@ export function buildSections(): Record<string, React.ReactNode>[] {
         </P>
       ),
       r4c: <RecapVideoTile />,
+      r4d: (
+        <P bg="bg-hs-navy" className="!gap-2 !px-4">
+          <p className={`${LBL} text-center text-hs-gold`}>HACKSPAIN '27</p>
+          <h2 className={`${MOSAIC_HEADLINE_SM} text-center text-hs-paper`}>
+            ¿TE AVISAMOS?
+          </h2>
+          <NextEditionForm className="w-full text-hs-gold" />
+        </P>
+      ),
       ...bottomRow(0),
       r5b: (
         <P bg="bg-hs-paper">
@@ -424,14 +440,10 @@ export function buildSections(): Record<string, React.ReactNode>[] {
       ),
     },
     {
-      r1c: (
-        <P bg="bg-hs-paper">
-          <p className={`${LBL} text-hs-ink`}>HACKSPAIN 2026</p>
-          <h2 className={`${MOSAIC_HEADLINE_SM} text-center text-hs-red`}>
-            VUESTRAS HISTORIAS
-          </h2>
-        </P>
-      ),
+      cl: <CommunityReel side="left" />,
+      ch: <CommunityHeading />,
+      cv: <CommunityVideo />,
+      cr: <CommunityReel side="right" />,
       ...bottomRow(1),
     },
     {
@@ -585,6 +597,12 @@ export function buildSections(): Record<string, React.ReactNode>[] {
       ),
       r4c: (
         <P bg="bg-hs-paper" className="!justify-evenly !px-10 !py-6">
+          <div className="flex w-full max-w-[420px] flex-col items-center gap-2">
+            <p className={`${LBL} text-center text-hs-ink`}>
+              ¿Te avisamos de HackSpain '27?
+            </p>
+            <NextEditionForm className="w-full text-hs-ink" />
+          </div>
           <a
             className="font-bold underline underline-offset-4"
             href="/comunidad"
@@ -766,7 +784,7 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
         </P>
       ),
       b1: (
-        <P bg="bg-hs-orange" className={CARDART}>
+        <P bg="bg-hs-orange" className={`${CARDART} !gap-1.5 !py-2`}>
           {cardArt(windmillSvg, "br")}
           <p className={`${CLBL} text-hs-paper/80`}>Así fue · 2026</p>
           <span
@@ -774,13 +792,17 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
           >
             18 al 20 de Septiembre
           </span>
-          <div className="mt-2 flex flex-col items-center gap-0">
+          <div className="flex items-baseline justify-center gap-2">
             <ParticipantsCountUp
               ariaLabel="250 PARTICIPANTES"
-              className={`${CH} text-[clamp(2rem,10vw,4rem)] text-hs-paper`}
+              className={`${CH} text-[clamp(1.4rem,7vw,3.2rem)] text-hs-paper`}
             />
             <p className={`${CLBL} text-hs-paper/70`}>PARTICIPANTES</p>
           </div>
+          <p className={`${CLBL} text-hs-paper`}>
+            ¿Te avisamos de HackSpain '27?
+          </p>
+          <NextEditionForm className="w-full max-w-[420px] text-hs-paper" />
         </P>
       ),
       b2: (
@@ -827,7 +849,17 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
         </P>
       ),
     },
-    {},
+    {
+      cv: (
+        <div className="cinema-stack">
+          <CommunityHeading />
+          <CommunityVideo />
+        </div>
+      ),
+      cl: <CommunityReel side="left" />,
+      cr: <CommunityReel side="right" />,
+      foot,
+    },
     {
       hero: (
         <P bg="bg-hs-navy" className={CARD}>
@@ -1042,6 +1074,12 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
       ),
       b1: (
         <P bg="bg-hs-paper" className={`${CARD} !justify-evenly`}>
+          <div className="flex w-full max-w-[420px] flex-col items-center gap-2">
+            <p className={`${CLBL} text-center text-hs-ink`}>
+              ¿Te avisamos de HackSpain '27?
+            </p>
+            <NextEditionForm className="w-full text-hs-ink" />
+          </div>
           <a
             className="font-bold underline underline-offset-4"
             href="/comunidad"

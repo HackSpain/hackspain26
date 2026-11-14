@@ -7,7 +7,7 @@ export const SECTION_SLUGS = [
   "mentores",
   "apuntate",
 ] as const;
-type SectionSlug = (typeof SECTION_SLUGS)[number];
+export type SectionSlug = (typeof SECTION_SLUGS)[number];
 
 export const COMMUNITY_SECTION_INDEX = SECTION_SLUGS.indexOf("comunidad") + 1;
 

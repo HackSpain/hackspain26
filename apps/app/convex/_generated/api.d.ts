@@ -24,6 +24,7 @@ import type * as feedSocial from "../feedSocial.js";
 import type * as finalists from "../finalists.js";
 import type * as github from "../github.js";
 import type * as githubFeed from "../githubFeed.js";
+import type * as hackspain27Emails from "../hackspain27Emails.js";
 import type * as http from "../http.js";
 import type * as judging from "../judging.js";
 import type * as lib_accessCodeEmail from "../lib/accessCodeEmail.js";
@@ -105,6 +106,7 @@ declare const fullApi: ApiFromModules<{
   finalists: typeof finalists;
   github: typeof github;
   githubFeed: typeof githubFeed;
+  hackspain27Emails: typeof hackspain27Emails;
   http: typeof http;
   judging: typeof judging;
   "lib/accessCodeEmail": typeof lib_accessCodeEmail;

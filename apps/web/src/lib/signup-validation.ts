@@ -92,6 +92,10 @@ const TRAILING_SLASHES_ON_PATH_RE = /\/+$/;
 const WWW_HOSTNAME_PREFIX_RE = /^www\./;
 const LINE_BREAK_SPLIT_RE = /\r?\n/;
 
+export function isValidEmail(email: string): boolean {
+  return email.length <= SIGNUP_MAX.email && EMAIL_RE.test(email);
+}
+
 export type SocialKind = "x" | "linkedin" | "github" | "web";
 
 function baseHostForProfileField(kind: Exclude<SocialKind, "web">): string {

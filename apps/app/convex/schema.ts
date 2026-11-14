@@ -610,4 +610,8 @@ export default defineSchema({
   linkedinProfiles: defineTable(linkedinProfileFields).index("by_slug", [
     "slug",
   ]),
+
+  hackspain27_emails: defineTable({
+    email: v.string(),
+  }).index("by_email", ["email"]),
 });

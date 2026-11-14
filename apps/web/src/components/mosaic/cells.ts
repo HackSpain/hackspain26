@@ -57,9 +57,27 @@ const CELLS: CellDef[] = [
   { delay: 0.09, h: 70, id: "r5d", w: 360, x: 1080, y: 830 },
 ];
 
+/**
+ * Community section: the mosaic tiles merge into these regions (see
+ * MosaicBackground), so each one must stay aligned to tile boundaries.
+ */
+export const COMMUNITY_CELLS: Record<LayoutProfile, CellDef[]> = {
+  compact: [
+    { delay: 0.12, h: 1220, id: "cv", w: 1440, x: 0, y: 0 },
+    { delay: 0.18, h: 860, id: "cl", w: 720, x: 0, y: 1220 },
+    { delay: 0.22, h: 860, id: "cr", w: 720, x: 720, y: 1220 },
+  ],
+  desktop: [
+    { delay: 0.12, h: 830, id: "cl", w: 220, x: 0, y: 0 },
+    { delay: 0.14, h: 180, id: "ch", w: 1000, x: 220, y: 0 },
+    { delay: 0.18, h: 650, id: "cv", w: 1000, x: 220, y: 180 },
+    { delay: 0.16, h: 830, id: "cr", w: 220, x: 1220, y: 0 },
+  ],
+};
+
 export function cellsForProfile(profile: LayoutProfile): CellDef[] {
-  if (profile !== "compact") {
-    return CELLS;
-  }
-  return CELLS_COMPACT;
+  return [
+    ...(profile === "compact" ? CELLS_COMPACT : CELLS),
+    ...COMMUNITY_CELLS[profile],
+  ];
 }
