@@ -17,6 +17,7 @@ import type { LayoutProfile } from "../mosaic/artboard";
 import { artboardFor } from "../mosaic/artboard";
 import { cellsForProfile } from "../mosaic/cells";
 import { MosaicBackground } from "../mosaic/mosaic-background";
+import { useLayoutProfile } from "../mosaic/use-layout-profile";
 import { isOverlayOpen } from "../overlay/overlay-lock";
 import { illustrationsForSection } from "../sections/illustration-themes";
 import {
@@ -88,6 +89,7 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
   const [hydrated, setHydrated] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const locked = useRef(false);
+  const activeProfile = useLayoutProfile();
 
   // Both responsive layouts are static, so render them on the server and let
   // the existing CSS breakpoint choose which one is visible.
@@ -458,12 +460,18 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
           {liveLabel}
         </p>
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 hidden md:block">
-            {renderMosaic("desktop")}
-          </div>
-          <div className="absolute inset-0 md:hidden">
-            {renderMosaic("compact")}
-          </div>
+          {/* Both layouts render until hydration so CSS picks one without a
+              flash; afterwards only the visible one mounts each section. */}
+          {activeProfile !== "compact" && (
+            <div className="absolute inset-0 hidden md:block">
+              {renderMosaic("desktop")}
+            </div>
+          )}
+          {activeProfile !== "desktop" && (
+            <div className="absolute inset-0 md:hidden">
+              {renderMosaic("compact")}
+            </div>
+          )}
         </div>
         {section === 0 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-[max(2.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center">
