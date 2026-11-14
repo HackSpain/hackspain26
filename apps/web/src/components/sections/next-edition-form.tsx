@@ -3,7 +3,24 @@ import { useId, useState } from "react";
 import { Input } from "../form/input";
 import { Button } from "../ui/button";
 
-type Status = "idle" | "submitting" | "success" | "error";
+const ERROR_MESSAGES = {
+  disposable_email: "Usa un email permanente; no aceptamos emails temporales.",
+  error: "No se pudo guardar. Inténtalo de nuevo.",
+  invalid_email: "Revisa el email: no parece válido.",
+} as const;
+
+type ErrorStatus = keyof typeof ERROR_MESSAGES;
+type Status = "idle" | "submitting" | "success" | ErrorStatus;
+
+function isErrorStatus(status: Status): status is ErrorStatus {
+  return status in ERROR_MESSAGES;
+}
+
+function errorStatus(code: unknown): ErrorStatus {
+  return code === "disposable_email" || code === "invalid_email"
+    ? code
+    : "error";
+}
 
 export function NextEditionForm({ className }: { className?: string }) {
   const inputId = useId();
@@ -20,7 +37,18 @@ export function NextEditionForm({ className }: { className?: string }) {
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
-      setStatus(response.ok ? "success" : "error");
+      if (response.ok) {
+        setStatus("success");
+        return;
+      }
+      const body: unknown = await response.json().catch(() => null);
+      setStatus(
+        errorStatus(
+          body && typeof body === "object" && "error" in body
+            ? body.error
+            : undefined
+        )
+      );
     } catch {
       setStatus("error");
     }
@@ -59,9 +87,9 @@ export function NextEditionForm({ className }: { className?: string }) {
           </Button>
         </form>
       )}
-      {status === "error" && (
+      {isErrorStatus(status) && (
         <p className="mt-2 text-center font-bold text-xs">
-          No se pudo guardar. Inténtalo de nuevo.
+          {ERROR_MESSAGES[status]}
         </p>
       )}
     </div>

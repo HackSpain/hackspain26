@@ -42,6 +42,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "astro": "^7.3.4",
     "botid": "^1.5.11",
+    "disposable-email-domains-js": "~1.26.0",
     "drizzle-orm": "^0.45.2",
     "meshline": "^3.3.1",
     "motion": "^12.38.0",
