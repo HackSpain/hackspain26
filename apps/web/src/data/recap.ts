@@ -1,7 +1,7 @@
 /**
  * Public X posts shown in the community reels, selected in Safari on
  * 2026-09-21. After editing, run `pnpm --filter web tweets:snapshot` to
- * refresh `community-tweets.json`.
+ * refresh `community-tweets.ts`.
  */
 export const communityPostUrls = [
   "https://x.com/godoyruben_/status/2101679598312296518",

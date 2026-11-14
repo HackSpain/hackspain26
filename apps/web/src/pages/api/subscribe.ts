@@ -74,6 +74,7 @@ export const POST: APIRoute = async ({ request }) => {
       method: "POST",
       signal: AbortSignal.timeout(10_000),
     });
+    // Convex answers failed mutations with HTTP 200 and `status: "error"`.
     const result: unknown = await response.json();
     if (
       !(
@@ -84,11 +85,7 @@ export const POST: APIRoute = async ({ request }) => {
         result.status === "success"
       )
     ) {
-      const message =
-        result && typeof result === "object" && "errorMessage" in result
-          ? result.errorMessage
-          : undefined;
-      throw new Error(`Convex ${response.status}: ${String(message)}`);
+      throw new Error(`Convex ${response.status}: ${JSON.stringify(result)}`);
     }
   } catch (error) {
     console.error("[subscribe] Failed to save email:", error);

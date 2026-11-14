@@ -14,7 +14,6 @@ export interface SitemapPage {
 
 // Update a page's date when its visible content changes, not on every deploy:
 // search engines stop trusting lastmod values that always move.
-const LANDING_LASTMOD = "2026-11-14";
 const SECTION_LASTMOD: Record<SectionSlug, string> = {
   apuntate: "2026-11-14",
   comunidad: "2026-11-14",
@@ -37,7 +36,7 @@ function normalizeSitemapPageUrl(href: string): string {
 export function getAllSitemapPages(): SitemapPage[] {
   const o = SITEMAP_SITE_ORIGIN;
   const raw: SitemapPage[] = [
-    { lastmod: LANDING_LASTMOD, url: o },
+    { lastmod: "2026-11-14", url: o },
     ...SECTION_SLUGS.map((s) => ({
       lastmod: SECTION_LASTMOD[s],
       url: `${o}/${s}`,
