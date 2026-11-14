@@ -1,5 +1,5 @@
-import { motion, useReducedMotion } from "motion/react";
-import { SPRING } from "../theme/constants";
+import { useReducedMotion } from "motion/react";
+import type { CSSProperties, ReactNode } from "react";
 import type { LayoutProfile } from "./artboard";
 import { artboardFor } from "./artboard";
 import type { CellDef } from "./cells";
@@ -107,17 +107,6 @@ const TILES: Record<
   },
 };
 
-function tileFill(
-  strokeOnly: boolean,
-  region: CellDef | undefined,
-  fill: string
-): string {
-  if (strokeOnly) {
-    return "none";
-  }
-  return region ? PAPER : fill;
-}
-
 /** The community region containing the tile's centre, if any. */
 function regionFor(
   [x, y, w, h]: Rect,
@@ -140,59 +129,74 @@ export function MosaicBackground({
   const reducedMotion = useReducedMotion();
   const { h: height, w: width } = artboardFor(variant);
   const { rects, stroke, tris } = TILES[variant];
-  const regions = merged ? COMMUNITY_CELLS[variant] : [];
+  const regions = COMMUNITY_CELLS[variant];
   const sw = strokeOnly ? stroke.overlay : stroke.fill;
-  const transition = reducedMotion ? { duration: 0 } : SPRING;
+  const fixed = rects.filter((rect) => !regionFor(rect, regions));
+  const split = rects.filter((rect) => regionFor(rect, regions));
 
-  return (
+  // The merge is a crossfade of whole layers: opacity is composited, while
+  // moving tile geometry repaints every full-screen SVG on every frame.
+  const layer = (visible: boolean): CSSProperties => ({
+    opacity: visible ? 1 : 0,
+    transition: reducedMotion
+      ? "none"
+      : "opacity 260ms cubic-bezier(0.23, 1, 0.32, 1)",
+    willChange: "opacity",
+  });
+  const tile = ([x, y, w, h, fill]: Rect, key: string) => (
+    <rect
+      fill={strokeOnly ? "none" : fill}
+      height={h}
+      key={key}
+      stroke={INK}
+      strokeLinejoin="miter"
+      strokeWidth={sw}
+      width={w}
+      x={x}
+      y={y}
+    />
+  );
+  const svg = (children: ReactNode, style?: CSSProperties) => (
     <svg
-      aria-hidden={ariaHidden}
-      className={className}
+      aria-hidden
+      className="absolute inset-0 h-full w-full"
       preserveAspectRatio="none"
+      style={style}
       viewBox={`0 0 ${width} ${height}`}
     >
       <title>Mosaic background</title>
-      {!strokeOnly && <rect fill={PAPER} height={height} width={width} />}
-
-      {rects.map((rect) => {
-        const [x, y, w, h, fill] = rect;
-        const region = regionFor(rect, regions);
-        return (
-          <motion.rect
-            animate={{
-              attrX: region?.x ?? x,
-              attrY: region?.y ?? y,
-              height: region?.h ?? h,
-              width: region?.w ?? w,
-            }}
-            initial={false}
-            key={`r-${x}-${y}-${w}-${h}`}
-            stroke={INK}
-            strokeLinejoin="miter"
-            strokeWidth={sw}
-            style={{
-              fill: tileFill(strokeOnly, region, fill),
-              transition: "fill 200ms ease",
-            }}
-            transition={transition}
-          />
-        );
-      })}
-
-      {tris.map(([points, fill]) => (
-        <polygon
-          fill={strokeOnly ? "none" : fill}
-          key={`t-${points}`}
-          points={points}
-          stroke={INK}
-          strokeLinejoin="bevel"
-          strokeWidth={sw}
-          style={{
-            opacity: merged ? 0 : 1,
-            transition: reducedMotion ? "none" : "opacity 200ms ease-out",
-          }}
-        />
-      ))}
+      {children}
     </svg>
+  );
+
+  return (
+    <div aria-hidden={ariaHidden} className={className}>
+      {svg(
+        <>
+          {!strokeOnly && <rect fill={PAPER} height={height} width={width} />}
+          {fixed.map((rect) => tile(rect, rect.slice(0, 4).join("-")))}
+        </>
+      )}
+      {svg(
+        <>
+          {split.map((rect) => tile(rect, rect.slice(0, 4).join("-")))}
+          {tris.map(([points, fill]) => (
+            <polygon
+              fill={strokeOnly ? "none" : fill}
+              key={points}
+              points={points}
+              stroke={INK}
+              strokeLinejoin="bevel"
+              strokeWidth={sw}
+            />
+          ))}
+        </>,
+        layer(!merged)
+      )}
+      {svg(
+        regions.map((r) => tile([r.x, r.y, r.w, r.h, PAPER], r.id)),
+        layer(merged)
+      )}
+    </div>
   );
 }
