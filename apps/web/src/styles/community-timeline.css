@@ -332,28 +332,20 @@
   }
 }
 
-.reel-embed {
-  min-width: 0;
-  overflow: hidden;
-  background: #fff;
-  border: 2px solid var(--color-hs-ink);
+a.reel-tweet {
+  display: block;
 }
-.reel-embed-content {
-  min-width: 250px;
-}
-.reel-embed-content .twitter-tweet {
-  margin: 0 !important;
-}
-.reel-embed-fallback {
-  display: grid;
-  gap: 12px;
-  padding: 20px 14px;
+.reel-text {
+  margin-top: 12px;
   font-size: 12px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
-.reel-embed-fallback a {
-  font-weight: 800;
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  a.reel-tweet:hover .reel-author strong {
+    text-decoration: underline;
+  }
 }
 
 .recap-play {

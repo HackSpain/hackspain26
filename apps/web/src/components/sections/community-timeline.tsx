@@ -2,95 +2,30 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { CommunityPost } from "../../data/recap";
 import { communityPosts } from "../../data/recap";
-import { loadXWidgets } from "../../lib/x-widgets";
 import "../../styles/community-timeline.css";
 
 const EMPTY_CARDS = [0, 1, 2, 3];
 
 function TweetCard({ post }: { post: CommunityPost }) {
-  const frameRef = useRef<HTMLElement>(null);
-  const embedRef = useRef<HTMLDivElement>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [width, setWidth] = useState(250);
-  const scale = Math.min(1, width / 250);
-
-  useEffect(() => {
-    const frame = frameRef.current;
-    const container = embedRef.current;
-    if (!(frame && container)) {
-      return;
-    }
-    let active = true;
-    const observer = new ResizeObserver(() => {
-      if (frame.clientWidth > 0) {
-        setWidth(frame.clientWidth);
-      }
-    });
-    observer.observe(frame);
-    // Each effect owns its target, so late widget responses cannot duplicate it.
-    const target = document.createElement("div");
-    container.append(target);
-    const timeout = window.setTimeout(() => {
-      if (active) {
-        setFailed(true);
-      }
-    }, 20_000);
-    loadXWidgets()
-      .then((api) => {
-        if (!active) {
-          return;
-        }
-        return api.widgets.createTweet(
-          post.url.split("/").at(-1) ?? "",
-          target,
-          {
-            theme: "light",
-            lang: "es",
-            dnt: true,
-            conversation: "none",
-          }
-        );
-      })
-      .then((element) => {
-        if (active) {
-          window.clearTimeout(timeout);
-          setLoaded(Boolean(element));
-          setFailed(!element);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          window.clearTimeout(timeout);
-          setFailed(true);
-        }
-      });
-    return () => {
-      active = false;
-      window.clearTimeout(timeout);
-      observer.disconnect();
-      target.remove();
-    };
-  }, [post.url]);
-
   return (
-    <article className="reel-embed" ref={frameRef}>
-      <div
-        className="reel-embed-content"
-        ref={embedRef}
-        style={{ width: Math.max(250, width), zoom: scale }}
-      />
-      {!loaded && (
-        <div className="reel-embed-fallback">
-          <span>
-            {failed ? "Ver publicación original" : "Cargando publicación de X…"}
-          </span>
-          <a href={post.url} rel="noopener noreferrer" target="_blank">
-            {post.author} · @{post.handle} ↗
-          </a>
+    <a
+      className="reel-tweet"
+      href={post.url}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      <div className="reel-author">
+        <span aria-hidden="true" className="reel-avatar">
+          {post.author.charAt(0)}
+        </span>
+        <div>
+          <strong>{post.author}</strong>
+          <span>@{post.handle}</span>
         </div>
-      )}
-    </article>
+        <span aria-hidden="true">𝕏</span>
+      </div>
+      <p className="reel-text">{post.text}</p>
+    </a>
   );
 }
 
