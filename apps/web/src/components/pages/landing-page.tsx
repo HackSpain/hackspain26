@@ -1,3 +1,4 @@
+import { initBotId } from "botid/client/core";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -128,6 +129,12 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
   );
 
   useEffect(() => setHydrated(true), []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      initBotId({ protect: [{ method: "POST", path: "/api/subscribe" }] });
+    }
+  }, []);
 
   useEffect(() => {
     applySeoToDocument(initialSection);

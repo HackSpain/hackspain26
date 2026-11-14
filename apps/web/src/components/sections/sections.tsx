@@ -27,6 +27,7 @@ import { Button } from "../ui/button";
 import { P } from "../ui/panel";
 import { JudgesOverlay } from "./judges-overlay";
 import { MentorsOverlay } from "./mentors-overlay";
+import { NextEditionForm } from "./next-edition-form";
 import {
   GRAND_PRIZE_SPONSORS,
   INFRA_SPONSORS,
@@ -375,6 +376,15 @@ export function buildSections(): Record<string, React.ReactNode>[] {
         </P>
       ),
       r4c: <RecapVideoTile />,
+      r4d: (
+        <P bg="bg-hs-navy" className="!gap-2 !px-4">
+          <p className={`${LBL} text-center text-hs-gold`}>HACKSPAIN '27</p>
+          <h2 className={`${MOSAIC_HEADLINE_SM} text-center text-hs-paper`}>
+            ¿TE AVISAMOS?
+          </h2>
+          <NextEditionForm className="w-full text-hs-gold" />
+        </P>
+      ),
       ...bottomRow(0),
       r5b: (
         <P bg="bg-hs-paper">
@@ -766,7 +776,7 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
         </P>
       ),
       b1: (
-        <P bg="bg-hs-orange" className={CARDART}>
+        <P bg="bg-hs-orange" className={`${CARDART} !gap-1.5 !py-2`}>
           {cardArt(windmillSvg, "br")}
           <p className={`${CLBL} text-hs-paper/80`}>Así fue · 2026</p>
           <span
@@ -774,13 +784,17 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
           >
             18 al 20 de Septiembre
           </span>
-          <div className="mt-2 flex flex-col items-center gap-0">
+          <div className="flex items-baseline justify-center gap-2">
             <ParticipantsCountUp
               ariaLabel="250 PARTICIPANTES"
-              className={`${CH} text-[clamp(2rem,10vw,4rem)] text-hs-paper`}
+              className={`${CH} text-[clamp(1.4rem,7vw,3.2rem)] text-hs-paper`}
             />
             <p className={`${CLBL} text-hs-paper/70`}>PARTICIPANTES</p>
           </div>
+          <p className={`${CLBL} text-hs-paper`}>
+            ¿Te avisamos de HackSpain '27?
+          </p>
+          <NextEditionForm className="w-full max-w-[420px] text-hs-paper" />
         </P>
       ),
       b2: (
