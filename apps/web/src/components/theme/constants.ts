@@ -5,14 +5,19 @@ export const NUM_SECTIONS = 8;
 
 export const SPRING = { damping: 30, stiffness: 300, type: "spring" as const };
 
+// Full transform strings, not `y`, so Motion can run the slides on the
+// compositor and they stay smooth while a section mounts heavy content.
 export const slideVariants = {
-  center: { opacity: 1, y: "0%" },
-  enter: (dir: number) => ({ y: dir > 0 ? "100%" : "-100%", opacity: 0 }),
+  center: { opacity: 1, transform: "translateY(0%)" },
+  enter: (dir: number) => ({
+    opacity: 0,
+    transform: `translateY(${dir > 0 ? 100 : -100}%)`,
+  }),
   // Entrances are staggered by each tile's delay; exits leave together so the
   // next section's tiles never land on content that is still on screen.
   exit: (dir: number) => ({
-    y: dir > 0 ? "-100%" : "100%",
     opacity: 0,
+    transform: `translateY(${dir > 0 ? -100 : 100}%)`,
     transition: SPRING,
   }),
 };

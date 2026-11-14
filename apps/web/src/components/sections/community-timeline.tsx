@@ -41,8 +41,22 @@ const REELS = {
   },
 };
 
+/**
+ * The loop's second copy only scrolls into view seconds later, so it mounts
+ * after the section transition instead of doubling the tweets laid out
+ * during it; the scroll waits for it so the track height never jumps.
+ */
+const REEL_START_MS = 1000;
+
 export function CommunityReel({ side }: { side: keyof typeof REELS }) {
   const { label, posts } = REELS[side];
+  const [looping, setLooping] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setLooping(true), REEL_START_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const cards = posts.map((post) => (
     <div className="reel-embed" key={post.id_str}>
       <EmbeddedTweet components={TWEET_COMPONENTS} tweet={post} />
@@ -61,12 +75,17 @@ export function CommunityReel({ side }: { side: keyof typeof REELS }) {
       <div className="reel-viewport">
         <div
           className="reel-track"
-          style={{ animationDuration: `${Math.max(48, posts.length * 20)}s` }}
+          style={{
+            animationDelay: `${REEL_START_MS}ms`,
+            animationDuration: `${Math.max(48, posts.length * 20)}s`,
+          }}
         >
           <div className="reel-set">{cards}</div>
-          <div aria-hidden="true" className="reel-set reel-copy" inert>
-            {cards}
-          </div>
+          {looping && (
+            <div aria-hidden="true" className="reel-set reel-copy" inert>
+              {cards}
+            </div>
+          )}
         </div>
       </div>
     </section>
