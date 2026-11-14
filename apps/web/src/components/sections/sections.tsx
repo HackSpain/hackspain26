@@ -25,6 +25,11 @@ import {
 import { GITHUB_SVG, INSTAGRAM_SVG, X_SVG } from "../theme/constants";
 import { Button } from "../ui/button";
 import { P } from "../ui/panel";
+import {
+  CommunityHeading,
+  CommunityReel,
+  CommunityVideo,
+} from "./community-timeline";
 import { JudgesOverlay } from "./judges-overlay";
 import { MentorsOverlay } from "./mentors-overlay";
 import { NextEditionForm } from "./next-edition-form";
@@ -435,14 +440,10 @@ export function buildSections(): Record<string, React.ReactNode>[] {
       ),
     },
     {
-      r1c: (
-        <P bg="bg-hs-paper">
-          <p className={`${LBL} text-hs-ink`}>HACKSPAIN 2026</p>
-          <h2 className={`${MOSAIC_HEADLINE_SM} text-center text-hs-red`}>
-            VUESTRAS HISTORIAS
-          </h2>
-        </P>
-      ),
+      cl: <CommunityReel side="left" />,
+      ch: <CommunityHeading />,
+      cv: <CommunityVideo />,
+      cr: <CommunityReel side="right" />,
       ...bottomRow(1),
     },
     {
@@ -842,7 +843,17 @@ export function buildSectionsCompact(): Record<string, React.ReactNode>[] {
         </P>
       ),
     },
-    {},
+    {
+      cv: (
+        <div className="cinema-stack">
+          <CommunityHeading />
+          <CommunityVideo />
+        </div>
+      ),
+      cl: <CommunityReel side="left" />,
+      cr: <CommunityReel side="right" />,
+      foot,
+    },
     {
       hero: (
         <P bg="bg-hs-navy" className={CARD}>

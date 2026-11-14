@@ -18,7 +18,6 @@ import { artboardFor } from "../mosaic/artboard";
 import { cellsForProfile } from "../mosaic/cells";
 import { MosaicBackground } from "../mosaic/mosaic-background";
 import { isOverlayOpen } from "../overlay/overlay-lock";
-import { CommunityTimeline } from "../sections/community-timeline";
 import { illustrationsForSection } from "../sections/illustration-themes";
 import {
   GRAND_PRIZE_SPONSORS,
@@ -282,6 +281,7 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
   const renderMosaic = (profile: LayoutProfile) => {
     const { artboard, cells, sections } = layouts[profile];
     const isCompact = profile === "compact";
+    const merged = section === COMMUNITY_SECTION_INDEX;
     const ills = illustrationsForSection(section, profile);
     const baseCurrent = sections[section] ?? {};
     // Partner logos fill any empty open-row cells (o1..o5) on every desktop section.
@@ -377,21 +377,20 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
         <MosaicBackground
           aria-hidden
           className="absolute inset-0 h-full w-full"
+          merged={merged}
           variant={profile}
         />
 
         {!isCompact && ills.map(renderIll)}
 
         {cells.map((cell) => {
-          if (isCompact && !current.get(cell.id)) {
-            return null;
-          }
-
           const mosaicCell = profile === "compact" ? "" : "hs-mosaic-cell ";
+          // Frames overlap across sections; an empty one must not take clicks.
+          const emptyFrame = current.get(cell.id) ? "" : "pointer-events-none ";
           const cellFrameClass =
             cell.id === "r2c"
-              ? `${mosaicCell}absolute z-10 overflow-visible @container`
-              : `${mosaicCell}absolute overflow-hidden @container`;
+              ? `${mosaicCell}${emptyFrame}absolute z-10 overflow-visible @container`
+              : `${mosaicCell}${emptyFrame}absolute overflow-hidden @container`;
 
           const cellInner = (
             <AnimatePresence custom={dir} initial={false} mode="popLayout">
@@ -439,6 +438,7 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
         <MosaicBackground
           aria-hidden
           className="pointer-events-none absolute inset-0 h-full w-full"
+          merged={merged}
           strokeOnly
           variant={profile}
         />
@@ -464,12 +464,6 @@ export function LandingPage({ initialSection = 0, sponsorSeed }: Props) {
           <div className="absolute inset-0 md:hidden">
             {renderMosaic("compact")}
           </div>
-          <CommunityTimeline
-            onNext={() => advance(1)}
-            onPrevious={() => advance(-1)}
-            reducedMotion={reducedMotion}
-            section={section}
-          />
         </div>
         {section === 0 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-[max(2.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center">

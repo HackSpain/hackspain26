@@ -1,34 +1,17 @@
+import { motion, useReducedMotion } from "motion/react";
+import { SPRING } from "../theme/constants";
 import type { LayoutProfile } from "./artboard";
+import { artboardFor } from "./artboard";
+import type { CellDef } from "./cells";
+import { COMMUNITY_CELLS } from "./cells";
 
 interface Props {
   "aria-hidden"?: boolean;
   className?: string;
+  /** Merge the tiles into the community section's regions. */
+  merged?: boolean;
   strokeOnly?: boolean;
   variant?: LayoutProfile;
-}
-
-export function MosaicBackground({
-  className = "",
-  strokeOnly = false,
-  "aria-hidden": ariaHidden = true,
-  variant = "desktop",
-}: Props) {
-  if (variant === "compact") {
-    return (
-      <MosaicBackgroundCompact
-        aria-hidden={ariaHidden}
-        className={className}
-        strokeOnly={strokeOnly}
-      />
-    );
-  }
-  return (
-    <MosaicBackgroundDesktop
-      aria-hidden={ariaHidden}
-      className={className}
-      strokeOnly={strokeOnly}
-    />
-  );
 }
 
 const PAPER = "var(--color-hs-paper)";
@@ -36,11 +19,11 @@ const INK = "var(--color-hs-ink)";
 const ORANGE = "var(--color-hs-orange)";
 const TEAL = "var(--color-hs-teal)";
 
-// Desktop Mondrian — strict horizontal bands, clean tiling.
-// Each rect aligns to a content cell slot (or is purely decorative).
 type Rect = readonly [x: number, y: number, w: number, h: number, fill: string];
 type Tri = readonly [points: string, fill: string];
 
+// Desktop Mondrian — strict horizontal bands, clean tiling.
+// Each rect aligns to a content cell slot (or is purely decorative).
 const DESKTOP_RECTS: readonly Rect[] = [
   // Band 1 (top row) — y 0-180 : 7 cells, narrow centered main cell
   [0, 0, 200, 180, PAPER],
@@ -91,58 +74,13 @@ const DESKTOP_TRIS: readonly Tri[] = [
   ["0,400 220,400 0,650", PAPER],
 ];
 
-function MosaicBackgroundDesktop({
-  className,
-  strokeOnly,
-  "aria-hidden": ariaHidden,
-}: Omit<Props, "variant">) {
-  const f = (color: string) => (strokeOnly ? "none" : color);
-  const sw = strokeOnly ? 6 : 5;
-  return (
-    <svg
-      aria-hidden={ariaHidden}
-      className={className}
-      preserveAspectRatio="none"
-      viewBox="0 0 1440 900"
-    >
-      <title>Mosaic background</title>
-      {!strokeOnly && <rect fill={PAPER} height="900" width="1440" />}
-
-      {DESKTOP_RECTS.map(([x, y, w, h, fill]) => (
-        <rect
-          fill={f(fill)}
-          height={h}
-          key={`r-${x}-${y}-${w}-${h}`}
-          stroke={INK}
-          strokeLinejoin="miter"
-          strokeWidth={sw}
-          width={w}
-          x={x}
-          y={y}
-        />
-      ))}
-
-      {DESKTOP_TRIS.map(([points, fill]) => (
-        <polygon
-          fill={f(fill)}
-          key={`t-${points}`}
-          points={points}
-          stroke={INK}
-          strokeLinejoin="bevel"
-          strokeWidth={sw}
-        />
-      ))}
-    </svg>
-  );
-}
-
-// Portrait layout (1440 x 2560): hero, two big content cards, footer.
+// Portrait layout (1440 x 2320): hero, two big content cards, footer.
 // Boundaries mirror CELLS_COMPACT so the ink stroke grid frames each card.
 // Tiles are paper so empty slots stay clean; content cards paint their own bg.
-const COMPACT_TILES: readonly Rect[] = [
+// The ornament strip's colours and diagonals come from React cells per section.
+const COMPACT_RECTS: readonly Rect[] = [
   [0, 0, 1440, 580, PAPER],
   [0, 580, 1440, 640, PAPER],
-  // Ornament strip — all PAPER; colours/diagonals come from React cells per section
   [0, 1220, 288, 200, PAPER], // orn1
   [288, 1220, 288, 200, PAPER], // orn2
   [576, 1220, 288, 200, PAPER], // orn3
@@ -152,45 +90,107 @@ const COMPACT_TILES: readonly Rect[] = [
   [0, 2080, 1440, 240, PAPER],
 ];
 
-// No static triangles for the compact ornament strip — handled by React cells.
-const COMPACT_TRIS: readonly Tri[] = [];
+const TILES: Record<
+  LayoutProfile,
+  {
+    rects: readonly Rect[];
+    /** Stroke widths for the filled layer and the stroke-only overlay. */
+    stroke: { fill: number; overlay: number };
+    tris: readonly Tri[];
+  }
+> = {
+  compact: { rects: COMPACT_RECTS, stroke: { fill: 4, overlay: 5 }, tris: [] },
+  desktop: {
+    rects: DESKTOP_RECTS,
+    stroke: { fill: 5, overlay: 6 },
+    tris: DESKTOP_TRIS,
+  },
+};
 
-function MosaicBackgroundCompact({
-  className,
-  strokeOnly,
-  "aria-hidden": ariaHidden,
-}: Omit<Props, "variant">) {
-  const f = (color: string) => (strokeOnly ? "none" : color);
-  const sw = strokeOnly ? 5 : 4;
+function tileFill(
+  strokeOnly: boolean,
+  region: CellDef | undefined,
+  fill: string
+): string {
+  if (strokeOnly) {
+    return "none";
+  }
+  return region ? PAPER : fill;
+}
+
+/** The community region containing the tile's centre, if any. */
+function regionFor(
+  [x, y, w, h]: Rect,
+  regions: readonly CellDef[]
+): CellDef | undefined {
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  return regions.find(
+    (r) => cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h
+  );
+}
+
+export function MosaicBackground({
+  className = "",
+  merged = false,
+  strokeOnly = false,
+  "aria-hidden": ariaHidden = true,
+  variant = "desktop",
+}: Props) {
+  const reducedMotion = useReducedMotion();
+  const { h: height, w: width } = artboardFor(variant);
+  const { rects, stroke, tris } = TILES[variant];
+  const regions = merged ? COMMUNITY_CELLS[variant] : [];
+  const sw = strokeOnly ? stroke.overlay : stroke.fill;
+  const transition = reducedMotion ? { duration: 0 } : SPRING;
+
   return (
     <svg
       aria-hidden={ariaHidden}
       className={className}
       preserveAspectRatio="none"
-      viewBox="0 0 1440 2320"
+      viewBox={`0 0 ${width} ${height}`}
     >
       <title>Mosaic background</title>
-      {!strokeOnly && <rect fill={PAPER} height="2320" width="1440" />}
-      {COMPACT_TILES.map(([x, y, w, h, fill]) => (
-        <rect
-          fill={f(fill)}
-          height={h}
-          key={`${x}-${y}-${w}-${h}-${fill}`}
-          stroke={INK}
-          strokeWidth={sw}
-          width={w}
-          x={x}
-          y={y}
-        />
-      ))}
-      {COMPACT_TRIS.map(([points, fill]) => (
+      {!strokeOnly && <rect fill={PAPER} height={height} width={width} />}
+
+      {rects.map((rect) => {
+        const [x, y, w, h, fill] = rect;
+        const region = regionFor(rect, regions);
+        return (
+          <motion.rect
+            animate={{
+              attrX: region?.x ?? x,
+              attrY: region?.y ?? y,
+              height: region?.h ?? h,
+              width: region?.w ?? w,
+            }}
+            initial={false}
+            key={`r-${x}-${y}-${w}-${h}`}
+            stroke={INK}
+            strokeLinejoin="miter"
+            strokeWidth={sw}
+            style={{
+              fill: tileFill(strokeOnly, region, fill),
+              transition: "fill 200ms ease",
+            }}
+            transition={transition}
+          />
+        );
+      })}
+
+      {tris.map(([points, fill]) => (
         <polygon
-          fill={f(fill)}
-          key={`ct-${points}`}
+          fill={strokeOnly ? "none" : fill}
+          key={`t-${points}`}
           points={points}
           stroke={INK}
           strokeLinejoin="bevel"
           strokeWidth={sw}
+          style={{
+            opacity: merged ? 0 : 1,
+            transition: reducedMotion ? "none" : "opacity 200ms ease-out",
+          }}
         />
       ))}
     </svg>

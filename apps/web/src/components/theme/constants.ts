@@ -8,7 +8,13 @@ export const SPRING = { damping: 30, stiffness: 300, type: "spring" as const };
 export const slideVariants = {
   center: { opacity: 1, y: "0%" },
   enter: (dir: number) => ({ y: dir > 0 ? "100%" : "-100%", opacity: 0 }),
-  exit: (dir: number) => ({ y: dir > 0 ? "-100%" : "100%", opacity: 0 }),
+  // Entrances are staggered by each tile's delay; exits leave together so the
+  // next section's tiles never land on content that is still on screen.
+  exit: (dir: number) => ({
+    y: dir > 0 ? "-100%" : "100%",
+    opacity: 0,
+    transition: SPRING,
+  }),
 };
 
 export const GITHUB_SVG =
