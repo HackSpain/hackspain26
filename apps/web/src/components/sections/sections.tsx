@@ -289,9 +289,10 @@ function RecapVideoTile() {
       <img
         alt="Participantes de HackSpain en UPM–ETSIT"
         className="absolute inset-0 h-full w-full object-cover opacity-55"
-        height={1080}
-        src="/recap/poster.jpg"
-        width={1920}
+        fetchPriority="high"
+        height={720}
+        src="/recap/poster.webp"
+        width={1280}
       />
       <span className="relative font-bungee text-[clamp(1rem,3vw,2rem)]">
         ASÍ FUE HACKSPAIN

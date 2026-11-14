@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import type { ComponentProps } from "react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { EmbeddedTweet } from "react-tweet";
 import type { Tweet } from "react-tweet/api";
@@ -9,6 +10,31 @@ import "../../styles/community-timeline.css";
 
 const EMPTY_CARDS = [0, 1, 2, 3];
 const tweets = communityTweets;
+
+type TweetComponents = NonNullable<
+  ComponentProps<typeof EmbeddedTweet>["components"]
+>;
+type MediaImgProps = Parameters<NonNullable<TweetComponents["MediaImg"]>>[0];
+
+/** Reel columns are under 300px wide; X's "small" photos are about 680px JPEGs. */
+function ReelMediaImg({ alt, src, ...props }: MediaImgProps) {
+  const url = new URL(src);
+  url.searchParams.set("format", "webp");
+  url.searchParams.set("name", "360x360");
+  return (
+    <img
+      alt={alt}
+      decoding="async"
+      height={360}
+      loading="lazy"
+      src={url.toString()}
+      width={360}
+      {...props}
+    />
+  );
+}
+
+const TWEET_COMPONENTS: TweetComponents = { MediaImg: ReelMediaImg };
 
 function subscribeToPageLoad(onChange: () => void): () => void {
   window.addEventListener("load", onChange);
@@ -41,7 +67,7 @@ function TweetReel({
     sequence.length > 0
       ? sequence.map(({ post, key }) => (
           <div className="reel-embed" key={key}>
-            <EmbeddedTweet tweet={post} />
+            <EmbeddedTweet components={TWEET_COMPONENTS} tweet={post} />
           </div>
         ))
       : EMPTY_CARDS.map((id) => (
@@ -212,8 +238,8 @@ export function CommunityTimeline({
             muted
             onPlay={() => setBlocked(false)}
             playsInline
-            poster="/recap/poster.jpg"
-            preload="metadata"
+            poster="/recap/poster.webp"
+            preload={isActive ? "metadata" : "none"}
             ref={videoRef}
           >
             <source src="/recap/hackspain-2026.mp4" type="video/mp4" />
