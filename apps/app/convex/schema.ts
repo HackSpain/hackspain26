@@ -453,6 +453,18 @@ export default defineSchema({
     phoneConfirmed: v.optional(v.boolean()),
     notificationConsent: v.boolean(),
     notificationConsentAt: v.optional(v.number()),
+    /**
+     * Leftover on deployed user rows after the move to participations.
+     * Optional until `editions.prepareNarrow` unsets them.
+     */
+    attendanceStatus: v.optional(attendanceValidator),
+    dietaryDetails: v.optional(v.string()),
+    dietaryRestrictions: v.optional(v.string()),
+    onboardingComplete: v.optional(v.boolean()),
+    signupId: v.optional(v.string()),
+    termsAcceptedAt: v.optional(v.number()),
+    travelOrigin: v.optional(v.string()),
+    userTypeId: v.optional(v.id("userTypes")),
     adminNotes: v.optional(v.string()),
     githubId: v.optional(v.string()),
     githubUsername: v.optional(v.string()),
