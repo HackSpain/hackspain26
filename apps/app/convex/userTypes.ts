@@ -1,13 +1,14 @@
 import { v } from "convex/values";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import {
-  isSponsorType,
+  defaultUserType,
   normalizeSections,
   PARTICIPANT_SECTIONS,
   sectionsValidator,
   slugify,
+  typeOpenForApplications,
+  typeRequiresConfirmed,
   userTypeSummaryValidator,
-  withSponsorCatalog,
 } from "./lib/userTypes";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -21,6 +22,8 @@ function summary(row: Doc<"userTypes">) {
     description: row.description,
     isDefault: row.isDefault,
     label: row.label,
+    openForApplications: typeOpenForApplications(row),
+    requiresConfirmed: typeRequiresConfirmed(row),
     sections: normalizeSections(row.sections),
     slug: row.slug,
     sortOrder: row.sortOrder,
@@ -90,7 +93,12 @@ async function seedType(
   adminId: Id<"users">,
   fields: Pick<
     Doc<"userTypes">,
-    "label" | "description" | "sections" | "isDefault"
+    | "label"
+    | "description"
+    | "sections"
+    | "isDefault"
+    | "openForApplications"
+    | "requiresConfirmed"
   >
 ): Promise<Id<"userTypes">> {
   const slug = slugify(fields.label);
@@ -99,6 +107,16 @@ async function seedType(
     .withIndex("by_slug", (q) => q.eq("slug", slug))
     .unique();
   if (existing) {
+    const patch: Partial<Doc<"userTypes">> = {};
+    if (existing.requiresConfirmed === undefined) {
+      patch.requiresConfirmed = fields.requiresConfirmed;
+    }
+    if (existing.openForApplications === undefined) {
+      patch.openForApplications = fields.openForApplications;
+    }
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(existing._id, { ...patch, updatedAt: Date.now() });
+    }
     return existing._id;
   }
   const rows = await allTypes(ctx);
@@ -127,6 +145,8 @@ export const ensureDefaults = adminMutation({
         description: "Participa en la hackathon.",
         isDefault: true,
         label: "Hacker",
+        openForApplications: true,
+        requiresConfirmed: true,
         sections: PARTICIPANT_SECTIONS,
       });
     }
@@ -135,30 +155,45 @@ export const ensureDefaults = adminMutation({
       .withIndex("by_role", (q) => q.eq("role", "judge"))
       .collect();
     if (before.length === 0 || legacyJudges.length > 0) {
-      const juradoId = await seedType(ctx, ctx.user._id, {
+      await seedType(ctx, ctx.user._id, {
         description: "Puntúa proyectos en el panel del jurado.",
         isDefault: false,
         label: "Jurado",
-        sections: ["judging"],
+        openForApplications: false,
+        requiresConfirmed: false,
+        sections: ["judging", "judgingSponsors", "participantes"],
       });
       for (const user of legacyJudges) {
-        await ctx.db.patch(user._id, {
-          role: "user",
-          userTypeId: user.userTypeId ?? juradoId,
-        });
+        await ctx.db.patch(user._id, { role: "user" });
       }
     }
+    await seedType(ctx, ctx.user._id, {
+      description: "Partner del evento: ve las entregas.",
+      isDefault: false,
+      label: "Sponsor",
+      openForApplications: true,
+      requiresConfirmed: false,
+      sections: ["judgingSponsors", "participantes"],
+    });
+    await seedType(ctx, ctx.user._id, {
+      description: "Acompaña a los equipos durante el evento.",
+      isDefault: false,
+      label: "Mentor",
+      openForApplications: true,
+      requiresConfirmed: false,
+      sections: ["tracks", "participantes"],
+    });
     const now = Date.now();
     for (const row of await allTypes(ctx)) {
-      if (!isSponsorType(row)) {
-        continue;
-      }
-      const next = withSponsorCatalog(row.sections);
-      if (next.join(",") === normalizeSections(row.sections).join(",")) {
+      if (
+        row.requiresConfirmed !== undefined &&
+        row.openForApplications !== undefined
+      ) {
         continue;
       }
       await ctx.db.patch(row._id, {
-        sections: next,
+        openForApplications: row.openForApplications ?? !row.isDefault,
+        requiresConfirmed: row.requiresConfirmed ?? row.isDefault,
         updatedAt: now,
       });
     }
@@ -174,11 +209,11 @@ export const list = adminQuery({
     const rows = await allTypes(ctx);
     const out = [];
     for (const row of rows) {
-      const users = await ctx.db
-        .query("users")
-        .withIndex("by_user_type", (q) => q.eq("userTypeId", row._id))
+      const assigned = await ctx.db
+        .query("participations")
+        .withIndex("by_role", (q) => q.eq("roleId", row._id))
         .collect();
-      out.push({ ...summary(row), userCount: users.length });
+      out.push({ ...summary(row), userCount: assigned.length });
     }
     return out;
   },
@@ -192,6 +227,8 @@ export const create = adminMutation({
     description: v.optional(v.string()),
     isDefault: v.optional(v.boolean()),
     label: v.string(),
+    openForApplications: v.optional(v.boolean()),
+    requiresConfirmed: v.optional(v.boolean()),
     sections: sectionsValidator,
   },
   handler: async (ctx, args) => {
@@ -208,6 +245,8 @@ export const create = adminMutation({
       description: parseDescription(args.description),
       isDefault,
       label,
+      openForApplications: args.openForApplications === true,
+      requiresConfirmed: args.requiresConfirmed !== false,
       sections: normalizeSections(args.sections),
       slug: await uniqueSlug(ctx, label),
       sortOrder: (existing.at(-1)?.sortOrder ?? -1) + 1,
@@ -222,6 +261,8 @@ export const update = adminMutation({
     description: v.optional(v.string()),
     isDefault: v.optional(v.boolean()),
     label: v.optional(v.string()),
+    openForApplications: v.optional(v.boolean()),
+    requiresConfirmed: v.optional(v.boolean()),
     sections: v.optional(sectionsValidator),
     typeId: v.id("userTypes"),
   },
@@ -240,6 +281,12 @@ export const update = adminMutation({
     }
     if (args.sections !== undefined) {
       patch.sections = normalizeSections(args.sections);
+    }
+    if (args.openForApplications !== undefined) {
+      patch.openForApplications = args.openForApplications;
+    }
+    if (args.requiresConfirmed !== undefined) {
+      patch.requiresConfirmed = args.requiresConfirmed;
     }
     if (args.isDefault !== undefined) {
       patch.isDefault = args.isDefault;
@@ -294,12 +341,20 @@ export const remove = adminMutation({
     if (!row) {
       return null;
     }
-    const users = await ctx.db
-      .query("users")
-      .withIndex("by_user_type", (q) => q.eq("userTypeId", row._id))
+    const hacker =
+      (await ctx.db
+        .query("userTypes")
+        .withIndex("by_slug", (q) => q.eq("slug", "hacker"))
+        .unique()) ?? (await defaultUserType(ctx));
+    if (!hacker || hacker._id === row._id) {
+      throw new Error("No se puede borrar el rol por defecto");
+    }
+    const assigned = await ctx.db
+      .query("participations")
+      .withIndex("by_role", (q) => q.eq("roleId", row._id))
       .collect();
-    for (const user of users) {
-      await ctx.db.patch(user._id, { userTypeId: undefined });
+    for (const participation of assigned) {
+      await ctx.db.patch(participation._id, { roleId: hacker._id });
     }
     await ctx.db.delete(row._id);
     return null;

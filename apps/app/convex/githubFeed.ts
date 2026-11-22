@@ -14,6 +14,7 @@ import {
   repoSlug,
 } from "./lib/github";
 import { urlOf } from "./lib/urls";
+import { currentEditionId, ofEdition } from "./lib/editions";
 import { getEventWindow } from "./lib/eventWindow";
 import { teamRepoList } from "./stack";
 import { removePostSocial } from "./feedSocial";
@@ -119,9 +120,13 @@ export const reposToPoll = internalQuery({
     if (!window) {
       return null;
     }
+    const editionId = await currentEditionId(ctx);
     const [teams, submissions] = await Promise.all([
-      ctx.db.query("teams").collect(),
-      ctx.db.query("submissions").collect(),
+      ctx.db
+        .query("teams")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
+      ofEdition(await ctx.db.query("submissions").collect(), editionId),
     ]);
     const submissionRepos = new Map<string, string>();
     for (const submission of submissions) {
@@ -218,18 +223,20 @@ export const recordEvents = internalMutation({
       if (existing) {
         continue;
       }
+      const team = await ctx.db.get(args.teamId);
       await ctx.db.insert("posts", {
+        createdAt: event.createdAt,
+        editionId: team?.editionId ?? (await currentEditionId(ctx)),
+        externalId: event.externalId,
+        github: {
+          actor: event.actor,
+          event: event.event,
+          repo: args.repo,
+          url: event.url,
+        },
         kind: "github",
         teamId: args.teamId,
         text: event.text,
-        github: {
-          repo: args.repo,
-          event: event.event,
-          url: event.url,
-          actor: event.actor,
-        },
-        externalId: event.externalId,
-        createdAt: event.createdAt,
       });
       inserted++;
     }

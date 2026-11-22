@@ -1,8 +1,7 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
-import { getSignupForUser } from "./lib/auth";
 import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
+import { currentEditionId } from "./lib/editions";
 import { fail } from "./lib/errors";
 import { membershipForUser } from "./lib/team";
 import { milestoneKindValidator } from "./lib/validators";
@@ -21,18 +20,8 @@ const milestoneReturn = v.object({
   teamName: v.string(),
 });
 
-async function loggedBy(
-  ctx: QueryCtx,
-  user: Doc<"users"> | null
-): Promise<string | undefined> {
-  if (!user) {
-    return undefined;
-  }
-  if (user.name) {
-    return user.name;
-  }
-  const signup = await getSignupForUser(ctx, user);
-  return signup?.fullName;
+function loggedBy(user: Doc<"users"> | null): string | undefined {
+  return user?.name;
 }
 
 export const add = onboardedMutation({
@@ -81,6 +70,7 @@ export const add = onboardedMutation({
       label: label || undefined,
       at,
       createdAt: now,
+      editionId: await currentEditionId(ctx),
     });
   },
   returns: v.id("milestones"),
@@ -111,7 +101,7 @@ export const mine = onboardedQuery({
         kind: row.kind,
         label: row.label,
         at: row.at,
-        byName: await loggedBy(ctx, user),
+        byName: loggedBy(user),
       });
     }
     return result;
@@ -140,7 +130,7 @@ export const list = onboardedQuery({
         kind: row.kind,
         label: row.label,
         at: row.at,
-        byName: await loggedBy(ctx, user),
+        byName: loggedBy(user),
       });
     }
     return result;

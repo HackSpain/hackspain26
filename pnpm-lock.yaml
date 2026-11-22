@@ -166,9 +166,6 @@ importers:
       '@astrojs/vercel':
         specifier: ^11.0.11
         version: 11.0.11(astro@7.3.4(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.3)(@types/node@25.9.5)(@vercel/functions@3.9.9(ws@8.21.0))(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@25.9.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(rollup@4.63.1)(ws@8.21.0)
-      '@neondatabase/serverless':
-        specifier: ^1.0.2
-        version: 1.1.0
       '@rawtree/sdk':
         specifier: ^0.2.0
         version: 0.2.0
@@ -235,9 +232,6 @@ importers:
       react-tweet:
         specifier: ^3.3.1
         version: 3.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      resend:
-        specifier: ^6.18.1
-        version: 6.26.0
       tailwindcss:
         specifier: ^4.2.2
         version: 4.3.3

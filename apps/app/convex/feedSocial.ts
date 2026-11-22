@@ -1,5 +1,7 @@
 import { v } from "convex/values";
-import { getSignupForUser, isAdmin } from "./lib/auth";
+import { isAdmin } from "./lib/auth";
+import { getCurrentParticipation } from "./lib/participations";
+import { currentEditionId } from "./lib/editions";
 import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
 import {
@@ -168,7 +170,7 @@ async function hydrateComment(
 ) {
   const author = await ctx.db.get(comment.authorId);
   const signup =
-    author && !author.name ? await getSignupForUser(ctx, author) : null;
+    author && !author.name ? await getCurrentParticipation(ctx, author) : null;
   return {
     _id: comment._id,
     author: {
@@ -271,11 +273,19 @@ export const removeComment = onboardedMutation({
 export const mentionable = onboardedQuery({
   args: {},
   handler: async (ctx) => {
+    const editionId = await currentEditionId(ctx);
     const users = await ctx.db.query("users").collect();
     const out = [];
     for (const user of users) {
       const name = user.name?.trim();
-      if (!name || !(user.onboardingComplete || isAdmin(user))) {
+      const participation = await getCurrentParticipation(ctx, user);
+      if (
+        !name ||
+        !(participation?.onboardingComplete === true || isAdmin(user))
+      ) {
+        continue;
+      }
+      if (participation && participation.editionId !== editionId) {
         continue;
       }
       out.push({

@@ -1,6 +1,8 @@
 import type { Doc } from "../_generated/dataModel";
 
-export type AttendanceStatus = Doc<"users">["attendanceStatus"];
+export type AttendanceStatus = NonNullable<
+  Doc<"participations">["attendanceStatus"]
+>;
 
 export function countsAsAttending(
   status: AttendanceStatus | null | undefined

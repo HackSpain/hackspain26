@@ -8,7 +8,13 @@ import {
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { HACKATHON_SETTINGS_KEY, settingsDoc } from "./lib/eventWindow";
+import {
+  currentEdition,
+  currentEditionId,
+  ofEdition,
+  resolveEditionId,
+} from "./lib/editions";
+import { submissionsAreOpenFor } from "./lib/schedule";
 
 const DEFAULT_TRACKS = [
   {
@@ -123,7 +129,11 @@ export async function trackEntryCounts(
   exceptSubmissionId?: Id<"submissions">
 ): Promise<Map<Id<"tracks">, number>> {
   const counts = new Map<Id<"tracks">, number>();
-  for (const submission of await ctx.db.query("submissions").collect()) {
+  const editionId = await currentEditionId(ctx);
+  for (const submission of ofEdition(
+    await ctx.db.query("submissions").collect(),
+    editionId
+  )) {
     if (submission._id === exceptSubmissionId) {
       continue;
     }
@@ -137,8 +147,8 @@ export async function trackEntryCounts(
 export async function submissionsAreOpen(
   ctx: QueryCtx | MutationCtx
 ): Promise<boolean> {
-  const row = await settingsDoc(ctx);
-  return row?.submissionsOpen ?? false;
+  const edition = await currentEdition(ctx);
+  return submissionsAreOpenFor(edition, Date.now());
 }
 
 export type SeedMode = "replace" | "fill";
@@ -154,10 +164,13 @@ export async function seedDefaults(
   ctx: MutationCtx,
   mode: SeedMode = "replace"
 ): Promise<void> {
+  const editionId = await currentEditionId(ctx);
   for (const track of DEFAULT_TRACKS) {
     const existing = await ctx.db
       .query("tracks")
-      .withIndex("by_slug", (q) => q.eq("slug", track.slug))
+      .withIndex("by_edition_slug", (q) =>
+        q.eq("editionId", editionId).eq("slug", track.slug)
+      )
       .unique();
     if (existing) {
       if (mode === "fill") {
@@ -178,6 +191,7 @@ export async function seedDefaults(
     await ctx.db.insert("tracks", {
       active: true,
       body: track.body,
+      editionId,
       label: track.label,
       logoUrl: track.logoUrl,
       note: track.note,
@@ -196,14 +210,6 @@ export async function seedDefaults(
       await ctx.db.patch(leftover._id, { active: false });
     }
   }
-
-  const settings = await settingsDoc(ctx);
-  if (!settings) {
-    await ctx.db.insert("settings", {
-      key: HACKATHON_SETTINGS_KEY,
-      submissionsOpen: false,
-    });
-  }
 }
 
 export const list = tracksQuery({
@@ -216,7 +222,8 @@ export const list = tracksQuery({
         .collect(),
       trackEntryCounts(ctx),
     ]);
-    return tracks
+    const editionId = await currentEditionId(ctx);
+    return ofEdition(tracks, editionId)
       .toSorted((a, b) => a.sortOrder - b.sortOrder)
       .map((track) => ({
         ...trackFields(track),
@@ -236,9 +243,12 @@ export const list = tracksQuery({
 export const get = tracksQuery({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
+    const editionId = await currentEditionId(ctx);
     const track = await ctx.db
       .query("tracks")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .withIndex("by_edition_slug", (q) =>
+        q.eq("editionId", editionId).eq("slug", args.slug)
+      )
       .unique();
     if (!track?.active) {
       return null;
@@ -263,9 +273,13 @@ export const settings = tracksQuery({
 });
 
 export const adminList = adminQuery({
-  args: {},
-  handler: async (ctx) => {
-    const tracks = await ctx.db.query("tracks").collect();
+  args: { editionId: v.optional(v.id("editions")) },
+  handler: async (ctx, args) => {
+    const editionId = await resolveEditionId(ctx, args.editionId);
+    const tracks = await ctx.db
+      .query("tracks")
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+      .collect();
     return tracks
       .toSorted((a, b) => a.sortOrder - b.sortOrder)
       .map(trackFields);
@@ -306,23 +320,6 @@ export const syncOfficialTracks = internalMutation({
   args: {},
   handler: async (ctx) => {
     await seedDefaults(ctx);
-    return null;
-  },
-  returns: v.null(),
-});
-
-export const adminSetSubmissionsOpen = adminMutation({
-  args: { submissionsOpen: v.boolean() },
-  handler: async (ctx, args) => {
-    const row = await settingsDoc(ctx);
-    if (row) {
-      await ctx.db.patch(row._id, { submissionsOpen: args.submissionsOpen });
-    } else {
-      await ctx.db.insert("settings", {
-        key: HACKATHON_SETTINGS_KEY,
-        submissionsOpen: args.submissionsOpen,
-      });
-    }
     return null;
   },
   returns: v.null(),

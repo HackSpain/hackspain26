@@ -5,33 +5,20 @@ import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import type { Role } from "@convex/lib/validators";
 import { api } from "@convex/_generated/api";
 import { isEventOpen } from "@/components/event-closed-banner";
 import { HomeSplash } from "@/components/home-splash";
 import { LoginTransitionProvider } from "@/components/login-transition-context";
 import { LoadingText } from "@/components/page";
 import { Button } from "@/components/ui/button";
+import { route } from "@/lib/auth-route";
+import type { AuthMe } from "@/lib/auth-route";
 import {
   CLI_AUTH_PATH,
   cliAuthReturnTo,
   safeCliAuthReturnTo,
 } from "@/lib/cli-handoff";
 import { isPublicAppPath } from "@/lib/public-paths";
-import {
-  DIRECTORY_PATH,
-  hasDirectory,
-  hasSponsorCatalog,
-  isAnyJudgingPath,
-  isJudgingPath,
-  isPathAllowedWhenClosed,
-  isSponsorJudgingPath,
-  isTracksPath,
-  judgingDashboardHome,
-  JUDGING_PATH,
-  JUDGING_SPONSORS_PATH,
-  sectionForPath,
-} from "@/lib/sections";
 
 const LoginTransition = dynamic(
   () =>
@@ -51,37 +38,22 @@ const LoginTransition = dynamic(
   }
 );
 
-function destination(me: {
-  role: Role;
-  isRegistered: boolean;
-  accepted: boolean;
-  onboardingComplete: boolean;
-  profileComplete: boolean;
-}): string | null {
-  if (!me.isRegistered) {
-    return "/unregistered";
-  }
-  if (!me.accepted) {
-    return "/pending";
-  }
-  if (!me.onboardingComplete) {
-    return "/onboarding";
-  }
-  // Name, photo and directory card (convex/lib/profile.ts). Every role,
-  // admins and judges included, fills these in the same wizard.
-  if (!me.profileComplete) {
-    return "/onboarding";
-  }
-  return null;
+type Me = NonNullable<ReturnType<typeof useQuery<typeof api.users.me>>>;
+
+function toAuthMe(me: Me): AuthMe {
+  return {
+    accepted: me.accepted,
+    admin: me.admin,
+    canJudge: me.canJudge,
+    event: { open: isEventOpen(me.event) },
+    isRegistered: me.isRegistered,
+    onboardingComplete: me.onboardingComplete,
+    profileComplete: me.profileComplete,
+    role: me.role,
+    sections: me.sections,
+  };
 }
 
-// /cli-auth approves a CLI login and carries a one-time hs-code, in the URL
-// fragment for current CLI links and in the query for older ones. The whole
-// location is kept through the login redirect via sessionStorage, since
-// neither the middleware nor this gate has a returnTo query.
-// /cli-auth/handoff signs the browser in with a token minted by the CLI
-// (`hackspain open`). Like /tv it renders without a session; the page itself
-// navigates onward once the cookies are set, and the gates apply there.
 const CLI_HANDOFF_PATH = "/cli-auth/handoff";
 const RETURN_TO_KEY = "hs-return-to";
 
@@ -97,9 +69,6 @@ function stashReturnTo(): void {
   }
 }
 
-// Peek, don't consume: the gate effect re-runs while the router is still on
-// /login, and removing the stash on first read would let a re-run fall
-// through to the participant-gate redirect. Cleared on arrival at /cli-auth.
 function peekReturnTo(): string | null {
   try {
     return safeCliAuthReturnTo(sessionStorage.getItem(RETURN_TO_KEY));
@@ -123,8 +92,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
   const attachAfterLogin = useMutation(api.users.attachAfterLogin);
 
-  // Set by the login page once its code is accepted; the curtain stays up
-  // until the page the user lands on is rendered underneath (see below).
   const [transition, setTransition] = useState<{
     email: string | null;
     startedAt: number;
@@ -141,10 +108,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     void attachAfterLogin({});
   }, [attachAfterLogin, isAuthenticated, me]);
 
-  // Safety net for the curtain: if the session never materialises (a
-  // rejected token) or the redirect stalls, hand the screen back rather than
-  // leaving "Entrando…" up for good. The provider needs a moment to pick the
-  // new token up, hence the grace before trusting "not signed in".
   useEffect(() => {
     if (!transition) {
       return;
@@ -186,148 +149,21 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         return;
       }
     }
-    // Any signed-in user may approve a CLI login; the participant gates
-    // (pending / onboarding) apply to the CLI session itself, not here.
     if (pathname === CLI_AUTH_PATH) {
       clearReturnTo();
-      return;
     }
 
-    if (me.role === "admin") {
-      // Admins must fill their profile like everyone else; the phone step is
-      // only offered to those with an accepted signup, never forced.
-      const profileDue = !me.profileComplete;
-      const detailsDue = me.accepted && !me.onboardingComplete;
-      if (profileDue) {
-        if (pathname !== "/onboarding") {
-          router.replace("/onboarding");
-        }
-        return;
-      }
-      if (pathname === "/login") {
-        router.replace("/");
-        return;
-      }
-      if (pathname === "/onboarding" && !detailsDue) {
-        router.replace("/");
-      }
-      if (pathname === "/pending" || pathname === "/unregistered") {
-        router.replace("/");
-      }
-      return;
-    }
-
-    // Outside the hackathon window only the profile, directory, perks and
-    // judging stay; judges also keep the challenge briefs on /tracks.
-    if (
-      !isEventOpen(me.event) &&
-      !isPathAllowedWhenClosed(pathname, me.canJudge)
-    ) {
-      router.replace("/");
-      return;
-    }
-
-    // Hidden sections (CRM user type) bounce home; a judge or sponsor without
-    // a signup then continues to their dashboard through the ladder below.
-    const section = sectionForPath(pathname);
-    if (
-      section &&
-      !me.sections.includes(section) &&
-      !(me.canJudge && section === "tracks")
-    ) {
-      router.replace("/");
-      return;
-    }
-
-    const catalogAccess = hasSponsorCatalog(me.sections);
-    const dashboardAccess =
-      me.canJudge || catalogAccess || hasDirectory(me.sections);
-    if (dashboardAccess) {
-      if (pathname.startsWith("/admin")) {
-        router.replace("/");
-        return;
-      }
-      if (!me.profileComplete) {
-        if (pathname !== "/onboarding") {
-          router.replace("/onboarding");
-        }
-        return;
-      }
-      const home = judgingDashboardHome(me);
-      if (isAnyJudgingPath(pathname)) {
-        if (isJudgingPath(pathname) && !me.canJudge) {
-          router.replace(catalogAccess ? JUDGING_SPONSORS_PATH : home);
-          return;
-        }
-        if (isSponsorJudgingPath(pathname) && !catalogAccess) {
-          router.replace(me.canJudge ? JUDGING_PATH : home);
-          return;
-        }
-        return;
-      }
-      if (me.canJudge && isTracksPath(pathname)) {
-        return;
-      }
-      if (pathname === "/login") {
-        router.replace(home);
-        return;
-      }
-      if (pathname === "/" && home === DIRECTORY_PATH) {
-        router.replace(home);
-        return;
-      }
-      const next = destination(me);
-      if (next && pathname !== next) {
-        if (
-          next === "/pending" ||
-          next === "/unregistered" ||
-          next === "/onboarding"
-        ) {
-          router.replace(home);
-          return;
-        }
-        router.replace(next);
-        return;
-      }
-      if (
-        !next &&
-        (pathname === "/onboarding" ||
-          pathname === "/unregistered" ||
-          pathname === "/pending")
-      ) {
-        router.replace(home);
-      }
-      return;
-    }
-
-    const next = destination(me);
-    if (next && pathname !== next) {
+    const next = route(toAuthMe(me), pathname);
+    if (next) {
       router.replace(next);
-      return;
-    }
-    if (
-      !next &&
-      (pathname === "/onboarding" ||
-        pathname === "/unregistered" ||
-        pathname === "/pending" ||
-        pathname === "/login")
-    ) {
-      router.replace("/");
-    }
-    if (pathname.startsWith("/admin")) {
-      router.replace("/");
     }
   }, [isAuthenticated, isLoading, me, pathname, router]);
 
-  // These routes render without waiting on auth. The handoff creates its own
-  // session; TV, closing and the finals cancel page are public.
   if (isPublicAppPath(pathname) || pathname === CLI_HANDOFF_PATH) {
     return <>{children}</>;
   }
 
   const view = resolveView({ isAuthenticated, isLoading, me, pathname });
-  // The curtain lifts only once the landing page itself is on screen, never
-  // over "Cargando…" or the login card the gate remounts on the way.
   const revealReady =
     transition !== null && pathname !== "/login" && view === "page";
 
@@ -353,12 +189,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   );
 }
 
-type Me = NonNullable<ReturnType<typeof useQuery<typeof api.users.me>>>;
-
-/**
- * What the gate shows at this path: the page itself, the loading screen,
- * the public splash or nothing while the effect above redirects.
- */
 function resolveView({
   isAuthenticated,
   isLoading,
@@ -370,7 +200,7 @@ function resolveView({
   me: Me | null | undefined;
   pathname: string;
 }): "page" | "loading" | "splash" | "blank" {
-  if (isLoading || (isAuthenticated && me === undefined)) {
+  if (isLoading) {
     return "loading";
   }
 
@@ -382,87 +212,13 @@ function resolveView({
     return "blank";
   }
 
-  if (me && me.role !== "admin" && pathname !== CLI_AUTH_PATH) {
-    if (pathname.startsWith("/admin")) {
-      return "blank";
-    }
-    if (
-      !isEventOpen(me.event) &&
-      !isPathAllowedWhenClosed(pathname, me.canJudge)
-    ) {
-      return "blank";
-    }
-    const section = sectionForPath(pathname);
-    if (
-      section &&
-      !me.sections.includes(section) &&
-      !(me.canJudge && section === "tracks")
-    ) {
-      return "blank";
-    }
-    const next = destination(me);
-    const dashboardAccess =
-      me.canJudge ||
-      hasSponsorCatalog(me.sections) ||
-      hasDirectory(me.sections);
-    const isRequiredStatusPage =
-      pathname === next && (next === "/unregistered" || next === "/pending");
-    if (!me.profileComplete && !isRequiredStatusPage) {
-      if (pathname !== "/onboarding") {
-        return "blank";
-      }
-      // The effect keeps a judge here even without a signup; everyone else
-      // still has to be registered and accepted first (ladder below).
-      if (dashboardAccess) {
-        return "page";
-      }
-    }
-    const judgingAllowed =
-      (me.canJudge && isJudgingPath(pathname)) ||
-      (hasSponsorCatalog(me.sections) && isSponsorJudgingPath(pathname));
-    const tracksAllowed = me.canJudge && isTracksPath(pathname);
-    if (!judgingAllowed && !tracksAllowed) {
-      if (
-        dashboardAccess &&
-        (pathname === "/login" ||
-          (pathname === "/" && judgingDashboardHome(me) === DIRECTORY_PATH))
-      ) {
-        return "blank";
-      }
-      if (
-        dashboardAccess &&
-        next &&
-        (next === "/pending" ||
-          next === "/unregistered" ||
-          next === "/onboarding")
-      ) {
-        if (pathname !== judgingDashboardHome(me)) {
-          return "blank";
-        }
-      } else if (
-        dashboardAccess &&
-        !next &&
-        (pathname === "/onboarding" ||
-          pathname === "/unregistered" ||
-          pathname === "/pending")
-      ) {
-        return "blank";
-      } else if (next && pathname !== next) {
-        return "blank";
-      }
-    }
+  if (isAuthenticated && me === undefined) {
+    return "page";
   }
 
-  if (me?.role === "admin") {
-    const profileDue = !me.profileComplete;
-    const detailsDue = me.accepted && !me.onboardingComplete;
-    if (profileDue && pathname !== "/onboarding") {
-      return "blank";
-    }
-    if (pathname === "/onboarding" && !profileDue && !detailsDue) {
-      return "blank";
-    }
-    if (pathname === "/pending" || pathname === "/unregistered") {
+  if (me) {
+    const next = route(toAuthMe(me), pathname);
+    if (next) {
       return "blank";
     }
   }

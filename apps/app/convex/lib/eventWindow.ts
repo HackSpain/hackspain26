@@ -1,12 +1,10 @@
 import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { currentEdition } from "./editions";
 import { fail } from "./errors";
 
 type Ctx = QueryCtx | MutationCtx;
-
-/** Key of the singleton `settings` row that holds hackathon-wide switches. */
-export const HACKATHON_SETTINGS_KEY = "hackathon";
 
 export type EventWindow = { startsAt?: number; endsAt?: number };
 
@@ -31,16 +29,9 @@ export const eventWindowValidator = v.object({
   startsAt: v.optional(v.number()),
 });
 
-export async function settingsDoc(ctx: Ctx): Promise<Doc<"settings"> | null> {
-  return await ctx.db
-    .query("settings")
-    .withIndex("by_key", (q) => q.eq("key", HACKATHON_SETTINGS_KEY))
-    .unique();
-}
-
 export async function getEventWindow(ctx: Ctx): Promise<EventWindow> {
-  const row = await settingsDoc(ctx);
-  return { endsAt: row?.eventEndsAt, startsAt: row?.eventStartsAt };
+  const edition = await currentEdition(ctx);
+  return { endsAt: edition.eventEndsAt, startsAt: edition.eventStartsAt };
 }
 
 export function eventPhase(window: EventWindow, now: number): EventPhase {
@@ -73,6 +64,40 @@ export function formatEventDate(ms: number): string {
   return DATE_FORMAT.format(new Date(ms));
 }
 
+const DAY_FORMAT = new Intl.DateTimeFormat("es-ES", {
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/Madrid",
+  year: "numeric",
+});
+
+function madridDay(ms: number): { day: string; month: string; year: string } {
+  const parts = DAY_FORMAT.formatToParts(new Date(ms));
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  return { day, month, year };
+}
+
+/** Compact Madrid range for emails. Missing bounds leave the caller to fall back. */
+export function editionDatesLine(
+  startsAt?: number,
+  endsAt?: number
+): string | undefined {
+  if (startsAt === undefined || endsAt === undefined) {
+    return undefined;
+  }
+  const start = madridDay(startsAt);
+  const end = madridDay(endsAt);
+  if (start.month === end.month && start.year === end.year) {
+    return `Madrid · ${start.day}—${end.day} ${start.month} ${start.year}`;
+  }
+  if (start.year === end.year) {
+    return `Madrid · ${start.day} ${start.month} — ${end.day} ${end.month} ${start.year}`;
+  }
+  return `Madrid · ${start.day} ${start.month} ${start.year} — ${end.day} ${end.month} ${end.year}`;
+}
+
 /** Spanish copy for a closed window; the CLI swaps it for English by code. */
 export function closedMessage(phase: EventPhase, window: EventWindow): string {
   if (phase === "before" && window.startsAt !== undefined) {
@@ -92,9 +117,9 @@ export function closedMessage(phase: EventPhase, window: EventWindow): string {
  */
 export async function requireEventOpen(
   ctx: Ctx,
-  user: Pick<Doc<"users">, "role">
+  user: Pick<Doc<"users">, "admin" | "role">
 ): Promise<void> {
-  if (user.role === "admin") {
+  if (user.admin === true || user.role === "admin") {
     return;
   }
   const window = await getEventWindow(ctx);

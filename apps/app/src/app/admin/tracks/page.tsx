@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { ExternalLink } from "lucide-react";
+import { useAdminEditionArgs } from "@/components/admin/use-admin-edition";
 import {
   EmptyState,
   Field,
@@ -50,11 +51,11 @@ export default function AdminTracksPage() {
 }
 
 function TracksAdmin() {
-  const tracks = useQuery(api.tracks.adminList);
+  const editionArgs = useAdminEditionArgs();
+  const tracks = useQuery(api.tracks.adminList, editionArgs);
   const settings = useQuery(api.tracks.adminSettings);
-  const submissions = useQuery(api.submissions.adminList);
+  const submissions = useQuery(api.submissions.adminList, editionArgs);
   const ensureDefaults = useMutation(api.tracks.adminEnsureDefaults);
-  const setOpen = useMutation(api.tracks.adminSetSubmissionsOpen);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -94,34 +95,9 @@ function TracksAdmin() {
 
   return (
     <Page
-      title="Retos y proyectos"
+      title="Retos"
       description="Los retos viven en Convex. THEKER se puede combinar con otro reto."
     >
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex flex-wrap items-center gap-2">
-            Ventana de envío
-            <Badge
-              variant={settings.submissionsOpen ? "gold" : "default"}
-              className="whitespace-nowrap"
-            >
-              {settings.submissionsOpen ? "Abierta" : "Cerrada"}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={() =>
-              void setOpen({ submissionsOpen: !settings.submissionsOpen })
-            }
-          >
-            {settings.submissionsOpen ? "Cerrar envíos" : "Abrir envíos"}
-          </Button>
-        </CardContent>
-      </Card>
-
       {selected === null ? (
         <EmptyState title="Aún no hay retos">
           Se crearán los retos por defecto en un momento.

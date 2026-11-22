@@ -5,6 +5,12 @@ import {
   anytimeOnboardedMutation,
   anytimeOnboardedQuery,
 } from "./lib/customFunctions";
+import {
+  currentEditionId,
+  ofEdition,
+  requireCurrentEdition,
+  resolveEditionId,
+} from "./lib/editions";
 import { fail } from "./lib/errors";
 import { isHttpUrl, normalizeInputs, validateAnswers } from "./lib/perkInputs";
 import type { PerkInput } from "./lib/perkInputs";
@@ -125,10 +131,14 @@ export const listCatalog = anytimeOnboardedQuery({
     })
   ),
   handler: async (ctx) => {
-    const perks = await ctx.db
-      .query("perks")
-      .withIndex("by_active", (q) => q.eq("active", true))
-      .collect();
+    const editionId = await currentEditionId(ctx);
+    const perks = ofEdition(
+      await ctx.db
+        .query("perks")
+        .withIndex("by_active", (q) => q.eq("active", true))
+        .collect(),
+      editionId
+    );
     const result = [];
     for (const perk of perks) {
       const claim = await ctx.db
@@ -221,6 +231,7 @@ export const claim = anytimeOnboardedMutation({
         codeId: unused._id,
         answers,
         createdAt: now,
+        editionId: perk.editionId ?? (await currentEditionId(ctx)),
         updatedAt: now,
       });
     }
@@ -232,13 +243,14 @@ export const claim = anytimeOnboardedMutation({
       status: "pending",
       answers,
       createdAt: now,
+      editionId: perk.editionId ?? (await currentEditionId(ctx)),
       updatedAt: now,
     });
   },
 });
 
 export const adminList = adminQuery({
-  args: {},
+  args: { editionId: v.optional(v.id("editions")) },
   returns: v.array(
     v.object({
       _id: v.id("perks"),
@@ -256,8 +268,12 @@ export const adminList = adminQuery({
       claimCount: v.number(),
     })
   ),
-  handler: async (ctx) => {
-    const perks = await ctx.db.query("perks").collect();
+  handler: async (ctx, args) => {
+    const editionId = await resolveEditionId(ctx, args.editionId);
+    const perks = await ctx.db
+      .query("perks")
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+      .collect();
     const rows = [];
     for (const perk of perks) {
       const codes = await ctx.db
@@ -293,6 +309,7 @@ export const adminCreate = adminMutation({
   },
   returns: v.id("perks"),
   handler: async (ctx, args) => {
+    await requireCurrentEdition(ctx);
     const company = args.company.trim();
     const title = args.title.trim();
     if (!company || !title) {
@@ -315,6 +332,7 @@ export const adminCreate = adminMutation({
       active: true,
       createdBy: ctx.user._id,
       createdAt: now,
+      editionId: await currentEditionId(ctx),
       updatedAt: now,
     });
     if (args.type === "code") {

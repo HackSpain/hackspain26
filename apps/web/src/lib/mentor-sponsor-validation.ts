@@ -46,23 +46,6 @@ export const ATTENDANCE_MEAL_OPTIONS: readonly {
   { id: "dinner", label: "Cena" },
 ] as const;
 
-/** One line per attended day, e.g. "Viernes 18: comida, tarde". */
-export function formatAttendanceSlots(
-  slots: readonly string[]
-): readonly string[] {
-  const chosen = new Set(slots);
-  const lines: string[] = [];
-  for (const day of ATTENDANCE_DAY_OPTIONS) {
-    const meals = ATTENDANCE_MEAL_OPTIONS.filter((meal) =>
-      chosen.has(`${day.id}_${meal.id}`)
-    ).map((meal) => meal.label.toLowerCase());
-    if (meals.length > 0) {
-      lines.push(`${day.label}: ${meals.join(", ")}`);
-    }
-  }
-  return lines;
-}
-
 function requiredName(message: string) {
   return z
     .string()

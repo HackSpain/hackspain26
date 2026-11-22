@@ -1,3 +1,5 @@
+import { youtubeId } from "@convex/lib/submission";
+
 export type VideoEmbed =
   | { kind: "youtube"; src: string }
   | { kind: "loom"; src: string }
@@ -5,29 +7,6 @@ export type VideoEmbed =
 
 function pathSegments(pathname: string): string[] {
   return pathname.split("/").filter((part) => part.length > 0);
-}
-
-function youtubeId(url: URL): string | null {
-  const host = url.hostname.replace(/^www\./, "");
-  if (host === "youtu.be") {
-    const [id] = pathSegments(url.pathname);
-    return id ?? null;
-  }
-  if (
-    host !== "youtube.com" &&
-    host !== "m.youtube.com" &&
-    host !== "youtube-nocookie.com"
-  ) {
-    return null;
-  }
-  if (url.pathname === "/watch") {
-    return url.searchParams.get("v");
-  }
-  const [kind, id] = pathSegments(url.pathname);
-  if ((kind === "embed" || kind === "shorts" || kind === "live") && id) {
-    return id;
-  }
-  return null;
 }
 
 function loomId(url: URL): string | null {

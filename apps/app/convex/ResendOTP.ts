@@ -2,10 +2,11 @@ import { Email } from "@convex-dev/auth/providers/Email";
 import { generateRandomString } from "@oslojs/crypto/random";
 import type { RandomReader } from "@oslojs/crypto/random";
 import { Resend as ResendAPI } from "resend";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
 import { fail } from "./lib/errors";
+import { editionDatesLine } from "./lib/eventWindow";
 import { OTP_EMAIL_SUBJECT, otpEmailHtml, otpEmailText } from "./lib/otpEmail";
 import { resendApiKey, resendFrom } from "./lib/resend";
 
@@ -57,10 +58,16 @@ export async function sendVerificationRequest(
     return;
   }
 
+  const edition = ctx
+    ? await ctx.runQuery(api.editions.currentLabel, {})
+    : null;
+  const datesLine =
+    editionDatesLine(edition?.eventStartsAt, edition?.eventEndsAt) ?? "Madrid";
+
   const resend = new ResendAPI(provider.apiKey);
   const { error } = await resend.emails.send({
     from: resendFrom(),
-    html: otpEmailHtml(token),
+    html: otpEmailHtml(token, datesLine),
     subject: OTP_EMAIL_SUBJECT,
     text: otpEmailText(token),
     to: [email],

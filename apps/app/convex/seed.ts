@@ -16,14 +16,11 @@ import {
   UNIVERSITY_OPTIONS,
 } from "./lib/directoryOptions";
 import { JUDGING_SETTINGS_KEY } from "./lib/judging";
-import {
-  isSponsorType,
-  PARTICIPANT_SECTIONS,
-  slugify,
-  withSponsorCatalog,
-} from "./lib/userTypes";
+import { PARTICIPANT_SECTIONS, slugify } from "./lib/userTypes";
 import type { Sections } from "./lib/userTypes";
+import { seedEditions } from "./lib/editions";
 import { seedDefaults as seedTracks } from "./tracks";
+import { deleteUnreadTableRows } from "./lib/unreadTables";
 
 /**
  * Development seed: a believable hackathon in progress. Run it against the
@@ -551,30 +548,40 @@ const USER_TYPES: {
   description: string;
   sections: Sections;
   isDefault: boolean;
+  openForApplications: boolean;
+  requiresConfirmed: boolean;
 }[] = [
   {
     label: "Hacker",
     description: "Participa en la hackathon.",
     sections: PARTICIPANT_SECTIONS,
     isDefault: true,
+    openForApplications: true,
+    requiresConfirmed: true,
   },
   {
     label: "Jurado",
     description: "Puntúa proyectos en el panel del jurado.",
-    sections: ["judging"],
+    sections: ["judging", "judgingSponsors", "participantes"],
     isDefault: false,
+    openForApplications: false,
+    requiresConfirmed: false,
   },
   {
     label: "Mentor",
     description: "Acompaña a los equipos durante el evento.",
-    sections: ["tracks", "cli"],
+    sections: ["tracks", "participantes"],
     isDefault: false,
+    openForApplications: true,
+    requiresConfirmed: false,
   },
   {
     label: "Sponsor",
-    description: "Partner del evento: retos, perks y entregas.",
-    sections: ["tracks", "perks", "participantes", "judgingSponsors"],
+    description: "Partner del evento: ve las entregas.",
+    sections: ["judgingSponsors", "participantes"],
     isDefault: false,
+    openForApplications: true,
+    requiresConfirmed: false,
   },
 ];
 
@@ -631,15 +638,11 @@ async function upsertUserType(
     all.find((row) => row.slug === slug) ??
     all.find((row) => [...row.sections].toSorted().join(",") === wanted);
   if (existing) {
-    if (isSponsorType(existing)) {
-      const next = withSponsorCatalog(existing.sections);
-      if (next.join(",") !== existing.sections.join(",")) {
-        await ctx.db.patch(existing._id, {
-          sections: next,
-          updatedAt: Date.now(),
-        });
-      }
-    }
+    await ctx.db.patch(existing._id, {
+      openForApplications: spec.openForApplications,
+      requiresConfirmed: spec.requiresConfirmed,
+      updatedAt: Date.now(),
+    });
     return existing._id;
   }
   const now = Date.now();
@@ -649,6 +652,8 @@ async function upsertUserType(
     description: spec.description,
     isDefault: spec.isDefault && !all.some((row) => row.isDefault),
     label: spec.label,
+    openForApplications: spec.openForApplications,
+    requiresConfirmed: spec.requiresConfirmed,
     sections: spec.sections,
     slug,
     sortOrder: Math.max(sortOrder, (all.at(-1)?.sortOrder ?? -1) + 1),
@@ -668,9 +673,7 @@ async function insertUser(
   person: Person,
   opts: {
     role: "admin" | "user";
-    signupId?: Id<"signups">;
     onboarded: boolean;
-    userTypeId?: Id<"userTypes">;
     index: number;
     profile?: SeedProfile;
   }
@@ -679,8 +682,6 @@ async function insertUser(
   const travelOrigin = opts.onboarded ? pick(CITIES) : undefined;
   const profile = opts.profile ?? "complete";
   return await ctx.db.insert("users", {
-    attendanceStatus: "attending",
-    dietaryRestrictions: opts.onboarded ? pick(DIETS) : undefined,
     directory:
       profile === "noDirectory"
         ? undefined
@@ -694,25 +695,24 @@ async function insertUser(
     image: profile === "noPhoto" ? undefined : avatarFor(person.github),
     name,
     notificationConsent: chance(0.85),
-    onboardingComplete: opts.onboarded,
     phone: opts.onboarded ? phoneFor(opts.index) : undefined,
     role: opts.role,
-    signupId: opts.signupId,
-    termsAcceptedAt: opts.onboarded
-      ? Date.now() - between(1, 10) * 24 * HOUR
-      : undefined,
-    travelOrigin,
-    userTypeId: opts.userTypeId,
   });
 }
 
-async function insertSignup(
+async function insertParticipation(
   ctx: MutationCtx,
   person: Person,
-  accepted: boolean
-): Promise<Id<"signups">> {
-  return await ctx.db.insert("signups", {
-    accepted,
+  opts: {
+    editionId: Id<"editions">;
+    roleId: Id<"userTypes">;
+    status: "applied" | "accepted" | "confirmed";
+    userId?: Id<"users">;
+    onboarded: boolean;
+  }
+): Promise<Id<"participations">> {
+  const travelOrigin = opts.onboarded ? pick(CITIES) : undefined;
+  return await ctx.db.insert("participations", {
     achievements: chance(0.5)
       ? pick([
           "Gané el hackathon de mi universidad en 2025.",
@@ -721,13 +721,23 @@ async function insertSignup(
           "Primer hackathon, muchas ganas.",
         ])
       : undefined,
+    attendanceStatus: "attending",
     createdAt: Date.now() - between(20, 60) * 24 * HOUR,
+    dietaryRestrictions: opts.onboarded ? pick(DIETS) : undefined,
+    editionId: opts.editionId,
     email: person.email,
     freeTime: chance(0.5)
       ? pick(["Escalada", "Ajedrez", "Cocina", "Fotografía", "Ciclismo"])
       : undefined,
     fullName: `${person.first} ${person.last}`,
     githubUsername: person.github,
+    onboardingComplete: opts.onboarded,
+    roleId: opts.roleId,
+    status: opts.status,
+    termsAcceptedAt: opts.onboarded
+      ? Date.now() - between(1, 10) * 24 * HOUR
+      : undefined,
+    travelOrigin,
     urls: [
       { kind: "github", url: `https://github.com/${person.github}` },
       ...(chance(0.6)
@@ -742,6 +752,7 @@ async function insertSignup(
         ? [{ kind: "x" as const, url: `https://x.com/${person.github}` }]
         : []),
     ],
+    userId: opts.userId,
     wantsAmbassador: chance(0.1),
   });
 }
@@ -772,7 +783,7 @@ async function seededUserIds(
 
 async function clearSeed(ctx: MutationCtx): Promise<Record<string, number>> {
   const userIds = await seededUserIds(ctx);
-  const deleted: Record<string, number> = {};
+  const deleted: Record<string, number> = await deleteUnreadTableRows(ctx);
   const del = async (table: string, id: Id<TableNames>) => {
     await ctx.db.delete(id);
     deleted[table] = (deleted[table] ?? 0) + 1;
@@ -799,29 +810,11 @@ async function clearSeed(ctx: MutationCtx): Promise<Record<string, number>> {
       await del("milestones", row._id);
     }
   }
-  for (const row of await ctx.db.query("judgingScores").collect()) {
-    if (userIds.has(row.judgeId)) {
-      await del("judgingScores", row._id);
-    }
-  }
-  for (const row of await ctx.db.query("judgingAssignments").collect()) {
-    if (userIds.has(row.userId)) {
-      await del("judgingAssignments", row._id);
-    }
-  }
   for (const row of await ctx.db.query("submissions").collect()) {
     if (
       userIds.has(row.submittedBy) ||
       (row.teamId && teamIds.has(row.teamId))
     ) {
-      for (const score of await ctx.db
-        .query("judgingScores")
-        .withIndex("by_submission_context", (q) =>
-          q.eq("submissionId", row._id)
-        )
-        .collect()) {
-        await del("judgingScores", score._id);
-      }
       await del("submissions", row._id);
     }
   }
@@ -858,25 +851,14 @@ async function clearSeed(ctx: MutationCtx): Promise<Record<string, number>> {
       await del("notifications", row._id);
     }
   }
-  for (const row of await ctx.db.query("tvMessages").collect()) {
-    if (userIds.has(row.createdBy)) {
-      await del("tvMessages", row._id);
-    }
-  }
-  for (const row of await ctx.db.query("signups").collect()) {
+  for (const row of await ctx.db.query("participations").collect()) {
     if (row.email.endsWith(`@${SEED_DOMAIN}`)) {
-      await del("signups", row._id);
+      await del("participations", row._id);
     }
   }
   for (const type of await ctx.db.query("userTypes").collect()) {
     if (!userIds.has(type.createdBy)) {
       continue;
-    }
-    for (const user of await ctx.db
-      .query("users")
-      .withIndex("by_user_type", (q) => q.eq("userTypeId", type._id))
-      .collect()) {
-      await ctx.db.patch(user._id, { userTypeId: undefined });
     }
     await del("userTypes", type._id);
   }
@@ -947,19 +929,19 @@ async function runSeed(
   };
 
   // Organiser (admin) who "creates" the shared config.
+  const { edition2026 } = await seedEditions(ctx);
   const orgId = await ctx.db.insert("users", {
-    attendanceStatus: "attending",
     email: ORG_EMAIL,
     emailVerificationTime: now,
     image: avatarFor("hackspain-org"),
     name: "Organización HackSpain",
     notificationConsent: true,
-    onboardingComplete: true,
+    admin: true,
     role: "admin",
   });
   count("users");
 
-  // Shared config: tracks, user types, submission window, judging groups.
+  // Shared config: tracks, user types, submission window.
   await seedTracks(ctx);
   const tracks = await ctx.db
     .query("tracks")
@@ -975,31 +957,18 @@ async function runSeed(
   const juradoType = typeIds.get("Jurado");
   const mentorType = typeIds.get("Mentor");
   const sponsorType = typeIds.get("Sponsor");
-
-  const settings = await ctx.db
-    .query("settings")
-    .withIndex("by_key", (q) => q.eq("key", "hackathon"))
-    .unique();
-  if (settings) {
-    await ctx.db.patch(settings._id, { submissionsOpen: true });
-  } else {
-    await ctx.db.insert("settings", {
-      key: "hackathon",
-      submissionsOpen: true,
-    });
+  if (!hackerType || !juradoType || !mentorType || !sponsorType) {
+    throw new Error("Faltan tipos de usuario para el seed");
   }
+
+  await ctx.db.patch(edition2026, { submissionsOpen: true });
   const judgingSettings = await ctx.db
     .query("judgingSettings")
     .withIndex("by_key", (q) => q.eq("key", JUDGING_SETTINGS_KEY))
     .unique();
-  if (judgingSettings) {
-    await ctx.db.patch(judgingSettings._id, {
-      generalGroupCount: 3,
-      updatedAt: now,
-    });
-  } else {
+  if (!judgingSettings) {
     await ctx.db.insert("judgingSettings", {
-      generalGroupCount: 3,
+      editionId: edition2026,
       key: JUDGING_SETTINGS_KEY,
       updatedAt: now,
     });
@@ -1015,71 +984,108 @@ async function runSeed(
   const hackerGaps: SeedProfile[] = ["noDirectory", "noDirectory", "noPhoto"];
   const hackers: { person: Person; userId: Id<"users"> }[] = [];
   for (const [index, person] of take(48).entries()) {
-    const signupId = await insertSignup(ctx, person, true);
     const userId = await insertUser(ctx, person, {
       index,
       onboarded: true,
       profile: gap(person, hackerGaps[index]),
       role: "user",
-      signupId,
-      userTypeId: chance(0.5) ? hackerType : undefined,
+    });
+    await insertParticipation(ctx, person, {
+      editionId: edition2026,
+      onboarded: true,
+      roleId: hackerType,
+      status: "confirmed",
+      userId,
     });
     hackers.push({ person, userId });
-    count("signups");
+    count("participations");
     count("users");
   }
   for (const [index, person] of take(6).entries()) {
-    const signupId = await insertSignup(ctx, person, true);
-    await insertUser(ctx, person, {
+    const userId = await insertUser(ctx, person, {
       index: 100 + index,
       onboarded: false,
       // One walks the whole wizard: phone and terms, then the card.
       profile: gap(person, index === 0 ? "noDirectory" : undefined),
       role: "user",
-      signupId,
     });
-    count("signups");
+    await insertParticipation(ctx, person, {
+      editionId: edition2026,
+      onboarded: false,
+      roleId: hackerType,
+      status: "accepted",
+      userId,
+    });
+    count("participations");
     count("users");
   }
   for (const person of take(4)) {
-    await insertSignup(ctx, person, true);
-    count("signups");
+    await insertParticipation(ctx, person, {
+      editionId: edition2026,
+      onboarded: false,
+      roleId: hackerType,
+      status: "accepted",
+    });
+    count("participations");
   }
   for (const person of take(3)) {
-    await insertSignup(ctx, person, false);
-    count("signups");
+    await insertParticipation(ctx, person, {
+      editionId: edition2026,
+      onboarded: false,
+      roleId: hackerType,
+      status: "applied",
+    });
+    count("participations");
   }
-  const judges: Id<"users">[] = [];
   for (const [index, person] of take(4).entries()) {
-    judges.push(
-      await insertUser(ctx, person, {
-        index: 200 + index,
-        onboarded: false,
-        // A judge without a signup: the wizard with no phone step.
-        profile: gap(person, index === 0 ? "noDirectory" : undefined),
-        role: "user",
-        userTypeId: juradoType,
-      })
-    );
+    const userId = await insertUser(ctx, person, {
+      index: 200 + index,
+      onboarded: false,
+      // A judge without a signup: the wizard with no phone step.
+      profile: gap(person, index === 0 ? "noDirectory" : undefined),
+      role: "user",
+    });
+    await insertParticipation(ctx, person, {
+      editionId: edition2026,
+      onboarded: false,
+      roleId: juradoType,
+      status: "accepted",
+      userId,
+    });
     count("users");
+    count("participations");
   }
   for (const [index, person] of take(3).entries()) {
-    await insertUser(ctx, person, {
+    const userId = await insertUser(ctx, person, {
       index: 300 + index,
       onboarded: false,
       role: "user",
-      userTypeId: mentorType,
+    });
+    await insertParticipation(ctx, person, {
+      editionId: edition2026,
+      onboarded: false,
+      roleId: mentorType,
+      status: "accepted",
+      userId,
     });
     count("users");
+    count("participations");
   }
   for (const [index, person] of take(2).entries()) {
-    await insertUser(ctx, person, {
+    const userId = await insertUser(ctx, person, {
       index: 400 + index,
       onboarded: false,
       role: "user",
-      userTypeId: sponsorType,
+    });
+    await insertParticipation(ctx, person, {
+      editionId: edition2026,
+      onboarded: false,
+      roleId: sponsorType,
+      status: "accepted",
+      userId,
     });
     count("users");
+    count("participations");
   }
 
   // Perks with code pools.
@@ -1090,6 +1096,7 @@ async function runSeed(
       company: spec.company,
       createdAt: now - 14 * 24 * HOUR,
       createdBy: orgId,
+      editionId: edition2026,
       description: spec.description,
       instructions: spec.instructions,
       inputs:
@@ -1145,6 +1152,7 @@ async function runSeed(
     const project = PROJECTS[index];
     const teamId = await ctx.db.insert("teams", {
       createdAt,
+      editionId: edition2026,
       joinCode: joinCodeFor(index),
       name,
       ownerId: owner.userId,
@@ -1162,9 +1170,9 @@ async function runSeed(
       await ctx.db.insert("teamMembers", {
         addedBy: owner.userId,
         createdAt: createdAt + between(0, 60) * MINUTE,
+        editionId: edition2026,
         identifier: member.person.email,
         identifierType: "email",
-        signupId: undefined,
         status: "member",
         teamId,
         userId: member.userId,
@@ -1178,6 +1186,7 @@ async function runSeed(
         await ctx.db.insert("teamMembers", {
           addedBy: owner.userId,
           createdAt: createdAt + 90 * MINUTE,
+          editionId: edition2026,
           identifier: `${invitee.person.github}-friend`,
           identifierType: "github",
           status: "pending",
@@ -1194,13 +1203,7 @@ async function runSeed(
     });
   }
 
-  // Projects: one per team, most submitted, spread over 3 general groups.
-  const submissions: {
-    id: Id<"submissions">;
-    trackIds: Id<"tracks">[];
-    group?: number;
-  }[] = [];
-  let group = 0;
+  // Projects: one per team, most submitted.
   for (const [index, team] of teams.entries()) {
     const project = PROJECTS[index];
     const owner = team.members[0];
@@ -1211,13 +1214,12 @@ async function runSeed(
       .map((slug) => trackBySlug.get(slug)?._id)
       .filter((id): id is Id<"tracks"> => id !== undefined);
     const submitted = project.status === "submitted";
-    const generalGroup = submitted ? (group++ % 3) + 1 : undefined;
     const createdAt = now - between(6, 20) * HOUR;
-    const submissionId = await ctx.db.insert("submissions", {
+    await ctx.db.insert("submissions", {
       challengeIds: trackIds,
       createdAt,
+      editionId: edition2026,
       description: project.description,
-      generalGroup,
       name: project.name,
       perkIds: shuffle(perkIds).slice(0, between(0, 3)),
       status: project.status,
@@ -1249,59 +1251,7 @@ async function runSeed(
           : []),
       ],
     });
-    submissions.push({ group: generalGroup, id: submissionId, trackIds });
     count("submissions");
-  }
-
-  // Judging: each judge covers one general group and one track; scores for
-  // roughly half of what they can see.
-  const trackList = tracks.map((track) => track._id);
-  for (const [index, judgeId] of judges.entries()) {
-    const generalGroup = (index % 3) + 1;
-    await ctx.db.insert("judgingAssignments", {
-      contextKey: String(generalGroup),
-      contextKind: "general",
-      createdAt: now - 2 * HOUR,
-      group: generalGroup,
-      userId: judgeId,
-    });
-    count("judgingAssignments");
-    const trackId = trackList[index % trackList.length];
-    if (trackId) {
-      await ctx.db.insert("judgingAssignments", {
-        contextKey: trackId,
-        contextKind: "track",
-        createdAt: now - 2 * HOUR,
-        userId: judgeId,
-      });
-      count("judgingAssignments");
-    }
-    for (const submission of submissions) {
-      if (submission.group === generalGroup && chance(0.6)) {
-        await ctx.db.insert("judgingScores", {
-          contextKey: String(generalGroup),
-          contextKind: "general",
-          createdAt: now - between(5, 90) * MINUTE,
-          judgeId,
-          score: between(4, 10),
-          submissionId: submission.id,
-          updatedAt: now - between(0, 5) * MINUTE,
-        });
-        count("judgingScores");
-      }
-      if (trackId && submission.trackIds.includes(trackId) && chance(0.5)) {
-        await ctx.db.insert("judgingScores", {
-          contextKey: trackId,
-          contextKind: "track",
-          createdAt: now - between(5, 90) * MINUTE,
-          judgeId,
-          score: between(5, 10),
-          submissionId: submission.id,
-          updatedAt: now - between(0, 5) * MINUTE,
-        });
-        count("judgingScores");
-      }
-    }
   }
 
   // Milestones.
@@ -1324,6 +1274,7 @@ async function runSeed(
       await ctx.db.insert("milestones", {
         at,
         createdAt: at,
+        editionId: edition2026,
         kind,
         teamId: team.id,
         userId: owner,
@@ -1344,6 +1295,7 @@ async function runSeed(
       const actor = pick(hackers).person.github;
       await ctx.db.insert("posts", {
         createdAt,
+        editionId: edition2026,
         externalId: `seed:${i}`,
         github: {
           actor,
@@ -1360,6 +1312,7 @@ async function runSeed(
       await ctx.db.insert("posts", {
         authorId,
         createdAt,
+        editionId: edition2026,
         kind: "post",
         teamId: team.id,
         ...(chance(0.15)
@@ -1401,6 +1354,7 @@ async function runSeed(
         await ctx.db.insert("perkClaims", {
           codeId: code._id,
           createdAt: at,
+          editionId: edition2026,
           perkId,
           status: "assigned",
           type: "code",
@@ -1416,6 +1370,7 @@ async function runSeed(
             { key: "team", value: pick(teams).name },
           ],
           createdAt: at,
+          editionId: edition2026,
           perkId,
           status: pick(["pending", "pending", "added", "rejected"]),
           type: "email",
@@ -1432,7 +1387,7 @@ async function runSeed(
     count("perkClaims");
   }
 
-  // Organiser broadcasts and venue screen messages.
+  // Organiser broadcasts.
   const broadcasts = [
     {
       subject: "¡Arrancamos!",
@@ -1454,6 +1409,7 @@ async function runSeed(
     await ctx.db.insert("notifications", {
       audience: "attending",
       body: broadcast.body,
+      editionId: edition2026,
       failures: [],
       recipientCount: hackers.length,
       sentAt: now - broadcast.hoursAgo * HOUR,
@@ -1463,27 +1419,6 @@ async function runSeed(
       subject: broadcast.subject,
     });
     count("notifications");
-  }
-  const tvMessages: {
-    text: string;
-    zone: "banner" | "left" | "right" | "ticker";
-  }[] = [
-    { text: "HackSpain 2026 · Madrid", zone: "banner" },
-    { text: "Envíos abiertos hasta las 14:00", zone: "ticker" },
-    { text: "Wifi: HackSpain · clave: construir2026", zone: "ticker" },
-    { text: "Mentores en la sala azul de 16:00 a 19:00", zone: "left" },
-  ];
-  for (const [order, message] of tvMessages.entries()) {
-    await ctx.db.insert("tvMessages", {
-      active: true,
-      createdAt: now - 20 * HOUR,
-      createdBy: orgId,
-      order,
-      text: message.text,
-      updatedAt: now - 20 * HOUR,
-      zone: message.zone,
-    });
-    count("tvMessages");
   }
 
   return { created, incompleteProfiles };

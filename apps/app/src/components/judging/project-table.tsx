@@ -28,11 +28,12 @@ import {
 import { JUDGING_SPONSORS_PATH } from "@/lib/sections";
 import { urlOf } from "@/lib/urls";
 
-export const PROJECT_PARAM = "proyecto";
-export const TRACK_PARAM = "reto";
+export const PROJECT_PARAM = "project";
+export const TRACK_PARAM = "track";
+const LEGACY_PROJECT_PARAM = "proyecto";
 
 export function deliveryHref(item: { _id: string }): string {
-  return `${JUDGING_SPONSORS_PATH}/${item._id}`;
+  return `${JUDGING_SPONSORS_PATH}?${PROJECT_PARAM}=${item._id}`;
 }
 
 export type ProjectRow = ProjectInfo & {
@@ -70,7 +71,8 @@ export function writeParams(
 export function useProjectPicker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const projectId = searchParams.get(PROJECT_PARAM) as Id<"submissions"> | null;
+  const projectId = (searchParams.get(PROJECT_PARAM) ??
+    searchParams.get(LEGACY_PROJECT_PARAM)) as Id<"submissions"> | null;
   const pushed = useRef(false);
   const triggerRef = useRef<HTMLElement | null>(null);
 

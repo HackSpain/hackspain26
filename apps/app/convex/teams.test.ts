@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { QueryCtx } from "./_generated/server";
+import { testEditionRow, withCurrentEdition } from "./lib/testFixtures";
 import { list } from "./teams";
 
 type Row = Record<string, unknown> & { _id: string };
@@ -13,71 +14,86 @@ function directory() {
       { _id: "u2" },
       { _id: "u3", name: "" },
     ],
-    signups: [
-      { _id: "s1", fullName: "Old name" },
-      { _id: "s2", fullName: "Signup name" },
-      { _id: "s3", fullName: "Should not replace empty name" },
+    editions: [testEditionRow()],
+    participations: [
+      withCurrentEdition({
+        _id: "s1",
+        email: "u1@x.test",
+        fullName: "Old name",
+        userId: "u1",
+      }),
+      withCurrentEdition({
+        _id: "s2",
+        email: "u2@x.test",
+        fullName: "Signup name",
+        userId: "u2",
+      }),
+      withCurrentEdition({
+        _id: "s3",
+        email: "u3@x.test",
+        fullName: "Should not replace empty name",
+        userId: "u3",
+      }),
     ],
     teams: [
-      { _id: "t1", name: "Zeta", ownerId: "u1" },
-      { _id: "t2", name: "Alfa", ownerId: "u3" },
+      withCurrentEdition({ _id: "t1", name: "Zeta", ownerId: "u1" }),
+      withCurrentEdition({ _id: "t2", name: "Alfa", ownerId: "u3" }),
     ],
     teamMembers: [
-      {
+      withCurrentEdition({
         _id: "m2",
         teamId: "t1",
         userId: "u2",
-        signupId: "s2",
         status: "member",
         identifier: "fallback",
-      },
-      {
+      }),
+      withCurrentEdition({
         _id: "m1",
         teamId: "t1",
         userId: "u1",
-        signupId: "s1",
         status: "member",
         identifier: "fallback",
-      },
-      {
+      }),
+      withCurrentEdition({
         _id: "m3",
         teamId: "t2",
         userId: "u3",
-        signupId: "s3",
         status: "member",
         identifier: "fallback",
-      },
-      {
+      }),
+      withCurrentEdition({
         _id: "m4",
         teamId: "t2",
         status: "member",
         identifier: "Identifier name",
-      },
-      {
+      }),
+      withCurrentEdition({
         _id: "pending",
         teamId: "t1",
         userId: "operator",
         status: "pending",
         identifier: "private",
-      },
+      }),
     ],
     submissions: [
-      {
+      withCurrentEdition({
         _id: "sub1",
         teamId: "t1",
         name: " Project ",
         status: "draft",
         challengeIds: ["track", "deleted-track"],
-      },
-      {
+      }),
+      withCurrentEdition({
         _id: "sub2",
         teamId: "t2",
         name: "",
         status: "submitted",
         challengeIds: ["track", "deleted-track"],
-      },
+      }),
     ],
-    tracks: [{ _id: "track", label: "Shared", slug: "shared" }],
+    tracks: [
+      withCurrentEdition({ _id: "track", label: "Shared", slug: "shared" }),
+    ],
   };
   const reads: string[] = [];
   let authenticated = true;
@@ -159,7 +175,6 @@ test("team directory reuses shared tracks and only reads signup names when neede
   assert.deepEqual(zeta.tracks, alfa.tracks);
   assert.equal(reads.filter((id) => id === "track").length, 1);
   assert.equal(reads.filter((id) => id === "deleted-track").length, 1);
-  assert.equal(reads.filter((id) => id === "s2").length, 1);
   assert.ok(!reads.includes("s1") && !reads.includes("s3"));
 });
 

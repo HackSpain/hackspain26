@@ -39,7 +39,10 @@ import type {
 } from "./lib/judging";
 import { teamLogoUrlFor } from "./lib/team";
 import { urlOf, urlsValidator } from "./lib/urls";
-import { grantsJudging, isSponsorType, userTypeFor } from "./lib/userTypes";
+import { currentEditionId, resolveEditionId } from "./lib/editions";
+import { loadCatalog, loadJudgePool } from "./lib/judgingCatalog";
+import type { Catalog } from "./lib/judgingCatalog";
+import { grantsJudging, userTypeFor } from "./lib/userTypes";
 import {
   assessmentStatusValidator,
   scoreValueValidator,
@@ -128,15 +131,6 @@ const adminJudge = v.object({
   submitted: v.number(),
 });
 
-type Catalog = {
-  membersByTeam: Map<Id<"teams">, string[]>;
-  perksById: Map<Id<"perks">, Doc<"perks">>;
-  submitted: Doc<"submissions">[];
-  teamsById: Map<Id<"teams">, Doc<"teams">>;
-  tracksById: Map<Id<"tracks">, Doc<"tracks">>;
-  usersById: Map<Id<"users">, Doc<"users">>;
-};
-
 type Settings = { disagreementThreshold: number; lambda: number };
 
 function judgeName(user: Doc<"users"> | undefined): string {
@@ -189,86 +183,12 @@ async function loadRound(ctx: DbCtx): Promise<Doc<"judgingRounds"> | null> {
     .unique();
 }
 
-/**
- * Everyone whose user type grants scoring. Sponsors share the judging tab
- * as a read-only catalog and stay out of the pairings. Admins organise.
- */
-async function loadJudgePool(ctx: DbCtx): Promise<Doc<"users">[]> {
-  const [legacy, types] = await Promise.all([
-    ctx.db
-      .query("users")
-      .withIndex("by_role", (q) => q.eq("role", "judge"))
-      .collect(),
-    ctx.db.query("userTypes").collect(),
-  ]);
-  const pool = new Map<Id<"users">, Doc<"users">>();
-  for (const user of legacy) {
-    if (isSponsorType(await userTypeFor(ctx, user))) {
-      continue;
-    }
-    pool.set(user._id, user);
-  }
-  for (const type of types) {
-    if (!grantsJudging({ role: "user" }, type) || isSponsorType(type)) {
-      continue;
-    }
-    const rows = await ctx.db
-      .query("users")
-      .withIndex("by_user_type", (q) => q.eq("userTypeId", type._id))
-      .collect();
-    for (const user of rows) {
-      pool.set(user._id, user);
-    }
-  }
-  return [...pool.values()]
-    .filter((user) => user.role !== "admin")
-    .toSorted((a, b) => a._id.localeCompare(b._id));
-}
-
 async function isPoolJudge(ctx: DbCtx, user: Doc<"users">): Promise<boolean> {
   if (user.role === "admin") {
     return false;
   }
   const type = await userTypeFor(ctx, user);
-  if (isSponsorType(type)) {
-    return false;
-  }
   return user.role === "judge" || grantsJudging(user, type);
-}
-
-async function loadCatalog(ctx: DbCtx): Promise<Catalog> {
-  const [submitted, tracks, teams, perks, members, users] = await Promise.all([
-    ctx.db
-      .query("submissions")
-      .withIndex("by_status", (q) => q.eq("status", "submitted"))
-      .collect(),
-    ctx.db.query("tracks").collect(),
-    ctx.db.query("teams").collect(),
-    ctx.db.query("perks").collect(),
-    ctx.db.query("teamMembers").collect(),
-    ctx.db.query("users").collect(),
-  ]);
-  const usersById = new Map(users.map((user) => [user._id, user]));
-  const membersByTeam = new Map<Id<"teams">, string[]>();
-  for (const member of members) {
-    if (member.status !== "member") {
-      continue;
-    }
-    const userName = member.userId
-      ? usersById.get(member.userId)?.name?.trim()
-      : undefined;
-    const list = membersByTeam.get(member.teamId) ?? [];
-    list.push(userName || member.identifier);
-    membersByTeam.set(member.teamId, list);
-  }
-  return {
-    membersByTeam,
-    perksById: new Map(perks.map((perk) => [perk._id, perk])),
-    submitted: submitted.toSorted((a, b) => a._id.localeCompare(b._id)),
-    teamsById: new Map(teams.map((team) => [team._id, team])),
-    tracksById: new Map(tracks.map((track) => [track._id, track])),
-    usersById,
-  };
 }
 
 function videoForTrack(
@@ -386,6 +306,7 @@ function ownAssessmentView(row: Doc<"assessments">) {
 export const myQueue = judgeQuery({
   args: {},
   handler: async (ctx) => {
+    const editionId = await currentEditionId(ctx);
     const [round, assignments, assessments, catalog] = await Promise.all([
       loadRound(ctx),
       ctx.db
@@ -396,7 +317,7 @@ export const myQueue = judgeQuery({
         .query("assessments")
         .withIndex("by_judge", (q) => q.eq("judgeId", ctx.user._id))
         .collect(),
-      loadCatalog(ctx),
+      loadCatalog(ctx, editionId),
     ]);
     const bySubmission = new Map(
       catalog.submitted.map((submission) => [submission._id, submission])
@@ -451,7 +372,7 @@ export const myQueue = judgeQuery({
 export const getDelivery = catalogQuery({
   args: { submissionId: v.id("submissions") },
   handler: async (ctx, args) => {
-    const catalog = await loadCatalog(ctx);
+    const catalog = await loadCatalog(ctx, await currentEditionId(ctx));
     const submission = catalog.submitted.find(
       (row) => row._id === args.submissionId
     );
@@ -466,7 +387,7 @@ export const getDelivery = catalogQuery({
 export const trackCatalog = catalogQuery({
   args: { trackSlug: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const catalog = await loadCatalog(ctx);
+    const catalog = await loadCatalog(ctx, await currentEditionId(ctx));
     const tracks = [...catalog.tracksById.values()]
       .filter((track) => track.active)
       .toSorted(
@@ -525,14 +446,21 @@ async function writeAssessment(
   existing: Doc<"assessments"> | null,
   fields: Omit<
     Doc<"assessments">,
-    "_id" | "_creationTime" | "createdAt" | "judgeId" | "submissionId"
+    | "_id"
+    | "_creationTime"
+    | "createdAt"
+    | "editionId"
+    | "judgeId"
+    | "submissionId"
   >
 ): Promise<void> {
   const now = Date.now();
+  const editionId = existing?.editionId ?? (await currentEditionId(ctx));
   if (assessmentWriteKind(existing) === "replace" && existing) {
     await ctx.db.replace(existing._id, {
       ...fields,
       createdAt: existing.createdAt,
+      editionId,
       judgeId,
       submissionId,
     });
@@ -541,6 +469,7 @@ async function writeAssessment(
   await ctx.db.insert("assessments", {
     ...fields,
     createdAt: now,
+    editionId,
     judgeId,
     submissionId,
   });
@@ -598,8 +527,9 @@ export const submit = judgeMutation({
 // --- Organiser --------------------------------------------------------------
 
 export const adminOverview = adminQuery({
-  args: {},
-  handler: async (ctx) => {
+  args: { editionId: v.optional(v.id("editions")) },
+  handler: async (ctx, args) => {
+    const editionId = await resolveEditionId(ctx, args.editionId);
     const [
       settings,
       settingsDoc,
@@ -613,11 +543,20 @@ export const adminOverview = adminQuery({
       loadSettings(ctx),
       loadSettingsDoc(ctx),
       loadRound(ctx),
-      loadJudgePool(ctx),
-      loadCatalog(ctx),
-      ctx.db.query("assessmentAssignments").collect(),
-      ctx.db.query("assessments").collect(),
-      ctx.db.query("judgingConflicts").collect(),
+      loadJudgePool(ctx, editionId),
+      loadCatalog(ctx, editionId),
+      ctx.db
+        .query("assessmentAssignments")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
+      ctx.db
+        .query("assessments")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
+      ctx.db
+        .query("judgingConflicts")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
     ]);
 
     const judgeIds: Id<"users">[] = round
@@ -952,15 +891,20 @@ async function planAssignments(
   ctx: DbCtx,
   seed: string
 ): Promise<PlannedRound> {
-  const [pool, submitted, conflictRows, users] = await Promise.all([
-    loadJudgePool(ctx),
+  const editionId = await currentEditionId(ctx);
+  const [pool, submissions, conflictRows, users] = await Promise.all([
+    loadJudgePool(ctx, editionId),
     ctx.db
       .query("submissions")
-      .withIndex("by_status", (q) => q.eq("status", "submitted"))
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
       .collect(),
-    ctx.db.query("judgingConflicts").collect(),
+    ctx.db
+      .query("judgingConflicts")
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+      .collect(),
     ctx.db.query("users").collect(),
   ]);
+  const submitted = submissions.filter((row) => row.status === "submitted");
   assertPairingCounts(pool.length, submitted.length);
 
   const judgeIds = seededShuffle(
@@ -1076,7 +1020,9 @@ export const generateAssignments = adminMutation({
     }
 
     const now = Date.now();
+    const editionId = await currentEditionId(ctx);
     const roundId = await ctx.db.insert("judgingRounds", {
+      editionId,
       generatedAt: now,
       generatedBy: ctx.user._id,
       judgeIds: plan.judgeIds,
@@ -1092,6 +1038,7 @@ export const generateAssignments = adminMutation({
       for (const slot of [0, 1] as const) {
         await ctx.db.insert("assessmentAssignments", {
           createdAt: now,
+          editionId,
           judgeId: plan.judgeIds[pair.judges[slot]] as Id<"users">,
           roundId,
           slot,
@@ -1102,6 +1049,7 @@ export const generateAssignments = adminMutation({
     if (!(await loadSettingsDoc(ctx))) {
       await ctx.db.insert("judgingSettings", {
         disagreementThreshold: DEFAULT_DISAGREEMENT_THRESHOLD,
+        editionId,
         key: JUDGING_SETTINGS_KEY,
         lambda: DEFAULT_LAMBDA,
         updatedAt: now,
@@ -1159,6 +1107,7 @@ export const updateSettings = adminMutation({
     await ctx.db.insert("judgingSettings", {
       disagreementThreshold:
         patch.disagreementThreshold ?? current.disagreementThreshold,
+      editionId: await currentEditionId(ctx),
       key: JUDGING_SETTINGS_KEY,
       lambda: patch.lambda ?? current.lambda,
       updatedAt: now,
@@ -1198,6 +1147,7 @@ export const addConflict = adminMutation({
     await ctx.db.insert("judgingConflicts", {
       createdAt: Date.now(),
       createdBy: ctx.user._id,
+      editionId: await currentEditionId(ctx),
       judgeId: args.judgeId,
       note: note || undefined,
       submissionId: args.submissionId,

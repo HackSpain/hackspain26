@@ -6,26 +6,26 @@ import { contentWidth } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 
 /**
- * Brand row with the live insights shortcut and account menu. The home page
- * carries the rest of the section tiles and every other page shows a back
- * button (app-shell.tsx). The venue screen (/tv) is not linked from the app:
- * admins reach it from /admin/tv.
+ * Brand row with granted section links, Insights, and the account menu.
+ * Admins get their sidebar from admin/layout.tsx instead of this nav.
  */
 export function AppHeader({
   pathname,
   accountMenu,
   homeHref = "/",
+  nav,
 }: {
   pathname: string;
   accountMenu?: ReactNode;
   homeHref?: string;
+  nav?: ReactNode;
 }) {
   return (
     <header className="border-b-[3px] border-hs-ink bg-hs-sand">
       <div
         className={cn(
           contentWidth(pathname),
-          "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 py-3 sm:gap-x-5"
+          "flex items-center gap-x-2 py-3 sm:gap-x-5"
         )}
       >
         <Link
@@ -40,6 +40,11 @@ export function AppHeader({
             className="h-auto w-20 sm:h-10 sm:w-auto"
           />
         </Link>
+        {nav ? (
+          <div className="min-w-0 flex-1">{nav}</div>
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
         <Link
           href="/insights"
           aria-current={pathname === "/insights" ? "page" : undefined}
@@ -52,7 +57,7 @@ export function AppHeader({
           </span>
           <ChevronRight className="size-4" strokeWidth={2} aria-hidden />
         </Link>
-        <div className="min-w-0 justify-self-end">{accountMenu}</div>
+        <div className="shrink-0">{accountMenu}</div>
       </div>
     </header>
   );

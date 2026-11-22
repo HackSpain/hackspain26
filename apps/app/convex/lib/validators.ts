@@ -42,6 +42,19 @@ export const attendanceValidator = v.union(
   v.literal("undecided")
 );
 
+/** One participation per email per edition. See convex/lib/participations.ts. */
+export const participationStatusValidator = v.union(
+  v.literal("interested"),
+  v.literal("applied"),
+  v.literal("waitlist"),
+  v.literal("accepted"),
+  v.literal("rejected"),
+  v.literal("confirmed"),
+  v.literal("cancelled")
+);
+
+export type ParticipationStatus = Infer<typeof participationStatusValidator>;
+
 export const finalistStatusValidator = v.union(
   v.literal("in"),
   v.literal("canceled")
@@ -170,9 +183,12 @@ export const meValidator = v.object({
   /** Identity fields still empty on `users`; see convex/lib/profile.ts. */
   profileMissing: v.array(profileFieldValidator),
   role: roleValidator,
+  /** Global CRM admin. Independent of the catalog role. */
+  admin: v.boolean(),
   /** Dashboard sections this user may open. Feed and profile are always on. */
   sections: sectionsValidator,
-  signupId: v.optional(v.id("signups")),
+  /** Participation id of the current edition; field name kept for CLIs through 0.5.9. */
+  signupId: v.optional(v.string()),
   /** Prefill for the X handle: the stored one, else what the signup carried. */
   suggestedTwitterHandle: v.optional(v.string()),
   travelOrigin: v.optional(v.string()),

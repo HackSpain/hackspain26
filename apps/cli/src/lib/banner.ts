@@ -118,7 +118,7 @@ export type BannerOptions = {
  * elsewhere. Every screen that opens with the brand goes through here.
  */
 export function banner(
-  tagline = "HackSpain 2026 · Madrid",
+  tagline = "HackSpain · Madrid",
   options: BannerOptions = {}
 ): string {
   const columns = options.columns ?? process.stdout.columns ?? 80;

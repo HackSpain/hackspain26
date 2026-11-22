@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 import type { LoginErrorCode } from "@/app/api/login/otp/route";
 import { useBeginLoginTransition } from "@/components/login-transition-context";
+import { EditionLabel } from "@/components/edition-label";
 import { AuthScreen, Field, FormError, FormNotice } from "@/components/page";
 import {
   EASE_OUT,
@@ -228,7 +229,7 @@ export default function LoginPage() {
     <AuthScreen>
       <Card className="hs-enter w-full max-w-md overflow-hidden">
         <CardHeader>
-          <p className="font-bungee text-xs text-hs-brown">HackSpain 2026</p>
+          <EditionLabel />
           <CardTitle className="text-2xl sm:text-3xl">Entrar</CardTitle>
         </CardHeader>
         <motion.div

@@ -1,7 +1,7 @@
 import type { Infer } from "convex/values";
-import type { widgetReturn } from "../tv";
+import type { tvWidgetValidator } from "./tvValidators";
 
-type LayoutWidget = Omit<Infer<typeof widgetReturn>, "_id">;
+type LayoutWidget = Infer<typeof tvWidgetValidator>;
 
 // Percentages on Leo's editable canvas, with gutters and a permanent demo label.
 export const INSIGHTS_LAYOUT = [

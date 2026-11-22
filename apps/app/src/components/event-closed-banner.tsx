@@ -57,14 +57,3 @@ export function EventClosedBanner({ event }: { event: EventInfo }) {
     </div>
   );
 }
-
-/** Replaces the feed on the home page while closed. */
-export function EventClosedNotice({ event }: { event: EventInfo }) {
-  const copy = eventClosedCopy(event);
-  return (
-    <div className="border border-hs-ink/30 bg-hs-sand p-4">
-      <p className="font-bungee text-sm leading-tight">{copy.title}</p>
-      <p className="mt-1 text-sm text-hs-brown">{copy.body}</p>
-    </div>
-  );
-}

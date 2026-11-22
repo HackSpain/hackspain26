@@ -4,7 +4,6 @@ import { Check, Copy } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -192,17 +191,6 @@ export function TeamCliDialog({ children }: { children: ReactNode }) {
             }
           </CodeBlock>
         </div>
-
-        <p className="text-sm text-hs-brown">
-          Todos los comandos, en la{" "}
-          <Link
-            href="/cli"
-            className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
-          >
-            guía completa de la CLI
-          </Link>
-          .
-        </p>
       </DialogContent>
     </Dialog>
   );

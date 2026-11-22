@@ -6,7 +6,7 @@ function pathSegments(pathname: string): string[] {
   return pathname.split("/").filter((part) => part.length > 0);
 }
 
-function youtubeId(url: URL): string | null {
+export function youtubeId(url: URL): string | null {
   const host = url.hostname.replace(/^www\./, "");
   if (host === "youtu.be") {
     const [id] = pathSegments(url.pathname);

@@ -1,7 +1,10 @@
 import type { APIRoute } from "astro";
 import { checkBotId } from "botid/server";
 import { isDisposableEmailDomain } from "disposable-email-domains-js";
-import { envFromRuntime } from "../../lib/runtime-env";
+import {
+  isLandingRequestError,
+  subscribeEmail,
+} from "../../lib/convex-landing";
 import { isValidEmail } from "../../lib/signup-validation";
 
 export const prerender = false;
@@ -56,39 +59,13 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ error: "disposable_email" }, { status: 400 });
   }
 
-  const convexUrl = envFromRuntime("CONVEX_URL");
-  const secret = envFromRuntime("SUBSCRIBE_SECRET");
-  if (!(convexUrl && secret)) {
-    console.error("[subscribe] Convex is not configured");
-    return Response.json({ error: "save_failed" }, { status: 500 });
-  }
-
   try {
-    const response = await fetch(`${convexUrl}/api/mutation`, {
-      body: JSON.stringify({
-        args: { email, secret },
-        format: "json",
-        path: "hackspain27Emails:subscribe",
-      }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-      signal: AbortSignal.timeout(10_000),
-    });
-    // Convex answers failed mutations with HTTP 200 and `status: "error"`.
-    const result: unknown = await response.json();
-    if (
-      !(
-        response.ok &&
-        result &&
-        typeof result === "object" &&
-        "status" in result &&
-        result.status === "success"
-      )
-    ) {
-      throw new Error(`Convex ${response.status}: ${JSON.stringify(result)}`);
-    }
+    await subscribeEmail(email);
   } catch (error) {
     console.error("[subscribe] Failed to save email:", error);
+    if (isLandingRequestError(error)) {
+      return Response.json({ error: error.error }, { status: error.status });
+    }
     return Response.json({ error: "save_failed" }, { status: 500 });
   }
 

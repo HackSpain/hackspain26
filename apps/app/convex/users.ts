@@ -4,14 +4,21 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { authedMutation, profileMutation } from "./lib/customFunctions";
 import { meValidator } from "./lib/validators";
 import { defaultedAttendance } from "./lib/attendance";
-import { getSignupForUser, signupIsAccepted } from "./lib/auth";
+import { isAdmin } from "./lib/auth";
+import { currentEditionId } from "./lib/editions";
 import { fail } from "./lib/errors";
 import { parseEventDetails } from "./lib/eventDetails";
 import { eventIsOpen, eventPhase, getEventWindow } from "./lib/eventWindow";
-import { imagePathFor } from "./lib/files";
+import { assertStoredImage, imagePathFor } from "./lib/files";
+import {
+  getCurrentParticipation,
+  participationIsAccepted,
+  participationIsRegistered,
+} from "./lib/participations";
 import { missingProfileFields } from "./lib/profile";
 import { effectiveSections, userTypeFor } from "./lib/userTypes";
 import {
+  normalizeEmail,
   normalizeGithub,
   normalizePhone,
   normalizeTwitter,
@@ -24,24 +31,30 @@ import type { MutationCtx } from "./_generated/server";
 
 export async function resolvePendingInvites(
   ctx: MutationCtx,
-  userId: Id<"users">,
-  email: string | undefined,
-  signupId: Id<"signups"> | undefined,
-  githubUsername: string | undefined,
-  twitterHandle: string | undefined
+  userId: Id<"users">
 ): Promise<void> {
+  const user = await ctx.db.get(userId);
+  if (!user) {
+    return;
+  }
   const candidates: {
     type: "email" | "github" | "twitter";
     value: string;
   }[] = [];
-  if (email) {
-    candidates.push({ type: "email", value: email });
+  if (user.email && user.emailVerificationTime !== undefined) {
+    candidates.push({ type: "email", value: normalizeEmail(user.email) });
   }
-  if (githubUsername) {
-    candidates.push({ type: "github", value: githubUsername });
+  if (user.githubUsername && user.githubLinkedAt !== undefined) {
+    candidates.push({
+      type: "github",
+      value: normalizeGithub(user.githubUsername),
+    });
   }
-  if (twitterHandle) {
-    candidates.push({ type: "twitter", value: twitterHandle });
+  if (user.twitterHandle && user.twitterLinkedAt !== undefined) {
+    candidates.push({
+      type: "twitter",
+      value: normalizeTwitter(user.twitterHandle),
+    });
   }
 
   const matches: Doc<"teamMembers">[] = [];
@@ -60,12 +73,32 @@ export async function resolvePendingInvites(
     }
   }
 
-  const existing = await membershipForUser(ctx, userId);
+  let editionId: Id<"editions"> | undefined;
+  try {
+    editionId = await currentEditionId(ctx);
+  } catch {
+    editionId = undefined;
+  }
+  const scoped: Doc<"teamMembers">[] = [];
+  for (const row of matches) {
+    if (editionId === undefined) {
+      scoped.push(row);
+      continue;
+    }
+    if (row.editionId === editionId) {
+      scoped.push(row);
+      continue;
+    }
+    const team = await ctx.db.get(row.teamId);
+    if (!team || team.editionId === editionId) {
+      scoped.push(row);
+    }
+  }
+
+  const existing = await membershipForUser(ctx, userId, editionId);
   let teamId = existing?.teamId;
   if (!teamId) {
-    const oldest = [...matches].toSorted(
-      (a, b) => a.createdAt - b.createdAt
-    )[0];
+    const oldest = [...scoped].toSorted((a, b) => a.createdAt - b.createdAt)[0];
     teamId = oldest?.teamId;
   }
   if (!teamId) {
@@ -73,14 +106,13 @@ export async function resolvePendingInvites(
   }
 
   let resolved = existing ?? null;
-  for (const member of matches) {
+  for (const member of scoped) {
     if (member.teamId !== teamId) {
       continue;
     }
     if (!resolved) {
       if (member.status !== "member" || member.userId !== userId) {
         await ctx.db.patch(member._id, {
-          signupId: member.signupId ?? signupId,
           status: "member",
           userId,
         });
@@ -114,23 +146,26 @@ export const me = query({
     if (!user) {
       return null;
     }
-    const signup = await getSignupForUser(ctx, user);
+    const participation = await getCurrentParticipation(ctx, user);
     const type = await userTypeFor(ctx, user);
     const sections = effectiveSections(user, type);
     const window = await getEventWindow(ctx);
     const phase = eventPhase(window, Date.now());
+    const onboarded =
+      participation?.onboardingComplete === true || isAdmin(user);
     const profileMissing = missingProfileFields(user);
-    const xUrl = urlOf(signup?.urls, "x");
+    const xUrl = urlOf(participation?.urls, "x");
     return {
       _id: user._id,
       email: user.email,
       event: {
         endsAt: window.endsAt,
-        open: user.role === "admin" || eventIsOpen(phase),
+        open: isAdmin(user) || eventIsOpen(phase),
         phase,
         startsAt: window.startsAt,
       },
-      name: user.name ?? signup?.fullName,
+      name: user.name ?? participation?.fullName,
+      admin: isAdmin(user),
       role: user.role,
       avatarUrl: avatarUrlFor(user),
       canRemoveAvatar: Boolean(user.avatarId && user.image?.trim()),
@@ -141,17 +176,17 @@ export const me = query({
       notificationConsent: user.notificationConsent,
       notificationConsentAt: user.notificationConsentAt,
       attendanceStatus: defaultedAttendance(
-        user.attendanceStatus,
-        user.onboardingComplete || user.role === "admin"
+        participation?.attendanceStatus,
+        onboarded
       ),
-      dietaryRestrictions: user.dietaryRestrictions,
-      dietaryDetails: user.dietaryDetails,
-      travelOrigin: user.travelOrigin,
-      onboardingComplete: user.onboardingComplete,
-      isRegistered: signup !== null,
-      accepted: signupIsAccepted(signup),
-      signupId: user.signupId ?? signup?._id,
-      githubUsername: user.githubUsername ?? signup?.githubUsername,
+      dietaryRestrictions: participation?.dietaryRestrictions,
+      dietaryDetails: participation?.dietaryDetails,
+      travelOrigin: participation?.travelOrigin,
+      onboardingComplete: onboarded,
+      isRegistered: participationIsRegistered(participation?.status),
+      accepted: participationIsAccepted(participation?.status),
+      signupId: participation?._id,
+      githubUsername: user.githubUsername ?? participation?.githubUsername,
       githubLinked: user.githubLinkedAt !== undefined,
       githubCanReadRepos: Boolean(user.githubAccessToken),
       profileComplete: profileMissing.length === 0,
@@ -159,7 +194,7 @@ export const me = query({
       twitterHandle: user.twitterHandle,
       suggestedTwitterHandle:
         user.twitterHandle ??
-        signup?.twitterHandle ??
+        participation?.twitterHandle ??
         (xUrl ? normalizeTwitter(xUrl) || undefined : undefined),
     };
   },
@@ -169,38 +204,43 @@ export const me = query({
 export const attachAfterLogin = authedMutation({
   args: {},
   handler: async (ctx) => {
-    const signup = await getSignupForUser(ctx, ctx.user);
-    const patch: {
-      signupId?: Id<"signups">;
-      name?: string;
-      attendanceStatus?: "attending";
-    } = {};
-    if (signup && ctx.user.signupId !== signup._id) {
-      patch.signupId = signup._id;
-      patch.name = ctx.user.name ?? signup.fullName;
+    if (ctx.user.email) {
+      const rows = await ctx.db
+        .query("participations")
+        .withIndex("by_email", (q) => q.eq("email", ctx.user.email ?? ""))
+        .collect();
+      for (const row of rows) {
+        const patch: {
+          fullName?: string;
+          userId?: Id<"users">;
+        } = {};
+        if (row.userId !== ctx.user._id) {
+          patch.userId = ctx.user._id;
+        }
+        if (!ctx.user.name && row.fullName) {
+          patch.fullName = row.fullName;
+        }
+        if (Object.keys(patch).length > 0) {
+          await ctx.db.patch(row._id, patch);
+        }
+      }
+      const named = rows.find((row) => row.fullName);
+      if (!ctx.user.name && named?.fullName) {
+        await ctx.db.patch(ctx.user._id, { name: named.fullName });
+      }
     }
+    const participation = await getCurrentParticipation(ctx, ctx.user);
     if (
-      (ctx.user.onboardingComplete || ctx.user.role === "admin") &&
-      ctx.user.attendanceStatus !== "cancelled" &&
-      ctx.user.attendanceStatus !== "attending"
+      participation &&
+      participation.attendanceStatus !== "cancelled" &&
+      participation.attendanceStatus !== "attending" &&
+      (participation.onboardingComplete || isAdmin(ctx.user))
     ) {
-      patch.attendanceStatus = "attending";
+      await ctx.db.patch(participation._id, {
+        attendanceStatus: "attending",
+      });
     }
-    if (Object.keys(patch).length > 0) {
-      await ctx.db.patch(ctx.user._id, patch);
-    }
-    const githubUrl = urlOf(signup?.urls, "github");
-    const xUrl = urlOf(signup?.urls, "x");
-    await resolvePendingInvites(
-      ctx,
-      ctx.user._id,
-      ctx.user.email,
-      signup?._id ?? ctx.user.signupId,
-      ctx.user.githubUsername ??
-        signup?.githubUsername ??
-        (githubUrl ? normalizeGithub(githubUrl) : undefined),
-      signup?.twitterHandle ?? (xUrl ? normalizeTwitter(xUrl) : undefined)
-    );
+    await resolvePendingInvites(ctx, ctx.user._id);
     return null;
   },
   returns: v.null(),
@@ -241,22 +281,21 @@ export const setTwitterHandle = authedMutation({
   handler: async (ctx, args) => {
     const handle = normalizeTwitter(args.handle);
     if (!handle) {
-      await ctx.db.patch(ctx.user._id, { twitterHandle: undefined });
+      await ctx.db.patch(ctx.user._id, {
+        twitterHandle: undefined,
+        twitterLinkedAt: undefined,
+      });
       return null;
     }
     if (!TWITTER_HANDLE.test(handle)) {
       fail("VALIDATION", "Ese usuario de X no parece válido");
     }
-    await ctx.db.patch(ctx.user._id, { twitterHandle: handle });
-    const signup = await getSignupForUser(ctx, ctx.user);
-    await resolvePendingInvites(
-      ctx,
-      ctx.user._id,
-      ctx.user.email,
-      signup?._id ?? ctx.user.signupId,
-      ctx.user.githubUsername ?? signup?.githubUsername,
-      handle
-    );
+    await ctx.db.patch(ctx.user._id, {
+      twitterHandle: handle,
+      ...(handle === ctx.user.twitterHandle
+        ? {}
+        : { twitterLinkedAt: undefined }),
+    });
     return handle;
   },
   returns: v.union(v.string(), v.null()),
@@ -271,16 +310,12 @@ async function assertImage(
   imageId: Id<"_storage">,
   maxBytes: number
 ): Promise<void> {
-  const meta = await ctx.db.system.get(imageId);
-  if (!meta) {
-    fail("NOT_FOUND", "La imagen no se ha subido");
-  }
-  if (!meta.contentType?.startsWith("image/")) {
-    fail("VALIDATION", "Solo se admiten imágenes");
-  }
-  if (meta.size > maxBytes) {
-    fail("VALIDATION", "La foto no puede superar 2 MB");
-  }
+  await assertStoredImage(
+    ctx,
+    imageId,
+    maxBytes,
+    "La foto no puede superar 2 MB"
+  );
 }
 
 /** Upload target for a profile picture. POST the file there, then call setAvatar. */
@@ -368,7 +403,11 @@ export const updateEventDetails = profileMutation({
   },
   handler: async (ctx, args) => {
     const details = parseEventDetails(args);
-    await ctx.db.patch(ctx.user._id, details);
+    const participation = await getCurrentParticipation(ctx, ctx.user);
+    if (!participation) {
+      throw new Error("No hay participación en la edición en curso");
+    }
+    await ctx.db.patch(participation._id, details);
     return null;
   },
   returns: v.null(),

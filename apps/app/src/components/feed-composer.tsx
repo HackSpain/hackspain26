@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import type { OptimisticUpdate } from "convex/browser";
 import type { FunctionReturnType } from "convex/server";
 import { ImagePlus } from "lucide-react";
@@ -82,8 +82,7 @@ function optimisticPost(
   };
 }
 
-export function FeedComposer() {
-  const me = useQuery(api.users.me);
+export function FeedComposer({ me }: { me: Me }) {
   const post = useMutation(api.feed.post);
   const generateUploadUrl = useMutation(api.feed.generateUploadUrl);
   const [text, setText] = useState("");

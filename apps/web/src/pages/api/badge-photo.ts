@@ -1,11 +1,12 @@
 import type { APIRoute } from "astro";
-import { and, eq } from "drizzle-orm";
-import { getDb } from "../../db";
-import { hackathonSignups } from "../../db/schema";
 import {
   BADGE_PHOTO_MAX_LENGTH,
   isValidBadgePhoto,
 } from "../../lib/badge-photo";
+import {
+  isLandingRequestError,
+  saveBadgePhoto,
+} from "../../lib/convex-landing";
 
 export const prerender = false;
 
@@ -64,21 +65,15 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: "invalid_photo" }, 400);
   }
 
-  // Scoped to a confirmed place, matching what earns a badge in the first place.
-  const [updated] = await getDb()
-    .update(hackathonSignups)
-    .set({ badgePhoto: photo, badgePhotoUpdatedAt: new Date() })
-    .where(
-      and(
-        eq(hackathonSignups.managementToken, token),
-        eq(hackathonSignups.approvalStatus, "confirmed")
-      )
-    )
-    .returning({ updatedAt: hackathonSignups.badgePhotoUpdatedAt });
-
-  if (!updated) {
-    return json({ error: "not_found" }, 404);
+  try {
+    return json(await saveBadgePhoto(token, photo));
+  } catch (error) {
+    if (isLandingRequestError(error) && error.error === "not_found") {
+      return json({ error: "not_found" }, 404);
+    }
+    if (isLandingRequestError(error) && error.error === "invalid_photo") {
+      return json({ error: "invalid_photo" }, 400);
+    }
+    return json({ error: "save_failed" }, 500);
   }
-
-  return json({ version: updated.updatedAt?.getTime() ?? null });
 };

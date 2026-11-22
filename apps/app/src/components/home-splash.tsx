@@ -4,6 +4,7 @@ import Image from "next/image";
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
+import { EditionDates } from "@/components/edition-label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -174,12 +175,9 @@ export function HomeSplash() {
               className="mt-6 h-[3px] w-16 origin-center bg-hs-gold"
               variants={reduced ? item : rule}
             />
-            <motion.p
-              className="mt-5 text-center font-bungee text-xs tracking-wide text-pretty text-hs-brown sm:text-sm"
-              variants={item}
-            >
-              Madrid · 18–20 sep 2026
-            </motion.p>
+            <motion.div className="mt-5 text-center sm:text-sm" variants={item}>
+              <EditionDates className="text-pretty sm:text-sm" />
+            </motion.div>
             <motion.div className="mt-8 w-full max-w-56" variants={item}>
               <Button asChild className="w-full">
                 <Link href="/login">Entrar</Link>

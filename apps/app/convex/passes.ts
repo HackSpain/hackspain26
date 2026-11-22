@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { Resend as ResendAPI } from "resend";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -7,15 +6,20 @@ import { internalAction, internalMutation, query } from "./_generated/server";
 import {
   ACCESS_CODE_EMAIL_SUBJECT,
   accessCodeEmailHtml,
+  accessCodeEmailSubject,
   accessCodeEmailText,
 } from "./lib/accessCodeEmail";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
+import { findUserByEmail } from "./lib/auth";
+import { currentEdition, currentEditionId, ofEdition } from "./lib/editions";
+import { editionDatesLine } from "./lib/eventWindow";
+import { checkInIsOpen } from "./lib/schedule";
 import {
-  findUserByEmail,
-  getSignupForUser,
-  signupIsAccepted,
-} from "./lib/auth";
-import { resendApiKey, resendFrom } from "./lib/resend";
+  getCurrentParticipation,
+  participationIsAccepted,
+} from "./lib/participations";
+import { randomCode as randomFromAlphabet } from "./lib/randomCode";
+import { resendApiKey, sendBatchedEmails } from "./lib/resend";
 const PASS_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const PASS_CODE_LENGTH = 4;
 
@@ -28,12 +32,7 @@ const scanReturn = v.object({
 });
 
 function randomCode(): string {
-  const bytes = new Uint8Array(PASS_CODE_LENGTH);
-  crypto.getRandomValues(bytes);
-  return Array.from(
-    bytes,
-    (byte) => PASS_CODE_ALPHABET[byte % PASS_CODE_ALPHABET.length]
-  ).join("");
+  return randomFromAlphabet(PASS_CODE_ALPHABET, PASS_CODE_LENGTH);
 }
 
 async function uniqueCode(ctx: MutationCtx): Promise<string> {
@@ -52,18 +51,8 @@ async function uniqueCode(ctx: MutationCtx): Promise<string> {
 
 export async function findEventPass(
   ctx: QueryCtx | MutationCtx,
-  signup: Doc<"signups"> | null,
   user: Doc<"users"> | null
 ) {
-  if (signup) {
-    const bySignup = await ctx.db
-      .query("eventPasses")
-      .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
-      .unique();
-    if (bySignup) {
-      return bySignup;
-    }
-  }
   if (!user) {
     return null;
   }
@@ -77,24 +66,29 @@ async function completeCheckIn(
   ctx: MutationCtx,
   pass: Doc<"eventPasses">,
   user: Doc<"users"> | null,
-  resolvedSignup: Doc<"signups"> | null,
+  participation: Doc<"participations"> | null,
   options: { allowCancelled?: boolean } = {}
 ) {
+  const edition =
+    (await ctx.db.get(pass.editionId)) ?? (await currentEdition(ctx));
+  if (!checkInIsOpen(edition, Date.now())) {
+    throw new Error("El check-in aún no está abierto");
+  }
   if (pass.status !== "active") {
     throw new Error("Esta acreditación está revocada");
   }
-  if (!signupIsAccepted(resolvedSignup)) {
+  if (!participationIsAccepted(participation?.status)) {
     throw new Error("Este participante ya no está aceptado");
   }
   if (
-    user &&
-    user.attendanceStatus !== "attending" &&
+    participation &&
+    participation.attendanceStatus !== "attending" &&
     !options.allowCancelled
   ) {
     throw new Error("Este participante ha cancelado su asistencia");
   }
-  const name = user?.name ?? resolvedSignup?.fullName ?? "Hacker";
-  const email = user?.email ?? resolvedSignup?.email ?? "";
+  const name = user?.name ?? participation?.fullName ?? "Hacker";
+  const email = user?.email ?? participation?.email ?? "";
   if (pass.checkedInAt !== undefined) {
     return {
       checkedInAt: pass.checkedInAt,
@@ -107,12 +101,11 @@ async function completeCheckIn(
   const checkedInAt = Date.now();
   await ctx.db.patch(pass._id, {
     checkedInAt,
-    signupId: pass.signupId ?? resolvedSignup?._id,
     userId: pass.userId ?? user?._id,
     updatedAt: checkedInAt,
   });
-  if (user && user.attendanceStatus !== "attending") {
-    await ctx.db.patch(user._id, { attendanceStatus: "attending" });
+  if (participation && participation.attendanceStatus !== "attending") {
+    await ctx.db.patch(participation._id, { attendanceStatus: "attending" });
   }
   return {
     checkedInAt,
@@ -135,36 +128,37 @@ async function checkIn(ctx: MutationCtx, value: string) {
   if (!pass) {
     throw new Error("Acreditación desconocida");
   }
-  const signup = pass.signupId ? await ctx.db.get(pass.signupId) : null;
-  let user: Doc<"users"> | null = null;
-  if (pass.userId) {
-    user = await ctx.db.get(pass.userId);
-  } else if (signup) {
-    user = await findUserByEmail(ctx, signup.email);
-  }
-  const resolvedSignup =
-    signup ?? (user ? await getSignupForUser(ctx, user) : null);
-  return await completeCheckIn(ctx, pass, user, resolvedSignup);
+  const user = pass.userId ? await ctx.db.get(pass.userId) : null;
+  const participation = user ? await getCurrentParticipation(ctx, user) : null;
+  return await completeCheckIn(ctx, pass, user, participation);
 }
 
 export async function checkInParticipantRecord(
   ctx: MutationCtx,
-  args: { signupId?: Id<"signups">; userId?: Id<"users"> }
+  args: { signupId?: string; userId?: Id<"users"> }
 ) {
-  const signup = args.signupId ? await ctx.db.get(args.signupId) : null;
+  const participation = args.signupId
+    ? await ctx.db.get(args.signupId as Id<"participations">)
+    : null;
   let user = args.userId ? await ctx.db.get(args.userId) : null;
-  if (!user && signup) {
-    user = await findUserByEmail(ctx, signup.email);
+  if (!user && participation?.userId) {
+    user = await ctx.db.get(participation.userId);
   }
-  const resolvedSignup =
-    signup ?? (user ? await getSignupForUser(ctx, user) : null);
-  if (!resolvedSignup) {
+  if (!user && participation?.email) {
+    user = await findUserByEmail(ctx, participation.email);
+  }
+  const resolved =
+    participation ?? (user ? await getCurrentParticipation(ctx, user) : null);
+  if (!resolved) {
     throw new Error("No hay solicitud para hacer el check-in");
   }
-  if (!signupIsAccepted(resolvedSignup)) {
+  if (!participationIsAccepted(resolved.status)) {
     throw new Error("Este participante no está aceptado");
   }
-  let pass = await findEventPass(ctx, resolvedSignup, user);
+  if (!user && resolved.userId) {
+    user = await ctx.db.get(resolved.userId);
+  }
+  let pass = await findEventPass(ctx, user);
   if (pass?.status === "revoked") {
     throw new Error("Esta acreditación está revocada");
   }
@@ -173,7 +167,7 @@ export async function checkInParticipantRecord(
     const passId = await ctx.db.insert("eventPasses", {
       code: await uniqueCode(ctx),
       createdAt: now,
-      signupId: resolvedSignup._id,
+      editionId: resolved.editionId,
       status: "active",
       updatedAt: now,
       userId: user?._id,
@@ -183,7 +177,7 @@ export async function checkInParticipantRecord(
       throw new Error("No se ha podido crear la acreditación");
     }
   }
-  return await completeCheckIn(ctx, pass, user, resolvedSignup, {
+  return await completeCheckIn(ctx, pass, user, resolved, {
     allowCancelled: true,
   });
 }
@@ -196,7 +190,7 @@ export const scan = adminMutation({
 
 export const checkInParticipant = adminMutation({
   args: {
-    signupId: v.optional(v.id("signups")),
+    signupId: v.optional(v.string()),
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => await checkInParticipantRecord(ctx, args),
@@ -227,7 +221,11 @@ export const arrivals = query({
     ),
   }),
   handler: async (ctx, { since }) => {
-    const passes = (await ctx.db.query("eventPasses").collect())
+    const editionId = await currentEditionId(ctx);
+    const passes = ofEdition(
+      await ctx.db.query("eventPasses").collect(),
+      editionId
+    )
       .filter(
         (pass): pass is Doc<"eventPasses"> & { checkedInAt: number } =>
           pass.status === "active" && pass.checkedInAt !== undefined
@@ -242,21 +240,19 @@ export const arrivals = query({
         }
         return [
           (async () => {
-            const signup = pass.signupId
-              ? await ctx.db.get(pass.signupId)
-              : null;
             let user: Doc<"users"> | null = null;
             if (pass.userId) {
               user = await ctx.db.get(pass.userId);
-            } else if (signup) {
-              user = await findUserByEmail(ctx, signup.email);
             }
+            const participation = user
+              ? await getCurrentParticipation(ctx, user)
+              : null;
             const card = user?.directory;
             return {
               id: `${pass._id}:${pass.checkedInAt}`,
               checkedInAt: pass.checkedInAt,
               number: index + 1,
-              name: user?.name?.trim() || signup?.fullName || "Hacker",
+              name: user?.name?.trim() || participation?.fullName || "Hacker",
               image: user?.avatarId
                 ? await ctx.storage.getUrl(user.avatarId)
                 : user?.image || null,
@@ -293,16 +289,22 @@ export const undoCheckIn = adminMutation({
 export const stats = adminQuery({
   args: {},
   handler: async (ctx) => {
-    const passes = await ctx.db.query("eventPasses").collect();
+    const editionId = await currentEditionId(ctx);
+    const passes = ofEdition(
+      await ctx.db.query("eventPasses").collect(),
+      editionId
+    );
     const activePasses = passes.filter((pass) => pass.status === "active");
     const accepted = await ctx.db
-      .query("signups")
-      .withIndex("by_accepted", (q) => q.eq("accepted", true))
+      .query("participations")
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
       .collect();
     let expected = 0;
-    for (const signup of accepted) {
-      const user = await findUserByEmail(ctx, signup.email);
-      if (user?.attendanceStatus !== "cancelled") {
+    for (const row of accepted) {
+      if (
+        participationIsAccepted(row.status) &&
+        row.attendanceStatus !== "cancelled"
+      ) {
         expected++;
       }
     }
@@ -334,9 +336,10 @@ export const issueAndEmailAccepted = adminMutation({
     if (!resendApiKey()) {
       throw new Error("Configura Resend antes de enviar los códigos de acceso");
     }
-    const signups = await ctx.db
-      .query("signups")
-      .withIndex("by_accepted", (q) => q.eq("accepted", true))
+    const editionId = await currentEditionId(ctx);
+    const rows = await ctx.db
+      .query("participations")
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
       .collect();
     const recipients: {
       passId: Id<"eventPasses">;
@@ -346,54 +349,61 @@ export const issueAndEmailAccepted = adminMutation({
     }[] = [];
     let issued = 0;
 
-    for (const signup of signups) {
-      const user = await findUserByEmail(ctx, signup.email);
-      if (user?.attendanceStatus === "cancelled") {
+    for (const row of rows) {
+      if (
+        !participationIsAccepted(row.status) ||
+        row.attendanceStatus === "cancelled"
+      ) {
         continue;
       }
-      let pass = await ctx.db
-        .query("eventPasses")
-        .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
-        .unique();
-      if (!pass && user) {
-        pass = await ctx.db
-          .query("eventPasses")
-          .withIndex("by_user", (q) => q.eq("userId", user._id))
-          .unique();
-      }
+      const user = row.userId
+        ? await ctx.db.get(row.userId)
+        : await findUserByEmail(ctx, row.email);
+      let pass = user
+        ? await ctx.db
+            .query("eventPasses")
+            .withIndex("by_user", (q) => q.eq("userId", user._id))
+            .unique()
+        : null;
       if (!pass) {
         const now = Date.now();
         const code = await uniqueCode(ctx);
         const passId = await ctx.db.insert("eventPasses", {
           code,
           createdAt: now,
-          signupId: signup._id,
+          editionId,
           status: "active",
           updatedAt: now,
           userId: user?._id,
         });
         pass = await ctx.db.get(passId);
         issued++;
-      } else if (!pass.signupId || (user && !pass.userId)) {
+      } else if (user && !pass.userId) {
         await ctx.db.patch(pass._id, {
-          signupId: signup._id,
+          editionId: pass.editionId ?? editionId,
           updatedAt: Date.now(),
-          userId: pass.userId ?? user?._id,
+          userId: user._id,
         });
       }
       if (pass?.status === "active" && pass.codeSentAt === undefined) {
         recipients.push({
           passId: pass._id,
           code: pass.code,
-          email: signup.email,
-          name: signup.fullName,
+          email: row.email,
+          name: row.fullName ?? user?.name ?? row.email,
         });
       }
     }
 
     if (recipients.length > 0) {
+      const edition = await currentEdition(ctx);
       await ctx.scheduler.runAfter(0, internal.passes.deliverAccessCodes, {
+        datesLine:
+          editionDatesLine(edition.eventStartsAt, edition.eventEndsAt) ??
+          `Madrid · ${edition.label}`,
+        label: edition.label,
         recipients,
+        subject: accessCodeEmailSubject(edition.label),
       });
     }
     return { emailed: recipients.length, issued };
@@ -412,6 +422,8 @@ export const markCodesSent = internalMutation({
 
 export const deliverAccessCodes = internalAction({
   args: {
+    datesLine: v.optional(v.string()),
+    label: v.optional(v.string()),
     recipients: v.array(
       v.object({
         passId: v.id("eventPasses"),
@@ -420,32 +432,36 @@ export const deliverAccessCodes = internalAction({
         name: v.string(),
       })
     ),
+    subject: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const apiKey = resendApiKey();
-    if (!apiKey) {
+    const result = await sendBatchedEmails(
+      args.recipients.map((recipient) => ({
+        html: accessCodeEmailHtml({
+          ...recipient,
+          datesLine: args.datesLine,
+          label: args.label,
+        }),
+        subject: args.subject ?? ACCESS_CODE_EMAIL_SUBJECT,
+        text: accessCodeEmailText({
+          ...recipient,
+          label: args.label,
+        }),
+        to: [recipient.email],
+      }))
+    );
+    if (result.failures.length > 0 && result.sentCount === 0) {
       throw new Error(
-        "Resend is not configured; access codes were not emailed"
+        result.failures[0]?.error ?? "No se pudieron enviar los códigos"
       );
     }
-    const resend = new ResendAPI(apiKey);
-    const from = resendFrom();
-    for (let offset = 0; offset < args.recipients.length; offset += 100) {
-      const chunk = args.recipients.slice(offset, offset + 100);
-      const { error } = await resend.batch.send(
-        chunk.map((recipient) => ({
-          from,
-          html: accessCodeEmailHtml(recipient),
-          subject: ACCESS_CODE_EMAIL_SUBJECT,
-          text: accessCodeEmailText(recipient),
-          to: [recipient.email],
-        }))
-      );
-      if (error) {
-        throw new Error(error.message);
-      }
+    const failed = new Set(result.failures.map((row) => row.email));
+    const sent = args.recipients
+      .filter((recipient) => !failed.has(recipient.email))
+      .map((recipient) => recipient.passId);
+    if (sent.length > 0) {
       await ctx.runMutation(internal.passes.markCodesSent, {
-        passIds: chunk.map((recipient) => recipient.passId),
+        passIds: sent,
       });
     }
     return null;

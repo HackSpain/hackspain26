@@ -10,7 +10,7 @@ import type { FeedTab } from "@convex/lib/feedTabs";
 import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
 import { MentionText } from "@/components/mention-textarea";
-import { LoadingText } from "@/components/page";
+import { Skeleton } from "@/components/page";
 import { PostSocial } from "@/components/post-social";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -304,17 +304,38 @@ export function FeedTabs({
 }
 
 /** Mount with `key={tab}` so the enter-animation baseline resets per tab. */
+function FeedTimelineSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden>
+      {["a", "b", "c"].map((key) => (
+        <div key={key} className="border-[3px] border-hs-ink bg-hs-paper p-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-10 shrink-0" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+          <Skeleton className="mt-4 h-3 w-full" />
+          <Skeleton className="mt-2 h-3 w-2/3" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function FeedTimeline({
   tab,
   limit = 50,
   className,
+  meId,
 }: {
   tab: FeedTab;
   limit?: number;
   className?: string;
+  meId?: Id<"users">;
 }) {
   const posts = useQuery(api.feed.list, { limit, tab });
-  const meId = useQuery(api.users.me)?._id;
   // Keys present when the list first loaded never animate in; only posts that
   // arrive afterwards (yours, someone else's, GitHub) get the enter transition.
   // The set is frozen on purpose: a later post keeps `hs-enter` for its whole
@@ -325,7 +346,7 @@ export function FeedTimeline({
   }
 
   if (posts === undefined) {
-    return <LoadingText />;
+    return <FeedTimelineSkeleton />;
   }
   if (posts.length === 0) {
     return (

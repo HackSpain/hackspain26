@@ -27,7 +27,12 @@ const LOGO_URL = "https://hackspain.com/hs-email-logo.png";
 
 export const OTP_EMAIL_SUBJECT = "Tu código de acceso a HackSpain";
 
-export function otpEmailHtml(token: string): string {
+const DEFAULT_DATES_LINE = "Madrid";
+
+export function otpEmailHtml(
+  token: string,
+  datesLine = DEFAULT_DATES_LINE
+): string {
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -53,7 +58,7 @@ export function otpEmailHtml(token: string): string {
 
           <tr>
             <td align="center" bgcolor="${PALETTE.gold}" style="background:${PALETTE.gold};border:3px solid ${PALETTE.ink};border-top:0;padding:11px 24px;">
-              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:${PALETTE.brown};">Madrid · 18—20 septiembre 2026</div>
+              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:${PALETTE.brown};">${datesLine}</div>
             </td>
           </tr>
 

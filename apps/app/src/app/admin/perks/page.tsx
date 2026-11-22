@@ -4,9 +4,17 @@ import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { ArrowUpRightIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
-import { useId, useState } from "react";
+import { Suspense, useId, useState } from "react";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
+import { AdminTabs, useAdminTab } from "@/components/admin/admin-tabs";
+import {
+  EmailApplicationsQueue,
+  ReviewActions,
+} from "@/components/admin/email-applications-queue";
+import {
+  useAdminEdition,
+  useAdminEditionArgs,
+} from "@/components/admin/use-admin-edition";
 import { participantHref } from "@/components/admin/participant-detail";
 import {
   EmptyState,
@@ -14,19 +22,12 @@ import {
   FormError,
   LoadingText,
   Page,
-  RecordCard,
   errorMessage,
 } from "@/components/page";
 import { LinkedText } from "@/components/linked-text";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -74,7 +75,7 @@ import {
   toCsv,
 } from "@/lib/perks";
 import type { PerkInput, PerkInputType } from "@/lib/perks";
-import { claimStatusLabel, cn, perkName, perkTypeLabel } from "@/lib/utils";
+import { claimStatusLabel, perkName, perkTypeLabel } from "@/lib/utils";
 
 type AdminPerk = FunctionReturnType<typeof api.perks.adminList>[number];
 type PerkType = AdminPerk["type"];
@@ -211,7 +212,18 @@ const dateFormat = new Intl.DateTimeFormat("es-ES", {
 });
 
 export default function AdminPerksPage() {
-  const perks = useQuery(api.perks.adminList);
+  return (
+    <Suspense fallback={<LoadingText />}>
+      <AdminPerks />
+    </Suspense>
+  );
+}
+
+function AdminPerks() {
+  const tab = useAdminTab("catalogo");
+  const { isCurrent } = useAdminEdition();
+  const editionArgs = useAdminEditionArgs();
+  const perks = useQuery(api.perks.adminList, editionArgs);
   const create = useMutation(api.perks.adminCreate);
   const update = useMutation(api.perks.adminUpdate);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -260,16 +272,27 @@ export default function AdminPerksPage() {
       title={
         <div className="flex min-w-0 items-center justify-between gap-3">
           <h1 className="min-w-0 font-bungee text-2xl leading-tight sm:text-3xl">
-            Admin de perks
+            Perks
           </h1>
-          <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
-            <PlusIcon aria-hidden />
-            Crear perk
-          </Button>
+          {tab === "catalogo" && isCurrent ? (
+            <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
+              <PlusIcon aria-hidden />
+              Crear perk
+            </Button>
+          ) : null}
         </div>
       }
     >
-      {perks === undefined ? (
+      <AdminTabs
+        defaultTab="catalogo"
+        tabs={[
+          { value: "catalogo", label: "Catálogo" },
+          { value: "solicitudes", label: "Solicitudes" },
+        ]}
+      />
+      {tab === "solicitudes" ? (
+        <EmailApplicationsQueue />
+      ) : perks === undefined ? (
         <LoadingText />
       ) : perks.length === 0 ? (
         <EmptyState title="Aún no hay perks">
@@ -405,8 +428,6 @@ export default function AdminPerksPage() {
           ))}
         </div>
       )}
-
-      <EmailApplicationsQueue />
 
       <Dialog
         open={createOpen}
@@ -868,167 +889,6 @@ function InputsEditor({
           })}
         </ol>
       ) : null}
-    </div>
-  );
-}
-
-function Answers({ answers }: { answers: { label: string; value: string }[] }) {
-  if (answers.length === 0) {
-    return null;
-  }
-  return (
-    <dl className="mt-1 grid gap-0.5 text-xs">
-      {answers.map((answer) => (
-        <div key={answer.label} className="flex min-w-0 gap-1.5">
-          <dt className="shrink-0 font-bungee uppercase text-hs-brown">
-            {answer.label}
-          </dt>
-          <dd className="min-w-0 break-words">{answer.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function EmailApplicationsQueue() {
-  const [status, setStatus] = useState<
-    "all" | "pending" | "added" | "rejected"
-  >("pending");
-  const rows = useQuery(api.perks.adminApplications, {
-    status: status === "all" ? undefined : status,
-  });
-
-  return (
-    <Card id="solicitudes" className="min-w-0 overflow-hidden">
-      <CardHeader className="min-w-0 gap-3">
-        <div className="min-w-0 space-y-1">
-          <CardTitle>Solicitudes por email</CardTitle>
-          <CardDescription>
-            El hacker pide acceso; al marcarlo como añadido puedes pegar el
-            código que le toca.
-          </CardDescription>
-        </div>
-        <Select
-          value={status}
-          onValueChange={(value) =>
-            setStatus(value as "all" | "pending" | "added" | "rejected")
-          }
-        >
-          <SelectTrigger className="w-full max-w-full sm:max-w-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            <SelectItem value="pending">Pendientes</SelectItem>
-            <SelectItem value="added">Añadidas</SelectItem>
-            <SelectItem value="rejected">Rechazadas</SelectItem>
-          </SelectContent>
-        </Select>
-      </CardHeader>
-      <CardContent className="min-w-0">
-        {!rows ? (
-          <LoadingText />
-        ) : rows.length === 0 ? (
-          <p className="text-sm text-hs-brown">Nada en este estado todavía.</p>
-        ) : (
-          <div className="grid min-w-0 gap-3">
-            {rows.map((row) => (
-              <RecordCard
-                key={row._id}
-                title={row.name ?? "—"}
-                subtitle={row.email}
-                badges={<Badge>{claimStatusLabel(row.status)}</Badge>}
-              >
-                <p className="min-w-0 text-sm break-words text-hs-brown">
-                  {perkName(row.company, row.title)}
-                </p>
-                {row.code ? (
-                  <p className="min-w-0 font-mono text-xs break-all">
-                    {row.code}
-                  </p>
-                ) : null}
-                <Answers answers={row.answers} />
-                <ReviewActions claimId={row._id} stacked />
-              </RecordCard>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ReviewActions({
-  claimId,
-  compact,
-  stacked,
-}: {
-  claimId: Id<"perkClaims">;
-  compact?: boolean;
-  stacked?: boolean;
-}) {
-  const setApplicationStatus = useMutation(api.perks.adminSetApplicationStatus);
-  const [code, setCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  async function setStatus(status: "added" | "rejected") {
-    setError(null);
-    setPending(true);
-    try {
-      await setApplicationStatus({
-        claimId,
-        status,
-        code: status === "added" && code.trim() ? code.trim() : undefined,
-      });
-      if (status === "added") {
-        setCode("");
-      }
-    } catch (caughtError: unknown) {
-      setError(errorMessage(caughtError, "No se ha podido actualizar"));
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <div className="grid min-w-0 gap-2">
-      <div
-        className={cn(
-          "flex gap-2",
-          stacked ? "flex-col" : "flex-wrap items-center"
-        )}
-      >
-        <Input
-          aria-label="Código del perk"
-          placeholder="Código"
-          value={code}
-          disabled={pending}
-          className={cn(
-            "min-w-0 font-mono",
-            compact ? "h-9 flex-1 text-sm" : stacked ? "w-full" : "max-w-48"
-          )}
-          onChange={(event) => setCode(event.target.value)}
-        />
-        <Button
-          size={compact ? "sm" : "default"}
-          className={stacked ? "w-full min-w-0" : undefined}
-          disabled={pending}
-          onClick={() => void setStatus("added")}
-        >
-          Marcar añadida
-        </Button>
-        <Button
-          size={compact ? "sm" : "default"}
-          variant="outline"
-          className={stacked ? "w-full min-w-0" : undefined}
-          disabled={pending}
-          onClick={() => void setStatus("rejected")}
-        >
-          Rechazar
-        </Button>
-      </div>
-      <FormError message={error} />
     </div>
   );
 }

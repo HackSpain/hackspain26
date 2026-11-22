@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { api } from "@convex/_generated/api";
+import { EditionLabel } from "@/components/edition-label";
 import {
   AuthScreen,
   FormError,
@@ -39,7 +40,7 @@ function CliAuthCard() {
   return (
     <Card className="hs-enter w-full max-w-md">
       <CardHeader>
-        <p className="font-bungee text-xs text-hs-brown">HackSpain 2026</p>
+        <EditionLabel />
         <CardTitle className="text-2xl sm:text-3xl">Autorizar la CLI</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

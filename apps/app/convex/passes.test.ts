@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
-import type { TestContext } from "node:test";
+import { afterEach, test } from "node:test";
 import type { MutationCtx } from "./_generated/server";
 import {
   arrivals,
@@ -9,17 +8,31 @@ import {
   undoCheckIn,
 } from "./passes";
 import { dropCheckInMetadata } from "./migrations";
+import { TEST_EDITION_ID, testEditionRow } from "./lib/testFixtures";
 import { reconcileArrivals } from "../src/lib/arrival-queue";
 
 type Row = Record<string, unknown> & { _id: string; table: string };
 
-function passesContext(t: TestContext) {
+let restoreNow: (() => void) | undefined;
+afterEach(() => {
+  restoreNow?.();
+  restoreNow = undefined;
+});
+
+function passesContext() {
   let now = Date.parse("2026-09-18T12:00:00Z");
-  t.mock.method(Date, "now", () => now);
+  const originalNow = Date.now.bind(Date);
+  Date.now = () => now;
+  restoreNow = () => {
+    Date.now = originalNow;
+  };
   const rows = new Map<string, Row>([
     [
-      "settings",
-      { _id: "settings", table: "eventSettings", key: "main", phase: "live" },
+      "edition",
+      {
+        ...testEditionRow(),
+        table: "editions",
+      } as Row,
     ],
     ["operator", { _id: "operator", table: "users", role: "admin" }],
   ]);
@@ -27,17 +40,19 @@ function passesContext(t: TestContext) {
     const suffix = String(index);
     rows.set(`signup${suffix}`, {
       _id: `signup${suffix}`,
-      table: "signups",
-      accepted: true,
-      fullName: `Persona ${suffix}`,
+      attendanceStatus: "attending",
+      editionId: TEST_EDITION_ID,
       email: `person${suffix}@example.com`,
+      fullName: `Persona ${suffix}`,
+      status: "accepted",
+      table: "participations",
+      userId: `user${suffix}`,
     });
     rows.set(`user${suffix}`, {
       _id: `user${suffix}`,
       table: "users",
       name: `Persona ${suffix}`,
       email: `person${suffix}@example.com`,
-      attendanceStatus: "attending",
       image: "https://example.com/avatar.png",
       directory: {
         role: "Developer",
@@ -52,6 +67,7 @@ function passesContext(t: TestContext) {
       table: "eventPasses",
       userId: `user${suffix}`,
       signupId: `signup${suffix}`,
+      editionId: TEST_EDITION_ID,
       status: "active",
       code,
       createdAt: now - 1000,
@@ -69,12 +85,17 @@ function passesContext(t: TestContext) {
             _name: string,
             filter: (q: { eq: (field: string, value: unknown) => void }) => void
           ) {
-            filter({
-              eq(field, value) {
+            const range = {
+              eq(field: string, value: unknown) {
                 matches = matches.filter((row) => row[field] === value);
+                return range;
               },
-            });
-            return { unique: async () => matches[0] ?? null };
+            };
+            filter(range);
+            return {
+              collect: async () => matches,
+              unique: async () => matches[0] ?? null,
+            };
           },
           collect: async () => matches,
         };
@@ -106,8 +127,8 @@ function passesContext(t: TestContext) {
   };
 }
 
-test("admin code scan persists check-in and supplies the real TV profile", async (t) => {
-  const { ctx, rows, tick } = passesContext(t);
+test("admin code scan persists check-in and supplies the real TV profile", async () => {
+  const { ctx, rows, tick } = passesContext();
   const baseline = await arrivals._handler(ctx, {});
   assert.deepEqual(baseline.entries, []);
   tick();
@@ -133,8 +154,8 @@ test("admin code scan persists check-in and supplies the real TV profile", async
   );
 });
 
-test("two admin scans queue both arrivals and a repeated code never replays", async (t) => {
-  const { ctx, tick } = passesContext(t);
+test("two admin scans queue both arrivals and a repeated code never replays", async () => {
+  const { ctx, tick } = passesContext();
   const { serverTime: since } = await arrivals._handler(ctx, {});
   tick();
   await scan._handler(ctx, { value: "AB7K" });
@@ -164,8 +185,8 @@ test("two admin scans queue both arrivals and a repeated code never replays", as
   );
 });
 
-test("unknown codes do not reach the screen and admin undo withdraws an arrival", async (t) => {
-  const { ctx, tick } = passesContext(t);
+test("unknown codes do not reach the screen and admin undo withdraws an arrival", async () => {
+  const { ctx, tick } = passesContext();
   const { serverTime: since } = await arrivals._handler(ctx, {});
   tick();
   await assert.rejects(scan._handler(ctx, { value: "ZZZZ" }), /desconocida/);
@@ -175,8 +196,8 @@ test("unknown codes do not reach the screen and admin undo withdraws an arrival"
   assert.deepEqual((await arrivals._handler(ctx, { since })).entries, []);
 });
 
-test("legacy cleanup removes only operator metadata and can run twice", async (t) => {
-  const { ctx, rows } = passesContext(t);
+test("legacy cleanup removes only operator metadata and can run twice", async () => {
+  const { ctx, rows } = passesContext();
   await scan._handler(ctx, { value: "AB7K" });
   const pass = rows.get("pass0");
   assert.ok(pass);
@@ -187,14 +208,13 @@ test("legacy cleanup removes only operator metadata and can run twice", async (t
   assert.equal(clean?.checkedInAt, checkedInAt);
   assert.equal(clean?.code, "AB7K");
   assert.equal(clean?.userId, "user0");
-  assert.equal(clean?.signupId, "signup0");
   assert.equal("checkedInBy" in (clean ?? {}), false);
   assert.equal("checkedInVia" in (clean ?? {}), false);
   assert.equal(await dropCheckInMetadata._handler(ctx, {}), 0);
 });
 
-test("admin ficha check-in marks the existing pass and can run twice", async (t) => {
-  const { ctx, rows } = passesContext(t);
+test("admin ficha check-in marks the existing pass and can run twice", async () => {
+  const { ctx, rows } = passesContext();
   const result = await checkInParticipantRecord(ctx, {
     signupId: "signup0" as never,
   });
@@ -207,29 +227,29 @@ test("admin ficha check-in marks the existing pass and can run twice", async (t)
   assert.equal(again.checkedInAt, result.checkedInAt);
 });
 
-test("admin ficha check-in issues a pass when the person has none", async (t) => {
-  const { ctx, rows } = passesContext(t);
+test("admin ficha check-in issues a pass when the person has none", async () => {
+  const { ctx, rows } = passesContext();
   rows.delete("pass0");
   const result = await checkInParticipantRecord(ctx, {
     signupId: "signup0" as never,
   });
   assert.equal(result.status, "checked_in");
   const created = [...rows.values()].find(
-    (row) => row.table === "eventPasses" && row.signupId === "signup0"
+    (row) => row.table === "eventPasses" && row.userId === "user0"
   );
   assert.ok(created);
   assert.equal(created.checkedInAt, result.checkedInAt);
   assert.equal(created.status, "active");
 });
 
-test("admin ficha check-in can recover a cancelled attendee", async (t) => {
-  const { ctx, rows } = passesContext(t);
-  const user = rows.get("user0");
-  assert.ok(user);
-  user.attendanceStatus = "cancelled";
+test("admin ficha check-in can recover a cancelled attendee", async () => {
+  const { ctx, rows } = passesContext();
+  const participation = rows.get("signup0");
+  assert.ok(participation);
+  participation.attendanceStatus = "cancelled";
   const result = await checkInParticipantRecord(ctx, {
     userId: "user0" as never,
   });
   assert.equal(result.status, "checked_in");
-  assert.equal(rows.get("user0")?.attendanceStatus, "attending");
+  assert.equal(rows.get("signup0")?.attendanceStatus, "attending");
 });

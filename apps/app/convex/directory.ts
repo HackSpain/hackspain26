@@ -27,6 +27,8 @@ import {
   normalizeLinkedinSlug,
 } from "./lib/linkedinProfile";
 import { avatarThumbnailFor } from "./lib/photo";
+import { currentEditionId } from "./lib/editions";
+import { getCurrentParticipation } from "./lib/participations";
 import { membershipForUser } from "./lib/team";
 import { urlsValidator } from "./lib/urls";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -83,12 +85,13 @@ export const me = authedQuery({
     const missing = missingDirectoryFields(card);
     const membership = await membershipForUser(ctx, ctx.user._id);
     const team = membership ? await ctx.db.get(membership.teamId) : null;
+    const participation = await getCurrentParticipation(ctx, ctx.user);
     return {
       card,
       complete: missing.length === 0,
       missing,
       suggestions: {
-        city: ctx.user.travelOrigin,
+        city: participation?.travelOrigin,
         skills: team?.techStack ?? [],
       },
     };
@@ -161,31 +164,59 @@ export const normalizeCards = internalMutation({
 export const list = directoryQuery({
   args: {},
   handler: async (ctx) => {
-    const [users, teams, memberships, submissions, tracks, signups] =
+    const editionId = await currentEditionId(ctx);
+    const [teams, memberships, submissions, tracks, participations] =
       await Promise.all([
-        ctx.db.query("users").collect(),
-        ctx.db.query("teams").collect(),
-        ctx.db.query("teamMembers").collect(),
-        ctx.db.query("submissions").collect(),
-        ctx.db.query("tracks").collect(),
-        ctx.db.query("signups").collect(),
+        ctx.db
+          .query("teams")
+          .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+          .collect(),
+        ctx.db
+          .query("teamMembers")
+          .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+          .collect(),
+        ctx.db
+          .query("submissions")
+          .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+          .collect(),
+        ctx.db
+          .query("tracks")
+          .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+          .collect(),
+        ctx.db
+          .query("participations")
+          .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+          .collect(),
       ]);
-    const signupById = new Map(signups.map((row) => [row._id, row]));
-    const signupByEmail = new Map<string, Doc<"signups">>();
-    for (const row of signups) {
-      signupByEmail.set(row.email.toLowerCase(), row);
-    }
-    const signupOf = (user: (typeof users)[number]) => {
-      if (user.signupId) {
-        const byId = signupById.get(user.signupId);
-        if (byId) {
-          return byId;
-        }
+    const users: Doc<"users">[] = [];
+    for (const row of participations) {
+      if (!row.userId) {
+        continue;
       }
-      return user.email
-        ? signupByEmail.get(user.email.toLowerCase())
-        : undefined;
-    };
+      const user = await ctx.db.get(row.userId);
+      if (user) {
+        users.push(user);
+      }
+    }
+    const participationByUser = new Map<
+      Id<"users">,
+      (typeof participations)[number]
+    >();
+    const participationByEmail = new Map<
+      string,
+      (typeof participations)[number]
+    >();
+    for (const row of participations) {
+      if (row.userId) {
+        participationByUser.set(row.userId, row);
+      }
+      participationByEmail.set(row.email.toLowerCase(), row);
+    }
+    const signupOf = (user: (typeof users)[number]) =>
+      participationByUser.get(user._id) ??
+      (user.email
+        ? participationByEmail.get(user.email.toLowerCase())
+        : undefined);
     const projectByTeam = new Map<
       Id<"teams">,
       {
@@ -250,12 +281,15 @@ export const list = directoryQuery({
     }
     const out = [];
     for (const user of users) {
+      const application = signupOf(user);
+      if (!application) {
+        continue;
+      }
       const card = user.directory;
       if (!card || !isDirectoryComplete(card)) {
         continue;
       }
       const team = teamOf(user._id);
-      const application = signupOf(user);
       out.push({
         achievements: application?.achievements,
         bio: card.bio,

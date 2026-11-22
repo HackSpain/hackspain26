@@ -2,107 +2,10 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { getSignupForUser } from "./lib/auth";
+import { currentEditionId, ofEdition } from "./lib/editions";
 import { isDirectoryComplete } from "./lib/directory";
 import { externalThumbnail } from "./lib/photo";
-import { tvFeedSourceValidator, tvWidgetFields } from "./lib/tvValidators";
-
-export const tvZoneValidator = v.union(
-  v.literal("banner"),
-  v.literal("left"),
-  v.literal("right"),
-  v.literal("ticker")
-);
-
-export const messageReturn = v.object({
-  _id: v.id("tvMessages"),
-  text: v.string(),
-  zone: tvZoneValidator,
-  order: v.number(),
-});
-
-function byZoneOrder(a: Doc<"tvMessages">, b: Doc<"tvMessages">) {
-  return a.zone === b.zone ? a.order - b.order : a.zone.localeCompare(b.zone);
-}
-
-/**
- * Legacy message projection for GET /api/tv. No auth: it only returns
- * admin-authored display copy, never participant data.
- */
-export const list = query({
-  args: {},
-  returns: v.array(messageReturn),
-  handler: async (ctx) => {
-    const rows = await ctx.db.query("tvMessages").collect();
-    return rows
-      .filter((row) => row.active)
-      .toSorted(byZoneOrder)
-      .map((row) => ({
-        _id: row._id,
-        text: row.text,
-        zone: row.zone,
-        order: row.order,
-      }));
-  },
-});
-
-export const widgetReturn = v.object({
-  _id: v.string(),
-  ...tvWidgetFields,
-});
-
-function toPublicWidget(row: Doc<"tvWidgets">) {
-  return {
-    _id: row._id,
-    ...snapshotOf(row),
-  };
-}
-
-function snapshotOf(row: Doc<"tvWidgets">) {
-  return {
-    kind: row.kind,
-    x: row.x,
-    y: row.y,
-    w: row.w,
-    h: row.h,
-    z: row.z,
-    text: row.text,
-    sponsors: row.sponsors,
-    tickerSpeed: row.tickerSpeed,
-    feedMode: row.feedMode,
-    feedSource: row.feedSource,
-    fontSize: row.fontSize,
-    fontWeight: row.fontWeight,
-    background: row.background,
-  };
-}
-
-function byZ(a: Doc<"tvWidgets">, b: Doc<"tvWidgets">) {
-  return a.z - b.z || a._creationTime - b._creationTime;
-}
-
-/**
- * Read-only legacy composition for GET /api/tv. Uses the saved live state
- * when one is set; otherwise the stored widgets.
- */
-export const listWidgets = query({
-  args: {},
-  returns: v.array(widgetReturn),
-  handler: async (ctx) => {
-    const live = await ctx.db
-      .query("tvLayouts")
-      .withIndex("by_live", (q) => q.eq("isLive", true))
-      .first();
-    if (live) {
-      return live.widgets.map((widget, index) => ({
-        _id: `${live._id}:${index}`,
-        ...widget,
-      }));
-    }
-    const rows = await ctx.db.query("tvWidgets").withIndex("by_z").collect();
-    return rows.toSorted(byZ).map(toPublicWidget);
-  },
-});
+import { tvFeedSourceValidator } from "./lib/tvValidators";
 
 const tvFeedPostReturn = v.object({
   _id: v.string(),
@@ -118,12 +21,11 @@ const tvFeedPostReturn = v.object({
 
 async function toTvFeedPost(ctx: QueryCtx, post: Doc<"posts">) {
   const author = post.authorId ? await ctx.db.get(post.authorId) : null;
-  const signup = author ? await getSignupForUser(ctx, author) : null;
   const team = post.teamId ? await ctx.db.get(post.teamId) : null;
   const authorName =
     post.kind === "github"
       ? post.github?.actor || team?.name || "GitHub"
-      : author?.name || signup?.fullName || "Alguien";
+      : author?.name || "Alguien";
   return {
     _id: post._id,
     kind: post.kind,
@@ -151,12 +53,16 @@ export const listFeed = query({
   returns: v.array(tvFeedPostReturn),
   handler: async (ctx, args) => {
     const source = args.source ?? "participants";
+    const editionId = await currentEditionId(ctx);
     // One kind is read from further back: a burst of commits must not empty the posts view.
-    const rows = await ctx.db
-      .query("posts")
-      .withIndex("by_created")
-      .order("desc")
-      .take(source === "all" ? 40 : 200);
+    const rows = ofEdition(
+      await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(source === "all" ? 80 : 400),
+      editionId
+    );
     const filtered = rows.filter((row) => {
       if (source === "participants") {
         return row.kind === "post";
@@ -197,11 +103,15 @@ export const listMemes = query({
     })
   ),
   handler: async (ctx) => {
-    const rows = await ctx.db
-      .query("posts")
-      .withIndex("by_meme_created", (q) => q.eq("meme", true))
-      .order("desc")
-      .take(12);
+    const editionId = await currentEditionId(ctx);
+    const rows = ofEdition(
+      await ctx.db
+        .query("posts")
+        .withIndex("by_meme_created", (q) => q.eq("meme", true))
+        .order("desc")
+        .take(24),
+      editionId
+    ).slice(0, 12);
     return await Promise.all(
       rows.map(async (row) => {
         const [post, imageUrl, social] = await Promise.all([
@@ -249,10 +159,14 @@ export const teamFormation = query({
     })
   ),
   handler: async (ctx) => {
+    const editionId = await currentEditionId(ctx);
     const [users, teams, memberships] = await Promise.all([
       ctx.db.query("users").collect(),
-      ctx.db.query("teams").collect(),
-      ctx.db.query("teamMembers").collect(),
+      ctx.db
+        .query("teams")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
+      ofEdition(await ctx.db.query("teamMembers").collect(), editionId),
     ]);
     const teamsById = new Map(teams.map((team) => [team._id, team]));
     // Same row as membershipForUser: the earliest membership, whatever its status.
@@ -304,11 +218,15 @@ export const listGithubActivity = query({
     })
   ),
   handler: async (ctx) => {
-    const rows = await ctx.db
-      .query("posts")
-      .withIndex("by_created")
-      .order("desc")
-      .take(40);
+    const editionId = await currentEditionId(ctx);
+    const rows = ofEdition(
+      await ctx.db
+        .query("posts")
+        .withIndex("by_created")
+        .order("desc")
+        .take(80),
+      editionId
+    );
     return rows
       .filter((row) => row.kind === "github")
       .slice(0, 16)

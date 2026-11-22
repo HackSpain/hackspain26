@@ -5,15 +5,15 @@ interface Window {
 }
 
 interface ImportMetaEnv {
+  /** Dashboard Convex deployment the landing writes to. */
+  readonly CONVEX_URL?: string;
   readonly DATABASE_URL?: string;
   /** Better Stack Errors DSN (public; embedded in client bundle). */
   readonly PUBLIC_BETTER_STACK_ERRORS_DSN?: string;
-  /** Server-only API key for transactional email delivery through Resend. */
-  readonly RESEND_API_KEY?: string;
-  /** Verified Resend sender, including its optional display name. */
-  readonly RESEND_FROM?: string;
-  /** Canonical public origin used in transactional email links. */
+  /** Canonical public origin used in shared links. */
   readonly SITE_URL?: string;
+  /** Shared secret that must match the Convex deployment. */
+  readonly SUBSCRIBE_SECRET?: string;
 }
 
 interface ImportMeta {

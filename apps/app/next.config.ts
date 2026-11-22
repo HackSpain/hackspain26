@@ -5,6 +5,35 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 const nextConfig: NextConfig = {
   agentRules: false,
   allowedDevOrigins: ["127.0.2.2", "127.0.0.1", "localhost"],
+  redirects() {
+    return [
+      {
+        source: "/participantes",
+        destination: "/people",
+        permanent: true,
+      },
+      {
+        source: "/judging-sponsors",
+        destination: "/deliveries",
+        permanent: true,
+      },
+      {
+        source: "/judging-sponsors/:submissionId",
+        destination: "/deliveries?project=:submissionId",
+        permanent: true,
+      },
+      {
+        source: "/admin/equipos",
+        destination: "/admin/teams",
+        permanent: true,
+      },
+      {
+        source: "/admin/evento",
+        destination: "/admin/event",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 const configuredApp = withBetterStack(nextConfig);

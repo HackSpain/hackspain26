@@ -22,7 +22,7 @@ const bungee = Bungee({
 
 export const metadata: Metadata = {
   title: "HackSpain",
-  description: "Panel de participantes y organización de HackSpain 2026.",
+  description: "Panel de participantes y organización de HackSpain.",
   robots: { index: false, follow: false },
   icons: {
     icon: [{ url: "/icon.png", type: "image/png" }],

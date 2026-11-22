@@ -6,10 +6,20 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { api } from "@convex/_generated/api";
+import { AdminTableSkeleton } from "@/components/admin/admin-table-skeleton";
+import { AdminTabs, useAdminTab } from "@/components/admin/admin-tabs";
+import { FinalPanel } from "@/components/admin/final-panel";
+import {
+  formatDate,
+  formatSigned,
+  randomSeed,
+} from "@/components/admin/judging-format";
+import { useAdminEditionArgs } from "@/components/admin/use-admin-edition";
 import type { Id } from "@convex/_generated/dataModel";
 import { CRITERIA, CRITERION_LABELS } from "@convex/lib/judging";
 import { formatScore, ScoreLegend } from "@/components/judging/assessment-form";
 import { ProjectDetails } from "@/components/judging/project-details";
+import { PROJECT_PARAM, writeParams } from "@/components/judging/project-table";
 import { VideoFrame } from "@/components/judging/video-frame";
 import {
   EmptyState,
@@ -64,8 +74,6 @@ import {
 import { urlOf } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 
-const PROJECT_PARAM = "proyecto";
-
 type Overview = FunctionReturnType<typeof api.judging.adminOverview>;
 type ProjectRow = Overview["projects"][number];
 type JudgeRow = Overview["judges"][number];
@@ -75,71 +83,27 @@ type Unresolved = Extract<
 >["unresolved"];
 type Preview = FunctionReturnType<typeof api.judging.previewAssignments>;
 
-function randomSeed(): string {
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
-    ""
-  );
-}
-
-function formatSigned(value: number | null): string {
-  if (value === null) {
-    return "—";
-  }
-  const fixed = Math.abs(value).toFixed(2);
-  if (value > 0) {
-    return `+${fixed}`;
-  }
-  if (value < 0) {
-    return `−${fixed}`;
-  }
-  return fixed;
-}
-
-function formatDate(value: number): string {
-  return new Date(value).toLocaleString("es-ES", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-  });
-}
-
-function writeParams(
-  pathname: string,
-  mutate: (params: URLSearchParams) => void,
-  mode: "push" | "replace"
-) {
-  const next = new URLSearchParams(window.location.search);
-  mutate(next);
-  const query = next.toString();
-  const url = query ? `${pathname}?${query}` : pathname;
-  if (mode === "push") {
-    window.history.pushState(null, "", url);
-    return;
-  }
-  window.history.replaceState(null, "", url);
-}
-
 export default function AdminJudgingPage() {
   return (
-    <Suspense fallback={<LoadingText />}>
+    <Suspense fallback={<AdminTableSkeleton title="Jurado" />}>
       <AdminJudging />
     </Suspense>
   );
 }
 
 function AdminJudging() {
-  const overview = useQuery(api.judging.adminOverview);
+  const tab = useAdminTab("evaluacion");
+  const editionArgs = useAdminEditionArgs();
+  const overview = useQuery(api.judging.adminOverview, editionArgs);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const projectId = searchParams.get(PROJECT_PARAM) as Id<"submissions"> | null;
+  const projectId = (searchParams.get(PROJECT_PARAM) ??
+    searchParams.get("proyecto")) as Id<"submissions"> | null;
   const pushed = useRef(false);
   const triggerRef = useRef<HTMLElement | null>(null);
 
-  if (!overview) {
-    return <LoadingText />;
+  if (tab !== "final" && !overview) {
+    return <AdminTableSkeleton title="Jurado" />;
   }
 
   const openProject = (id: Id<"submissions">, from: HTMLElement | null) => {
@@ -166,32 +130,51 @@ function AdminJudging() {
   };
 
   const selected =
-    overview.projects.find((project) => project._id === projectId) ?? null;
+    overview?.projects.find((project) => project._id === projectId) ?? null;
 
   return (
     <Page
       title="Jurado"
-      description="Reparto de proyectos, seguimiento de evaluaciones y clasificación calibrada."
+      description={
+        tab === "final"
+          ? undefined
+          : "Reparto de proyectos, seguimiento de evaluaciones y clasificación calibrada."
+      }
     >
-      <SetupCard overview={overview} />
-      <SettingsCard settings={overview.settings} />
-      {overview.round ? (
+      <AdminTabs
+        defaultTab="evaluacion"
+        tabs={[
+          { value: "evaluacion", label: "Evaluación" },
+          { value: "final", label: "Final" },
+        ]}
+      />
+      {tab === "final" ? (
+        <FinalPanel />
+      ) : overview ? (
         <>
-          <CompletionCard overview={overview} />
-          <JudgesCard judges={overview.judges} />
-          <ProjectsCard
-            overview={overview}
-            projectId={projectId}
-            onOpen={openProject}
+          <SetupCard overview={overview} />
+          <SettingsCard settings={overview.settings} />
+          {overview.round ? (
+            <>
+              <CompletionCard overview={overview} />
+              <JudgesCard judges={overview.judges} />
+              <ProjectsCard
+                overview={overview}
+                projectId={projectId}
+                onOpen={openProject}
+              />
+            </>
+          ) : null}
+          <ProjectSheet
+            selected={projectId ? selected : null}
+            threshold={overview.settings.disagreementThreshold}
+            onClose={closeProject}
+            returnFocusRef={triggerRef}
           />
         </>
-      ) : null}
-      <ProjectSheet
-        selected={projectId ? selected : null}
-        threshold={overview.settings.disagreementThreshold}
-        onClose={closeProject}
-        returnFocusRef={triggerRef}
-      />
+      ) : (
+        <LoadingText />
+      )}
     </Page>
   );
 }

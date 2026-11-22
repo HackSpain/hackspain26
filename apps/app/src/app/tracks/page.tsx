@@ -2,18 +2,13 @@
 
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
-import { DeliveryBriefing } from "@/components/delivery-briefing";
 import { isEventOpen } from "@/components/event-closed-banner";
-import { LinkedText } from "@/components/linked-text";
 import { TrackBriefLink } from "@/components/markdown";
-import { LoadingText, MetaLink, MetaRow, Page } from "@/components/page";
-import { ProjectCliDialog } from "@/components/project-cli-dialog";
-import { TrackLogo, TrackTag } from "@/components/track-tag";
+import { LoadingText, Page } from "@/components/page";
+import { TrackLogo } from "@/components/track-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +17,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Frame,
 } from "@/components/ui/card";
-import { urlDisplay, urlLabel } from "@/lib/urls";
-import type { UrlEntry } from "@/lib/urls";
-import { cn, perkName, submissionStatusLabel } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type TeamSummary = FunctionReturnType<typeof api.teams.list>[number];
 
@@ -147,232 +139,7 @@ function TrackTeams({
   );
 }
 
-type TrackRow = {
-  _id: Id<"tracks">;
-  slug: string;
-  label: string;
-  body: string;
-  note: string;
-  logoUrl?: string;
-  website?: string;
-  teamCount: number;
-  teamLimit: number;
-};
-
 const PLACEHOLDER_SLUGS = new Set(["ml", "non-tech"]);
-
-type SubmissionRow = {
-  name: string;
-  description: string;
-  urls: UrlEntry[];
-  challengeIds: Id<"tracks">[];
-  perkIds: Id<"perks">[];
-  status: "draft" | "submitted";
-  techStack: string[];
-};
-
-type CatalogRow = {
-  perk: { _id: Id<"perks">; company: string; title: string };
-};
-
-function SubmitCallout() {
-  return (
-    <Frame
-      tone="navy"
-      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <p className="text-hs-navy">
-        Entra en el reto desde la CLI. La entrega (vídeo, repo y producto) es en
-        Submit.
-      </p>
-      <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
-        <Button asChild>
-          <Link href="/submit">Ir a Submit</Link>
-        </Button>
-        <ProjectCliDialog>
-          <Button variant="outline" className="w-full sm:w-auto">
-            Cómo apuntarse
-          </Button>
-        </ProjectCliDialog>
-      </div>
-    </Frame>
-  );
-}
-
-function NoProject({ submissionsOpen }: { submissionsOpen: boolean }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Todavía no tienes proyecto</CardTitle>
-        <CardDescription>
-          Entra en un reto desde la CLI. Puedes combinar THEKER con otro reto.
-          La entrega es en Submit.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-hs-brown">
-          Empieza con{" "}
-          <code className="font-mono text-xs">
-            hackspain track register &lt;slug&gt;
-          </code>
-          {submissionsOpen
-            ? ". Cuando esté listo, entrega en "
-            : ". El envío aún no está abierto; cuando lo esté, entrega en "}
-          <Link
-            href="/submit"
-            className="font-medium text-hs-navy underline underline-offset-4"
-          >
-            /submit
-          </Link>
-          .
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/submit">Ir a Submit</Link>
-          </Button>
-          <ProjectCliDialog>
-            <Button variant="outline" className="w-full sm:w-auto">
-              Cómo apuntarse
-            </Button>
-          </ProjectCliDialog>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function MyProject({
-  mine,
-  tracks,
-  catalog,
-  submissionsOpen,
-}: {
-  mine: SubmissionRow;
-  tracks: TrackRow[];
-  catalog: CatalogRow[] | undefined;
-  submissionsOpen: boolean;
-}) {
-  const submitted = mine.status === "submitted";
-  const entered = tracks.filter((track) =>
-    mine.challengeIds.includes(track._id)
-  );
-  const perks = (catalog ?? []).filter(({ perk }) =>
-    mine.perkIds.includes(perk._id)
-  );
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          {mine.name || "Proyecto sin nombre"}
-          <Badge
-            variant={submitted ? "gold" : "default"}
-            className="whitespace-nowrap"
-          >
-            {submissionStatusLabel(mine.status)}
-          </Badge>
-        </CardTitle>
-        <CardDescription>
-          {submitted
-            ? "Enviado y bloqueado. Ya está en manos del jurado."
-            : submissionsOpen
-              ? "Borrador. Entrégalo en Submit cuando esté listo."
-              : "Borrador. El envío se abrirá más adelante; puedes preparar los enlaces en Submit."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {mine.description ? (
-          <p className="text-sm whitespace-pre-wrap">
-            <LinkedText text={mine.description} />
-          </p>
-        ) : (
-          <p className="text-sm text-hs-brown">
-            Sin notas todavía. El vídeo de Submit cubre qué habéis hecho y por
-            qué.
-          </p>
-        )}
-
-        <div className="space-y-2">
-          <p className="font-bungee text-xs">Reto</p>
-          {entered.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {entered.map((track) => (
-                <TrackTag key={track._id} track={track} className="py-1" />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-hs-brown">
-              No está en ningún reto. Entra con{" "}
-              <code className="font-mono text-xs">
-                hackspain track register &lt;slug&gt;
-              </code>
-              .
-            </p>
-          )}
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(["repo", "demo", "video"] as const).map((kind) => {
-            const entry = mine.urls.find((url) => url.kind === kind);
-            return (
-              <MetaRow key={kind} label={urlLabel(kind)}>
-                {entry ? (
-                  <MetaLink href={entry.url}>
-                    {urlDisplay(kind, entry.url)}
-                  </MetaLink>
-                ) : (
-                  <span className="text-hs-brown">
-                    Sin {urlLabel(kind).toLowerCase()} · se pide en{" "}
-                    <Link
-                      href="/submit"
-                      className="text-hs-navy underline underline-offset-4"
-                    >
-                      Submit
-                    </Link>
-                  </span>
-                )}
-              </MetaRow>
-            );
-          })}
-          <MetaRow label="Stack">
-            {mine.techStack.length > 0 ? (
-              <span className="flex flex-wrap gap-2">
-                {mine.techStack.map((tech) => (
-                  <Badge key={tech}>{tech}</Badge>
-                ))}
-              </span>
-            ) : (
-              <span className="text-hs-brown">
-                Se detecta al vincular el repo público del equipo.
-              </span>
-            )}
-          </MetaRow>
-        </div>
-
-        <div className="space-y-2">
-          <p className="font-bungee text-xs">Herramientas de partners</p>
-          {perks.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {perks.map(({ perk }) => (
-                <Badge key={perk._id}>
-                  {perkName(perk.company, perk.title)}
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-hs-brown">
-              Ninguna marcada. Se eligen en Submit.
-            </p>
-          )}
-        </div>
-
-        <Button asChild className="w-full sm:w-auto">
-          <Link href="/submit">{submitted ? "Ver envío" : "Ir a Submit"}</Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function TracksPage() {
   const me = useQuery(api.users.me);
@@ -382,9 +149,7 @@ export default function TracksPage() {
     !isEventOpen(me.event) ||
     (me.canJudge && !me.sections.includes("tracks"));
   const tracks = useQuery(api.tracks.list);
-  const settings = useQuery(api.tracks.settings);
   const mine = useQuery(api.submissions.mine, skipLive ? "skip" : {});
-  const catalog = useQuery(api.perks.listCatalog);
   const teams = useQuery(api.teams.list, skipLive ? "skip" : {});
   const ensureCatalog = useMutation(api.tracks.ensureCatalog);
 
@@ -400,11 +165,7 @@ export default function TracksPage() {
     }
   }, [ensureCatalog, skipLive, tracks]);
 
-  if (
-    tracks === undefined ||
-    settings === undefined ||
-    (!skipLive && mine === undefined)
-  ) {
+  if (tracks === undefined || (!skipLive && mine === undefined)) {
     return <LoadingText />;
   }
 
@@ -416,9 +177,8 @@ export default function TracksPage() {
   return (
     <Page
       title="Retos"
-      description="Un proyecto entra en un reto, o en dos si uno es THEKER. Te apuntas desde la CLI; la entrega del Gran Premio es en Submit a las 11."
+      description="Un proyecto entra en un reto, o en dos si uno es THEKER. Te apuntas desde la CLI."
     >
-      {skipLive ? null : <DeliveryBriefing />}
       {tracks.length === 0 ? (
         <p className="text-hs-brown">Cargando retos…</p>
       ) : (
@@ -497,22 +257,6 @@ export default function TracksPage() {
             </Card>
           ))}
         </div>
-      )}
-
-      {skipLive ? null : (
-        <>
-          <SubmitCallout />
-          {mine ? (
-            <MyProject
-              mine={mine}
-              tracks={tracks}
-              catalog={catalog}
-              submissionsOpen={settings.submissionsOpen}
-            />
-          ) : (
-            <NoProject submissionsOpen={settings.submissionsOpen} />
-          )}
-        </>
       )}
     </Page>
   );

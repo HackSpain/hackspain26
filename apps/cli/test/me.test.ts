@@ -13,6 +13,7 @@ const OCT_5_18_00_MADRID = Date.UTC(2026, 9, 5, 16, 0);
 
 const ready: Me = {
   _id: "u1" as Me["_id"],
+  admin: false,
   accepted: true,
   attendanceStatus: "attending",
   avatarUrl: undefined,

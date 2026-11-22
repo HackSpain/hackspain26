@@ -50,6 +50,8 @@ export const acceptedMutation = wrapMutation(requireAccepted);
  */
 export const onboardedQuery = wrapQuery(requireInEvent);
 export const onboardedMutation = wrapMutation(requireInEvent);
+export const inEventQuery = onboardedQuery;
+export const inEventMutation = onboardedMutation;
 /** Onboarded, no window check: features that remain available at any time. */
 export const anytimeOnboardedQuery = wrapQuery(requireOnboarded);
 export const anytimeOnboardedMutation = wrapMutation(requireOnboarded);

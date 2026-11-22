@@ -11,22 +11,26 @@ export function teamLogoUrlFor(
 
 export async function membershipForUser(
   ctx: QueryCtx | MutationCtx,
-  userId: Id<"users">
+  userId: Id<"users">,
+  editionId?: Id<"editions">
 ): Promise<Doc<"teamMembers"> | null> {
-  return await ctx.db
+  const rows = await ctx.db
     .query("teamMembers")
     .withIndex("by_user", (q) => q.eq("userId", userId))
-    .first();
-}
-
-export async function membershipForSignup(
-  ctx: QueryCtx | MutationCtx,
-  signupId: Id<"signups">
-): Promise<Doc<"teamMembers"> | null> {
-  return await ctx.db
-    .query("teamMembers")
-    .withIndex("by_signup", (q) => q.eq("signupId", signupId))
-    .first();
+    .collect();
+  if (editionId === undefined) {
+    return rows[0] ?? null;
+  }
+  for (const row of rows) {
+    if (row.editionId === editionId) {
+      return row;
+    }
+    const team = await ctx.db.get(row.teamId);
+    if (team?.editionId === editionId) {
+      return row;
+    }
+  }
+  return null;
 }
 
 export async function findTeamSubmission(
@@ -41,17 +45,23 @@ export async function findTeamSubmission(
 
 export async function findOwnedSubmission(
   ctx: QueryCtx | MutationCtx,
-  userId: Id<"users">
+  userId: Id<"users">,
+  editionId?: Id<"editions">
 ): Promise<Doc<"submissions"> | null> {
-  const membership = await membershipForUser(ctx, userId);
+  const membership = await membershipForUser(ctx, userId, editionId);
   if (membership) {
     const byTeam = await findTeamSubmission(ctx, membership.teamId);
-    if (byTeam) {
+    if (byTeam && (editionId === undefined || byTeam.editionId === editionId)) {
       return byTeam;
     }
   }
-  return await ctx.db
+  const owned = await ctx.db
     .query("submissions")
     .withIndex("by_user", (q) => q.eq("submittedBy", userId))
-    .first();
+    .collect();
+  const match = owned.find(
+    (row) =>
+      !row.teamId && (editionId === undefined || row.editionId === editionId)
+  );
+  return match ?? null;
 }

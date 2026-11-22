@@ -10,6 +10,7 @@ import { normalizeX, validateX } from "../src/lib/x-handle";
 
 const base: Me = {
   _id: "u1" as Me["_id"],
+  admin: false,
   accepted: true,
   attendanceStatus: "attending",
   avatarUrl: undefined,

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalQuery } from "./_generated/server";
-import { findSignupByEmail, findUserByEmail } from "./lib/auth";
+import { findSignupByEmail, findUserByEmail, isAdmin } from "./lib/auth";
+import { participationIsRegistered } from "./lib/participations";
 import { adminEmailAllowlist, normalizeEmail } from "./lib/normalize";
 
 /**
@@ -23,9 +24,9 @@ export const eligibilityValidator = v.union(
 );
 
 /**
- * Who may receive a code: anyone with a signup, an existing account, or an
- * email on ADMIN_EMAILS. Signups that are not accepted yet still get a code
- * and land on /pending, which explains the wait.
+ * Who may receive a code: a current-edition registered participation, an
+ * existing admin account, or an email on ADMIN_EMAILS. Applicants still get
+ * a code and land on /pending, which explains the wait.
  */
 export const eligibility = internalQuery({
   args: { email: v.string() },
@@ -35,10 +36,12 @@ export const eligibility = internalQuery({
     if (adminEmailAllowlist().has(email)) {
       return "ok";
     }
-    if (await findUserByEmail(ctx, email)) {
+    const user = await findUserByEmail(ctx, email);
+    if (user && isAdmin(user)) {
       return "ok";
     }
-    if (await findSignupByEmail(ctx, email)) {
+    const participation = await findSignupByEmail(ctx, email);
+    if (participation && participationIsRegistered(participation.status)) {
       return "ok";
     }
     return "unregistered";

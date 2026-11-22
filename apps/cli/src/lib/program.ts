@@ -27,12 +27,9 @@ import { c, cmd } from "./style";
 export function buildProgram(): Command {
   const program = new Command()
     .name("hackspain")
-    .description("Your terminal companion for HackSpain 2026")
+    .description("Your terminal companion for HackSpain")
     .version(VERSION, "-v, --version")
-    .addHelpText(
-      "beforeAll",
-      `${banner(`HackSpain 2026 · Madrid · v${VERSION}`)}\n`
-    )
+    .addHelpText("beforeAll", `${banner(`HackSpain · Madrid · v${VERSION}`)}\n`)
     .addHelpText(
       "afterAll",
       `\n${c.dim("Start with")} ${cmd("hackspain auth login")}${c.dim(", then just")} ${cmd("hackspain")} ${c.dim("to see where you stand.")}\n`

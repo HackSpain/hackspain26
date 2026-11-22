@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { Resend as ResendAPI } from "resend";
 import { internalAction, internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -9,11 +8,14 @@ import {
   onboardedQuery,
 } from "./lib/customFunctions";
 import { countsAsAttending } from "./lib/attendance";
-import { getSignupForUser, signupIsAccepted } from "./lib/auth";
-import { resendApiKey, resendFrom } from "./lib/resend";
+import { currentEditionId } from "./lib/editions";
+import {
+  getCurrentParticipation,
+  participationIsAccepted,
+} from "./lib/participations";
+import { resendApiKey, sendBatchedEmails } from "./lib/resend";
 import type { Doc, Id } from "./_generated/dataModel";
 
-const RESEND_BATCH_LIMIT = 100;
 const MAX_STORED_FAILURES = 50;
 
 export const audienceValidator = v.union(
@@ -40,8 +42,8 @@ async function notifiableEmail(
   if (user.email) {
     return user.email;
   }
-  const signup = await getSignupForUser(ctx, user);
-  return signup?.email ?? null;
+  const participation = await getCurrentParticipation(ctx, user);
+  return participation?.email ?? null;
 }
 
 async function resolveRecipients(
@@ -61,17 +63,31 @@ async function resolveRecipients(
     return email ? [{ email, userId: user._id }] : [];
   }
 
-  const users = await ctx.db.query("users").collect();
+  const editionId = await currentEditionId(ctx);
+  const participations = await ctx.db
+    .query("participations")
+    .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+    .collect();
   const recipients: { userId: Id<"users">; email: string }[] = [];
-  for (const user of users) {
-    if (audience === "attending" && !countsAsAttending(user.attendanceStatus)) {
+  for (const participation of participations) {
+    if (!participation.userId) {
       continue;
     }
-    if (audience === "accepted") {
-      const signup = await getSignupForUser(ctx, user);
-      if (!signupIsAccepted(signup)) {
-        continue;
-      }
+    const user = await ctx.db.get(participation.userId);
+    if (!user) {
+      continue;
+    }
+    if (
+      audience === "attending" &&
+      !countsAsAttending(participation?.attendanceStatus)
+    ) {
+      continue;
+    }
+    if (
+      audience === "accepted" &&
+      !participationIsAccepted(participation?.status)
+    ) {
+      continue;
     }
     const email = await notifiableEmail(ctx, user);
     if (email) {
@@ -192,9 +208,9 @@ export const forMe = onboardedQuery({
       return [];
     }
 
-    const signup = await getSignupForUser(ctx, ctx.user);
-    const accepted = signupIsAccepted(signup);
-    const attending = countsAsAttending(ctx.user.attendanceStatus);
+    const participation = await getCurrentParticipation(ctx, ctx.user);
+    const accepted = participationIsAccepted(participation?.status);
+    const attending = countsAsAttending(participation?.attendanceStatus);
 
     const result = [];
     for (const row of rows) {
@@ -265,6 +281,7 @@ export const send = adminMutation({
       subject,
       body,
       audience: args.audience,
+      editionId: await currentEditionId(ctx),
       recipientUserId,
       sentBy: ctx.user._id,
       sentAt: Date.now(),
@@ -294,8 +311,7 @@ export const deliver = internalAction({
     subject: v.string(),
   },
   handler: async (ctx, args) => {
-    const apiKey = resendApiKey();
-    if (!apiKey) {
+    if (!resendApiKey()) {
       await ctx.runMutation(internal.notifications.finishDelivery, {
         notificationId: args.notificationId,
         sentCount: 0,
@@ -309,43 +325,18 @@ export const deliver = internalAction({
       );
     }
 
-    const resend = new ResendAPI(apiKey);
-    const from = resendFrom();
-
-    let sentCount = 0;
-    const failures: { email: string; error: string }[] = [];
-
-    for (let i = 0; i < args.emails.length; i += RESEND_BATCH_LIMIT) {
-      const chunk = args.emails.slice(i, i + RESEND_BATCH_LIMIT);
-      try {
-        const { error } = await resend.batch.send(
-          chunk.map((email) => ({
-            from,
-            to: [email],
-            subject: args.subject,
-            text: args.body,
-          }))
-        );
-        if (error) {
-          for (const email of chunk) {
-            failures.push({ email, error: error.message });
-          }
-        } else {
-          sentCount += chunk.length;
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        for (const email of chunk) {
-          failures.push({ email, error: message });
-        }
-      }
-    }
+    const result = await sendBatchedEmails(
+      args.emails.map((email) => ({
+        subject: args.subject,
+        text: args.body,
+        to: [email],
+      }))
+    );
 
     await ctx.runMutation(internal.notifications.finishDelivery, {
       notificationId: args.notificationId,
-      sentCount,
-      failures: failures.slice(0, MAX_STORED_FAILURES),
+      sentCount: result.sentCount,
+      failures: result.failures.slice(0, MAX_STORED_FAILURES),
     });
     return null;
   },

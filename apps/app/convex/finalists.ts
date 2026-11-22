@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { Resend as ResendAPI } from "resend";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
@@ -10,7 +9,9 @@ import {
 } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
-import { getSignupForUser } from "./lib/auth";
+import { findUserByEmail } from "./lib/auth";
+import { currentEditionId, ofEdition } from "./lib/editions";
+import { getCurrentParticipation } from "./lib/participations";
 import {
   FINAL_EMAIL_LOGO_URL,
   FINAL_EMAIL_SUBJECT,
@@ -27,12 +28,11 @@ import {
   rankProjects,
 } from "./lib/judging";
 import type { PairedObservation } from "./lib/judging";
+import { sendBatchedEmails } from "./lib/resend";
 import { finalistStatusValidator } from "./lib/validators";
 
-const RESEND_BATCH_LIMIT = 100;
-
 const personRefValidator = v.object({
-  signupId: v.optional(v.id("signups")),
+  signupId: v.optional(v.string()),
   userId: v.optional(v.id("users")),
 });
 
@@ -52,74 +52,47 @@ function cancelUrlFor(token: string): string {
 
 async function existingFinalist(
   ctx: QueryCtx | MutationCtx,
-  userId: Id<"users"> | undefined,
-  signupId: Id<"signups"> | undefined
+  userId: Id<"users"> | undefined
 ): Promise<Doc<"finalists"> | null> {
-  if (userId) {
-    const byUser = await ctx.db
-      .query("finalists")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-    if (byUser) {
-      return byUser;
-    }
+  if (!userId) {
+    return null;
   }
-  if (signupId) {
-    const bySignup = await ctx.db
-      .query("finalists")
-      .withIndex("by_signup", (q) => q.eq("signupId", signupId))
-      .first();
-    if (bySignup) {
-      return bySignup;
-    }
-  }
-  return null;
+  return await ctx.db
+    .query("finalists")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .first();
 }
 
 async function resolvePerson(
   ctx: QueryCtx | MutationCtx,
-  ref: { userId?: Id<"users">; signupId?: Id<"signups"> }
+  ref: { userId?: Id<"users">; signupId?: string }
 ): Promise<{
   email: string;
   name: string;
-  signupId?: Id<"signups">;
+  signupId?: string;
   userId?: Id<"users">;
 } | null> {
-  const user = ref.userId ? await ctx.db.get(ref.userId) : null;
-  let signup = ref.signupId ? await ctx.db.get(ref.signupId) : null;
-  if (!signup && user) {
-    signup = await getSignupForUser(ctx, user);
+  const participation = ref.signupId
+    ? await ctx.db.get(ref.signupId as Id<"participations">)
+    : null;
+  let user = ref.userId ? await ctx.db.get(ref.userId) : null;
+  if (!user && participation?.userId) {
+    user = await ctx.db.get(participation.userId);
   }
-  if (!user && signup) {
-    const bySignup = await ctx.db
-      .query("users")
-      .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
-      .unique();
-    const byEmail = bySignup
-      ? null
-      : await ctx.db
-          .query("users")
-          .withIndex("email", (q) => q.eq("email", signup.email))
-          .unique();
-    const resolvedUser = bySignup ?? byEmail;
-    if (resolvedUser) {
-      return {
-        email: resolvedUser.email ?? signup.email,
-        name: resolvedUser.name ?? signup.fullName,
-        signupId: signup._id,
-        userId: resolvedUser._id,
-      };
-    }
+  if (!user && participation?.email) {
+    user = await findUserByEmail(ctx, participation.email);
   }
-  const email = user?.email ?? signup?.email;
-  const name = user?.name ?? signup?.fullName;
+  const resolved =
+    participation ?? (user ? await getCurrentParticipation(ctx, user) : null);
+  const email = user?.email ?? resolved?.email;
+  const name = user?.name ?? resolved?.fullName;
   if (!email || !name) {
     return null;
   }
   return {
     email,
     name,
-    signupId: signup?._id,
+    signupId: resolved?._id,
     userId: user?._id,
   };
 }
@@ -129,12 +102,12 @@ async function upsertIn(
   person: {
     email: string;
     name: string;
-    signupId?: Id<"signups">;
+    signupId?: string;
     userId?: Id<"users">;
   },
   addedBy: Id<"users">
 ): Promise<"added" | "restored" | "skipped"> {
-  const existing = await existingFinalist(ctx, person.userId, person.signupId);
+  const existing = await existingFinalist(ctx, person.userId);
   if (existing?.status === "in") {
     return "skipped";
   }
@@ -145,7 +118,6 @@ async function upsertIn(
       canceledBy: undefined,
       emailedAt: undefined,
       deliveryError: undefined,
-      signupId: person.signupId ?? existing.signupId,
       status: "in",
       userId: person.userId ?? existing.userId,
     });
@@ -155,7 +127,7 @@ async function upsertIn(
     addedAt: Date.now(),
     addedBy,
     cancelToken: newCancelToken(),
-    signupId: person.signupId,
+    editionId: await currentEditionId(ctx),
     status: "in",
     userId: person.userId,
   });
@@ -199,7 +171,7 @@ const personRowValidator = v.object({
   rank: v.union(v.number(), v.null()),
   score: v.union(v.number(), v.null()),
   scores: v.array(v.number()),
-  signupId: v.optional(v.id("signups")),
+  signupId: v.optional(v.string()),
   status: v.union(finalistStatusValidator, v.literal("out")),
   teamName: v.optional(v.string()),
   userId: v.optional(v.id("users")),
@@ -220,22 +192,27 @@ function preferMemberTeam(
 export const listPeople = adminQuery({
   args: {},
   handler: async (ctx) => {
-    const [signups, users, finalists, teamMembers, teams, teamScores] =
+    const editionId = await currentEditionId(ctx);
+    const [participations, users, finalists, teamMembers, teams, teamScores] =
       await Promise.all([
-        ctx.db.query("signups").collect(),
+        ctx.db
+          .query("participations")
+          .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+          .collect(),
         ctx.db.query("users").collect(),
         ctx.db.query("finalists").collect(),
         ctx.db.query("teamMembers").collect(),
         ctx.db.query("teams").collect(),
         scoresByTeam(ctx),
       ]);
+    const scopedTeams = ofEdition(teams, editionId);
+    const scopedMembers = ofEdition(teamMembers, editionId);
+    const scopedFinalists = ofEdition(finalists, editionId);
 
-    const teamsById = new Map(teams.map((team) => [team._id, team]));
+    const teamsById = new Map(scopedTeams.map((team) => [team._id, team]));
     const teamByUser = new Map<Id<"users">, Id<"teams">>();
-    const teamBySignup = new Map<Id<"signups">, Id<"teams">>();
     const memberUser = new Map<Id<"users">, boolean>();
-    const memberSignup = new Map<Id<"signups">, boolean>();
-    for (const member of teamMembers) {
+    for (const member of scopedMembers) {
       const isMember = member.status === "member";
       if (member.userId) {
         const next = preferMemberTeam(
@@ -249,36 +226,15 @@ export const listPeople = adminQuery({
           memberUser.set(member.userId, isMember);
         }
       }
-      if (member.signupId) {
-        const next = preferMemberTeam(
-          teamBySignup.get(member.signupId),
-          member.teamId,
-          memberSignup.get(member.signupId),
-          isMember
-        );
-        teamBySignup.set(member.signupId, next);
-        if (next === member.teamId) {
-          memberSignup.set(member.signupId, isMember);
-        }
-      }
     }
 
     const finalistByUser = new Map<Id<"users">, Doc<"finalists">>();
-    const finalistBySignup = new Map<Id<"signups">, Doc<"finalists">>();
-    for (const row of finalists) {
+    for (const row of scopedFinalists) {
       if (row.userId) {
         finalistByUser.set(row.userId, row);
       }
-      if (row.signupId) {
-        finalistBySignup.set(row.signupId, row);
-      }
     }
 
-    const usersBySignup = new Map(
-      users
-        .filter((user) => user.signupId !== undefined)
-        .map((user) => [user.signupId as Id<"signups">, user])
-    );
     const usersByEmail = new Map(
       users
         .filter((user) => user.email)
@@ -296,7 +252,7 @@ export const listPeople = adminQuery({
       rank: number | null;
       score: number | null;
       scores: number[];
-      signupId?: Id<"signups">;
+      signupId?: string;
       status: "in" | "canceled" | "out";
       teamName?: string;
       userId?: Id<"users">;
@@ -305,7 +261,7 @@ export const listPeople = adminQuery({
     const pushPerson = (input: {
       email: string;
       name: string;
-      signupId?: Id<"signups">;
+      signupId?: string;
       userId?: Id<"users">;
     }) => {
       const key = input.userId ?? input.signupId ?? input.email;
@@ -313,13 +269,11 @@ export const listPeople = adminQuery({
         return;
       }
       seen.add(key);
-      const teamId =
-        (input.userId ? teamByUser.get(input.userId) : undefined) ??
-        (input.signupId ? teamBySignup.get(input.signupId) : undefined);
+      const teamId = input.userId ? teamByUser.get(input.userId) : undefined;
       const judging = teamId ? teamScores.get(teamId) : undefined;
-      const finalist =
-        (input.userId ? finalistByUser.get(input.userId) : undefined) ??
-        (input.signupId ? finalistBySignup.get(input.signupId) : undefined);
+      const finalist = input.userId
+        ? finalistByUser.get(input.userId)
+        : undefined;
       const status = finalist?.status ?? "out";
       people.push({
         addedAt: finalist?.addedAt,
@@ -338,25 +292,15 @@ export const listPeople = adminQuery({
       });
     };
 
-    for (const signup of signups) {
-      const user =
-        usersBySignup.get(signup._id) ?? usersByEmail.get(signup.email);
+    for (const row of participations) {
+      const user = row.userId
+        ? await ctx.db.get(row.userId)
+        : usersByEmail.get(row.email);
       pushPerson({
-        email: signup.email,
-        name: user?.name ?? signup.fullName,
-        signupId: signup._id,
-        userId: user?._id,
-      });
-    }
-    for (const user of users) {
-      if (!user.email) {
-        continue;
-      }
-      pushPerson({
-        email: user.email,
-        name: user.name ?? user.email,
-        signupId: user.signupId,
-        userId: user._id,
+        email: row.email,
+        name: user?.name ?? row.fullName ?? row.email,
+        signupId: row._id,
+        userId: user?._id ?? row.userId,
       });
     }
 
@@ -494,11 +438,6 @@ export const listTeams = adminQuery({
         .filter((row) => row.status === "in" && row.userId)
         .map((row) => row.userId as Id<"users">)
     );
-    const inSignupIds = new Set(
-      finalists
-        .filter((row) => row.status === "in" && row.signupId)
-        .map((row) => row.signupId as Id<"signups">)
-    );
     const membersByTeam = new Map<Id<"teams">, Doc<"teamMembers">[]>();
     for (const member of members) {
       const teamMembers = membersByTeam.get(member.teamId) ?? [];
@@ -514,14 +453,10 @@ export const listTeams = adminQuery({
         if (member.status !== "member") {
           continue;
         }
-        const hasIdentity =
-          member.userId !== undefined || member.signupId !== undefined;
-        if (!hasIdentity) {
+        if (member.userId === undefined) {
           continue;
         }
-        const isIn =
-          (member.userId !== undefined && inUserIds.has(member.userId)) ||
-          (member.signupId !== undefined && inSignupIds.has(member.signupId));
+        const isIn = inUserIds.has(member.userId);
         if (isIn) {
           alreadyIn += 1;
         } else {
@@ -631,7 +566,6 @@ export const addTeam = adminMutation({
         continue;
       }
       const person = await resolvePerson(ctx, {
-        signupId: member.signupId,
         userId: member.userId,
       });
       if (!person) {
@@ -711,7 +645,6 @@ export const sendEmails = adminMutation({
         continue;
       }
       const person = await resolvePerson(ctx, {
-        signupId: row.signupId,
         userId: row.userId,
       });
       if (!person?.email) {
@@ -745,57 +678,34 @@ export const deliver = internalAction({
     ),
   },
   handler: async (ctx, args) => {
-    const apiKey = process.env.AUTH_RESEND_KEY;
-    if (!apiKey) {
-      throw new Error(
-        "AUTH_RESEND_KEY is not set on the Convex deployment; cannot send email"
-      );
-    }
-    const resend = new ResendAPI(apiKey);
-    const from = process.env.AUTH_EMAIL ?? "HackSpain <onboarding@resend.dev>";
+    const result = await sendBatchedEmails(
+      args.items.map((item) => {
+        const content = {
+          cancelUrl: item.cancelUrl,
+          firstName: item.firstName,
+          logoUrl: FINAL_EMAIL_LOGO_URL,
+        };
+        return {
+          html: finalEmailHtml(content),
+          subject: FINAL_EMAIL_SUBJECT,
+          text: finalEmailText(content),
+          to: [item.email],
+        };
+      })
+    );
+    const failedByEmail = new Map(
+      result.failures.map((row) => [row.email, row.error])
+    );
     const sent: Id<"finalists">[] = [];
     const failures: { finalistId: Id<"finalists">; error: string }[] = [];
     const errorKinds = new Set<string>();
-
-    for (let i = 0; i < args.items.length; i += RESEND_BATCH_LIMIT) {
-      const chunk = args.items.slice(i, i + RESEND_BATCH_LIMIT);
-      try {
-        const { error } = await resend.batch.send(
-          chunk.map((item) => {
-            const content = {
-              cancelUrl: item.cancelUrl,
-              firstName: item.firstName,
-              logoUrl: FINAL_EMAIL_LOGO_URL,
-            };
-            return {
-              from,
-              html: finalEmailHtml(content),
-              subject: FINAL_EMAIL_SUBJECT,
-              text: finalEmailText(content),
-              to: [item.email],
-            };
-          })
-        );
-        if (error) {
-          errorKinds.add(error.name ?? "ResendError");
-          for (const item of chunk) {
-            failures.push({
-              finalistId: item.finalistId,
-              error: error.message,
-            });
-          }
-        } else {
-          for (const item of chunk) {
-            sent.push(item.finalistId);
-          }
-        }
-      } catch (error) {
-        errorKinds.add(error instanceof Error ? error.name : "UnknownError");
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        for (const item of chunk) {
-          failures.push({ finalistId: item.finalistId, error: message });
-        }
+    for (const item of args.items) {
+      const error = failedByEmail.get(item.email);
+      if (error) {
+        errorKinds.add(error);
+        failures.push({ finalistId: item.finalistId, error });
+      } else {
+        sent.push(item.finalistId);
       }
     }
 
@@ -866,7 +776,6 @@ export const lookup = query({
       return null;
     }
     const person = await resolvePerson(ctx, {
-      signupId: row.signupId,
       userId: row.userId,
     });
     return {

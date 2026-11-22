@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { fetchAction } from "convex/nextjs";
 import { ConvexError } from "convex/values";
 import { NextResponse } from "next/server";
+import { isRecord } from "@convex/lib/isRecord";
 import { reportServerEvent } from "@/lib/server-observability";
 import { serverMessage } from "../../cli/_lib/respond";
 
@@ -17,10 +18,6 @@ export type LoginErrorCode = "INVALID_EMAIL" | "UNREGISTERED" | "SEND_FAILED";
 
 function refuse(code: LoginErrorCode, status: number): NextResponse {
   return NextResponse.json({ code, ok: false }, { status });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 /** One line per failure, no stack, no recipient: enough to spot a broken key or quota. */
