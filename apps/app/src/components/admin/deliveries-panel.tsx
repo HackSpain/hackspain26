@@ -40,7 +40,7 @@ function memberLine(team: TeamRow) {
   return team.members.map((member) => member.name).join(" · ") || "Sin emails";
 }
 
-export function EntregasPanel() {
+export function DeliveriesPanel() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

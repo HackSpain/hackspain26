@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Brand row with granted section links, Insights, and the account menu.
- * Admins get their sidebar from admin/layout.tsx instead of this nav.
+ * Admins get their sidebar from AdminFrame instead of this nav.
  */
 export function AppHeader({
   pathname,

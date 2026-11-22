@@ -136,6 +136,7 @@ const SHORT_DATE = new Intl.DateTimeFormat("es-ES", {
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Madrid",
 });
 const SHORT_DATE_WITH_YEAR = new Intl.DateTimeFormat("es-ES", {
   day: "numeric",
@@ -143,10 +144,12 @@ const SHORT_DATE_WITH_YEAR = new Intl.DateTimeFormat("es-ES", {
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Madrid",
 });
 const FULL_DATE = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "full",
   timeStyle: "medium",
+  timeZone: "Europe/Madrid",
 });
 
 function formatSentAt(ms: number) {
@@ -298,7 +301,7 @@ function HistoryRow({ item }: { item: HistoryItem }) {
   );
 }
 
-export function AvisosPanel() {
+export function NotificationsPanel() {
   const ids = useId();
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");

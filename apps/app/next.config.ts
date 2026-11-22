@@ -32,6 +32,51 @@ const nextConfig: NextConfig = {
         destination: "/admin/event",
         permanent: true,
       },
+      {
+        source: "/admin/notifications",
+        destination: "/admin/event?tab=avisos",
+        permanent: true,
+      },
+      {
+        source: "/admin/check-in",
+        destination: "/admin/event?tab=accesos",
+        permanent: true,
+      },
+      {
+        source: "/admin/applications",
+        destination: "/admin/perks?tab=solicitudes",
+        permanent: true,
+      },
+      {
+        source: "/admin/final",
+        destination: "/admin/judging?tab=final",
+        permanent: true,
+      },
+      {
+        source: "/admin/types",
+        destination: "/admin?tab=roles",
+        permanent: true,
+      },
+      {
+        source: "/admin/submit",
+        destination: "/admin/teams?tab=entregas",
+        permanent: true,
+      },
+      {
+        source: "/admin/users/:id",
+        destination: "/admin?user=:id",
+        permanent: true,
+      },
+      {
+        source: "/cli",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/feed",
+        destination: "/",
+        permanent: true,
+      },
     ];
   },
 };

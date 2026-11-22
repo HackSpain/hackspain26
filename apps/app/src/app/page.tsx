@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -23,15 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { isSubmitFeatured } from "@/lib/event";
-
-function useNow(intervalMs = 30_000) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const tick = window.setInterval(() => setNow(Date.now()), intervalMs);
-    return () => window.clearInterval(tick);
-  }, [intervalMs]);
-  return now;
-}
+import { useNow } from "@/lib/use-now";
 
 export default function HomePage() {
   const me = useQuery(api.users.me);

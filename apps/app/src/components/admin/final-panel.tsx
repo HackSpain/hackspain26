@@ -59,6 +59,7 @@ const ADDED_AT = new Intl.DateTimeFormat("es-ES", {
   hour: "2-digit",
   minute: "2-digit",
   month: "short",
+  timeZone: "Europe/Madrid",
 });
 
 function personKey(person: { userId?: string; signupId?: string }) {

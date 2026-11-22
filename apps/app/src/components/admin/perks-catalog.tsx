@@ -1,0 +1,1118 @@
+"use client";
+
+import { useMutation, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
+import { ArrowUpRightIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import Link from "next/link";
+import { useId, useState } from "react";
+import { api } from "@convex/_generated/api";
+import { AdminTabs, useAdminTab } from "@/components/admin/admin-tabs";
+import {
+  EmailApplicationsQueue,
+  ReviewActions,
+} from "@/components/admin/email-applications-queue";
+import {
+  useAdminEdition,
+  useAdminEditionArgs,
+} from "@/components/admin/use-admin-edition";
+import { participantHref } from "@/components/admin/participant-detail";
+import {
+  EmptyState,
+  Field,
+  FormError,
+  LoadingText,
+  Page,
+  errorMessage,
+} from "@/components/page";
+import { LinkedText } from "@/components/linked-text";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  MAX_PERK_INPUTS,
+  answerFor,
+  downloadCsv,
+  fileSlug,
+  isHttpUrl,
+  perkInputTypeLabels,
+  slugKey,
+  toCsv,
+} from "@/lib/perks";
+import type { PerkInput, PerkInputType } from "@/lib/perks";
+import { claimStatusLabel, perkName, perkTypeLabel } from "@/lib/utils";
+
+type AdminPerk = FunctionReturnType<typeof api.perks.adminList>[number];
+type PerkType = AdminPerk["type"];
+type Viewing = { perk: AdminPerk; kind: "requests" | "codes" };
+
+type DraftInput = {
+  id: string;
+  label: string;
+  key: string;
+  keyTouched: boolean;
+  type: PerkInputType;
+  required: boolean;
+  options: string;
+};
+
+type Draft = {
+  company: string;
+  title: string;
+  value: string;
+  description: string;
+  type: PerkType;
+  sponsorUrl: string;
+  instructions: string;
+  codes: string;
+  inputs: DraftInput[];
+};
+
+const emptyDraft: Draft = {
+  company: "",
+  title: "",
+  value: "",
+  description: "",
+  type: "email",
+  sponsorUrl: "",
+  instructions: "",
+  codes: "",
+  inputs: [],
+};
+
+function newDraftInput(): DraftInput {
+  return {
+    id: crypto.randomUUID(),
+    label: "",
+    key: "",
+    keyTouched: false,
+    type: "text",
+    required: true,
+    options: "",
+  };
+}
+
+function draftFromPerk(perk: AdminPerk): Draft {
+  return {
+    company: perk.company,
+    title: perk.title,
+    value: perk.value,
+    description: perk.description,
+    type: perk.type,
+    sponsorUrl: perk.sponsorUrl ?? "",
+    instructions: perk.instructions ?? "",
+    codes: "",
+    inputs: perk.inputs.map((input) => ({
+      id: crypto.randomUUID(),
+      label: input.label,
+      key: input.key,
+      keyTouched: true,
+      type: input.type,
+      required: input.required,
+      options: (input.options ?? []).join(", "),
+    })),
+  };
+}
+
+function lines(value: string): string[] {
+  return value
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function codesCountLabel(count: number): string {
+  return `${count} ${count === 1 ? "código" : "códigos"}`;
+}
+
+function inputsFromDraft(inputs: DraftInput[]): PerkInput[] {
+  return inputs.map((input) => ({
+    key: input.key.trim() || slugKey(input.label),
+    label: input.label.trim(),
+    type: input.type,
+    required: input.required,
+    options:
+      input.type === "select"
+        ? input.options
+            .split(",")
+            .map((option) => option.trim())
+            .filter(Boolean)
+        : undefined,
+  }));
+}
+
+function draftProblem(draft: Draft): string | null {
+  if (!draft.company.trim() || !draft.title.trim()) {
+    return "La empresa y el título son obligatorios";
+  }
+  if (draft.type === "external") {
+    if (!draft.sponsorUrl.trim()) {
+      return "La URL es obligatoria";
+    }
+    if (!isHttpUrl(draft.sponsorUrl.trim())) {
+      return "La URL debe empezar por http:// o https://";
+    }
+    if (!draft.instructions.trim()) {
+      return "Las instrucciones son obligatorias";
+    }
+    return null;
+  }
+  if (draft.sponsorUrl.trim() && !isHttpUrl(draft.sponsorUrl.trim())) {
+    return "La URL debe empezar por http:// o https://";
+  }
+  for (const input of draft.inputs) {
+    if (!input.label.trim()) {
+      return "Cada campo necesita una etiqueta";
+    }
+    if (input.type === "select" && !input.options.trim()) {
+      return `El selector "${input.label.trim()}" necesita opciones`;
+    }
+  }
+  return null;
+}
+
+const dateFormat = new Intl.DateTimeFormat("es-ES", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "Europe/Madrid",
+});
+
+export function AdminPerks() {
+  const tab = useAdminTab("catalogo");
+  const { isCurrent } = useAdminEdition();
+  const editionArgs = useAdminEditionArgs();
+  const perks = useQuery(
+    api.perks.adminList,
+    tab === "solicitudes" || editionArgs === "skip" ? "skip" : editionArgs
+  );
+  const create = useMutation(api.perks.adminCreate);
+  const update = useMutation(api.perks.adminUpdate);
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [extraCodes, setExtraCodes] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<AdminPerk | null>(null);
+  const [viewing, setViewing] = useState<Viewing | null>(null);
+
+  async function submitCreate() {
+    const problem = draftProblem(draft);
+    if (problem) {
+      setCreateError(problem);
+      return;
+    }
+    setCreateError(null);
+    setCreating(true);
+    try {
+      await create({
+        company: draft.company,
+        title: draft.title,
+        value: draft.value,
+        description: draft.description,
+        type: draft.type,
+        sponsorUrl: draft.sponsorUrl.trim() || undefined,
+        instructions: draft.instructions.trim() || undefined,
+        inputs:
+          draft.type === "external" ? undefined : inputsFromDraft(draft.inputs),
+        codes: draft.type === "code" ? lines(draft.codes) : undefined,
+      });
+      setDraft(emptyDraft);
+      setCreateOpen(false);
+    } catch (caughtError: unknown) {
+      setCreateError(
+        errorMessage(caughtError, "No se ha podido crear el perk")
+      );
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <Page
+      className="min-w-0 overflow-x-hidden"
+      title={
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <h1 className="min-w-0 font-bungee text-2xl leading-tight sm:text-3xl">
+            Perks
+          </h1>
+          {tab === "catalogo" && isCurrent ? (
+            <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
+              <PlusIcon aria-hidden />
+              Crear perk
+            </Button>
+          ) : null}
+        </div>
+      }
+    >
+      <AdminTabs
+        defaultTab="catalogo"
+        tabs={[
+          { value: "catalogo", label: "Catálogo" },
+          { value: "solicitudes", label: "Solicitudes" },
+        ]}
+      />
+      {tab === "solicitudes" ? (
+        <EmailApplicationsQueue />
+      ) : perks === undefined ? (
+        <LoadingText />
+      ) : perks.length === 0 ? (
+        <EmptyState title="Aún no hay perks">
+          Crea el primero con el botón de arriba.
+        </EmptyState>
+      ) : (
+        <div className="grid gap-4">
+          {perks.map((perk) => (
+            <Card key={perk._id} className="min-w-0 overflow-hidden">
+              <CardHeader className="min-w-0">
+                <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 [&_[data-slot=badge]]:whitespace-nowrap">
+                  <span className="min-w-0 break-words">
+                    {perkName(perk.company, perk.title)}
+                  </span>
+                  <Badge>{perkTypeLabel(perk.type)}</Badge>
+                  {perk.value ? (
+                    <Badge variant="gold">{perk.value}</Badge>
+                  ) : null}
+                  {perk.active ? null : (
+                    <Badge className="bg-hs-paper">Inactivo</Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {perk.description ? (
+                  <p className="min-w-0 whitespace-pre-wrap break-words">
+                    <LinkedText text={perk.description} />
+                  </p>
+                ) : null}
+                <p className="text-hs-brown tabular-nums">
+                  {perk.type === "external" ? (
+                    "Se reclama en la web del partner"
+                  ) : (
+                    <>
+                      {perk.claimCount}{" "}
+                      {perk.claimCount === 1 ? "solicitud" : "solicitudes"}
+                      {perk.type === "code"
+                        ? ` · ${perk.availableCodes}/${perk.codeCount} códigos libres`
+                        : ""}
+                      {perk.inputs.length > 0
+                        ? ` · ${perk.inputs.length} ${perk.inputs.length === 1 ? "campo" : "campos"}: ${perk.inputs.map((input) => input.label).join(", ")}`
+                        : ""}
+                    </>
+                  )}
+                  {perk.sponsorUrl ? (
+                    <>
+                      {" · "}
+                      <a
+                        href={perk.sponsorUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+                      >
+                        {perk.type === "external"
+                          ? "Enlace para reclamar"
+                          : "Web del sponsor"}
+                        <ArrowUpRightIcon className="size-3.5" aria-hidden />
+                      </a>
+                    </>
+                  ) : null}
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  {perk.type === "external" ? null : (
+                    <Button
+                      variant="teal"
+                      onClick={() => setViewing({ perk, kind: "requests" })}
+                    >
+                      Solicitudes ({perk.claimCount})
+                    </Button>
+                  )}
+                  {perk.type === "code" ? (
+                    <Button
+                      variant="teal"
+                      onClick={() => setViewing({ perk, kind: "codes" })}
+                    >
+                      Códigos ({perk.codeCount})
+                    </Button>
+                  ) : null}
+                  <Button variant="outline" onClick={() => setEditing(perk)}>
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      void update({ perkId: perk._id, active: !perk.active })
+                    }
+                  >
+                    {perk.active ? "Desactivar" : "Activar"}
+                  </Button>
+                </div>
+                {perk.type === "code" ? (
+                  <Field
+                    label="Añadir más códigos"
+                    hint={
+                      lines(extraCodes[perk._id] ?? "").length > 0 ? (
+                        <span className="tabular-nums">
+                          {`${codesCountLabel(lines(extraCodes[perk._id] ?? "").length)} a añadir. Se ignoran líneas vacías.`}
+                        </span>
+                      ) : undefined
+                    }
+                  >
+                    <Textarea
+                      value={extraCodes[perk._id] ?? ""}
+                      onChange={(event) =>
+                        setExtraCodes((current) => ({
+                          ...current,
+                          [perk._id]: event.target.value,
+                        }))
+                      }
+                      className="font-mono"
+                    />
+                    <Button
+                      variant="teal"
+                      className="mt-2 w-full sm:w-auto"
+                      onClick={() =>
+                        void update({
+                          perkId: perk._id,
+                          codesToAdd: lines(extraCodes[perk._id] ?? ""),
+                        }).then(() =>
+                          setExtraCodes((current) => ({
+                            ...current,
+                            [perk._id]: "",
+                          }))
+                        )
+                      }
+                    >
+                      Añadir códigos
+                    </Button>
+                  </Field>
+                ) : null}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) {
+            setCreateError(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitCreate();
+            }}
+            noValidate
+          >
+            <DialogHeader>
+              <DialogTitle>Crear perk</DialogTitle>
+              <DialogDescription>
+                Aparece en el catálogo. Elige si se reclama en la app o con un
+                enlace al partner.
+              </DialogDescription>
+            </DialogHeader>
+            <FormError message={createError} />
+            <PerkFields draft={draft} onChange={setDraft} mode="create" />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={creating}
+                onClick={() => setCreateOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating ? "Creando…" : "Crear perk"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditing(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          {editing ? (
+            <EditPerkForm
+              key={editing._id}
+              perk={editing}
+              onDone={() => setEditing(null)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Sheet
+        open={viewing !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewing(null);
+          }
+        }}
+      >
+        <SheetContent className="sm:max-w-4xl">
+          {viewing?.kind === "requests" ? (
+            <RequestsSheet
+              key={`${viewing.perk._id}-requests`}
+              perk={viewing.perk}
+            />
+          ) : null}
+          {viewing?.kind === "codes" ? (
+            <CodesSheet key={`${viewing.perk._id}-codes`} perk={viewing.perk} />
+          ) : null}
+        </SheetContent>
+      </Sheet>
+    </Page>
+  );
+}
+
+function EditPerkForm({
+  perk,
+  onDone,
+}: {
+  perk: AdminPerk;
+  onDone: () => void;
+}) {
+  const update = useMutation(api.perks.adminUpdate);
+  const [draft, setDraft] = useState<Draft>(() => draftFromPerk(perk));
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const problem = draftProblem(draft);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      await update({
+        perkId: perk._id,
+        company: draft.company,
+        title: draft.title,
+        value: draft.value,
+        description: draft.description,
+        sponsorUrl: draft.sponsorUrl.trim(),
+        instructions: draft.instructions.trim(),
+        inputs:
+          perk.type === "external" ? undefined : inputsFromDraft(draft.inputs),
+      });
+      onDone();
+    } catch (caughtError: unknown) {
+      setError(errorMessage(caughtError, "No se ha podido guardar"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      className="grid gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+      noValidate
+    >
+      <DialogHeader>
+        <DialogTitle>Editar perk</DialogTitle>
+        <DialogDescription>
+          {perk.type === "external"
+            ? "Los participantes no reclaman aquí: ven las instrucciones y el enlace."
+            : perk.claimCount > 0
+              ? "Cambiar los campos no borra respuestas ya enviadas; las columnas se emparejan por clave."
+              : "Los participantes rellenan los campos al reclamar."}
+        </DialogDescription>
+      </DialogHeader>
+      <FormError message={error} />
+      <PerkFields draft={draft} onChange={setDraft} mode="edit" />
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onDone}
+          disabled={saving}
+        >
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={saving}>
+          {saving ? "Guardando…" : "Guardar"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function PerkFields({
+  draft,
+  onChange,
+  mode,
+}: {
+  draft: Draft;
+  onChange: (next: Draft) => void;
+  mode: "create" | "edit";
+}) {
+  const ids = useId();
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
+    onChange({ ...draft, [key]: value });
+
+  return (
+    <>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Empresa / sponsor" htmlFor={`${ids}-company`}>
+          <Input
+            id={`${ids}-company`}
+            value={draft.company}
+            onChange={(event) => set("company", event.target.value)}
+          />
+        </Field>
+        <Field label="Título" htmlFor={`${ids}-title`}>
+          <Input
+            id={`${ids}-title`}
+            value={draft.title}
+            onChange={(event) => set("title", event.target.value)}
+          />
+        </Field>
+        <Field label="Valor" htmlFor={`${ids}-value`}>
+          <Input
+            id={`${ids}-value`}
+            value={draft.value}
+            onChange={(event) => set("value", event.target.value)}
+            placeholder="100 créditos de Cursor"
+          />
+        </Field>
+        {mode === "create" ? (
+          <Field label="Tipo" htmlFor={`${ids}-type`}>
+            <Select
+              value={draft.type}
+              onValueChange={(next) => {
+                if (
+                  next === "email" ||
+                  next === "code" ||
+                  next === "external"
+                ) {
+                  set("type", next);
+                }
+              }}
+            >
+              <SelectTrigger id={`${ids}-type`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="email">Solicitud por email</SelectItem>
+                <SelectItem value="code">Bolsa de códigos</SelectItem>
+                <SelectItem value="external">Enlace externo</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        ) : (
+          <Field label="Tipo">
+            <p className="flex h-11 items-center text-sm text-hs-brown">
+              {perkTypeLabel(draft.type)} · no se puede cambiar
+            </p>
+          </Field>
+        )}
+        <Field
+          label={
+            draft.type === "external" ? "URL para reclamar" : "URL del sponsor"
+          }
+          htmlFor={`${ids}-sponsor`}
+          hint={
+            draft.type === "external"
+              ? "Obligatoria. El participante la abre en una pestaña nueva."
+              : "Se enlaza desde la tarjeta del perk."
+          }
+        >
+          <Input
+            id={`${ids}-sponsor`}
+            type="url"
+            inputMode="url"
+            placeholder="https://"
+            required={draft.type === "external"}
+            value={draft.sponsorUrl}
+            onChange={(event) => set("sponsorUrl", event.target.value)}
+          />
+        </Field>
+      </div>
+      <Field label="Descripción" htmlFor={`${ids}-description`}>
+        <Textarea
+          id={`${ids}-description`}
+          value={draft.description}
+          onChange={(event) => set("description", event.target.value)}
+        />
+      </Field>
+      {draft.type === "external" ? (
+        <Field
+          label="Instrucciones"
+          htmlFor={`${ids}-instructions`}
+          hint="Cómo canjearlo en la web del partner. Se muestra en la tarjeta."
+        >
+          <Textarea
+            id={`${ids}-instructions`}
+            value={draft.instructions}
+            onChange={(event) => set("instructions", event.target.value)}
+            placeholder="Entra con el email del equipo y activa el plan desde Billing."
+          />
+        </Field>
+      ) : null}
+      {mode === "create" && draft.type === "code" ? (
+        <Field
+          label="Códigos (uno por línea)"
+          htmlFor={`${ids}-codes`}
+          hint={
+            <span className="tabular-nums">
+              {`${codesCountLabel(lines(draft.codes).length)}. Se ignoran líneas vacías.`}
+            </span>
+          }
+        >
+          <Textarea
+            id={`${ids}-codes`}
+            value={draft.codes}
+            onChange={(event) => set("codes", event.target.value)}
+            className="font-mono"
+          />
+        </Field>
+      ) : null}
+      {draft.type === "external" ? null : (
+        <InputsEditor
+          inputs={draft.inputs}
+          onChange={(inputs) => set("inputs", inputs)}
+        />
+      )}
+    </>
+  );
+}
+
+function InputsEditor({
+  inputs,
+  onChange,
+}: {
+  inputs: DraftInput[];
+  onChange: (inputs: DraftInput[]) => void;
+}) {
+  const ids = useId();
+
+  function patch(id: string, changes: Partial<DraftInput>) {
+    onChange(
+      inputs.map((input) => {
+        if (input.id !== id) {
+          return input;
+        }
+        const next = { ...input, ...changes };
+        if (changes.label !== undefined && !next.keyTouched) {
+          next.key = slugKey(changes.label);
+        }
+        return next;
+      })
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <Label>Datos que pide el sponsor</Label>
+          <p className="mt-1 text-sm text-hs-brown">
+            El participante los rellena al reclamar. Sin campos, reclama con un
+            clic.
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={inputs.length >= MAX_PERK_INPUTS}
+          onClick={() => onChange([...inputs, newDraftInput()])}
+        >
+          <PlusIcon aria-hidden />
+          Añadir campo
+        </Button>
+      </div>
+      {inputs.length > 0 ? (
+        <ol className="grid gap-2">
+          {inputs.map((input, index) => {
+            const base = `${ids}-${input.id}`;
+            return (
+              <li
+                key={input.id}
+                className="grid gap-2 border-[3px] border-hs-ink bg-hs-sand/50 p-3 sm:grid-cols-2"
+              >
+                <div className="space-y-1">
+                  <Label htmlFor={`${base}-label`} className="text-xs">
+                    Etiqueta
+                  </Label>
+                  <Input
+                    id={`${base}-label`}
+                    value={input.label}
+                    placeholder={index === 0 ? "Usuario de GitHub" : undefined}
+                    onChange={(event) =>
+                      patch(input.id, { label: event.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor={`${base}-key`} className="text-xs">
+                    Clave
+                  </Label>
+                  <Input
+                    id={`${base}-key`}
+                    value={input.key}
+                    className="font-mono text-sm"
+                    onChange={(event) =>
+                      patch(input.id, {
+                        key: slugKey(event.target.value),
+                        keyTouched: true,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex items-end gap-3 sm:col-span-2">
+                  <div className="min-w-0 flex-1 space-y-1 sm:max-w-56">
+                    <Label htmlFor={`${base}-type`} className="text-xs">
+                      Tipo
+                    </Label>
+                    <Select
+                      value={input.type}
+                      onValueChange={(next) =>
+                        patch(input.id, { type: next as PerkInputType })
+                      }
+                    >
+                      <SelectTrigger id={`${base}-type`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(
+                          Object.keys(perkInputTypeLabels) as PerkInputType[]
+                        ).map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {perkInputTypeLabels[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <label
+                    htmlFor={`${base}-required`}
+                    className="flex h-11 items-center gap-2 text-sm select-none"
+                  >
+                    <Checkbox
+                      id={`${base}-required`}
+                      className="mt-0"
+                      checked={input.required}
+                      onCheckedChange={(checked) =>
+                        patch(input.id, { required: checked === true })
+                      }
+                    />
+                    Obligatorio
+                  </label>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="ml-auto"
+                    aria-label={`Quitar campo ${input.label || index + 1}`}
+                    onClick={() =>
+                      onChange(inputs.filter((row) => row.id !== input.id))
+                    }
+                  >
+                    <Trash2Icon aria-hidden />
+                  </Button>
+                </div>
+                {input.type === "select" ? (
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label htmlFor={`${base}-options`} className="text-xs">
+                      Opciones (separadas por coma)
+                    </Label>
+                    <Input
+                      id={`${base}-options`}
+                      value={input.options}
+                      placeholder="S, M, L, XL"
+                      onChange={(event) =>
+                        patch(input.id, { options: event.target.value })
+                      }
+                    />
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
+    </div>
+  );
+}
+
+function CodesSheet({ perk }: { perk: AdminPerk }) {
+  const rows = useQuery(api.perks.adminCodes, { perkId: perk._id });
+  const name = perkName(perk.company, perk.title);
+  const claimed = rows?.filter((row) => !row.available).length ?? 0;
+
+  function exportCsv() {
+    if (!rows) {
+      return;
+    }
+    const header = ["Código", "Estado", "Nombre", "Email", "Equipo", "Fecha"];
+    const body = rows.map((row) => [
+      row.code,
+      row.available ? "Libre" : "Reclamado",
+      row.name ?? "",
+      row.email ?? "",
+      row.teamName ?? "",
+      row.assignedAt ? new Date(row.assignedAt).toISOString() : "",
+    ]);
+    downloadCsv(`perk-${fileSlug(name)}-codigos.csv`, toCsv(header, body));
+  }
+
+  return (
+    <>
+      <SheetHeader>
+        <SheetTitle>{name}</SheetTitle>
+        <SheetDescription className="tabular-nums">
+          {rows === undefined
+            ? "Cargando códigos…"
+            : `${rows.length} ${rows.length === 1 ? "código" : "códigos"} · ${claimed} ${claimed === 1 ? "reclamado" : "reclamados"}`}
+        </SheetDescription>
+      </SheetHeader>
+      <SheetBody className="flex flex-col p-0">
+        {rows === undefined ? (
+          <div className="p-5">
+            <LoadingText />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="p-5 text-sm text-hs-brown">
+            Este perk aún no tiene códigos.
+          </p>
+        ) : (
+          <Table
+            className="border-separate border-spacing-0"
+            containerClassName="min-h-0 flex-1 overflow-auto overscroll-contain border-0"
+          >
+            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+              <TableRow>
+                <TableHead>Código</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Equipo</TableHead>
+                <TableHead>Fecha</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow
+                  key={row._id}
+                  className="[&_td]:border-b [&_td]:border-hs-ink/20"
+                >
+                  <TableCell className="font-mono text-xs">
+                    {row.code}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={row.available ? "default" : "gold"}>
+                      {row.available ? "Libre" : "Reclamado"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {row.userId ? (
+                      <Link
+                        href={participantHref({ kind: "user", id: row.userId })}
+                        className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+                      >
+                        {row.name ?? "Participante"}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                  <TableCell>{row.email ?? "—"}</TableCell>
+                  <TableCell>{row.teamName ?? "—"}</TableCell>
+                  <TableCell className="tabular-nums text-hs-brown">
+                    {row.assignedAt
+                      ? dateFormat.format(new Date(row.assignedAt))
+                      : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </SheetBody>
+      <SheetFooter>
+        <Button
+          variant="teal"
+          disabled={!rows || rows.length === 0}
+          onClick={exportCsv}
+        >
+          Exportar CSV
+        </Button>
+      </SheetFooter>
+    </>
+  );
+}
+
+function RequestsSheet({ perk }: { perk: AdminPerk }) {
+  const rows = useQuery(api.perks.adminRequests, { perkId: perk._id });
+  const name = perkName(perk.company, perk.title);
+  const reviewEmail = perk.type === "email";
+
+  function exportCsv() {
+    if (!rows) {
+      return;
+    }
+    const header = [
+      "Nombre",
+      "Email",
+      "Equipo",
+      ...perk.inputs.map((input) => input.label),
+      "Estado",
+      "Código",
+      "Fecha",
+    ];
+    const body = rows.map((row) => [
+      row.name ?? "",
+      row.email ?? "",
+      row.teamName ?? "",
+      ...perk.inputs.map((input) => answerFor(row.answers, input.key)),
+      claimStatusLabel(row.status),
+      row.code ?? "",
+      new Date(row.createdAt).toISOString(),
+    ]);
+    downloadCsv(`perk-${fileSlug(name)}-solicitudes.csv`, toCsv(header, body));
+  }
+
+  return (
+    <>
+      <SheetHeader>
+        <SheetTitle>{name}</SheetTitle>
+        <SheetDescription className="tabular-nums">
+          {rows === undefined
+            ? "Cargando solicitudes…"
+            : `${rows.length} ${rows.length === 1 ? "solicitud" : "solicitudes"}`}
+          {perk.inputs.length > 0
+            ? ` · ${perk.inputs.length} ${perk.inputs.length === 1 ? "campo" : "campos"}`
+            : ""}
+        </SheetDescription>
+      </SheetHeader>
+      <SheetBody className="flex flex-col p-0">
+        {rows === undefined ? (
+          <div className="p-5">
+            <LoadingText />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="p-5 text-sm text-hs-brown">
+            Nadie ha pedido este perk todavía.
+          </p>
+        ) : (
+          <Table
+            className="border-separate border-spacing-0"
+            containerClassName="min-h-0 flex-1 overflow-auto overscroll-contain border-0"
+          >
+            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Equipo</TableHead>
+                {perk.inputs.map((input) => (
+                  <TableHead key={input.key}>{input.label}</TableHead>
+                ))}
+                <TableHead>Estado</TableHead>
+                <TableHead>Código</TableHead>
+                <TableHead>Fecha</TableHead>
+                {reviewEmail ? <TableHead /> : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow
+                  key={row._id}
+                  className="[&_td]:border-b [&_td]:border-hs-ink/20"
+                >
+                  <TableCell>{row.name ?? "—"}</TableCell>
+                  <TableCell>{row.email ?? "—"}</TableCell>
+                  <TableCell>{row.teamName ?? "—"}</TableCell>
+                  {perk.inputs.map((input) => (
+                    <TableCell
+                      key={input.key}
+                      className="max-w-64 truncate whitespace-normal"
+                    >
+                      {answerFor(row.answers, input.key) || "—"}
+                    </TableCell>
+                  ))}
+                  <TableCell>
+                    <Badge>{claimStatusLabel(row.status)}</Badge>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {row.code ?? "—"}
+                  </TableCell>
+                  <TableCell className="tabular-nums text-hs-brown">
+                    {dateFormat.format(new Date(row.createdAt))}
+                  </TableCell>
+                  {reviewEmail ? (
+                    <TableCell>
+                      <ReviewActions claimId={row._id} compact />
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </SheetBody>
+      <SheetFooter>
+        <Button
+          variant="teal"
+          disabled={!rows || rows.length === 0}
+          onClick={exportCsv}
+        >
+          Exportar CSV
+        </Button>
+      </SheetFooter>
+    </>
+  );
+}

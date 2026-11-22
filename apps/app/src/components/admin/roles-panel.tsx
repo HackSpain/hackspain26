@@ -141,8 +141,8 @@ function NewTypeCard() {
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            void action
-              .run(() =>
+            void (async () => {
+              const ok = await action.run(() =>
                 create({
                   description,
                   isDefault,
@@ -151,18 +151,17 @@ function NewTypeCard() {
                   requiresConfirmed,
                   sections,
                 })
-              )
-              .then((ok) => {
-                if (!ok) {
-                  return;
-                }
-                setLabel("");
-                setDescription("");
-                setOpenForApplications(false);
-                setRequiresConfirmed(true);
-                setSections(NEW_DEFAULT_SECTIONS);
-                setIsDefault(false);
-              });
+              );
+              if (!ok) {
+                return;
+              }
+              setLabel("");
+              setDescription("");
+              setOpenForApplications(false);
+              setRequiresConfirmed(true);
+              setSections(NEW_DEFAULT_SECTIONS);
+              setIsDefault(false);
+            })();
           }}
         >
           <div className="grid gap-3 md:grid-cols-2">
