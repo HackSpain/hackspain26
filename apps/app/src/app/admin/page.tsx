@@ -20,7 +20,13 @@ import {
   useParticipant,
 } from "@/components/admin/participant-detail";
 import type { ParticipantRef } from "@/components/admin/participant-detail";
-import { EmptyState, Page, RecordCard, Skeleton } from "@/components/page";
+import {
+  EmptyState,
+  ListTableSkeleton,
+  Page,
+  RecordCard,
+  Skeleton,
+} from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -131,7 +137,7 @@ function CrmFallback() {
       className="flex h-[calc(100dvh-11rem)] flex-col gap-6 space-y-0 sm:h-[calc(100dvh-12rem)]"
     >
       <CrmToolbarSkeleton />
-      <CrmListSkeleton />
+      <ListTableSkeleton fill rows={8} />
     </Page>
   );
 }
@@ -399,7 +405,7 @@ function AdminCrm() {
             </p>
           </div>
           {data === undefined ? (
-            <CrmListSkeleton />
+            <ListTableSkeleton fill rows={8} />
           ) : !rows || rows.length === 0 ? (
             <EmptyState title="Ningún participante coincide">
               Prueba otra búsqueda o quita los filtros.
@@ -688,39 +694,6 @@ function CrmToolbarSkeleton() {
       <Skeleton className="h-11" />
       <Skeleton className="h-11" />
     </div>
-  );
-}
-
-function CrmListSkeleton() {
-  return (
-    <>
-      <div className="grid min-h-0 flex-1 gap-3 md:hidden" aria-hidden>
-        {["a", "b", "c"].map((key) => (
-          <div key={key} className="border-[3px] border-hs-ink bg-hs-paper p-4">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="mt-2 h-3 w-56" />
-            <Skeleton className="mt-4 h-3 w-28" />
-          </div>
-        ))}
-      </div>
-      <div
-        className="hidden min-h-0 flex-1 flex-col border-[3px] border-hs-ink md:flex"
-        aria-hidden
-      >
-        <div className="h-11 border-b-[3px] border-hs-ink bg-hs-sand" />
-        {["a", "b", "c", "d", "e", "f", "g", "h"].map((key) => (
-          <div
-            key={key}
-            className="flex h-11 items-center gap-3 border-b border-hs-ink/20 px-3"
-          >
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-3 w-40" />
-            <Skeleton className="h-5 w-20" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        ))}
-      </div>
-    </>
   );
 }
 

@@ -129,6 +129,27 @@ function isSharedBadge(value: unknown): value is SharedBadge {
   return isRecord(value) && typeof value.fullName === "string";
 }
 
+function optionalString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function badgeMediaFrom(body: {
+  githubHandle?: unknown;
+  photoDataUri?: unknown;
+  photoVersion?: unknown;
+}): {
+  githubHandle: string | null;
+  photoDataUri: string | null;
+  photoVersion: number | null;
+} {
+  return {
+    githubHandle: optionalString(body.githubHandle),
+    photoDataUri: optionalString(body.photoDataUri),
+    photoVersion:
+      typeof body.photoVersion === "number" ? body.photoVersion : null,
+  };
+}
+
 export async function subscribeEmail(email: string): Promise<void> {
   const response = await landingFetch("/landing/subscribe", {
     body: JSON.stringify({ email }),
@@ -191,12 +212,7 @@ function confirmViewFrom(body: unknown): ConfirmView {
   }
   return {
     fullName: body.fullName,
-    githubHandle:
-      typeof body.githubHandle === "string" ? body.githubHandle : null,
-    photoDataUri:
-      typeof body.photoDataUri === "string" ? body.photoDataUri : null,
-    photoVersion:
-      typeof body.photoVersion === "number" ? body.photoVersion : null,
+    ...badgeMediaFrom(body),
     state: body.state,
   };
 }
@@ -295,12 +311,7 @@ export async function findSharedBadge(input: {
     }
     return {
       fullName: body.fullName,
-      githubHandle:
-        typeof body.githubHandle === "string" ? body.githubHandle : null,
-      photoDataUri:
-        typeof body.photoDataUri === "string" ? body.photoDataUri : null,
-      photoVersion:
-        typeof body.photoVersion === "number" ? body.photoVersion : null,
+      ...badgeMediaFrom(body),
     };
   } catch {
     return null;

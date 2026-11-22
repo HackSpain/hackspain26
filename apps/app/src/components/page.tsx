@@ -74,6 +74,52 @@ export function Skeleton({ className }: { className?: string }) {
   );
 }
 
+/** Mobile cards + desktop rows used by admin lists and judging tables. */
+export function ListTableSkeleton({
+  fill = false,
+  rows = 6,
+}: {
+  fill?: boolean;
+  rows?: number;
+}) {
+  const keys = Array.from({ length: Math.max(1, rows) }, (_, index) => index);
+  return (
+    <>
+      <div
+        className={cn("grid gap-3 md:hidden", fill && "min-h-0 flex-1")}
+        aria-hidden
+      >
+        {keys.slice(0, 3).map((key) => (
+          <div key={key} className="border-[3px] border-hs-ink bg-hs-paper p-4">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-2 h-3 w-56" />
+            <Skeleton className="mt-4 h-3 w-28" />
+          </div>
+        ))}
+      </div>
+      <div
+        className={cn(
+          "hidden border-[3px] border-hs-ink",
+          fill ? "min-h-0 flex-1 flex-col md:flex" : "md:block"
+        )}
+        aria-hidden
+      >
+        <div className="h-11 border-b-[3px] border-hs-ink bg-hs-sand" />
+        {keys.map((key) => (
+          <div
+            key={key}
+            className="flex h-11 items-center gap-3 border-b border-hs-ink/20 px-3"
+          >
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export function EmptyState({
   title,
   children,

@@ -5,7 +5,7 @@ import { Suspense, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { FunctionReturnType } from "convex/server";
-import { AdminEventControls } from "@/components/admin-event-controls";
+import { AdminEventControls } from "@/components/admin/event-controls";
 import { AdminTabs, useAdminTab } from "@/components/admin/admin-tabs";
 import { AvisosPanel } from "@/components/admin/avisos-panel";
 import { useAdminEdition } from "@/components/admin/use-admin-edition";
