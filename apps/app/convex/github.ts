@@ -2,17 +2,10 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { authedMutation } from "./lib/customFunctions";
 import { getCurrentParticipation } from "./lib/participations";
-import { resolvePendingInvites } from "./users";
+import { githubRedirectUri } from "./lib/github";
+import { resolvePendingInvites } from "./lib/team";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
-
-export function githubRedirectUri(): string {
-  const convexSite = process.env.CONVEX_SITE_URL;
-  if (!convexSite) {
-    throw new Error("CONVEX_SITE_URL no está configurada");
-  }
-  return `${convexSite.replace(/\/$/, "")}/github/callback`;
-}
 
 function randomState(): string {
   const bytes = new Uint8Array(24);

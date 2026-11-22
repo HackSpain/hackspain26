@@ -4,7 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
-import { githubRedirectUri } from "./github";
+import { githubRedirectUri } from "./lib/github";
 import { isCodedError } from "./lib/errors";
 import { isRecord } from "./lib/isRecord";
 

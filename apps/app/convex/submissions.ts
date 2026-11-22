@@ -28,13 +28,13 @@ import {
 } from "./lib/team";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import { submissionStatusValidator } from "./lib/validators";
-import { scheduleStackScan } from "./stack";
+import { scheduleStackScan } from "./lib/stack";
 import {
   isTrackCombinationAllowed,
   MAX_TEAMS_PER_TRACK,
   submissionsAreOpen,
   trackEntryCounts,
-} from "./tracks";
+} from "./lib/tracks";
 
 const challengeSummary = v.object({
   _id: v.id("tracks"),

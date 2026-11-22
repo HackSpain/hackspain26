@@ -16,8 +16,8 @@ import {
 import { urlOf } from "./lib/urls";
 import { currentEditionId, ofEdition } from "./lib/editions";
 import { getEventWindow } from "./lib/eventWindow";
-import { teamRepoList } from "./stack";
-import { removePostSocial } from "./feedSocial";
+import { removePostSocial } from "./lib/feedSocial";
+import { teamRepoList } from "./lib/team";
 
 /**
  * Pulls public GitHub activity for every team repo into the feed.

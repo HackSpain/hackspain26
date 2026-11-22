@@ -1,3 +1,7 @@
+import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import type { MutationCtx } from "../_generated/server";
+import { repoSlug } from "./github";
 import {
   normalizePackage,
   PACKAGE_PREFIX_TAGS,
@@ -30,6 +34,29 @@ export function isHandSet(
   doc: { techStack?: string[]; techStackSource?: "repo" } | null | undefined
 ): boolean {
   return Boolean(doc?.techStack?.length) && doc?.techStackSource !== "repo";
+}
+
+export async function scheduleStackScan(
+  ctx: MutationCtx,
+  args: {
+    force?: boolean;
+    repoUrls?: string[];
+    submissionId?: Id<"submissions">;
+    teamId?: Id<"teams">;
+    userId: Id<"users">;
+  }
+): Promise<void> {
+  const repoUrls = (args.repoUrls ?? []).filter((url) => repoSlug(url));
+  if (repoUrls.length === 0) {
+    return;
+  }
+  await ctx.scheduler.runAfter(0, internal.stackDetect.scan, {
+    force: args.force,
+    repoUrls,
+    submissionId: args.submissionId,
+    teamId: args.teamId,
+    userId: args.userId,
+  });
 }
 
 export type StackFile = { path: string; content: string };

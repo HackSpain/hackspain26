@@ -118,6 +118,32 @@ test("subscribe still writes an interested participation", async () => {
   assert.equal(tables.participations[0]?.status, "interested");
 });
 
+test("subscribe refuses calls without the landing's secret", async () => {
+  const { ctx, tables } = fakeCtx();
+  await assert.rejects(
+    subscribe._handler(ctx, { email: "ada@example.com", secret: "wrong" }),
+    /Unauthorized/
+  );
+  assert.equal(tables.participations.length, 0);
+});
+
+test("subscribe stores each normalized email once", async () => {
+  const { ctx, tables } = fakeCtx();
+  await subscribe._handler(ctx, { email: " Ada@Example.com ", secret });
+  await subscribe._handler(ctx, { email: "ada@example.com", secret });
+  assert.deepEqual(
+    tables.participations.map((row) => row.email),
+    ["ada@example.com"]
+  );
+  assert.equal(tables.participations[0]?.editionId, TEST_EDITION_ID);
+  assert.equal(tables.participations[0]?.roleId, TEST_HACKER_ROLE_ID);
+  assert.equal(tables.participations[0]?.status, "interested");
+  await assert.rejects(
+    subscribe._handler(ctx, { email: "not-an-email", secret }),
+    /Email inválido/
+  );
+});
+
 test("apply inserts an applied participation for an open role", async () => {
   const { ctx, tables, scheduled } = fakeCtx();
   await apply._handler(ctx, {

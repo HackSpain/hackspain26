@@ -6,7 +6,7 @@ import {
   isTrackCombinationAllowed,
   seedDefaults,
   trackEntryCounts,
-} from "./tracks";
+} from "./lib/tracks";
 
 function ctxWith(submissions: { _id: string; challengeIds: string[] }[]) {
   return {

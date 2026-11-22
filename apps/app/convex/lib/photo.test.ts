@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Id } from "../_generated/dataModel";
-import { avatarThumbnailFor, externalThumbnail } from "./photo";
+import { avatarThumbnailFor, avatarUrlFor, externalThumbnail } from "./photo";
 
 const avatarId = "kg2avatar" as Id<"_storage">;
 const thumbId = "kg2thumb" as Id<"_storage">;
@@ -22,6 +22,18 @@ test("an uploaded thumbnail wins, then the resizing route, then GitHub", () => {
     "https://avatars.githubusercontent.com/u/1?v=4&s=128"
   );
   assert.equal(avatarThumbnailFor({}), undefined);
+});
+
+test("avatarUrlFor prefers the uploaded file over the GitHub image", () => {
+  assert.equal(
+    avatarUrlFor({ avatarId, image: "https://example.com/a.png" }),
+    "/api/files/kg2avatar"
+  );
+  assert.equal(
+    avatarUrlFor({ image: "https://example.com/a.png" }),
+    "https://example.com/a.png"
+  );
+  assert.equal(avatarUrlFor({}), undefined);
 });
 
 test("other hosts and odd values pass through untouched", () => {

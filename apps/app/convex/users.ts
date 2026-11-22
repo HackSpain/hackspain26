@@ -5,11 +5,12 @@ import { authedMutation, profileMutation } from "./lib/customFunctions";
 import { meValidator } from "./lib/validators";
 import { defaultedAttendance } from "./lib/attendance";
 import { isAdmin } from "./lib/auth";
-import { currentEditionId } from "./lib/editions";
 import { fail } from "./lib/errors";
 import { parseEventDetails } from "./lib/eventDetails";
 import { eventIsOpen, eventPhase, getEventWindow } from "./lib/eventWindow";
 import { assertStoredImage, imagePathFor } from "./lib/files";
+import { avatarUrlFor } from "./lib/photo";
+import { resolvePendingInvites } from "./lib/team";
 import {
   getCurrentParticipation,
   participationIsAccepted,
@@ -17,123 +18,10 @@ import {
 } from "./lib/participations";
 import { missingProfileFields } from "./lib/profile";
 import { effectiveSections, userTypeFor } from "./lib/userTypes";
-import {
-  normalizeEmail,
-  normalizeGithub,
-  normalizePhone,
-  normalizeTwitter,
-  PHONE_ERROR,
-} from "./lib/normalize";
+import { normalizePhone, normalizeTwitter, PHONE_ERROR } from "./lib/normalize";
 import { urlOf } from "./lib/urls";
-import { membershipForUser } from "./lib/team";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-
-export async function resolvePendingInvites(
-  ctx: MutationCtx,
-  userId: Id<"users">
-): Promise<void> {
-  const user = await ctx.db.get(userId);
-  if (!user) {
-    return;
-  }
-  const candidates: {
-    type: "email" | "github" | "twitter";
-    value: string;
-  }[] = [];
-  if (user.email && user.emailVerificationTime !== undefined) {
-    candidates.push({ type: "email", value: normalizeEmail(user.email) });
-  }
-  if (user.githubUsername && user.githubLinkedAt !== undefined) {
-    candidates.push({
-      type: "github",
-      value: normalizeGithub(user.githubUsername),
-    });
-  }
-  if (user.twitterHandle && user.twitterLinkedAt !== undefined) {
-    candidates.push({
-      type: "twitter",
-      value: normalizeTwitter(user.twitterHandle),
-    });
-  }
-
-  const matches: Doc<"teamMembers">[] = [];
-  for (const candidate of candidates) {
-    const rows = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_identifier", (q) =>
-        q.eq("identifierType", candidate.type).eq("identifier", candidate.value)
-      )
-      .collect();
-    for (const row of rows) {
-      if (row.userId && row.userId !== userId) {
-        continue;
-      }
-      matches.push(row);
-    }
-  }
-
-  let editionId: Id<"editions"> | undefined;
-  try {
-    editionId = await currentEditionId(ctx);
-  } catch {
-    editionId = undefined;
-  }
-  const scoped: Doc<"teamMembers">[] = [];
-  for (const row of matches) {
-    if (editionId === undefined) {
-      scoped.push(row);
-      continue;
-    }
-    if (row.editionId === editionId) {
-      scoped.push(row);
-      continue;
-    }
-    const team = await ctx.db.get(row.teamId);
-    if (!team || team.editionId === editionId) {
-      scoped.push(row);
-    }
-  }
-
-  const existing = await membershipForUser(ctx, userId, editionId);
-  let teamId = existing?.teamId;
-  if (!teamId) {
-    const oldest = [...scoped].toSorted((a, b) => a.createdAt - b.createdAt)[0];
-    teamId = oldest?.teamId;
-  }
-  if (!teamId) {
-    return;
-  }
-
-  let resolved = existing ?? null;
-  for (const member of scoped) {
-    if (member.teamId !== teamId) {
-      continue;
-    }
-    if (!resolved) {
-      if (member.status !== "member" || member.userId !== userId) {
-        await ctx.db.patch(member._id, {
-          status: "member",
-          userId,
-        });
-      }
-      resolved = member;
-      continue;
-    }
-    if (member._id !== resolved._id) {
-      await ctx.db.delete(member._id);
-    }
-  }
-}
-
-export function avatarUrlFor(
-  user: Pick<Doc<"users">, "avatarId" | "image">
-): string | undefined {
-  if (user.avatarId) {
-    return imagePathFor(user.avatarId);
-  }
-  return user.image;
-}
 
 export const me = query({
   args: {},

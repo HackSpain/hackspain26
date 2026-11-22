@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { checkedMentions } from "./feedSocial";
+import { checkedMentions } from "./lib/feedSocial";
 
 test("a mention links only to the user whose name appears in the text", async () => {
   const aliceId = "alice" as Id<"users">;

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { resolvePendingInvites } from "./users";
+import { resolvePendingInvites } from "./lib/team";
 
 type Row = Record<string, unknown> & { _id: string };
 

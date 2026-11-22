@@ -7,13 +7,16 @@ import {
   onboardedQuery,
 } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
-import { checkedMentions, removePostSocial } from "./feedSocial";
-import { mentionValidator } from "./lib/feedSocial";
+import {
+  checkedMentions,
+  mentionValidator,
+  removePostSocial,
+} from "./lib/feedSocial";
 import { feedTabValidator, hasMemeTag } from "./lib/feedTabs";
 import { assertStoredImage, imagePathFor } from "./lib/files";
 import { membershipForUser, teamLogoUrlFor } from "./lib/team";
 import { userTypeFor } from "./lib/userTypes";
-import { avatarUrlFor } from "./users";
+import { avatarUrlFor } from "./lib/photo";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 

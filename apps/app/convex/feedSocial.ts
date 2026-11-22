@@ -5,13 +5,12 @@ import { currentEditionId } from "./lib/editions";
 import { onboardedMutation, onboardedQuery } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
 import {
+  checkedMentions,
   MAX_COMMENT_TEXT,
   MAX_REACTION_KINDS,
   mentionValidator,
-  mentionsInText,
   normalizeEmoji,
 } from "./lib/feedSocial";
-import type { Mention } from "./lib/feedSocial";
 import { avatarThumbnailFor } from "./lib/photo";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -31,44 +30,6 @@ async function requirePost(ctx: MutationCtx, postId: Id<"posts">) {
     fail("NOT_FOUND", "Publicación no encontrada");
   }
   return post;
-}
-
-/**
- * Mentions as the server trusts them: the person exists, the text still says
- * `@name`, and that name belongs to the person. Existing mentions retain the
- * name they had when posted so old text keeps rendering after a rename.
- */
-export async function checkedMentions(
-  ctx: MutationCtx,
-  text: string,
-  mentions: Mention[] | undefined
-): Promise<Mention[] | undefined> {
-  const kept = [];
-  for (const mention of mentionsInText(text, mentions ?? [])) {
-    const user = await ctx.db.get(mention.userId);
-    if (
-      user?.name?.trim().toLocaleLowerCase("es") ===
-      mention.name.trim().toLocaleLowerCase("es")
-    ) {
-      kept.push({ name: mention.name, userId: mention.userId });
-    }
-  }
-  return kept.length > 0 ? kept : undefined;
-}
-
-/** Everything hanging off a post goes with it. */
-export async function removePostSocial(ctx: MutationCtx, postId: Id<"posts">) {
-  const social = await socialFor(ctx, postId);
-  if (social) {
-    await ctx.db.delete(social._id);
-  }
-  const comments = await ctx.db
-    .query("postComments")
-    .withIndex("by_post", (q) => q.eq("postId", postId))
-    .collect();
-  for (const comment of comments) {
-    await ctx.db.delete(comment._id);
-  }
 }
 
 /**

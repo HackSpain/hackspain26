@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { assertStoredImage, imagePathFor } from "./lib/files";
-import { avatarUrlFor } from "./users";
 import {
   adminMutation,
   adminQuery,
@@ -12,103 +11,38 @@ import {
   identifierTypeValidator,
   teamMemberStatusValidator,
 } from "./lib/validators";
+import { findUserByEmail } from "./lib/auth";
+import { canonicalRepoUrl } from "./lib/github";
 import {
   normalizeEmail,
   normalizeGithub,
   normalizeTwitter,
 } from "./lib/normalize";
-import { canonicalRepoUrl } from "./lib/github";
-import { MAX_TECH_LENGTH, MAX_TECH_STACK } from "./lib/stack";
-import { findUserByEmail } from "./lib/auth";
 import { currentEditionId, ofEdition, resolveEditionId } from "./lib/editions";
 import { getCurrentParticipation } from "./lib/participations";
+import { scheduleStackScan } from "./lib/stack";
 import {
+  currentMembership,
   findTeamSubmission,
-  membershipForUser,
+  hydrateMember,
+  JOIN_CODE_LENGTH,
+  MAX_REPOS,
+  nextJoinCode,
+  normalizeJoinCode,
+  normalizeRepoUrls,
+  normalizeTechStack,
+  ownedTeam,
+  resolveIdentifier,
   teamLogoUrlFor,
+  teamRepoList,
 } from "./lib/team";
-import { randomCode } from "./lib/randomCode";
 import { fail } from "./lib/errors";
-import { isTrackCombinationAllowed, MAX_TEAMS_PER_TRACK } from "./tracks";
-import { scheduleStackScan, teamRepoList } from "./stack";
+import { avatarUrlFor } from "./lib/photo";
+import { isTrackCombinationAllowed, MAX_TEAMS_PER_TRACK } from "./lib/tracks";
+import { removePostSocial } from "./lib/feedSocial";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { removePostSocial } from "./feedSocial";
-
-// No 0/O/1/I so codes survive being read aloud or handwritten.
-const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const JOIN_CODE_LENGTH = 8;
-const MAX_REPOS = 5;
-
-function randomJoinCode(): string {
-  return randomCode(JOIN_CODE_ALPHABET, JOIN_CODE_LENGTH);
-}
-
-export function normalizeJoinCode(raw: string): string {
-  return raw.toUpperCase().replaceAll(/[^A-Z0-9]/g, "");
-}
-
-async function uniqueJoinCode(
-  ctx: MutationCtx,
-  editionId: Id<"editions">
-): Promise<string> {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const code = randomJoinCode();
-    const taken = await ctx.db
-      .query("teams")
-      .withIndex("by_edition_join_code", (q) =>
-        q.eq("editionId", editionId).eq("joinCode", code)
-      )
-      .first();
-    if (!taken) {
-      return code;
-    }
-  }
-  throw new Error("No se pudo generar un código de equipo");
-}
-
-async function nextJoinCode(ctx: MutationCtx): Promise<string> {
-  return await uniqueJoinCode(ctx, await currentEditionId(ctx));
-}
-
-async function currentMembership(
-  ctx: QueryCtx | MutationCtx,
-  userId: Id<"users">
-): Promise<Doc<"teamMembers"> | null> {
-  return await membershipForUser(ctx, userId, await currentEditionId(ctx));
-}
-
-function normalizeRepoUrls(raw: string[]): string[] {
-  const out = [
-    ...new Set(raw.map(canonicalRepoUrl).filter((url) => url !== null)),
-  ];
-  if (out.length > MAX_REPOS) {
-    fail("VALIDATION", `Máximo ${MAX_REPOS} repositorios`);
-  }
-  return out;
-}
-
-export function normalizeTechStack(raw: string[]): string[] {
-  const seen = new Set<string>();
-  for (const entry of raw) {
-    const tech = entry.trim().toLowerCase();
-    if (!tech) {
-      continue;
-    }
-    if (tech.length > MAX_TECH_LENGTH) {
-      fail(
-        "VALIDATION",
-        `"${entry.trim()}" supera ${MAX_TECH_LENGTH} caracteres`
-      );
-    }
-    seen.add(tech);
-  }
-  if (seen.size > MAX_TECH_STACK) {
-    fail("VALIDATION", `Máximo ${MAX_TECH_STACK} tecnologías`);
-  }
-  return [...seen];
-}
 
 const memberReturn = v.object({
   _id: v.id("teamMembers"),
@@ -167,75 +101,6 @@ const teamSummaryReturn = v.object({
     })
   ),
 });
-
-async function hydrateMember(
-  ctx: QueryCtx | MutationCtx,
-  member: Doc<"teamMembers">
-) {
-  const user = member.userId ? await ctx.db.get(member.userId) : null;
-  return {
-    _id: member._id,
-    email: user?.email,
-    identifier: member.identifier,
-    identifierType: member.identifierType,
-    name: user?.name,
-    status: member.status,
-    userId: member.userId,
-  };
-}
-
-async function resolveIdentifier(
-  ctx: MutationCtx,
-  identifierType: "email" | "github" | "twitter",
-  raw: string
-): Promise<{
-  identifier: string;
-  userId?: Id<"users">;
-  status: "member" | "pending";
-}> {
-  let identifier: string;
-  if (identifierType === "email") {
-    identifier = normalizeEmail(raw);
-  } else if (identifierType === "github") {
-    identifier = normalizeGithub(raw);
-  } else {
-    identifier = normalizeTwitter(raw);
-  }
-  if (!identifier) {
-    throw new Error(
-      "Introduce un usuario de GitHub, un handle de X o un email válido"
-    );
-  }
-
-  let user: Doc<"users"> | null = null;
-  if (identifierType === "email") {
-    const byEmail = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identifier))
-      .first();
-    if (byEmail?.emailVerificationTime !== undefined) {
-      user = byEmail;
-    }
-  } else if (identifierType === "github") {
-    const byGithub = await ctx.db
-      .query("users")
-      .withIndex("by_github", (q) => q.eq("githubUsername", identifier))
-      .collect();
-    user = byGithub.find((row) => row.githubLinkedAt !== undefined) ?? null;
-  } else {
-    const byTwitter = await ctx.db
-      .query("users")
-      .withIndex("by_twitter", (q) => q.eq("twitterHandle", identifier))
-      .collect();
-    user = byTwitter.find((row) => row.twitterLinkedAt !== undefined) ?? null;
-  }
-
-  return {
-    identifier,
-    status: user ? "member" : "pending",
-    userId: user?._id,
-  };
-}
 
 export const mine = onboardedQuery({
   args: {},
@@ -384,21 +249,6 @@ export const list = onboardedQuery({
 });
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
-
-async function ownedTeam(
-  ctx: MutationCtx,
-  userId: Id<"users">
-): Promise<Doc<"teams">> {
-  const membership = await currentMembership(ctx, userId);
-  const team = membership ? await ctx.db.get(membership.teamId) : null;
-  if (!team) {
-    fail("NO_TEAM", "No tienes equipo");
-  }
-  if (team.ownerId !== userId) {
-    fail("NOT_OWNER", "Solo el dueño del equipo puede cambiar el logo");
-  }
-  return team;
-}
 
 /** Upload target for the team logo. POST the file there, then call setLogo. */
 export const generateLogoUploadUrl = onboardedMutation({
