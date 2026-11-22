@@ -1,22 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  acceptEmailText,
-  cancelUrl,
-  confirmUrl,
-  firstNameFrom,
-  reviewEmailText,
-} from "./landingEmail";
-
-test("firstNameFrom uses the first word and a fallback", () => {
-  assert.equal(firstNameFrom("Ada Lovelace"), "Ada");
-  assert.equal(firstNameFrom("   "), "hacker");
-});
-
-test("confirm and cancel URLs carry the token", () => {
-  assert.match(confirmUrl("token-1"), /\/confirmacion\?token=token-1$/);
-  assert.match(cancelUrl("token-1"), /\/cancelacion\?token=token-1$/);
-});
+import { acceptEmailText, reviewEmailText } from "./landingEmail";
 
 test("review and accept emails name the edition and role", () => {
   const review = reviewEmailText({

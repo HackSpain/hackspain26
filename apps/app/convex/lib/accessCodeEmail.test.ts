@@ -34,15 +34,12 @@ test("access code email escapes participant-controlled HTML", () => {
   assert.match(html, /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/);
 });
 
-test("accessCodeEmailSubject uses the edition label when provided", () => {
+test("access code email copy follows the edition when provided", () => {
   assert.equal(accessCodeEmailSubject(), ACCESS_CODE_EMAIL_SUBJECT);
   assert.equal(
     accessCodeEmailSubject("HackSpain 2027"),
     "Tu código de acceso a HackSpain 2027"
   );
-});
-
-test("access code email copy follows the edition when provided", () => {
   const html = accessCodeEmailHtml({
     code: "AB7K",
     datesLine: "Madrid · 12—14 marzo 2027",

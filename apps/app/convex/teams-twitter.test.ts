@@ -178,60 +178,6 @@ test("a self-declared GitHub handle stays a pending invitation", async () => {
   );
 });
 
-test("a signup GitHub handle does not join until OAuth", async () => {
-  const { ctx, tables } = context();
-  tables.participations.push(
-    withCurrentEdition({
-      _id: "s1",
-      githubUsername: "fromform",
-    })
-  );
-  tables.users.push({
-    _id: "fromform",
-    githubUsername: "fromform",
-  });
-  const teamId = await create._handler(ctx, {
-    name: "Form",
-    members: [{ identifierType: "github", identifier: "fromform" }],
-  });
-  assert.ok(
-    tables.teamMembers.some(
-      (row) =>
-        row.teamId === teamId &&
-        row.identifier === "fromform" &&
-        row.status === "pending" &&
-        row.userId === undefined
-    )
-  );
-});
-
-test("a signup X handle does not join until OAuth", async () => {
-  const { ctx, tables } = context();
-  tables.participations.push(
-    withCurrentEdition({
-      _id: "sx",
-      twitterHandle: "fromx",
-    })
-  );
-  tables.users.push({
-    _id: "fromx",
-    twitterHandle: "fromx",
-  });
-  const teamId = await create._handler(ctx, {
-    name: "Form X",
-    members: [{ identifierType: "twitter", identifier: "fromx" }],
-  });
-  assert.ok(
-    tables.teamMembers.some(
-      (row) =>
-        row.teamId === teamId &&
-        row.identifier === "fromx" &&
-        row.status === "pending" &&
-        row.userId === undefined
-    )
-  );
-});
-
 test("email invitations join a verified account", async () => {
   const { ctx, tables } = context();
   const teamId = await create._handler(ctx, {

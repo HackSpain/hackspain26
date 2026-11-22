@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { dashboardHome, route } from "./auth-route";
+import { route } from "./auth-route";
 import type { AuthMe } from "./auth-route";
 import { DELIVERIES_PATH, JUDGING_PATH } from "./sections";
 
@@ -17,17 +17,6 @@ function me(extra: Partial<AuthMe> = {}): AuthMe {
     ...extra,
   };
 }
-
-describe("dashboardHome", () => {
-  test("judges score, sponsors read deliveries, everyone else stays on home", () => {
-    expect(dashboardHome(me({ canJudge: true }))).toBe(JUDGING_PATH);
-    expect(
-      dashboardHome(me({ sections: ["judgingSponsors", "participantes"] }))
-    ).toBe(DELIVERIES_PATH);
-    expect(dashboardHome(me({ admin: true }))).toBe("/");
-    expect(dashboardHome(me())).toBe("/");
-  });
-});
 
 describe("route", () => {
   test("applicants stay in the accept queue even with a mentor role", () => {

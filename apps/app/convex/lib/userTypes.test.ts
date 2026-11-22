@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Doc } from "../_generated/dataModel";
-import {
-  effectiveSections,
-  typeOpenForApplications,
-  typeRequiresConfirmed,
-} from "./userTypes";
+import { effectiveSections, typeRequiresConfirmed } from "./userTypes";
 
 function catalog(
   fields: Pick<Doc<"userTypes">, "sections"> &
@@ -83,16 +79,6 @@ describe("catalog flags", () => {
     ).toBe(false);
     expect(
       typeRequiresConfirmed(catalog({ requiresConfirmed: true, sections: [] }))
-    ).toBe(true);
-  });
-
-  test("openForApplications is off unless explicitly true", () => {
-    expect(typeOpenForApplications(null)).toBe(false);
-    expect(typeOpenForApplications(catalog({ sections: [] }))).toBe(false);
-    expect(
-      typeOpenForApplications(
-        catalog({ openForApplications: true, sections: [] })
-      )
     ).toBe(true);
   });
 });

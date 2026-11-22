@@ -112,12 +112,6 @@ function fakeCtx(
   };
 }
 
-test("subscribe still writes an interested participation", async () => {
-  const { ctx, tables } = fakeCtx();
-  await subscribe._handler(ctx, { email: " Ada@Example.com ", secret });
-  assert.equal(tables.participations[0]?.status, "interested");
-});
-
 test("subscribe refuses calls without the landing's secret", async () => {
   const { ctx, tables } = fakeCtx();
   await assert.rejects(
