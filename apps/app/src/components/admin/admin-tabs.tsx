@@ -14,9 +14,11 @@ export function useAdminTab(defaultTab: string): string {
 export function AdminTabs({
   tabs,
   defaultTab,
+  className,
 }: {
   tabs: readonly { value: string; label: string }[];
   defaultTab: string;
+  className?: string;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -25,7 +27,7 @@ export function AdminTabs({
   return (
     <nav
       aria-label="Apartados"
-      className="flex flex-nowrap gap-4 overflow-x-auto"
+      className={cn("flex flex-nowrap gap-3 overflow-x-auto", className)}
     >
       {tabs.map((tab) => {
         const next = new URLSearchParams(searchParams.toString());

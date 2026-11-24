@@ -86,10 +86,7 @@ export function TracksAdmin() {
     submissions.filter((row) => row.challengeIds.includes(track._id)).length;
 
   return (
-    <Page
-      title="Retos"
-      description="Los retos viven en Convex. THEKER se puede combinar con otro reto."
-    >
+    <Page compact>
       {selected === null ? (
         <EmptyState title="Aún no hay retos">
           Se crearán los retos por defecto en un momento.

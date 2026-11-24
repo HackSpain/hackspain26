@@ -9,13 +9,7 @@ import { api } from "@convex/_generated/api";
 import { FormError, errorMessage } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -364,18 +358,11 @@ export function NotificationsPanel() {
   }
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm font-medium text-hs-brown">
-        Email a quien ha dado consentimiento para avisos operativos.
-      </p>
+    <div className="space-y-4">
       <Dialog open={confirming} onOpenChange={setConfirming}>
         <Card className="hs-enter">
           <CardHeader>
             <CardTitle>Redactar</CardTitle>
-            <CardDescription className="max-w-[60ch] text-pretty">
-              Email en texto plano desde la dirección de HackSpain. Solo llega a
-              quien ha dado consentimiento.
-            </CardDescription>
           </CardHeader>
           <CardContent className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)] lg:gap-6">
             <div className="min-w-0 max-w-[64ch] space-y-4">

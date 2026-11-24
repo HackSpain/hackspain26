@@ -6,7 +6,7 @@ import { AdminJudging } from "@/components/admin/judging-panel";
 
 export default function AdminJudgingPage() {
   return (
-    <Suspense fallback={<AdminTableSkeleton title="Jurado" />}>
+    <Suspense fallback={<AdminTableSkeleton />}>
       <AdminJudging />
     </Suspense>
   );

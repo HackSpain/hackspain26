@@ -90,7 +90,7 @@ export function AdminTeams() {
 
   if (tab === "entregas") {
     return (
-      <Page title="Equipos">
+      <Page compact>
         <AdminTabs
           defaultTab="equipos"
           tabs={[
@@ -104,7 +104,7 @@ export function AdminTeams() {
   }
 
   if (data === undefined) {
-    return <AdminTableSkeleton title="Equipos" />;
+    return <AdminTableSkeleton />;
   }
 
   const countById = new Map(
@@ -200,9 +200,8 @@ export function AdminTeams() {
 
   return (
     <Page
-      title="Equipos"
-      description="Asignar suma un track. La cruz lo quita. El tope de 15 no aplica aquí."
-      className="flex h-[calc(100dvh-11rem)] flex-col gap-4 space-y-0 sm:h-[calc(100dvh-12rem)]"
+      compact
+      className="flex h-[calc(100dvh-8.5rem)] flex-col gap-3 space-y-0 sm:h-[calc(100dvh-9rem)]"
     >
       <AdminTabs
         defaultTab="equipos"
@@ -211,7 +210,7 @@ export function AdminTeams() {
           { value: "entregas", label: "Entregas" },
         ]}
       />
-      <div className="grid shrink-0 gap-3 sm:grid-cols-[minmax(0,1fr)_16rem]">
+      <div className="grid shrink-0 gap-2 sm:grid-cols-[minmax(0,1fr)_16rem]">
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}

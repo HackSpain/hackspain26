@@ -4,7 +4,10 @@
  */
 export function contentWidth(pathname: string): string {
   if (pathname === "/admin/tv") {
-    return "mx-auto w-full max-w-[1800px] px-4";
+    return "mx-auto w-full max-w-[1800px] px-3";
+  }
+  if (pathname.startsWith("/admin")) {
+    return "mx-auto w-full max-w-[90rem] px-3";
   }
   return "mx-auto w-full max-w-6xl px-4";
 }

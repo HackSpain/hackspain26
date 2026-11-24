@@ -263,29 +263,23 @@ export function AdminPerks() {
   }
 
   return (
-    <Page
-      className="min-w-0 overflow-x-hidden"
-      title={
-        <div className="flex min-w-0 items-center justify-between gap-3">
-          <h1 className="min-w-0 font-bungee text-2xl leading-tight sm:text-3xl">
-            Perks
-          </h1>
-          {tab === "catalogo" && isCurrent ? (
-            <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
-              <PlusIcon aria-hidden />
-              Crear perk
-            </Button>
-          ) : null}
-        </div>
-      }
-    >
-      <AdminTabs
-        defaultTab="catalogo"
-        tabs={[
-          { value: "catalogo", label: "Catálogo" },
-          { value: "solicitudes", label: "Solicitudes" },
-        ]}
-      />
+    <Page compact className="min-w-0 overflow-x-hidden">
+      <div className="flex min-w-0 items-center gap-2">
+        <AdminTabs
+          className="min-w-0 flex-1"
+          defaultTab="catalogo"
+          tabs={[
+            { value: "catalogo", label: "Catálogo" },
+            { value: "solicitudes", label: "Solicitudes" },
+          ]}
+        />
+        {tab === "catalogo" && isCurrent ? (
+          <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
+            <PlusIcon aria-hidden />
+            Crear perk
+          </Button>
+        ) : null}
+      </div>
       {tab === "solicitudes" ? (
         <EmailApplicationsQueue />
       ) : perks === undefined ? (

@@ -131,8 +131,8 @@ function useKeptQuery<T>(value: T | undefined) {
 export function CrmFallback() {
   return (
     <Page
-      title="Personas"
-      className="flex h-[calc(100dvh-11rem)] flex-col gap-6 space-y-0 sm:h-[calc(100dvh-12rem)]"
+      compact
+      className="flex h-[calc(100dvh-8.5rem)] flex-col gap-3 space-y-0 sm:h-[calc(100dvh-9rem)]"
     >
       <CrmToolbarSkeleton />
       <ListTableSkeleton fill rows={8} />
@@ -303,32 +303,29 @@ export function AdminCrm() {
 
   return (
     <Page
-      title={
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="font-bungee text-2xl leading-tight sm:text-3xl">
-            Personas
-          </h1>
-          {tab === "personas" && isCurrent ? <AddPeopleDialog /> : null}
-        </div>
-      }
+      compact
       className={
         tab === "roles"
           ? undefined
-          : "flex h-[calc(100dvh-11rem)] flex-col gap-4 space-y-0 sm:h-[calc(100dvh-12rem)]"
+          : "flex h-[calc(100dvh-8.5rem)] flex-col gap-3 space-y-0 sm:h-[calc(100dvh-9rem)]"
       }
     >
-      <AdminTabs
-        defaultTab="personas"
-        tabs={[
-          { value: "personas", label: "Lista" },
-          { value: "roles", label: "Roles" },
-        ]}
-      />
+      <div className="flex min-w-0 shrink-0 items-center gap-2">
+        <AdminTabs
+          className="min-w-0 flex-1"
+          defaultTab="personas"
+          tabs={[
+            { value: "personas", label: "Lista" },
+            { value: "roles", label: "Roles" },
+          ]}
+        />
+        {tab === "personas" && isCurrent ? <AddPeopleDialog /> : null}
+      </div>
       {tab === "roles" ? (
         <RolesPanel />
       ) : (
         <>
-          <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <Input
               value={search}
               onChange={(event) => setSearchDraft(event.target.value)}

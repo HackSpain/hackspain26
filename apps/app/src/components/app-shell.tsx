@@ -236,7 +236,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={cn(
           bleed
             ? "w-full pt-6 sm:pt-8"
-            : cn(contentWidth(pathname), "min-w-0 py-6 sm:py-8")
+            : cn(
+                contentWidth(pathname),
+                "min-w-0",
+                pathname.startsWith("/admin") ? "py-3" : "py-6 sm:py-8"
+              )
         )}
       >
         <div className={cn(bleed && contentWidth(pathname))}>

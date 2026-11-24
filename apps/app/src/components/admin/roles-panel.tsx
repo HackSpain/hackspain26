@@ -71,10 +71,6 @@ function SectionPicker({
       <legend className="font-bungee text-xs uppercase">
         Secciones visibles
       </legend>
-      <p className="text-xs text-hs-brown">
-        El feed y el perfil se ven siempre. Las casillas son el permiso: este
-        tipo abre solo las secciones marcadas.
-      </p>
       <div className="grid gap-2 sm:grid-cols-2">
         {NAV_SECTION_KEYS.map((key) => {
           const checked = value.includes(key);
@@ -132,9 +128,6 @@ function NewTypeCard() {
         <CardTitle className="flex items-center gap-2">
           <Plus className="size-4" aria-hidden /> Nuevo tipo
         </CardTitle>
-        <CardDescription>
-          Hacker, mentor, jurado, sponsor… Cada tipo decide qué pestañas ve.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <form

@@ -6,7 +6,7 @@ import { AdminTeams } from "@/components/admin/teams-directory";
 
 export default function AdminTeamsPage() {
   return (
-    <Suspense fallback={<AdminTableSkeleton title="Equipos" />}>
+    <Suspense fallback={<AdminTableSkeleton />}>
       <AdminTeams />
     </Suspense>
   );

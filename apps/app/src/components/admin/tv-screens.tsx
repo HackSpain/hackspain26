@@ -216,18 +216,12 @@ export function AdminTvPage() {
     }
   }
   return (
-    <Page
-      title="Pantallas"
-      description="Asigna una vista a cada pantalla y contrólala desde aquí. Los cambios llegan en tiempo real."
-    >
-      <section className="space-y-4 border-2 border-hs-ink bg-hs-gold/15 p-5">
+    <Page compact>
+      <section className="space-y-3 border-2 border-hs-ink bg-hs-gold/15 p-4">
         <h2 className="font-bungee">Conectar una pantalla</h2>
-        <p className="max-w-3xl text-sm">
-          Abre <code>/tv?screen=entrada</code> en su navegador. Cambia «entrada»
-          por «auditorio», «hall» o un nombre único. Aparecerá aquí
-          automáticamente. También puedes prepararla antes de conectarla. Las
-          pantallas se registran solas hasta {SCREEN_LIMIT}; a partir de ahí,
-          borra las que sobren o prepara aquí las nuevas.
+        <p className="text-sm">
+          Abre <code>/tv?screen=entrada</code> en el navegador. Se registran
+          solas hasta {SCREEN_LIMIT}.
         </p>
         <form
           className="flex flex-wrap items-end gap-3"
@@ -273,11 +267,7 @@ export function AdminTvPage() {
           Todavía no hay pantallas. Abre su URL o prepara la primera arriba.
         </p>
       )}
-      <p className="text-sm text-hs-brown">
-        Una pantalla sin respuesta durante 45 segundos aparece desconectada. Las
-        órdenes se conservan hasta que vuelva a conectarse. Recargar no enciende
-        un ordenador apagado o suspendido.
-      </p>
+      <p className="text-sm text-hs-brown">Sin respuesta 45s = desconectada.</p>
     </Page>
   );
 }

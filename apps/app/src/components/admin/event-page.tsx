@@ -18,13 +18,7 @@ import {
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -67,7 +61,7 @@ export function AdminEvent() {
   const tab = useAdminTab("calendario");
   if (tab === "accesos") {
     return (
-      <Page title="Evento">
+      <Page compact>
         <EventTabs />
         <AdminEventControls />
       </Page>
@@ -75,7 +69,7 @@ export function AdminEvent() {
   }
   if (tab === "avisos") {
     return (
-      <Page title="Evento">
+      <Page compact>
         <EventTabs />
         <NotificationsPanel />
       </Page>
@@ -106,7 +100,7 @@ function AdminEventCalendar() {
   const [saved, setSaved] = useState(false);
   if (!current) {
     return (
-      <Page title="Evento">
+      <Page compact>
         <EventTabs />
         <LoadingText />
       </Page>
@@ -167,7 +161,6 @@ function CalendarForm({
   );
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const scheduled =
     current.eventStartsAt !== undefined && current.eventEndsAt !== undefined;
 
@@ -205,21 +198,14 @@ function CalendarForm({
   }
 
   return (
-    <Page
-      title="Evento"
-      description="Horas en Europe/Madrid al guardar. Vacío = sin programar. Las inscripciones vacías quedan cerradas; el fin de semana vacío queda abierto."
-    >
+    <Page compact className="space-y-3">
       <EventTabs />
-      <Card>
+      <Card className="gap-3 py-3">
         <CardHeader>
           <CardTitle>Inscripciones</CardTitle>
-          <CardDescription>
-            Antes de abrir o después de cerrar, la landing responde 410. Tras la
-            hora de lista de espera las solicitudes entran como waitlist.
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Abre" htmlFor="apps-open">
               <Input
                 id="apps-open"
@@ -272,7 +258,7 @@ function CalendarForm({
           </div>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="gap-3 py-3">
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2">
             Fin de semana
@@ -282,21 +268,18 @@ function CalendarForm({
             >
               {PHASE_LABEL[current.eventPhase]}
             </Badge>
-          </CardTitle>
-          <CardDescription>
             {scheduled &&
             current.eventStartsAt !== undefined &&
-            current.eventEndsAt !== undefined
-              ? `Del ${formatEventDate(current.eventStartsAt)} al ${formatEventDate(current.eventEndsAt)} (hora de Madrid).`
-              : "Sin ventana: el dashboard y la CLI siguen abiertos."}
-          </CardDescription>
+            current.eventEndsAt !== undefined ? (
+              <span className="font-sans text-xs font-medium normal-case text-hs-brown">
+                {formatEventDate(current.eventStartsAt)} –{" "}
+                {formatEventDate(current.eventEndsAt)}
+              </span>
+            ) : null}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Empieza"
-            htmlFor="event-starts"
-            hint={`Hora local de tu navegador (${timeZone}).`}
-          >
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          <Field label="Empieza" htmlFor="event-starts">
             <Input
               id="event-starts"
               type="datetime-local"
@@ -316,15 +299,11 @@ function CalendarForm({
           </Field>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="gap-3 py-3">
         <CardHeader>
           <CardTitle>Check-in y envíos</CardTitle>
-          <CardDescription>
-            Check-in vacío = se puede escanear. Envíos en automático usan las
-            fechas; vacío cierra.
-          </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="grid gap-3 sm:grid-cols-2">
           <Field label="Check-in abre" htmlFor="checkin-opens">
             <Input
               id="checkin-opens"

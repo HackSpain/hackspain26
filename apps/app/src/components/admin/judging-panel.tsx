@@ -33,13 +33,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -98,7 +92,7 @@ export function AdminJudging() {
   const triggerRef = useRef<HTMLElement | null>(null);
 
   if (tab !== "final" && !overview) {
-    return <AdminTableSkeleton title="Jurado" />;
+    return <AdminTableSkeleton />;
   }
 
   const openProject = (id: Id<"submissions">, from: HTMLElement | null) => {
@@ -128,14 +122,7 @@ export function AdminJudging() {
     overview?.projects.find((project) => project._id === projectId) ?? null;
 
   return (
-    <Page
-      title="Jurado"
-      description={
-        tab === "final"
-          ? undefined
-          : "Reparto de proyectos, seguimiento de evaluaciones y clasificación calibrada."
-      }
-    >
+    <Page compact className="space-y-3">
       <AdminTabs
         defaultTab="evaluacion"
         tabs={[
@@ -200,10 +187,6 @@ function SetupCard({ overview }: { overview: Overview }) {
   );
   const { pool, round } = overview;
   const ready = pool.feasible;
-  const loadLabel =
-    pool.loadMin === pool.loadMax
-      ? String(pool.loadMin)
-      : `${pool.loadMin}–${pool.loadMax}`;
   const previewUnresolved =
     preview && preview.ok === false ? preview.unresolved : null;
   const shownUnresolved = previewUnresolved ?? unresolved;
@@ -247,17 +230,8 @@ function SetupCard({ overview }: { overview: Overview }) {
           <CountBadge label="Jueces" value={pool.judgeCount} />
           <CountBadge label="Proyectos" value={pool.projectCount} />
         </CardTitle>
-        <CardDescription>
-          Juzgado general: los jueces y proyectos enviados ahora mismo. Cada
-          proyecto recibe dos jueces distintos
-          {ready
-            ? `, cada juez ${loadLabel} y ${pool.projectCount * 2} evaluaciones en total.`
-            : "."}{" "}
-          Prueba el reparto sin guardarlo. Volver a repartir borra las notas y
-          asigna a todos los jueces actuales.
-        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {round ? (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium">
             <span>
@@ -276,11 +250,7 @@ function SetupCard({ overview }: { overview: Overview }) {
         ) : null}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1 sm:max-w-xs">
-            <Field
-              label="Semilla (opcional)"
-              htmlFor="judging-seed"
-              hint="Con la misma semilla sale el mismo reparto."
-            >
+            <Field label="Semilla (opcional)" htmlFor="judging-seed">
               <Input
                 id="judging-seed"
                 value={seed}
@@ -488,13 +458,6 @@ function ConflictsSection({ overview }: { overview: Overview }) {
     <div className="space-y-3 border-t-[3px] border-hs-ink pt-4">
       <div>
         <p className="font-bungee text-xs uppercase">Conflictos de interés</p>
-        <p className="text-sm font-medium text-pretty text-hs-brown">
-          Un juez no evalúa los proyectos con los que tenga conflicto. Se
-          resuelven con intercambios al generar el reparto.
-          {overview.round
-            ? " El reparto ya está hecho. Los conflictos nuevos solo se aplican si vuelves a repartir."
-            : ""}
-        </p>
       </div>
       {overview.conflicts.length > 0 ? (
         <ul className="flex flex-wrap gap-2">
@@ -632,22 +595,10 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
     <Card>
       <CardHeader>
         <CardTitle>Calibración</CardTitle>
-        <CardDescription>
-          La generosidad de cada juez se estima a partir de la diferencia entre
-          las dos notas de cada proyecto. Lambda regulariza esa estimación. El
-          valor 2 es prudente, no óptimo. Puedes cambiarlo en cualquier momento:
-          generosidad, notas calibradas y puestos se recalculan al guardar. El
-          umbral marca los proyectos cuyas dos notas brutas se separan
-          demasiado.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2 sm:max-w-lg">
-          <Field
-            label="Lambda"
-            htmlFor="judging-lambda"
-            hint="Mayor que cero. Se aplica a las evaluaciones ya enviadas."
-          >
+          <Field label="Lambda" htmlFor="judging-lambda">
             <Input
               id="judging-lambda"
               type="number"
@@ -662,11 +613,7 @@ function SettingsCard({ settings }: { settings: Overview["settings"] }) {
               }}
             />
           </Field>
-          <Field
-            label="Umbral de revisión"
-            htmlFor="judging-threshold"
-            hint="Diferencia mínima entre notas brutas."
-          >
+          <Field label="Umbral de revisión" htmlFor="judging-threshold">
             <Input
               id="judging-threshold"
               type="number"
@@ -803,11 +750,6 @@ function JudgesCard({ judges }: { judges: JudgeRow[] }) {
             }
           />
         </CardTitle>
-        <CardDescription>
-          Una generosidad positiva significa que el juez tiende a puntuar alto,
-          y negativa que tiende a puntuar bajo. Se recalcula con cada evaluación
-          enviada. Los borradores no cuentan.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table className="border-separate border-spacing-0 font-medium">
@@ -926,12 +868,6 @@ function ProjectsCard({
             />
           </span>
         </CardTitle>
-        <CardDescription>
-          Orden por media calibrada (nota bruta menos generosidad del juez). Los
-          empates exactos comparten puesto. Se marca para revisar cuando las dos
-          notas brutas difieren al menos{" "}
-          {overview.settings.disagreementThreshold.toFixed(2)} puntos.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         {overview.projects.length === 0 ? (

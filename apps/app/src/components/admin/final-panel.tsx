@@ -15,13 +15,7 @@ import {
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -751,9 +745,6 @@ export function FinalPanel() {
       <Card>
         <CardHeader>
           <CardTitle>Añadir un equipo</CardTitle>
-          <CardDescription>
-            Entran todos los miembros. Quien ya está dentro se ignora.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Select value={teamId || undefined} onValueChange={setTeamId}>

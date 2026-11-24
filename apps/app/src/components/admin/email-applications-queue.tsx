@@ -12,13 +12,7 @@ import {
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -135,10 +129,6 @@ export function EmailApplicationsQueue() {
       <CardHeader className="min-w-0 gap-3">
         <div className="min-w-0 space-y-1">
           <CardTitle>Solicitudes por email</CardTitle>
-          <CardDescription>
-            El hacker pide acceso; al marcarlo como añadido puedes pegar el
-            código que le toca.
-          </CardDescription>
         </div>
         <Select
           value={status}

@@ -76,13 +76,10 @@ export function AdminEventControls() {
   const steps = [
     {
       title: "Enviar códigos de acceso",
-      description: "Cada participante recibe su código personal por email.",
       icon: Mail,
     },
     {
       title: "Registrar llegadas",
-      description:
-        "Los admins pueden activar los códigos en cualquier momento.",
       icon: Radio,
     },
   ];
@@ -258,9 +255,6 @@ export function AdminEventControls() {
                   <CardTitle className="text-base text-balance">
                     {step.title}
                   </CardTitle>
-                  <CardDescription className="text-pretty">
-                    {step.description}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="mt-auto space-y-3">
                   {content}
@@ -277,10 +271,6 @@ export function AdminEventControls() {
             <KeyRound className="size-6" strokeWidth={2} aria-hidden />
           </div>
           <CardTitle>Activar código</CardTitle>
-          <CardDescription className="text-pretty">
-            Introduce el código de cuatro caracteres que recibió el
-            participante.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <form
