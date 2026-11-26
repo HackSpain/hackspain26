@@ -7,6 +7,8 @@ import base from "../../oxlint.config.mjs";
 export default defineConfig({
   extends: [base, react, next],
   ignorePatterns: base.ignorePatterns,
+  // Plugin only: no shadcn/* rules until the dashboard design-system policy is chosen.
+  jsPlugins: [...base.jsPlugins, "@shadcn/lint"],
   overrides: [
     {
       files: ["src/components/participant-directory/network-canvas.tsx"],
