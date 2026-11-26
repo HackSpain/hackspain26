@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { action, internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { isAdmin, requireOnboarded } from "./lib/auth";
+import { currentEditionId, resolveEditionId } from "./lib/editions";
 import {
   adminQuery,
   anytimeOnboardedQuery,
@@ -27,13 +28,13 @@ import {
 } from "./lib/team";
 import { buildUrls, urlOf, urlsValidator } from "./lib/urls";
 import { submissionStatusValidator } from "./lib/validators";
-import { scheduleStackScan } from "./stack";
+import { scheduleStackScan } from "./lib/stack";
 import {
   isTrackCombinationAllowed,
   MAX_TEAMS_PER_TRACK,
   submissionsAreOpen,
   trackEntryCounts,
-} from "./tracks";
+} from "./lib/tracks";
 
 const challengeSummary = v.object({
   _id: v.id("tracks"),
@@ -257,7 +258,8 @@ const projectArgs = {
 export const saveDraft = onboardedMutation({
   args: projectArgs,
   handler: async (ctx, args) => {
-    const existing = await findOwnedSubmission(ctx, ctx.user._id);
+    const editionId = await currentEditionId(ctx);
+    const existing = await findOwnedSubmission(ctx, ctx.user._id, editionId);
     if (existing && existing.status === "submitted") {
       throw new Error("Este proyecto ya está enviado");
     }
@@ -292,6 +294,7 @@ export const saveDraft = onboardedMutation({
       : await ctx.db.insert("submissions", {
           ...fields,
           createdAt: now,
+          editionId,
         });
     const repoUrl = args.repoUrl ?? urlOf(fields.urls, "repo");
     if (repoUrl) {
@@ -323,6 +326,7 @@ export const commitTrack = internalMutation({
   args: commitArgs,
   handler: async (ctx, args) => {
     const user = await requireOnboarded(ctx);
+    const editionId = await currentEditionId(ctx);
     let existing;
     let teamId: Id<"teams"> | undefined;
     let submittedBy: Id<"users">;
@@ -342,8 +346,8 @@ export const commitTrack = internalMutation({
       if (!(await submissionsAreOpen(ctx))) {
         throw new Error("El envío de proyectos aún no está abierto");
       }
-      existing = await findOwnedSubmission(ctx, user._id);
-      const membership = await membershipForUser(ctx, user._id);
+      existing = await findOwnedSubmission(ctx, user._id, editionId);
+      const membership = await membershipForUser(ctx, user._id, editionId);
       teamId = membership?.teamId ?? existing?.teamId;
       submittedBy = existing?.submittedBy ?? user._id;
     }
@@ -400,6 +404,7 @@ export const commitTrack = internalMutation({
       : await ctx.db.insert("submissions", {
           ...fields,
           createdAt: now,
+          editionId,
         });
     await scheduleStackScan(ctx, {
       force: true,
@@ -594,9 +599,13 @@ export const listPublic = onboardedQuery({
 });
 
 export const adminList = adminQuery({
-  args: {},
-  handler: async (ctx) => {
-    const submissions = await ctx.db.query("submissions").collect();
+  args: { editionId: v.optional(v.id("editions")) },
+  handler: async (ctx, args) => {
+    const editionId = await resolveEditionId(ctx, args.editionId);
+    const submissions = await ctx.db
+      .query("submissions")
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+      .collect();
     const rows = await Promise.all(
       submissions.map((row) => hydrateSubmission(ctx, row))
     );

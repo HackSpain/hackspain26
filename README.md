@@ -50,20 +50,19 @@ HackSpain is an in-person hackathon where young builders spend a weekend creatin
 | **Organizer** | Asociación Exponential Fellowship. |
 | **Language** | The event and the websites are in Spanish. The code and this documentation are in English. |
 
-The event is over. This repository contains the public site, participant dashboard and terminal client that ran the 2026 edition, published for other hackathons to reuse.
+The public site, participant dashboard and CLI run multiple editions in one Convex deployment. 2026 rows stay; 2027 is the current edition once an admin flips it. Landing apply writes to Convex. The Neon project is left in place but the apps no longer write to it.
 
 ## In this repository
 
-- [`apps/web`](apps/web): Astro public site and signup, backed by Neon and Drizzle.
+- [`apps/web`](apps/web): Astro public site and apply form.
 - [`apps/app`](apps/app): Next.js participant dashboard, admin and venue screens, backed by Convex.
 - [`apps/cli`](apps/cli): Bun terminal client for participants.
 
-Public signup writes to Neon. Dashboard data lives in Convex. The CLI reaches Convex through authenticated dashboard `/api/cli/*` routes.
+Dashboard data and applications live in Convex. The CLI reaches Convex through authenticated dashboard `/api/cli/*` routes.
 
 ```mermaid
 flowchart LR
-  Landing["Public site<br/>Astro"] -->|signup| Neon[(Neon)]
-  Neon -.->|signup import| Convex[(Convex)]
+  Landing["Public site<br/>Astro"] -->|apply| Convex[(Convex)]
   Dashboard["Dashboard<br/>Next.js"] <--> Convex
   CLI["CLI<br/>Bun"] -->|"authenticated /api/cli/*"| Dashboard
   TV["Venue screens<br/>/tv"] --> Dashboard
@@ -104,6 +103,7 @@ header is unavailable; do not reuse `MIGRATION_SECRET`.
 ## Project docs
 
 - [AGENTS.md](AGENTS.md): project constraints and deployment traps.
+- [docs/runbook-new-edition.md](docs/runbook-new-edition.md): start the next edition.
 - [apps/cli/docs/telemetry-schema.md](apps/cli/docs/telemetry-schema.md): CLI telemetry contract.
 - [apps/web/src/data/design.md](apps/web/src/data/design.md): design guide; read before changing UI.
 

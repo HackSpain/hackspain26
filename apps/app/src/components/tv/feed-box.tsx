@@ -92,14 +92,10 @@ function FeedHeader({
   aside?: string;
 }) {
   return (
-    <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-hs-ink/15 pb-[0.5cqw]">
-      <p className="font-bungee text-[clamp(0.6rem,1.05cqw,1.4rem)] leading-none">
-        {title}
-      </p>
+    <header className="flex shrink-0 items-baseline justify-between gap-3 border-b border-hs-ink/15 pb-cq-5">
+      <p className="font-bungee text-cq-xl leading-none">{title}</p>
       {aside ? (
-        <p className="text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown tabular-nums">
-          {aside}
-        </p>
+        <p className="text-cq-md text-hs-brown tabular-nums">{aside}</p>
       ) : null}
     </header>
   );
@@ -107,9 +103,9 @@ function FeedHeader({
 
 function CommitCard({ post, now }: { post: FeedPost; now: number }) {
   return (
-    <article className="relative border-l-[3px] border-hs-navy bg-hs-sand/40 px-[0.7cqw] py-[0.45cqw] text-hs-ink">
+    <article className="relative border-l-3 border-hs-navy bg-hs-sand/40 px-cq-7 py-cq-45 text-hs-ink">
       <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
-      <p className="flex items-baseline justify-between gap-[0.5cqw] text-[clamp(0.5rem,0.7cqw,0.95rem)] text-hs-brown">
+      <p className="flex items-baseline justify-between gap-cq-5 text-cq-sm-plus text-hs-brown">
         <span className="truncate">
           <span className="font-bold uppercase text-hs-navy">Commit</span>
           {" · "}
@@ -117,13 +113,13 @@ function CommitCard({ post, now }: { post: FeedPost; now: number }) {
         </span>
         <span className="shrink-0">{timeAgo(post.createdAt, now)}</span>
       </p>
-      <p className="mt-[0.15cqw] truncate text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold">
+      <p className="mt-[0.15cqw] truncate text-cq-lg font-semibold">
         {post.text}
       </p>
       {post.sha ? (
         <p
           data-sha={post.sha}
-          className="font-mono text-[clamp(0.5rem,0.65cqw,0.9rem)] tabular-nums text-hs-navy"
+          className="font-mono text-cq-sm tabular-nums text-hs-navy"
         >
           {post.sha}
         </p>
@@ -137,22 +133,20 @@ function FeedCard({ post, now }: { post: FeedPost; now: number }) {
     return <CommitCard post={post} now={now} />;
   }
   return (
-    <article className="relative border-l-[3px] border-hs-ink/15 bg-hs-sand/40 px-[0.7cqw] py-[0.5cqw] text-hs-ink">
+    <article className="relative border-l-3 border-hs-ink/15 bg-hs-sand/40 px-cq-7 py-cq-5 text-hs-ink">
       <span data-flash aria-hidden className={FLASH_LAYER_CLASS} />
-      <p className="font-bungee text-[clamp(0.5rem,0.7cqw,0.95rem)] uppercase">
-        {post.authorName}
-      </p>
-      <p className="text-[clamp(0.5rem,0.7cqw,0.95rem)] text-hs-brown">
+      <p className="font-bungee text-cq-sm-plus uppercase">{post.authorName}</p>
+      <p className="text-cq-sm-plus text-hs-brown">
         {post.teamName ? `${post.teamName} · ` : ""}
         {timeAgo(post.createdAt, now)}
       </p>
       {post.text ? (
-        <p className="mt-[0.25cqw] line-clamp-4 text-pretty break-words text-[clamp(0.6rem,0.85cqw,1.15rem)] leading-snug text-hs-ink">
+        <p className="mt-[0.25cqw] line-clamp-4 text-pretty break-words text-cq-lg leading-snug text-hs-ink">
           {post.text}
         </p>
       ) : null}
       {post.hasImage ? (
-        <span className="mt-[0.35cqw] inline-flex items-center gap-1 text-[clamp(0.5rem,0.65cqw,0.9rem)] text-hs-brown">
+        <span className="mt-[0.35cqw] inline-flex items-center gap-1 text-cq-sm text-hs-brown">
           <ImageIcon className="size-[0.8cqw]" aria-hidden />
           Foto
         </span>
@@ -200,14 +194,14 @@ function FeedStream({
         : `${posts.length} publicaciones`;
 
   return (
-    <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
+    <div className="flex h-full flex-col bg-hs-paper p-cq text-hs-ink">
       <FeedHeader
         title={source === "all" ? "Feed · Commits" : "Feed"}
         aside={aside}
       />
       <ol
         ref={listRef}
-        className="mt-[0.6cqw] min-h-0 flex-1 space-y-[0.4cqw] overflow-hidden"
+        className="mt-[0.6cqw] min-h-0 flex-1 space-y-cq-4 overflow-hidden"
       >
         {shown.map((post) => (
           <li key={post._id}>
@@ -357,7 +351,7 @@ function FeedSpotlight({
   const position = posts.findIndex((post) => post._id === shown._id);
 
   return (
-    <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
+    <div className="flex h-full flex-col bg-hs-paper p-cq text-hs-ink">
       <FeedHeader aside={`${Math.max(position, 0) + 1} / ${posts.length}`} />
       <div className="mt-[0.5cqw] h-[0.3cqw] shrink-0 bg-hs-ink/10">
         <div
@@ -372,26 +366,26 @@ function FeedSpotlight({
       >
         <p
           data-author
-          className="font-bungee text-[clamp(0.8rem,1.5cqw,2rem)] leading-none uppercase"
+          className="font-bungee text-cq-4xl leading-none uppercase"
         >
           {shown.authorName}
         </p>
-        <p className="mt-[0.3cqw] text-[clamp(0.55rem,0.8cqw,1.1rem)] text-hs-brown">
+        <p className="mt-[0.3cqw] text-cq-md-plus text-hs-brown">
           {shown.teamName ? `${shown.teamName} · ` : ""}
           {timeAgo(shown.createdAt, now)}
         </p>
-        <div className="mt-[0.8cqw] min-h-0 flex-1 overflow-hidden border-l-[0.35cqw] border-hs-gold pl-[0.9cqw]">
+        <div className="mt-[0.8cqw] min-h-0 flex-1 overflow-hidden border-l-(length:--border-width-cq-35) border-hs-gold pl-cq-9">
           {shown.text ? (
             <p
               data-body
-              className="text-pretty break-words text-[clamp(0.9rem,2cqw,1.7rem)] leading-snug"
+              className="text-pretty break-words text-cq-5xl leading-snug"
             >
               {shown.text}
             </p>
           ) : null}
         </div>
         {shown.hasImage ? (
-          <span className="mt-[0.5cqw] inline-flex shrink-0 items-center gap-1 text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
+          <span className="mt-[0.5cqw] inline-flex shrink-0 items-center gap-1 text-cq-md text-hs-brown">
             <ImageIcon className="size-[0.9cqw]" aria-hidden />
             Foto adjunta
           </span>

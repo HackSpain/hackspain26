@@ -2,6 +2,13 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { requireEventOpen } from "./eventWindow";
+import { currentEditionId } from "./editions";
+import {
+  getCurrentParticipation,
+  participationByEditionEmail,
+  participationIsAccepted,
+  participationIsRegistered,
+} from "./participations";
 import {
   canJudge,
   canBrowseSponsorCatalog,
@@ -11,19 +18,24 @@ import type { Role } from "./validators";
 
 type Ctx = QueryCtx | MutationCtx;
 
-export function isAdmin(user: Pick<Doc<"users">, "role">): boolean {
-  return user.role === "admin";
+export function isAdmin(user: Pick<Doc<"users">, "admin" | "role">): boolean {
+  return user.admin === true || user.role === "admin";
 }
 
 export function resolvedLoginRole(
   existing: Role | undefined,
   allowlisted: boolean
 ): Role {
-  if (allowlisted || existing === "admin") {
+  if (existing === "admin") {
     return "admin";
   }
-  // "judge" is a legacy value; userTypes.ensureDefaults moves it to a type.
-  return existing ?? "user";
+  if (existing === "judge") {
+    return "user";
+  }
+  if (existing) {
+    return existing;
+  }
+  return allowlisted ? "admin" : "user";
 }
 
 export async function getCurrentUser(ctx: Ctx): Promise<Doc<"users">> {
@@ -54,20 +66,16 @@ export async function requireJudge(ctx: Ctx): Promise<Doc<"users">> {
   return user;
 }
 
-export function signupIsAccepted(signup: Doc<"signups"> | null): boolean {
-  return signup?.accepted === true;
-}
-
 export async function requireAccepted(ctx: Ctx): Promise<Doc<"users">> {
   const user = await getCurrentUser(ctx);
-  if (user.role === "admin") {
+  if (isAdmin(user)) {
     return user;
   }
-  const signup = await getSignupForUser(ctx, user);
-  if (!signup) {
+  const participation = await getCurrentParticipation(ctx, user);
+  if (!participation || !participationIsRegistered(participation.status)) {
     throw new Error("No hay inscripción a la hackathon con este email");
   }
-  if (!signupIsAccepted(signup)) {
+  if (!participationIsAccepted(participation.status)) {
     throw new Error("Aún no te han aceptado");
   }
   return user;
@@ -75,7 +83,11 @@ export async function requireAccepted(ctx: Ctx): Promise<Doc<"users">> {
 
 export async function requireOnboarded(ctx: Ctx): Promise<Doc<"users">> {
   const user = await requireAccepted(ctx);
-  if (user.role !== "admin" && !user.onboardingComplete) {
+  if (isAdmin(user)) {
+    return user;
+  }
+  const participation = await getCurrentParticipation(ctx, user);
+  if (!participation?.onboardingComplete) {
     throw new Error("Confirma tus datos primero");
   }
   return user;
@@ -118,39 +130,25 @@ export async function isOnboarded(
   ctx: Ctx,
   user: Doc<"users">
 ): Promise<boolean> {
-  if (user.role === "admin") {
+  if (isAdmin(user)) {
     return true;
   }
-  if (!user.onboardingComplete) {
+  const participation = await getCurrentParticipation(ctx, user);
+  if (!participation?.onboardingComplete) {
     return false;
   }
-  return signupIsAccepted(await getSignupForUser(ctx, user));
-}
-
-export async function getSignupForUser(
-  ctx: Ctx,
-  user: Doc<"users">
-): Promise<Doc<"signups"> | null> {
-  if (user.signupId) {
-    const byId = await ctx.db.get(user.signupId);
-    if (byId) {
-      return byId;
-    }
-  }
-  if (!user.email) {
-    return null;
-  }
-  return await findSignupByEmail(ctx, user.email);
+  return participationIsAccepted(participation.status);
 }
 
 export async function findSignupByEmail(
   ctx: Ctx,
   email: string
-): Promise<Doc<"signups"> | null> {
-  return await ctx.db
-    .query("signups")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .unique();
+): Promise<Doc<"participations"> | null> {
+  return await participationByEditionEmail(
+    ctx,
+    await currentEditionId(ctx),
+    email
+  );
 }
 
 export async function findUserByEmail(

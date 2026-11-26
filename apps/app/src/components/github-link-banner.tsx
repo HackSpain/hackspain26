@@ -103,7 +103,7 @@ export function GithubLinkBanner() {
   const { link, pending, error } = useGithubLink();
 
   return (
-    <div className="border-b-[3px] border-hs-ink bg-hs-gold text-hs-ink">
+    <div className="border-b-3 border-hs-ink bg-hs-gold text-hs-ink">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <Github className="mt-0.5 size-5 shrink-0" aria-hidden />
@@ -119,8 +119,8 @@ export function GithubLinkBanner() {
         </div>
         <Button
           type="button"
-          variant="outline"
-          className="w-full bg-hs-paper sm:w-auto"
+          variant="paper"
+          className="w-full sm:w-auto"
           disabled={pending}
           onClick={() => void link()}
         >

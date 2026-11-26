@@ -6,10 +6,11 @@ import { directoryValidator } from "./lib/directory";
 import { mentionValidator } from "./lib/feedSocial";
 import { sectionsValidator } from "./lib/userTypes";
 import { screenPresetValidator } from "./lib/tvScreens";
-import { tvWidgetFields, tvWidgetValidator } from "./lib/tvValidators";
 import {
+  attendanceValidator,
   claimTypeValidator,
   milestoneKindValidator,
+  participationStatusValidator,
   perkAnswerValidator,
   perkInputValidator,
   perkTypeValidator,
@@ -18,6 +19,10 @@ import {
 } from "./lib/validators";
 import { githubProfileFields } from "./lib/githubProfile";
 import { linkedinProfileFields } from "./lib/linkedinProfile";
+import {
+  applicationsModeValidator,
+  submissionsModeValidator,
+} from "./lib/schedule";
 
 export default defineSchema({
   tvPlaybackControl: defineTable({
@@ -45,6 +50,68 @@ export default defineSchema({
     .index("by_screen", ["screenId"])
     .index("by_screen_last_seen", ["screenId", "lastSeenAt"]),
   ...authTables,
+  editions: defineTable({
+    slug: v.string(),
+    label: v.string(),
+    current: v.boolean(),
+    submissionsOpen: v.boolean(),
+    eventStartsAt: v.optional(v.number()),
+    eventEndsAt: v.optional(v.number()),
+    applicationsOpensAt: v.optional(v.number()),
+    applicationsWaitlistFrom: v.optional(v.number()),
+    applicationsClosesAt: v.optional(v.number()),
+    checkInOpensAt: v.optional(v.number()),
+    submitOpensAt: v.optional(v.number()),
+    submitClosesAt: v.optional(v.number()),
+    applicationsMode: v.optional(applicationsModeValidator),
+    submissionsMode: v.optional(submissionsModeValidator),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_current", ["current"]),
+
+  /**
+   * One row per email per edition. `roleId` is required from insert.
+   * Status: interested → applied → waitlist | accepted | rejected →
+   * confirmed | cancelled.
+   */
+  participations: defineTable({
+    editionId: v.id("editions"),
+    email: v.string(),
+    userId: v.optional(v.id("users")),
+    roleId: v.id("userTypes"),
+    status: participationStatusValidator,
+    attendanceStatus: v.optional(attendanceValidator),
+    dietaryRestrictions: v.optional(v.string()),
+    dietaryDetails: v.optional(v.string()),
+    travelOrigin: v.optional(v.string()),
+    onboardingComplete: v.boolean(),
+    termsAcceptedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    neonId: v.optional(v.string()),
+    fullName: v.optional(v.string()),
+    urls: v.optional(v.array(urlEntryValidator)),
+    githubUsername: v.optional(v.string()),
+    twitterHandle: v.optional(v.string()),
+    achievements: v.optional(v.string()),
+    freeTime: v.optional(v.string()),
+    wantsAmbassador: v.optional(v.boolean()),
+    ambassadorMotivation: v.optional(v.string()),
+    ambassadorStudyWhere: v.optional(v.string()),
+    managementToken: v.optional(v.string()),
+    cancellationEmailSentAt: v.optional(v.number()),
+    badgePhoto: v.optional(v.string()),
+    badgePhotoUpdatedAt: v.optional(v.number()),
+    cancelledAt: v.optional(v.number()),
+  })
+    .index("by_edition", ["editionId"])
+    .index("by_edition_email", ["editionId", "email"])
+    .index("by_edition_user", ["editionId", "userId"])
+    .index("by_edition_status", ["editionId", "status"])
+    .index("by_user", ["userId"])
+    .index("by_email", ["email"])
+    .index("by_role", ["roleId"])
+    .index("by_management_token", ["managementToken"]),
+
   ambassadorApplications: defineTable({
     email: v.string(),
     fullName: v.string(),
@@ -64,8 +131,8 @@ export default defineSchema({
   }).index("by_email", ["email"]),
 
   eventPasses: defineTable({
+    editionId: v.id("editions"),
     userId: v.optional(v.id("users")),
-    signupId: v.optional(v.id("signups")),
     code: v.string(),
     status: v.union(v.literal("active"), v.literal("revoked")),
     codeSentAt: v.optional(v.number()),
@@ -73,20 +140,9 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_user", ["userId"])
-    .index("by_signup", ["signupId"])
     .index("by_code", ["code"]),
-
-  eventSettings: defineTable({
-    key: v.string(),
-    phase: v.union(
-      v.literal("pre_event"),
-      v.literal("live"),
-      v.literal("ended")
-    ),
-    updatedAt: v.number(),
-    updatedBy: v.id("users"),
-  }).index("by_key", ["key"]),
 
   githubLinkStates: defineTable({
     userId: v.id("users"),
@@ -99,6 +155,7 @@ export default defineSchema({
     .index("by_user", ["userId"]),
 
   milestones: defineTable({
+    editionId: v.id("editions"),
     teamId: v.id("teams"),
     userId: v.id("users"),
     kind: milestoneKindValidator,
@@ -106,10 +163,12 @@ export default defineSchema({
     at: v.number(),
     createdAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_team", ["teamId"])
     .index("by_at", ["at"]),
 
   notifications: defineTable({
+    editionId: v.id("editions"),
     subject: v.string(),
     body: v.string(),
     audience: v.union(
@@ -129,9 +188,12 @@ export default defineSchema({
     recipientCount: v.number(),
     sentCount: v.number(),
     failures: v.array(v.object({ email: v.string(), error: v.string() })),
-  }).index("by_sent_at", ["sentAt"]),
+  })
+    .index("by_edition", ["editionId"])
+    .index("by_sent_at", ["sentAt"]),
 
   perkClaims: defineTable({
+    editionId: v.id("editions"),
     perkId: v.id("perks"),
     userId: v.id("users"),
     type: claimTypeValidator,
@@ -146,6 +208,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_perk", ["perkId"])
     .index("by_user", ["userId"])
     .index("by_perk_and_user", ["perkId", "userId"])
@@ -163,6 +226,7 @@ export default defineSchema({
     .index("by_user", ["assignedTo"]),
 
   perks: defineTable({
+    editionId: v.id("editions"),
     company: v.string(),
     title: v.string(),
     value: v.string(),
@@ -177,10 +241,12 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_active", ["active"])
     .index("by_company", ["company"]),
 
   posts: defineTable({
+    editionId: v.id("editions"),
     kind: v.union(v.literal("post"), v.literal("github")),
     authorId: v.optional(v.id("users")),
     teamId: v.optional(v.id("teams")),
@@ -204,6 +270,7 @@ export default defineSchema({
     mentions: v.optional(v.array(mentionValidator)),
     createdAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_created", ["createdAt"])
     .index("by_kind_created", ["kind", "createdAt"])
     .index("by_meme_created", ["meme", "createdAt"])
@@ -233,37 +300,8 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_post", ["postId", "createdAt"]),
 
-  settings: defineTable({
-    key: v.string(),
-    submissionsOpen: v.boolean(),
-    /** Hackathon window (epoch ms). Both unset means no restriction. */
-    eventStartsAt: v.optional(v.number()),
-    eventEndsAt: v.optional(v.number()),
-  }).index("by_key", ["key"]),
-
-  signups: defineTable({
-    email: v.string(),
-    fullName: v.string(),
-    urls: v.array(urlEntryValidator),
-    githubUsername: v.optional(v.string()),
-    twitterHandle: v.optional(v.string()),
-    achievements: v.optional(v.string()),
-    freeTime: v.optional(v.string()),
-    wantsAmbassador: v.boolean(),
-    ambassadorMotivation: v.optional(v.string()),
-    ambassadorStudyWhere: v.optional(v.string()),
-    accepted: v.optional(v.boolean()),
-    dietaryRestrictions: v.optional(v.string()),
-    dietaryDetails: v.optional(v.string()),
-    createdAt: v.number(),
-    neonId: v.optional(v.string()),
-  })
-    .index("by_email", ["email"])
-    .index("by_github", ["githubUsername"])
-    .index("by_twitter", ["twitterHandle"])
-    .index("by_accepted", ["accepted"]),
-
   submissions: defineTable({
+    editionId: v.id("editions"),
     teamId: v.optional(v.id("teams")),
     submittedBy: v.id("users"),
     name: v.string(),
@@ -289,15 +327,16 @@ export default defineSchema({
     techStackAt: v.optional(v.number()),
     techStackSource: v.optional(v.literal("repo")),
   })
+    .index("by_edition", ["editionId"])
     .index("by_team", ["teamId"])
     .index("by_user", ["submittedBy"])
     .index("by_status", ["status"])
     .index("by_status_and_general_group", ["status", "generalGroup"]),
 
   teamMembers: defineTable({
+    editionId: v.id("editions"),
     teamId: v.id("teams"),
     userId: v.optional(v.id("users")),
-    signupId: v.optional(v.id("signups")),
     identifierType: v.union(
       v.literal("email"),
       v.literal("github"),
@@ -308,12 +347,13 @@ export default defineSchema({
     addedBy: v.id("users"),
     createdAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_team", ["teamId"])
     .index("by_user", ["userId"])
-    .index("by_signup", ["signupId"])
     .index("by_identifier", ["identifierType", "identifier"]),
 
   teams: defineTable({
+    editionId: v.id("editions"),
     name: v.string(),
     ownerId: v.id("users"),
     joinCode: v.optional(v.string()),
@@ -333,11 +373,14 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
+    .index("by_edition_join_code", ["editionId", "joinCode"])
     .index("by_owner", ["ownerId"])
     .index("by_join_code", ["joinCode"])
     .index("by_logo", ["logoId"]),
 
   tracks: defineTable({
+    editionId: v.id("editions"),
     slug: v.string(),
     label: v.string(),
     body: v.string(),
@@ -351,16 +394,25 @@ export default defineSchema({
     sortOrder: v.number(),
     active: v.boolean(),
   })
+    .index("by_edition", ["editionId"])
+    .index("by_edition_slug", ["editionId", "slug"])
     .index("by_slug", ["slug"])
     .index("by_active_and_sort", ["active", "sortOrder"]),
 
-  /** Admin-defined participant categories; `sections` drives the tabs. See convex/lib/userTypes.ts. */
+  /** Roles catalog; `sections` and flags are the grant. See convex/lib/userTypes.ts. */
   userTypes: defineTable({
     slug: v.string(),
     label: v.string(),
     description: v.optional(v.string()),
     sections: sectionsValidator,
     isDefault: v.boolean(),
+    /**
+     * After accept, the hacker confirm/onboarding step is required.
+     * Off: accepted is enough to use the flagged sections.
+     */
+    requiresConfirmed: v.optional(v.boolean()),
+    /** Landing may post this role. Seed on for Hacker, Mentor, Sponsor. */
+    openForApplications: v.optional(v.boolean()),
     sortOrder: v.number(),
     createdBy: v.id("users"),
     createdAt: v.number(),
@@ -378,14 +430,18 @@ export default defineSchema({
     avatarId: v.optional(v.id("_storage")),
     /** Small square copy of `avatarId` for the participants map and lists (convex/lib/photo.ts). */
     avatarThumbId: v.optional(v.id("_storage")),
-    userTypeId: v.optional(v.id("userTypes")),
     /** Participant directory card; drives the connections graph. See convex/lib/directory.ts. */
     directory: v.optional(directoryValidator),
     email: v.optional(v.string()),
     emailVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     role: roleValidator,
-    signupId: v.optional(v.id("signups")),
+    /**
+     * Global dashboard admin. Independent of the catalog role. Optional while
+     * existing `role === "admin"` rows are the source of truth; CRM and login
+     * write both.
+     */
+    admin: v.optional(v.boolean()),
     /** Contact number for the venue, E.164. Stored as typed (normalised), never verified. */
     phone: v.optional(v.string()),
     /**
@@ -397,16 +453,18 @@ export default defineSchema({
     phoneConfirmed: v.optional(v.boolean()),
     notificationConsent: v.boolean(),
     notificationConsentAt: v.optional(v.number()),
-    termsAcceptedAt: v.optional(v.number()),
-    attendanceStatus: v.union(
-      v.literal("attending"),
-      v.literal("cancelled"),
-      v.literal("undecided")
-    ),
-    dietaryRestrictions: v.optional(v.string()),
+    /**
+     * Leftover on deployed user rows after the move to participations.
+     * Optional until `editions.prepareNarrow` unsets them.
+     */
+    attendanceStatus: v.optional(attendanceValidator),
     dietaryDetails: v.optional(v.string()),
+    dietaryRestrictions: v.optional(v.string()),
+    onboardingComplete: v.optional(v.boolean()),
+    signupId: v.optional(v.string()),
+    termsAcceptedAt: v.optional(v.number()),
     travelOrigin: v.optional(v.string()),
-    onboardingComplete: v.boolean(),
+    userTypeId: v.optional(v.id("userTypes")),
     adminNotes: v.optional(v.string()),
     githubId: v.optional(v.string()),
     githubUsername: v.optional(v.string()),
@@ -415,18 +473,20 @@ export default defineSchema({
     githubAccessToken: v.optional(v.string()),
     /** X handle, lowercase without the @. Optional in onboarding; see users.setTwitterHandle. */
     twitterHandle: v.optional(v.string()),
+    /**
+     * Set only when X is linked via OAuth. Typed handles from
+     * `users.setTwitterHandle` never set this; team invites require it.
+     */
+    twitterLinkedAt: v.optional(v.number()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"])
-    .index("by_signup", ["signupId"])
     .index("by_role", ["role"])
-    .index("by_attendance", ["attendanceStatus"])
     .index("by_github_id", ["githubId"])
     .index("by_github", ["githubUsername"])
     .index("by_twitter", ["twitterHandle"])
     .index("by_avatar", ["avatarId"])
-    .index("by_avatar_thumb", ["avatarThumbId"])
-    .index("by_user_type", ["userTypeId"]),
+    .index("by_avatar_thumb", ["avatarThumbId"]),
 
   /** Pending `hackspain auth login` browser approvals. See convex/cliAuth.ts. */
   cliAuthRequests: defineTable({
@@ -460,38 +520,8 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_expires", ["expiresAt"]),
 
-  tvMessages: defineTable({
-    text: v.string(),
-    zone: v.union(
-      v.literal("banner"),
-      v.literal("left"),
-      v.literal("right"),
-      v.literal("ticker")
-    ),
-    order: v.number(),
-    active: v.boolean(),
-    createdBy: v.id("users"),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_zone", ["zone", "order"]),
-
-  tvWidgets: defineTable({
-    ...tvWidgetFields,
-    createdBy: v.id("users"),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_z", ["z"]),
-
-  tvLayouts: defineTable({
-    name: v.string(),
-    isLive: v.boolean(),
-    widgets: v.array(tvWidgetValidator),
-    createdBy: v.id("users"),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_live", ["isLive"]),
-
   judgingSettings: defineTable({
+    editionId: v.id("editions"),
     key: v.string(),
     /** Ridge regularisation for judge generosity. Fixed before judging starts. */
     lambda: v.optional(v.number()),
@@ -500,10 +530,13 @@ export default defineSchema({
     updatedAt: v.number(),
     /** Legacy general-group setting. No longer read. */
     generalGroupCount: v.optional(v.number()),
-  }).index("by_key", ["key"]),
+  })
+    .index("by_edition", ["editionId"])
+    .index("by_key", ["key"]),
 
   /** One persisted assignment run: the seed and the shuffled orders it used. */
   judgingRounds: defineTable({
+    editionId: v.id("editions"),
     key: v.string(),
     seed: v.string(),
     judgeIds: v.array(v.id("users")),
@@ -511,21 +544,26 @@ export default defineSchema({
     swaps: v.number(),
     generatedBy: v.id("users"),
     generatedAt: v.number(),
-  }).index("by_key", ["key"]),
+  })
+    .index("by_edition", ["editionId"])
+    .index("by_key", ["key"]),
 
   assessmentAssignments: defineTable({
+    editionId: v.id("editions"),
     roundId: v.id("judgingRounds"),
     submissionId: v.id("submissions"),
     judgeId: v.id("users"),
     slot: v.number(),
     createdAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_round", ["roundId"])
     .index("by_judge", ["judgeId"])
     .index("by_submission", ["submissionId"])
     .index("by_judge_submission", ["judgeId", "submissionId"]),
 
   assessments: defineTable({
+    editionId: v.id("editions"),
     submissionId: v.id("submissions"),
     judgeId: v.id("users"),
     status: v.union(v.literal("draft"), v.literal("submitted")),
@@ -538,43 +576,27 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_judge", ["judgeId"])
     .index("by_submission", ["submissionId"])
     .index("by_judge_submission", ["judgeId", "submissionId"])
     .index("by_status", ["status"]),
 
   judgingConflicts: defineTable({
+    editionId: v.id("editions"),
     judgeId: v.id("users"),
     submissionId: v.id("submissions"),
     note: v.optional(v.string()),
     createdBy: v.id("users"),
     createdAt: v.number(),
   })
+    .index("by_edition", ["editionId"])
     .index("by_judge", ["judgeId"])
     .index("by_judge_submission", ["judgeId", "submissionId"]),
 
-  /** Legacy group judging. Unused; kept so existing rows still validate. */
-  judgingScores: defineTable({
-    submissionId: v.id("submissions"),
-    judgeId: v.id("users"),
-    contextKind: v.union(v.literal("general"), v.literal("track")),
-    contextKey: v.string(),
-    score: v.number(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_submission_context", [
-      "submissionId",
-      "contextKind",
-      "contextKey",
-    ])
-    .index("by_judge_context", ["judgeId", "contextKind", "contextKey"])
-    .index("by_judge_submission", ["judgeId", "submissionId"])
-    .index("by_context", ["contextKind", "contextKey"]),
-
   finalists: defineTable({
+    editionId: v.id("editions"),
     userId: v.optional(v.id("users")),
-    signupId: v.optional(v.id("signups")),
     status: v.union(v.literal("in"), v.literal("canceled")),
     cancelToken: v.string(),
     addedAt: v.number(),
@@ -584,24 +606,10 @@ export default defineSchema({
     canceledAt: v.optional(v.number()),
     canceledBy: v.optional(v.union(v.literal("self"), v.literal("admin"))),
   })
+    .index("by_edition", ["editionId"])
     .index("by_user", ["userId"])
-    .index("by_signup", ["signupId"])
     .index("by_status", ["status"])
     .index("by_token", ["cancelToken"]),
-
-  judgingAssignments: defineTable({
-    userId: v.id("users"),
-    contextKind: v.optional(v.union(v.literal("general"), v.literal("track"))),
-    contextKey: v.optional(v.string()),
-    /** Legacy general-group field. Prefer contextKind + contextKey. */
-    group: v.optional(v.number()),
-    createdAt: v.number(),
-  })
-    .index("by_user", ["userId"])
-    .index("by_context", ["contextKind", "contextKey"])
-    .index("by_user_and_context", ["userId", "contextKind", "contextKey"])
-    .index("by_group", ["group"])
-    .index("by_user_and_group", ["userId", "group"]),
 
   githubProfiles: defineTable(githubProfileFields).index("by_username", [
     "username",
@@ -610,8 +618,4 @@ export default defineSchema({
   linkedinProfiles: defineTable(linkedinProfileFields).index("by_slug", [
     "slug",
   ]),
-
-  hackspain27_emails: defineTable({
-    email: v.string(),
-  }).index("by_email", ["email"]),
 });

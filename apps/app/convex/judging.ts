@@ -8,9 +8,7 @@ import {
 } from "./lib/customFunctions";
 import {
   assertLambda,
-  assertPairingCounts,
   assertThreshold,
-  assessmentScore,
   assessmentWriteKind,
   calibrationConnected,
   DEFAULT_DISAGREEMENT_THRESHOLD,
@@ -25,29 +23,37 @@ import {
   prepareDraft,
   prepareSubmission,
   rankProjects,
-  requireAssignedJudge,
-  resolveConflicts,
-  seededShuffle,
   totalAssessments,
-  validatePairs,
 } from "./lib/judging";
-import type {
-  Conflict,
-  Pair,
-  PairedObservation,
-  PartialScores,
-} from "./lib/judging";
-import { teamLogoUrlFor } from "./lib/team";
-import { urlOf, urlsValidator } from "./lib/urls";
-import { grantsJudging, isSponsorType, userTypeFor } from "./lib/userTypes";
+import type { PairedObservation } from "./lib/judging";
+import { urlsValidator } from "./lib/urls";
+import { currentEditionId, resolveEditionId } from "./lib/editions";
+import {
+  findAssessment,
+  isPoolJudge,
+  judgeName,
+  loadCatalog,
+  loadJudgePool,
+  loadRound,
+  loadSettings,
+  loadSettingsDoc,
+  mapUnresolved,
+  ownAssessmentView,
+  planAssignments,
+  previewFromPlan,
+  projectFields,
+  randomSeed,
+  requireAssignment,
+  submittedScore,
+  wipeRound,
+} from "./lib/judgingCatalog";
+import type { Settings } from "./lib/judgingCatalog";
 import {
   assessmentStatusValidator,
   scoreValueValidator,
 } from "./lib/validators";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "./_generated/server";
-
-type DbCtx = QueryCtx | MutationCtx;
+import type { MutationCtx } from "./_generated/server";
 
 const challengeSummary = v.object({
   _id: v.id("tracks"),
@@ -128,264 +134,10 @@ const adminJudge = v.object({
   submitted: v.number(),
 });
 
-type Catalog = {
-  membersByTeam: Map<Id<"teams">, string[]>;
-  perksById: Map<Id<"perks">, Doc<"perks">>;
-  submitted: Doc<"submissions">[];
-  teamsById: Map<Id<"teams">, Doc<"teams">>;
-  tracksById: Map<Id<"tracks">, Doc<"tracks">>;
-  usersById: Map<Id<"users">, Doc<"users">>;
-};
-
-type Settings = { disagreementThreshold: number; lambda: number };
-
-function judgeName(user: Doc<"users"> | undefined): string {
-  return user?.name?.trim() || user?.email || "Juez";
-}
-
-function scoresOf(row: Doc<"assessments">): PartialScores {
-  return {
-    craftsmanship: row.craftsmanship,
-    creativity: row.creativity,
-    overall: row.overall,
-    problemSolving: row.problemSolving,
-  };
-}
-
-function submittedScore(row: Doc<"assessments">): number | null {
-  return assessmentScore({ ...scoresOf(row), status: row.status });
-}
-
-function randomSeed(): string {
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
-    ""
-  );
-}
-
-async function loadSettingsDoc(
-  ctx: DbCtx
-): Promise<Doc<"judgingSettings"> | null> {
-  return await ctx.db
-    .query("judgingSettings")
-    .withIndex("by_key", (q) => q.eq("key", JUDGING_SETTINGS_KEY))
-    .unique();
-}
-
-async function loadSettings(ctx: DbCtx): Promise<Settings> {
-  const doc = await loadSettingsDoc(ctx);
-  return {
-    disagreementThreshold:
-      doc?.disagreementThreshold ?? DEFAULT_DISAGREEMENT_THRESHOLD,
-    lambda: doc?.lambda ?? DEFAULT_LAMBDA,
-  };
-}
-
-async function loadRound(ctx: DbCtx): Promise<Doc<"judgingRounds"> | null> {
-  return await ctx.db
-    .query("judgingRounds")
-    .withIndex("by_key", (q) => q.eq("key", JUDGING_ROUND_KEY))
-    .unique();
-}
-
-/**
- * Everyone whose user type grants scoring. Sponsors share the judging tab
- * as a read-only catalog and stay out of the pairings. Admins organise.
- */
-async function loadJudgePool(ctx: DbCtx): Promise<Doc<"users">[]> {
-  const [legacy, types] = await Promise.all([
-    ctx.db
-      .query("users")
-      .withIndex("by_role", (q) => q.eq("role", "judge"))
-      .collect(),
-    ctx.db.query("userTypes").collect(),
-  ]);
-  const pool = new Map<Id<"users">, Doc<"users">>();
-  for (const user of legacy) {
-    if (isSponsorType(await userTypeFor(ctx, user))) {
-      continue;
-    }
-    pool.set(user._id, user);
-  }
-  for (const type of types) {
-    if (!grantsJudging({ role: "user" }, type) || isSponsorType(type)) {
-      continue;
-    }
-    const rows = await ctx.db
-      .query("users")
-      .withIndex("by_user_type", (q) => q.eq("userTypeId", type._id))
-      .collect();
-    for (const user of rows) {
-      pool.set(user._id, user);
-    }
-  }
-  return [...pool.values()]
-    .filter((user) => user.role !== "admin")
-    .toSorted((a, b) => a._id.localeCompare(b._id));
-}
-
-async function isPoolJudge(ctx: DbCtx, user: Doc<"users">): Promise<boolean> {
-  if (user.role === "admin") {
-    return false;
-  }
-  const type = await userTypeFor(ctx, user);
-  if (isSponsorType(type)) {
-    return false;
-  }
-  return user.role === "judge" || grantsJudging(user, type);
-}
-
-async function loadCatalog(ctx: DbCtx): Promise<Catalog> {
-  const [submitted, tracks, teams, perks, members, users] = await Promise.all([
-    ctx.db
-      .query("submissions")
-      .withIndex("by_status", (q) => q.eq("status", "submitted"))
-      .collect(),
-    ctx.db.query("tracks").collect(),
-    ctx.db.query("teams").collect(),
-    ctx.db.query("perks").collect(),
-    ctx.db.query("teamMembers").collect(),
-    ctx.db.query("users").collect(),
-  ]);
-  const usersById = new Map(users.map((user) => [user._id, user]));
-  const membersByTeam = new Map<Id<"teams">, string[]>();
-  for (const member of members) {
-    if (member.status !== "member") {
-      continue;
-    }
-    const userName = member.userId
-      ? usersById.get(member.userId)?.name?.trim()
-      : undefined;
-    const list = membersByTeam.get(member.teamId) ?? [];
-    list.push(userName || member.identifier);
-    membersByTeam.set(member.teamId, list);
-  }
-  return {
-    membersByTeam,
-    perksById: new Map(perks.map((perk) => [perk._id, perk])),
-    submitted: submitted.toSorted((a, b) => a._id.localeCompare(b._id)),
-    teamsById: new Map(teams.map((team) => [team._id, team])),
-    tracksById: new Map(tracks.map((track) => [track._id, track])),
-    usersById,
-  };
-}
-
-function videoForTrack(
-  submission: Doc<"submissions">,
-  trackId: Id<"tracks">
-): string | undefined {
-  const recorded = submission.trackVideos?.find(
-    (row) => row.trackId === trackId
-  );
-  if (recorded?.videoUrl) {
-    return recorded.videoUrl;
-  }
-  if (submission.challengeIds.includes(trackId)) {
-    return urlOf(submission.urls, "video");
-  }
-  return undefined;
-}
-
-function projectFields(
-  submission: Doc<"submissions">,
-  catalog: Catalog,
-  trackId?: Id<"tracks">
-) {
-  const challenges = [];
-  for (const challengeId of submission.challengeIds) {
-    const track = catalog.tracksById.get(challengeId);
-    if (track) {
-      challenges.push({
-        _id: track._id,
-        label: track.label,
-        logoUrl: track.logoUrl,
-        slug: track.slug,
-      });
-    }
-  }
-  const perks = [];
-  for (const perkId of submission.perkIds) {
-    const perk = catalog.perksById.get(perkId);
-    if (perk) {
-      perks.push({ _id: perk._id, company: perk.company, title: perk.title });
-    }
-  }
-  const team = submission.teamId
-    ? catalog.teamsById.get(submission.teamId)
-    : undefined;
-  const videoUrl = trackId
-    ? videoForTrack(submission, trackId)
-    : urlOf(submission.urls, "video");
-  const urls =
-    videoUrl && urlOf(submission.urls, "video") !== videoUrl
-      ? [
-          ...submission.urls.filter((entry) => entry.kind !== "video"),
-          { kind: "video" as const, url: videoUrl },
-        ]
-      : submission.urls;
-  return {
-    _id: submission._id,
-    challenges,
-    description: submission.description,
-    members: submission.teamId
-      ? (catalog.membersByTeam.get(submission.teamId) ?? [])
-      : [],
-    name: submission.name,
-    perks,
-    teamLogoUrl: teamLogoUrlFor(team),
-    teamName: team?.name,
-    techStack: submission.techStack?.length
-      ? submission.techStack
-      : (team?.techStack ?? []),
-    urls,
-  };
-}
-
-async function requireAssignment(
-  ctx: DbCtx,
-  judgeId: Id<"users">,
-  submissionId: Id<"submissions">
-): Promise<void> {
-  const row = await ctx.db
-    .query("assessmentAssignments")
-    .withIndex("by_judge_submission", (q) =>
-      q.eq("judgeId", judgeId).eq("submissionId", submissionId)
-    )
-    .unique();
-  requireAssignedJudge(row, judgeId);
-}
-
-async function findAssessment(
-  ctx: DbCtx,
-  judgeId: Id<"users">,
-  submissionId: Id<"submissions">
-): Promise<Doc<"assessments"> | null> {
-  return await ctx.db
-    .query("assessments")
-    .withIndex("by_judge_submission", (q) =>
-      q.eq("judgeId", judgeId).eq("submissionId", submissionId)
-    )
-    .unique();
-}
-
-function ownAssessmentView(row: Doc<"assessments">) {
-  return {
-    craftsmanship: row.craftsmanship,
-    creativity: row.creativity,
-    overall: row.overall,
-    ownCriteriaComment: row.ownCriteriaComment,
-    problemSolving: row.problemSolving,
-    rawScore: submittedScore(row),
-    status: row.status,
-    submittedAt: row.submittedAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
 export const myQueue = judgeQuery({
   args: {},
   handler: async (ctx) => {
+    const editionId = await currentEditionId(ctx);
     const [round, assignments, assessments, catalog] = await Promise.all([
       loadRound(ctx),
       ctx.db
@@ -396,7 +148,7 @@ export const myQueue = judgeQuery({
         .query("assessments")
         .withIndex("by_judge", (q) => q.eq("judgeId", ctx.user._id))
         .collect(),
-      loadCatalog(ctx),
+      loadCatalog(ctx, editionId),
     ]);
     const bySubmission = new Map(
       catalog.submitted.map((submission) => [submission._id, submission])
@@ -451,7 +203,7 @@ export const myQueue = judgeQuery({
 export const getDelivery = catalogQuery({
   args: { submissionId: v.id("submissions") },
   handler: async (ctx, args) => {
-    const catalog = await loadCatalog(ctx);
+    const catalog = await loadCatalog(ctx, await currentEditionId(ctx));
     const submission = catalog.submitted.find(
       (row) => row._id === args.submissionId
     );
@@ -466,7 +218,7 @@ export const getDelivery = catalogQuery({
 export const trackCatalog = catalogQuery({
   args: { trackSlug: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const catalog = await loadCatalog(ctx);
+    const catalog = await loadCatalog(ctx, await currentEditionId(ctx));
     const tracks = [...catalog.tracksById.values()]
       .filter((track) => track.active)
       .toSorted(
@@ -525,14 +277,21 @@ async function writeAssessment(
   existing: Doc<"assessments"> | null,
   fields: Omit<
     Doc<"assessments">,
-    "_id" | "_creationTime" | "createdAt" | "judgeId" | "submissionId"
+    | "_id"
+    | "_creationTime"
+    | "createdAt"
+    | "editionId"
+    | "judgeId"
+    | "submissionId"
   >
 ): Promise<void> {
   const now = Date.now();
+  const editionId = existing?.editionId ?? (await currentEditionId(ctx));
   if (assessmentWriteKind(existing) === "replace" && existing) {
     await ctx.db.replace(existing._id, {
       ...fields,
       createdAt: existing.createdAt,
+      editionId,
       judgeId,
       submissionId,
     });
@@ -541,6 +300,7 @@ async function writeAssessment(
   await ctx.db.insert("assessments", {
     ...fields,
     createdAt: now,
+    editionId,
     judgeId,
     submissionId,
   });
@@ -598,8 +358,9 @@ export const submit = judgeMutation({
 // --- Organiser --------------------------------------------------------------
 
 export const adminOverview = adminQuery({
-  args: {},
-  handler: async (ctx) => {
+  args: { editionId: v.optional(v.id("editions")) },
+  handler: async (ctx, args) => {
+    const editionId = await resolveEditionId(ctx, args.editionId);
     const [
       settings,
       settingsDoc,
@@ -613,11 +374,20 @@ export const adminOverview = adminQuery({
       loadSettings(ctx),
       loadSettingsDoc(ctx),
       loadRound(ctx),
-      loadJudgePool(ctx),
-      loadCatalog(ctx),
-      ctx.db.query("assessmentAssignments").collect(),
-      ctx.db.query("assessments").collect(),
-      ctx.db.query("judgingConflicts").collect(),
+      loadJudgePool(ctx, editionId),
+      loadCatalog(ctx, editionId),
+      ctx.db
+        .query("assessmentAssignments")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
+      ctx.db
+        .query("assessments")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
+      ctx.db
+        .query("judgingConflicts")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
     ]);
 
     const judgeIds: Id<"users">[] = round
@@ -884,151 +654,6 @@ const previewJudge = v.object({
   projects: v.array(v.string()),
 });
 
-type PlannedRound = {
-  judgeIds: Id<"users">[];
-  pairs: Pair[];
-  seed: string;
-  submissionIds: Id<"submissions">[];
-  submitted: Doc<"submissions">[];
-  swaps: number;
-  unresolved: Conflict[];
-  usersById: Map<Id<"users">, Doc<"users">>;
-};
-
-function mapUnresolved(plan: PlannedRound) {
-  const namesBySubmission = new Map(
-    plan.submitted.map((row) => [row._id, row.name])
-  );
-  return plan.unresolved.map((conflict) => {
-    const judgeId = plan.judgeIds[conflict.judge] as Id<"users">;
-    const submissionId = plan.submissionIds[
-      conflict.project
-    ] as Id<"submissions">;
-    return {
-      judge: { _id: judgeId, name: judgeName(plan.usersById.get(judgeId)) },
-      projectName: namesBySubmission.get(submissionId) ?? "Proyecto",
-      submissionId,
-    };
-  });
-}
-
-function previewFromPlan(plan: PlannedRound) {
-  const namesBySubmission = new Map(
-    plan.submitted.map((row) => [row._id, row.name])
-  );
-  const projectsByJudge = new Map<Id<"users">, string[]>();
-  for (const judgeId of plan.judgeIds) {
-    projectsByJudge.set(judgeId, []);
-  }
-  for (const pair of plan.pairs) {
-    const submissionId = plan.submissionIds[pair.project] as Id<"submissions">;
-    const name = namesBySubmission.get(submissionId) ?? "Proyecto";
-    for (const slot of pair.judges) {
-      const judgeId = plan.judgeIds[slot] as Id<"users">;
-      projectsByJudge.get(judgeId)?.push(name);
-    }
-  }
-  return {
-    ok: true as const,
-    judges: plan.judgeIds
-      .map((judgeId) => {
-        const projects = (projectsByJudge.get(judgeId) ?? []).toSorted((a, b) =>
-          a.localeCompare(b, "es")
-        );
-        return {
-          _id: judgeId,
-          assigned: projects.length,
-          name: judgeName(plan.usersById.get(judgeId)),
-          projects,
-        };
-      })
-      .toSorted((a, b) => a.name.localeCompare(b.name, "es")),
-    seed: plan.seed,
-    swaps: plan.swaps,
-  };
-}
-
-async function planAssignments(
-  ctx: DbCtx,
-  seed: string
-): Promise<PlannedRound> {
-  const [pool, submitted, conflictRows, users] = await Promise.all([
-    loadJudgePool(ctx),
-    ctx.db
-      .query("submissions")
-      .withIndex("by_status", (q) => q.eq("status", "submitted"))
-      .collect(),
-    ctx.db.query("judgingConflicts").collect(),
-    ctx.db.query("users").collect(),
-  ]);
-  assertPairingCounts(pool.length, submitted.length);
-
-  const judgeIds = seededShuffle(
-    pool.map((user) => user._id),
-    `${seed}:judges`
-  );
-  const submissionIds = seededShuffle(
-    submitted.map((row) => row._id).toSorted((a, b) => a.localeCompare(b)),
-    `${seed}:projects`
-  );
-  const judgeIndex = new Map(judgeIds.map((id, i) => [id, i]));
-  const projectIndex = new Map(submissionIds.map((id, i) => [id, i]));
-
-  const conflicts: Conflict[] = [];
-  for (const row of conflictRows) {
-    const judge = judgeIndex.get(row.judgeId);
-    const project = projectIndex.get(row.submissionId);
-    if (judge !== undefined && project !== undefined) {
-      conflicts.push({ judge, project });
-    }
-  }
-
-  const initial = pairProjects(judgeIds.length, submissionIds.length);
-  const { pairs, swaps, unresolved } = resolveConflicts(
-    initial,
-    conflicts,
-    judgeIds.length,
-    submissionIds.length
-  );
-  const problems = validatePairs(pairs, judgeIds.length, submissionIds.length);
-  if (problems.length > 0) {
-    throw new Error(
-      `El reparto no cumple las garantías: ${problems.join("; ")}`
-    );
-  }
-
-  return {
-    judgeIds,
-    pairs,
-    seed,
-    submissionIds,
-    submitted,
-    swaps,
-    unresolved,
-    usersById: new Map(users.map((user) => [user._id, user])),
-  };
-}
-
-async function wipeRound(
-  ctx: MutationCtx,
-  round: Doc<"judgingRounds">
-): Promise<void> {
-  const [assignments, assessments] = await Promise.all([
-    ctx.db
-      .query("assessmentAssignments")
-      .withIndex("by_round", (q) => q.eq("roundId", round._id))
-      .collect(),
-    ctx.db.query("assessments").collect(),
-  ]);
-  for (const row of assignments) {
-    await ctx.db.delete(row._id);
-  }
-  for (const row of assessments) {
-    await ctx.db.delete(row._id);
-  }
-  await ctx.db.delete(round._id);
-}
-
 export const previewAssignments = adminQuery({
   args: { seed: v.string() },
   handler: async (ctx, args) => {
@@ -1076,7 +701,9 @@ export const generateAssignments = adminMutation({
     }
 
     const now = Date.now();
+    const editionId = await currentEditionId(ctx);
     const roundId = await ctx.db.insert("judgingRounds", {
+      editionId,
       generatedAt: now,
       generatedBy: ctx.user._id,
       judgeIds: plan.judgeIds,
@@ -1092,6 +719,7 @@ export const generateAssignments = adminMutation({
       for (const slot of [0, 1] as const) {
         await ctx.db.insert("assessmentAssignments", {
           createdAt: now,
+          editionId,
           judgeId: plan.judgeIds[pair.judges[slot]] as Id<"users">,
           roundId,
           slot,
@@ -1102,6 +730,7 @@ export const generateAssignments = adminMutation({
     if (!(await loadSettingsDoc(ctx))) {
       await ctx.db.insert("judgingSettings", {
         disagreementThreshold: DEFAULT_DISAGREEMENT_THRESHOLD,
+        editionId,
         key: JUDGING_SETTINGS_KEY,
         lambda: DEFAULT_LAMBDA,
         updatedAt: now,
@@ -1159,6 +788,7 @@ export const updateSettings = adminMutation({
     await ctx.db.insert("judgingSettings", {
       disagreementThreshold:
         patch.disagreementThreshold ?? current.disagreementThreshold,
+      editionId: await currentEditionId(ctx),
       key: JUDGING_SETTINGS_KEY,
       lambda: patch.lambda ?? current.lambda,
       updatedAt: now,
@@ -1198,6 +828,7 @@ export const addConflict = adminMutation({
     await ctx.db.insert("judgingConflicts", {
       createdAt: Date.now(),
       createdBy: ctx.user._id,
+      editionId: await currentEditionId(ctx),
       judgeId: args.judgeId,
       note: note || undefined,
       submissionId: args.submissionId,

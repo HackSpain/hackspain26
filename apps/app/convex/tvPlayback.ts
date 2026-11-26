@@ -1,17 +1,14 @@
 import { v } from "convex/values";
-import type { Infer } from "convex/values";
 import { telemetryWindow } from "../src/app/api/cli/telemetry/window";
-import { api } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
-import { getSignupForUser } from "./lib/auth";
+import { getCurrentParticipation } from "./lib/participations";
 import { adminMutation, adminQuery } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
 import { getEventWindow } from "./lib/eventWindow";
 import { GITHUB_FEED_EVENTS } from "./lib/github";
 import { externalThumbnail } from "./lib/photo";
 import { histogramReturn, stackHistogram } from "./stack";
-import { messageReturn, widgetReturn } from "./tv";
 import {
   SCREEN_CLIENT_ID_PATTERN,
   SCREEN_CONNECTION_LIMIT,
@@ -25,30 +22,6 @@ import {
   screenKey,
   screenPresetValidator,
 } from "./lib/tvScreens";
-
-export const snapshotValidator = v.object({
-  widgets: v.array(widgetReturn),
-  messages: v.array(messageReturn),
-  reloadVersion: v.number(),
-});
-export type TvSnapshot = Infer<typeof snapshotValidator>;
-
-// Reuse Leo's public projections and publishing semantics, not another layout model.
-export const snapshot = query({
-  args: {},
-  returns: snapshotValidator,
-  handler: async (ctx): Promise<TvSnapshot> => {
-    const [widgets, messages, control] = await Promise.all([
-      ctx.runQuery(api.tv.listWidgets, {}),
-      ctx.runQuery(api.tv.list, {}),
-      ctx.db
-        .query("tvPlaybackControl")
-        .withIndex("by_key", (q) => q.eq("key", "main"))
-        .unique(),
-    ]);
-    return { widgets, messages, reloadVersion: control?.reloadVersion ?? 0 };
-  },
-});
 
 // Only configuration changes invalidate this subscription; presence is a separate table.
 export const screenConfiguration = query({
@@ -456,7 +429,7 @@ export const insightsPeople = query({
     return await Promise.all(
       [...found.values()].map(async (user) => {
         const [signup, membership] = await Promise.all([
-          getSignupForUser(ctx, user),
+          getCurrentParticipation(ctx, user),
           ctx.db
             .query("teamMembers")
             .withIndex("by_user", (q) => q.eq("userId", user._id))

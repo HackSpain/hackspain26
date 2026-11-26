@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalQuery } from "./_generated/server";
-import { getSignupForUser, requireDirectoryViewer } from "./lib/auth";
+import { requireDirectoryViewer } from "./lib/auth";
+import { getCurrentParticipation } from "./lib/participations";
 import { isDirectoryComplete } from "./lib/directory";
 import { matchesParticipantProfile } from "./lib/directoryProfileSource";
 
@@ -17,7 +18,7 @@ export const assert = internalQuery({
     if (!participant || !isDirectoryComplete(participant.directory)) {
       throw new Error("Ese perfil no pertenece al directorio.");
     }
-    const signup = await getSignupForUser(ctx, participant);
+    const signup = await getCurrentParticipation(ctx, participant);
     if (
       !matchesParticipantProfile(
         args.kind,

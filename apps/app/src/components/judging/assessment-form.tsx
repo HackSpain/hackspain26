@@ -79,7 +79,7 @@ function ScorePicker({
       <div
         role="radiogroup"
         aria-labelledby={groupId}
-        className="grid grid-cols-4 border-[3px] border-hs-ink"
+        className="grid grid-cols-4 border-3 border-hs-ink"
       >
         {ALLOWED_SCORES.map((score) => {
           const selected = value === score;
@@ -94,7 +94,7 @@ function ScorePicker({
               disabled={disabled}
               onClick={() => onChange(score)}
               className={cn(
-                "min-h-11 border-hs-ink font-bungee text-sm tabular-nums outline-none select-none not-last:border-r-[3px] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-hs-navy disabled:opacity-50 motion-safe:transition-[background-color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:not-disabled:scale-[0.97]",
+                "min-h-11 border-hs-ink font-bungee text-sm tabular-nums outline-none select-none not-last:border-r-3 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-hs-navy disabled:opacity-50 motion-safe:transition-surface motion-safe:duration-press motion-safe:ease-out motion-safe:active:not-disabled:scale-[0.97]",
                 selected
                   ? "bg-hs-gold text-hs-ink"
                   : "bg-hs-paper text-hs-brown [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand"

@@ -1,13 +1,13 @@
 ---
 export const prerender = false;
 
-import { and, eq } from "drizzle-orm";
 import { ConfirmationPage } from "../components/share/confirmation-page";
-import { getDb } from "../db";
-import { hackathonSignups } from "../db/schema";
 import Layout from "../layouts/layout.astro";
 import { badgeOgImagePath, badgeSharePath } from "../lib/badge-share-params";
-import { githubHandleFromUrl } from "../lib/github-handle";
+import {
+  confirmParticipation,
+  lookupConfirmation,
+} from "../lib/convex-landing";
 import {
   envFromRuntime,
   sharedLinkOriginFromRuntime,
@@ -37,49 +37,15 @@ let photoDataUri: string | null = null;
 let photoVersion: number | null = null;
 
 if (token && UUID_PATTERN.test(token)) {
-  const db = getDb();
-
-  if (isPost && action === "confirm") {
-    // Only an explicit submission can confirm a place. The accepted guard also
-    // keeps retries from changing a signup that was already confirmed or cancelled.
-    await db
-      .update(hackathonSignups)
-      .set({ approvalStatus: "confirmed" })
-      .where(
-        and(
-          eq(hackathonSignups.managementToken, token),
-          eq(hackathonSignups.approvalStatus, "accepted")
-        )
-      );
-  }
-
-  const [signup] = await db
-    .select({
-      approvalStatus: hackathonSignups.approvalStatus,
-      badgePhoto: hackathonSignups.badgePhoto,
-      badgePhotoUpdatedAt: hackathonSignups.badgePhotoUpdatedAt,
-      fullName: hackathonSignups.fullName,
-      githubUrl: hackathonSignups.githubUrl,
-    })
-    .from(hackathonSignups)
-    .where(eq(hackathonSignups.managementToken, token))
-    .limit(1);
-
-  if (signup) {
-    fullName = signup.fullName;
-    githubHandle = githubHandleFromUrl(signup.githubUrl);
-    // Sent back so a reload keeps the photo they chose, instead of dropping to
-    // their avatar as if they had never set one.
-    photoDataUri = signup.badgePhoto;
-    photoVersion = signup.badgePhotoUpdatedAt?.getTime() ?? null;
-    if (signup.approvalStatus === "confirmed") {
-      state = "confirmed";
-    } else if (signup.approvalStatus === "accepted") {
-      state = "confirm";
-    } else {
-      state = "not_accepted";
-    }
-  }
+  const view =
+    isPost && action === "confirm"
+      ? await confirmParticipation(token)
+      : await lookupConfirmation(token);
+  fullName = view.fullName;
+  githubHandle = view.githubHandle;
+  photoDataUri = view.photoDataUri;
+  photoVersion = view.photoVersion;
+  state = view.state;
 }
 
 if (isPost && action === "confirm" && state === "confirmed") {

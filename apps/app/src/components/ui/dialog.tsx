@@ -26,7 +26,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-hs-ink/60 motion-safe:duration-200 motion-safe:data-closed:duration-150 motion-safe:ease-[var(--ease-out)] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-hs-ink/60 motion-safe:duration-200 motion-safe:data-closed:duration-150 motion-safe:ease-out data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -45,7 +45,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto border-[3px] border-hs-ink bg-hs-paper p-5 text-sm text-hs-ink outline-none motion-safe:duration-200 motion-safe:data-closed:duration-150 motion-safe:ease-[var(--ease-out)] data-open:animate-in data-open:fade-in-0 motion-safe:data-open:zoom-in-97 data-closed:animate-out data-closed:fade-out-0 motion-safe:data-closed:zoom-out-97",
+          "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto border-3 border-hs-ink bg-hs-paper p-5 text-sm text-hs-ink outline-none motion-safe:duration-200 motion-safe:data-closed:duration-150 motion-safe:ease-out data-open:animate-in data-open:fade-in-0 motion-safe:data-open:zoom-in-97 data-closed:animate-out data-closed:fade-out-0 motion-safe:data-closed:zoom-out-97",
           className
         )}
         {...props}
@@ -53,7 +53,7 @@ function DialogContent({
         {children}
         <DialogPrimitive.Close
           data-slot="dialog-close"
-          className="absolute top-3 right-3 flex size-9 items-center justify-center text-hs-brown outline-none hs-hover-bright focus-visible:border-[3px] focus-visible:border-hs-navy disabled:pointer-events-none"
+          className="absolute top-3 right-3 flex size-9 items-center justify-center text-hs-brown outline-none hs-hover-bright focus-visible:border-3 focus-visible:border-hs-navy disabled:pointer-events-none"
         >
           <XIcon className="size-5" />
           <span className="sr-only">Cerrar</span>

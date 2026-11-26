@@ -90,7 +90,7 @@ export function TagPicker({
           role="presentation"
           className={cn(
             "relative flex min-h-11 w-full cursor-text flex-wrap items-center gap-1.5 border-2 border-hs-ink/25 bg-hs-paper py-1.5 pr-10 pl-2 text-base text-hs-ink",
-            "motion-safe:transition-[border-color,box-shadow] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
+            "motion-safe:transition-surface motion-safe:duration-press motion-safe:ease-out",
             "has-[input:focus-visible]:border-hs-navy has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-hs-navy/25",
             disabled && "cursor-not-allowed opacity-50"
           )}
@@ -106,7 +106,7 @@ export function TagPicker({
           {value.map((tag) => (
             <span
               key={tag}
-              className="inline-flex h-7 items-center gap-1 border-2 border-hs-ink bg-hs-gold pl-2 text-[13px] leading-none font-semibold select-none"
+              className="inline-flex h-7 items-center gap-1 border-2 border-hs-ink bg-hs-gold pl-2 text-sm leading-none font-semibold select-none"
             >
               {tag}
               <button
@@ -199,7 +199,7 @@ export function TagPicker({
           >
             <ChevronDown
               className={cn(
-                "size-4 motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
+                "size-4 motion-safe:transition-transform motion-safe:duration-press motion-safe:ease-out",
                 open && "rotate-180"
               )}
               aria-hidden
@@ -217,7 +217,7 @@ export function TagPicker({
           collisionPadding={8}
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="z-50 max-h-72 w-(--radix-popover-trigger-width) origin-(--radix-popover-content-transform-origin) overflow-y-auto border border-hs-ink/20 bg-hs-paper p-1 text-hs-ink motion-safe:duration-150 motion-safe:ease-[var(--ease-out)] data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95"
+          className="z-50 max-h-72 w-(--radix-popover-trigger-width) origin-(--radix-popover-content-transform-origin) overflow-y-auto border border-hs-ink/20 bg-hs-paper p-1 text-hs-ink motion-safe:duration-150 motion-safe:ease-out data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95"
         >
           {rows.length === 0 ? (
             <p className="px-2 py-2 text-sm text-hs-brown">
@@ -233,7 +233,7 @@ export function TagPicker({
                   {header ? (
                     <p
                       className={cn(
-                        "px-2 pt-2 pb-1 font-bungee text-[10px] tracking-wide text-hs-brown",
+                        "px-2 pt-2 pb-1 font-bungee text-3xs tracking-wide text-hs-brown",
                         index > 0 && "mt-1 border-t border-hs-ink/10"
                       )}
                     >

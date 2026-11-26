@@ -4,6 +4,7 @@
 // https://github.com/Subhan-code/Amicro--Micro-transitions-
 // License: MIT, see THIRD_PARTY_NOTICES.md at the repository root.
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import {
   Bar,
   BarChart,
@@ -69,8 +70,12 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps) {
           >
             <dt className="flex items-center gap-2 text-hs-brown">
               <span
-                className="size-2 rounded-full"
-                style={{ backgroundColor: entry.color ?? INK }}
+                className="size-2 rounded-full bg-(--swatch)"
+                style={
+                  {
+                    "--swatch": entry.color ?? "var(--color-hs-navy)",
+                  } as CSSProperties
+                }
               />
               {entry.name}
             </dt>
@@ -254,18 +259,18 @@ export function ActivityChart({
       <div
         className={
           mode === "tv"
-            ? "mt-[0.4cqw] flex shrink-0 flex-wrap gap-x-[0.8cqw] gap-y-1 [&>span]:text-[0.7cqw]"
+            ? "mt-[0.4cqw] flex shrink-0 flex-wrap gap-x-cq-8 gap-y-1 [&>span]:text-cq-2"
             : "mt-3 flex flex-wrap gap-x-4 gap-y-2"
         }
       >
         {activeTools.map((harness) => (
           <span
             key={harness.id}
-            className="flex items-center gap-1.5 text-[11px] text-hs-brown"
+            className="flex items-center gap-1.5 text-2xs text-hs-brown"
           >
             <span
-              className="size-2 rounded-full"
-              style={{ backgroundColor: harness.color }}
+              className="size-2 rounded-full bg-(--swatch)"
+              style={{ "--swatch": harness.color } as CSSProperties}
             />
             {harness.name}
           </span>
@@ -342,7 +347,7 @@ export function UsageDonut({
         <span className="text-2xl font-bold tracking-tight tabular-nums">
           {active ? percent(active[metric], total) : compact(total)}
         </span>
-        <span className="mt-1 max-w-24 text-[11px] text-hs-brown">
+        <span className="mt-1 max-w-24 text-2xs text-hs-brown">
           {active ? active.name : metric}
         </span>
       </div>
@@ -372,7 +377,7 @@ function TeamPoint({
       strokeWidth={2}
       tabIndex={0}
       role="button"
-      className="cursor-pointer outline-none hover:fill-opacity-100 focus-visible:stroke-hs-navy focus-visible:stroke-[3px]"
+      className="cursor-pointer outline-none hover:fill-opacity-100 focus-visible:stroke-3 focus-visible:stroke-hs-navy"
       aria-label={`${team.name}: ${compact(team.tokens)} tokens, ${number(team.commits)} pushes. Ver equipo.`}
       onClick={() => onSelect(team)}
       onKeyDown={(event) => {
@@ -404,7 +409,7 @@ export function TeamScatter({
   return (
     <div>
       <div className={STAGE}>
-        <div className="mb-2 flex justify-between text-[11px] text-hs-brown">
+        <div className="mb-2 flex justify-between text-2xs text-hs-brown">
           <span>Pushes</span>
           <span>Tokens →</span>
         </div>
@@ -480,7 +485,7 @@ export function TeamScatter({
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-pretty text-hs-brown">
+      <p className="mt-3 text-2xs leading-relaxed text-pretty text-hs-brown">
         Cada punto es un equipo. Selecciónalo para explorarlo. Consumo y
         actividad no miden la calidad del proyecto.
       </p>

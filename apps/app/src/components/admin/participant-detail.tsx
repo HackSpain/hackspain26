@@ -41,8 +41,6 @@ import {
 } from "@/lib/utils";
 import { urlDisplay, urlLabel } from "@/lib/urls";
 
-const NO_TYPE = "none";
-
 function formatCheckInAt(at: number) {
   return new Date(at).toLocaleString("es-ES", {
     dateStyle: "medium",
@@ -52,7 +50,7 @@ function formatCheckInAt(at: number) {
 }
 
 export type ParticipantRef =
-  | { kind: "signup"; id: Id<"signups"> }
+  | { kind: "signup"; id: string }
   | { kind: "user"; id: Id<"users"> };
 
 export type ParticipantDetailData = NonNullable<
@@ -65,11 +63,16 @@ export function participantRef(
 ): ParticipantRef {
   return kind === "user"
     ? { kind: "user", id: id as Id<"users"> }
-    : { kind: "signup", id: id as Id<"signups"> };
+    : { kind: "signup", id };
 }
 
 export function participantHref(ref: ParticipantRef) {
-  return `/admin/users/${ref.id}?kind=${ref.kind}`;
+  const next = new URLSearchParams();
+  next.set("user", ref.id);
+  if (ref.kind === "user") {
+    next.set("kind", "user");
+  }
+  return `/admin?${next.toString()}`;
 }
 
 export function participantName(detail: ParticipantDetailData) {
@@ -208,25 +211,12 @@ export function ParticipantDetail({
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">
               Perfil
-              <Badge
-                variant={signup?.accepted ? "gold" : "default"}
-                className="whitespace-nowrap"
-              >
+              <Badge variant={signup?.accepted ? "gold" : "default"}>
                 {signup?.accepted ? "aceptado" : "no aceptado"}
               </Badge>
-              {attendance ? (
-                <Badge className="whitespace-nowrap">
-                  {attendanceLabel(attendance)}
-                </Badge>
-              ) : null}
-              {staffRole ? (
-                <Badge className="whitespace-nowrap">{staffRole}</Badge>
-              ) : null}
-              {user?.userType ? (
-                <Badge className="whitespace-nowrap">
-                  {user.userType.label}
-                </Badge>
-              ) : null}
+              {attendance ? <Badge>{attendanceLabel(attendance)}</Badge> : null}
+              {staffRole ? <Badge>{staffRole}</Badge> : null}
+              {user?.userType ? <Badge>{user.userType.label}</Badge> : null}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -327,12 +317,11 @@ export function ParticipantDetail({
                     Tipo de usuario
                   </label>
                   <Select
-                    value={user.userType?._id ?? NO_TYPE}
+                    value={user.userType?._id}
                     disabled={userTypes === undefined}
                     onValueChange={(value) =>
                       void setUserType({
-                        typeId:
-                          value === NO_TYPE ? null : (value as Id<"userTypes">),
+                        typeId: value as Id<"userTypes">,
                         userId: user._id,
                       })
                     }
@@ -341,15 +330,9 @@ export function ParticipantDetail({
                       id={`user-type-${user._id}`}
                       aria-label="Tipo de usuario"
                     >
-                      <SelectValue />
+                      <SelectValue placeholder="Asigna un rol" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NO_TYPE}>
-                        Sin tipo{" "}
-                        <span className="text-xs text-hs-brown">
-                          · usa el tipo por defecto
-                        </span>
-                      </SelectItem>
                       {(userTypes ?? []).map((type) => (
                         <SelectItem key={type._id} value={type._id}>
                           {type.label}
@@ -365,7 +348,7 @@ export function ParticipantDetail({
                   </Select>
                   {userTypes !== undefined && userTypes.length === 0 ? (
                     <p className="text-xs text-hs-brown">
-                      Aún no hay tipos. Créalos en Admin → Tipos.
+                      Aún no hay tipos. Créalos en Personas → Roles.
                     </p>
                   ) : null}
                 </div>
@@ -532,9 +515,7 @@ export function ParticipantDetail({
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">
               Proyecto
-              <Badge className="whitespace-nowrap">
-                {submissionStatusLabel(detail.submission.status)}
-              </Badge>
+              <Badge>{submissionStatusLabel(detail.submission.status)}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">

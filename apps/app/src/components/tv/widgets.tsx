@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import type { CSSProperties } from "react";
 import { useLiveInsights } from "@/app/insights/use-live-insights";
 import type { TvFontWeight, TvWidget } from "@/lib/tv";
 import {
@@ -34,6 +35,7 @@ function BannerWidget({
 }) {
   const reduced = usePrefersReducedMotion();
   const ref = useRef<HTMLParagraphElement>(null);
+  const customSize = tvFontSizeStyle(fontSize);
 
   useGSAP(
     () => {
@@ -67,9 +69,14 @@ function BannerWidget({
     >
       <p
         ref={ref}
-        style={tvFontSizeStyle(fontSize)}
+        style={
+          customSize
+            ? ({ "--font-size": customSize.fontSize } as CSSProperties)
+            : undefined
+        }
         className={cn(
           "font-bungee leading-tight text-balance text-hs-gold uppercase",
+          customSize && "font-size-var",
           tvFontSizeClass("banner", fontSize),
           tvFontWeightClass(fontWeight)
         )}
@@ -118,27 +125,27 @@ function EventClock() {
       : `${padClock(Math.floor(left / 3600))}:${padClock(Math.floor(left / 60) % 60)}:${padClock(left % 60)}`;
 
   return (
-    <div className="grid h-full grid-cols-[minmax(0,0.9fr)_minmax(0,1.5fr)_minmax(0,1.1fr)] gap-[0.3cqw] bg-hs-ink">
-      <p className="flex items-center justify-center gap-[0.5cqw] bg-hs-red px-[0.6cqw] font-bungee text-[clamp(0.7rem,1.3cqw,1.8rem)] uppercase text-hs-paper">
+    <div className="grid h-full grid-cols-[minmax(0,0.9fr)_minmax(0,1.5fr)_minmax(0,1.1fr)] gap-cq-3 bg-hs-ink">
+      <p className="flex items-center justify-center gap-cq-5 bg-hs-red px-cq-6 font-bungee text-cq-3xl uppercase text-hs-paper">
         <span
           className="tv-pulse size-[0.7cqw] shrink-0 rounded-full bg-hs-paper"
           aria-hidden
         />
         En directo
       </p>
-      <div className="flex flex-col items-center justify-center bg-hs-gold px-[0.6cqw] leading-none text-hs-ink">
-        <span className="text-[clamp(0.5rem,0.7cqw,0.95rem)] font-bold tracking-[0.12em] uppercase">
+      <div className="flex flex-col items-center justify-center bg-hs-gold px-cq-6 leading-none text-hs-ink">
+        <span className="text-cq-sm-plus font-bold tracking-caps uppercase">
           {label}
         </span>
-        <span className="mt-[0.35cqw] font-bungee text-[clamp(1.1rem,2.4cqw,3.2rem)] tabular-nums">
+        <span className="mt-[0.35cqw] font-bungee text-cq-8xl tabular-nums">
           {countdown}
         </span>
       </div>
-      <div className="flex flex-col items-center justify-center bg-hs-teal px-[0.6cqw] leading-none text-hs-paper">
-        <span className="text-[clamp(0.5rem,0.7cqw,0.95rem)] font-bold tracking-[0.12em] uppercase">
+      <div className="flex flex-col items-center justify-center bg-hs-teal px-cq-6 leading-none text-hs-paper">
+        <span className="text-cq-sm-plus font-bold tracking-caps uppercase">
           Madrid
         </span>
-        <span className="mt-[0.35cqw] font-bungee text-[clamp(1.1rem,2.4cqw,3.2rem)] tabular-nums">
+        <span className="mt-[0.35cqw] font-bungee text-cq-8xl tabular-nums">
           {madrid}
         </span>
       </div>

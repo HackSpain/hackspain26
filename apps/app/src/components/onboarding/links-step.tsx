@@ -89,12 +89,12 @@ export function LinksStep({
         <div
           ref={cardRef}
           className={cn(
-            "flex items-center gap-4 border-[3px] border-hs-ink bg-hs-paper p-3",
+            "flex items-center gap-4 border-3 border-hs-ink bg-hs-paper p-3",
             askGithub && "hs-shake"
           )}
         >
           <span
-            className="flex size-14 shrink-0 items-center justify-center border-[3px] border-hs-ink bg-hs-gold"
+            className="flex size-14 shrink-0 items-center justify-center border-3 border-hs-ink bg-hs-gold"
             aria-hidden
           >
             <Github className="size-7" strokeWidth={1.75} />
@@ -147,11 +147,6 @@ export function LinksStep({
           disabled={action.pending}
           aria-invalid={handleError ? true : undefined}
           aria-describedby={handleError ? "onboarding-x-error" : undefined}
-          className={
-            handleError
-              ? "border-hs-red focus-visible:border-hs-red focus-visible:ring-hs-red/25"
-              : undefined
-          }
           onChange={(event) => setHandleDraft(event.target.value)}
         />
         {handleError ? (

@@ -98,3 +98,12 @@ export async function inspectPublicGithubRepo(
   }
   return { ok: true, url: canonical };
 }
+
+/** Convex HTTP action callback for dashboard GitHub linking. */
+export function githubRedirectUri(): string {
+  const convexSite = process.env.CONVEX_SITE_URL;
+  if (!convexSite) {
+    throw new Error("CONVEX_SITE_URL no está configurada");
+  }
+  return `${convexSite.replace(/\/$/, "")}/github/callback`;
+}

@@ -1,15 +1,33 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { TEST_EDITION_ID, testEditionRow } from "./lib/testFixtures";
 import {
   isTrackCombinationAllowed,
   seedDefaults,
   trackEntryCounts,
-} from "./tracks";
+} from "./lib/tracks";
 
 function ctxWith(submissions: { _id: string; challengeIds: string[] }[]) {
   return {
-    db: { query: () => ({ collect: async () => submissions }) },
+    db: {
+      query(table: string) {
+        if (table === "editions") {
+          return {
+            withIndex: () => ({
+              unique: async () => testEditionRow(),
+            }),
+          };
+        }
+        return {
+          collect: async () =>
+            submissions.map((row) => ({
+              ...row,
+              editionId: TEST_EDITION_ID,
+            })),
+        };
+      },
+    },
   } as unknown as QueryCtx;
 }
 
@@ -86,6 +104,9 @@ function catalogWith(rows: CatalogRow[]) {
             filter(range);
             return {
               unique: async () => {
+                if (table === "editions") {
+                  return testEditionRow();
+                }
                 if (table === "settings") {
                   return { _id: "settings", key: value };
                 }

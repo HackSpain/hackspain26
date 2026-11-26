@@ -10,7 +10,7 @@ import type { FeedTab } from "@convex/lib/feedTabs";
 import type { Id } from "@convex/_generated/dataModel";
 import { Avatar } from "@/components/avatar";
 import { MentionText } from "@/components/mention-textarea";
-import { LoadingText } from "@/components/page";
+import { Skeleton } from "@/components/page";
 import { PostSocial } from "@/components/post-social";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,7 +60,7 @@ function PostContext({ post }: { post: FeedPost }) {
           <Avatar
             name={post.teamName}
             src={post.teamLogoUrl}
-            className="size-4 border text-[8px]"
+            className="size-4 border text-5xs"
           />
           Equipo{" "}
           <span className="font-semibold text-hs-ink">{post.teamName}</span>
@@ -78,7 +78,7 @@ function PostContext({ post }: { post: FeedPost }) {
       {project?.challenges.map((label) => (
         <span
           key={label}
-          className="border border-hs-ink/30 px-1.5 py-px text-[11px] uppercase tracking-wide"
+          className="border border-hs-ink/30 px-1.5 py-px text-2xs uppercase tracking-wide"
         >
           {label}
         </span>
@@ -122,7 +122,7 @@ function PostCard({
     <div className={fresh ? "hs-enter" : undefined}>
       <Card
         className={cn(
-          "gap-0 motion-safe:transition-opacity motion-safe:duration-[var(--duration-enter)] motion-safe:ease-[var(--ease-out)]",
+          "gap-0 motion-safe:transition-opacity motion-safe:duration-enter motion-safe:ease-out",
           post.pending && "opacity-60"
         )}
       >
@@ -130,7 +130,7 @@ function PostCard({
           <div className="flex min-w-0 items-start gap-3">
             {isGithub ? (
               <span
-                className="flex size-10 shrink-0 items-center justify-center border-[3px] border-hs-ink bg-hs-gold"
+                className="flex size-10 shrink-0 items-center justify-center border-3 border-hs-ink bg-hs-gold"
                 aria-hidden
               >
                 <GitBranch className="size-5" />
@@ -188,7 +188,7 @@ function PostCard({
                 height={384}
                 loading="lazy"
                 decoding="async"
-                className="aspect-[5/3] max-h-96 w-full max-w-2xl border-[3px] border-hs-ink bg-hs-sand object-contain outline outline-1 outline-black/10"
+                className="aspect-[5/3] max-h-96 w-full max-w-2xl border-3 border-hs-ink bg-hs-sand object-contain outline outline-1 outline-black/10"
               />
             </a>
           ) : null}
@@ -274,7 +274,7 @@ export function FeedTabs({
       tabIndex={-1}
       aria-label="Filtrar el feed"
       onKeyDown={onKeyDown}
-      className="box-border grid h-11 grid-cols-3 border-[3px] border-hs-ink [&>:not(:last-child)]:border-r-[3px] [&>:not(:last-child)]:border-hs-ink"
+      className="box-border grid h-11 grid-cols-3 border-3 border-hs-ink [&>:not(:last-child)]:border-r-3 [&>:not(:last-child)]:border-hs-ink"
     >
       {FEED_TABS.map((tab) => {
         const selected = tab.value === value;
@@ -288,7 +288,7 @@ export function FeedTabs({
             aria-controls={FEED_PANEL_ID}
             tabIndex={selected ? 0 : -1}
             className={cn(
-              "h-full min-w-0 truncate px-3 font-bungee text-xs uppercase outline-none focus-visible:border-[3px] focus-visible:border-hs-navy",
+              "h-full min-w-0 truncate px-3 font-bungee text-xs uppercase outline-none focus-visible:border-3 focus-visible:border-hs-navy",
               selected
                 ? "bg-hs-gold text-hs-ink"
                 : "bg-hs-paper text-hs-brown [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand"
@@ -304,17 +304,38 @@ export function FeedTabs({
 }
 
 /** Mount with `key={tab}` so the enter-animation baseline resets per tab. */
+function FeedTimelineSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden>
+      {["a", "b", "c"].map((key) => (
+        <div key={key} className="border-3 border-hs-ink bg-hs-paper p-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-10 shrink-0" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+          <Skeleton className="mt-4 h-3 w-full" />
+          <Skeleton className="mt-2 h-3 w-2/3" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function FeedTimeline({
   tab,
   limit = 50,
   className,
+  meId,
 }: {
   tab: FeedTab;
   limit?: number;
   className?: string;
+  meId?: Id<"users">;
 }) {
   const posts = useQuery(api.feed.list, { limit, tab });
-  const meId = useQuery(api.users.me)?._id;
   // Keys present when the list first loaded never animate in; only posts that
   // arrive afterwards (yours, someone else's, GitHub) get the enter transition.
   // The set is frozen on purpose: a later post keeps `hs-enter` for its whole
@@ -325,7 +346,7 @@ export function FeedTimeline({
   }
 
   if (posts === undefined) {
-    return <LoadingText />;
+    return <FeedTimelineSkeleton />;
   }
   if (posts.length === 0) {
     return (

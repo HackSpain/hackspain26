@@ -13,15 +13,21 @@ import {
 } from "./lib/normalize";
 import { formatDietaryRestrictions } from "./lib/dietary";
 import { hasMemeTag } from "./lib/feedTabs";
-import { urlOf, urlsFromRecord } from "./lib/urls";
+import { urlOf } from "./lib/urls";
+import { deleteUnreadTableRows } from "./lib/unreadTables";
 import type { Id } from "./_generated/dataModel";
+import { seedEditions } from "./lib/editions";
+import {
+  participationByEditionEmail,
+  participationIsAccepted,
+} from "./lib/participations";
+import { defaultUserType } from "./lib/userTypes";
 
-async function attachSignupToUser(
+async function attachUserToParticipation(
   ctx: MutationCtx,
   email: string,
-  signupId: Id<"signups">,
-  fullName: string,
-  diet: { dietaryRestrictions?: string; dietaryDetails?: string }
+  participationId: Id<"participations">,
+  fullName: string
 ): Promise<void> {
   const user = await ctx.db
     .query("users")
@@ -30,24 +36,12 @@ async function attachSignupToUser(
   if (!user) {
     return;
   }
-  const patch: {
-    signupId?: Id<"signups">;
-    name?: string;
-    dietaryRestrictions?: string;
-    dietaryDetails?: string;
-  } = {};
-  if (!user.signupId) {
-    patch.signupId = signupId;
-    patch.name = user.name ?? fullName;
+  if (!user.name) {
+    await ctx.db.patch(user._id, { name: fullName });
   }
-  if (!user.dietaryRestrictions && diet.dietaryRestrictions) {
-    patch.dietaryRestrictions = diet.dietaryRestrictions;
-  }
-  if (!user.dietaryDetails && diet.dietaryDetails) {
-    patch.dietaryDetails = diet.dietaryDetails;
-  }
-  if (Object.keys(patch).length > 0) {
-    await ctx.db.patch(user._id, patch);
+  const row = await ctx.db.get(participationId);
+  if (row && row.userId !== user._id) {
+    await ctx.db.patch(participationId, { userId: user._id });
   }
 }
 
@@ -68,6 +62,15 @@ export const importSignups = mutation({
   },
   handler: async (ctx, args) => {
     assertMigrationSecret(args.secret);
+    const { edition2026 } = await seedEditions(ctx);
+    const hacker =
+      (await ctx.db
+        .query("userTypes")
+        .withIndex("by_slug", (q) => q.eq("slug", "hacker"))
+        .unique()) ?? (await defaultUserType(ctx));
+    if (!hacker) {
+      throw new Error("No hay un rol Hacker para importar solicitudes");
+    }
     let inserted = 0;
     let updated = 0;
     for (const raw of args.signups) {
@@ -81,10 +84,11 @@ export const importSignups = mutation({
       const twitterHandle = xUrl
         ? normalizeTwitter(xUrl) || undefined
         : undefined;
-      const existing = await ctx.db
-        .query("signups")
-        .withIndex("by_email", (q) => q.eq("email", email))
-        .unique();
+      const existing = await participationByEditionEmail(
+        ctx,
+        edition2026,
+        email
+      );
       // Optional fields are only written when the source provides a value.
       // Patching with undefined would delete data already in Convex (for
       // example when the Neon source lacks a column) on every re-run.
@@ -127,26 +131,48 @@ export const importSignups = mutation({
         neonId: raw.neonId,
         ...optionalFields,
       };
+      let status:
+        | "applied"
+        | "accepted"
+        | "confirmed"
+        | "cancelled"
+        | "waitlist"
+        | "rejected"
+        | "interested" = "applied";
+      if (existing && participationIsAccepted(existing.status)) {
+        status = existing.status;
+      } else if (raw.accepted === true) {
+        status = "accepted";
+      }
       if (existing) {
         await ctx.db.patch(existing._id, {
           ...fields,
-          accepted: existing.accepted === true || raw.accepted === true,
+          dietaryDetails: optionalFields.dietaryDetails,
+          dietaryRestrictions: optionalFields.dietaryRestrictions,
+          status,
         });
         updated += 1;
-        await attachSignupToUser(ctx, email, existing._id, fields.fullName, {
-          dietaryRestrictions: optionalFields.dietaryRestrictions,
-          dietaryDetails: optionalFields.dietaryDetails,
-        });
+        await attachUserToParticipation(
+          ctx,
+          email,
+          existing._id,
+          fields.fullName
+        );
       } else {
-        const signupId = await ctx.db.insert("signups", {
+        const participationId = await ctx.db.insert("participations", {
           ...fields,
-          accepted: raw.accepted === true,
+          editionId: edition2026,
+          onboardingComplete: false,
+          roleId: hacker._id,
+          status,
         });
         inserted += 1;
-        await attachSignupToUser(ctx, email, signupId, fields.fullName, {
-          dietaryRestrictions: optionalFields.dietaryRestrictions,
-          dietaryDetails: optionalFields.dietaryDetails,
-        });
+        await attachUserToParticipation(
+          ctx,
+          email,
+          participationId,
+          fields.fullName
+        );
       }
     }
     return { inserted, updated };
@@ -199,89 +225,10 @@ export const importAmbassadors = mutation({
   }),
 });
 
-export const rewriteLegacyUrls = mutation({
-  args: { secret: v.string() },
-  handler: async (ctx, args) => {
-    assertMigrationSecret(args.secret);
-    let signupsRewritten = 0;
-    let ambassadorsRewritten = 0;
-
-    for (const signup of await ctx.db.query("signups").collect()) {
-      const leftoverFields = signup as typeof signup & {
-        githubUrl?: string;
-        xUrl?: string;
-        linkedinUrl?: string;
-        webUrl?: string;
-      };
-      const urls = urlsFromRecord(leftoverFields);
-      const leftover =
-        leftoverFields.githubUrl !== undefined ||
-        leftoverFields.xUrl !== undefined ||
-        leftoverFields.linkedinUrl !== undefined ||
-        leftoverFields.webUrl !== undefined ||
-        leftoverFields.urls === undefined;
-      if (!leftover) {
-        continue;
-      }
-      await ctx.db.replace(signup._id, {
-        email: signup.email,
-        fullName: signup.fullName,
-        urls,
-        githubUsername: signup.githubUsername,
-        twitterHandle: signup.twitterHandle,
-        achievements: signup.achievements,
-        freeTime: signup.freeTime,
-        wantsAmbassador: signup.wantsAmbassador,
-        ambassadorMotivation: signup.ambassadorMotivation,
-        ambassadorStudyWhere: signup.ambassadorStudyWhere,
-        accepted: signup.accepted === true,
-        dietaryRestrictions: signup.dietaryRestrictions,
-        dietaryDetails: signup.dietaryDetails,
-        createdAt: signup.createdAt,
-        neonId: signup.neonId,
-      });
-      signupsRewritten += 1;
-    }
-
-    for (const application of await ctx.db
-      .query("ambassadorApplications")
-      .collect()) {
-      const leftoverFields = application as typeof application & {
-        githubUrl?: string;
-        xUrl?: string;
-        linkedinUrl?: string;
-        webUrl?: string;
-      };
-      const urls = urlsFromRecord(leftoverFields);
-      const leftover =
-        leftoverFields.githubUrl !== undefined ||
-        leftoverFields.xUrl !== undefined ||
-        leftoverFields.linkedinUrl !== undefined ||
-        leftoverFields.webUrl !== undefined ||
-        leftoverFields.urls === undefined;
-      if (!leftover) {
-        continue;
-      }
-      await ctx.db.replace(application._id, {
-        email: application.email,
-        fullName: application.fullName,
-        institution: application.institution,
-        cityRegion: application.cityRegion,
-        urls,
-        motivation: application.motivation,
-        outreachPlan: application.outreachPlan,
-        createdAt: application.createdAt,
-        neonId: application.neonId,
-      });
-      ambassadorsRewritten += 1;
-    }
-
-    return { signupsRewritten, ambassadorsRewritten };
-  },
-  returns: v.object({
-    signupsRewritten: v.number(),
-    ambassadorsRewritten: v.number(),
-  }),
+export const emptyUnreadTables = internalMutation({
+  args: {},
+  handler: async (ctx) => await deleteUnreadTableRows(ctx),
+  returns: v.record(v.string(), v.number()),
 });
 
 /**
@@ -402,7 +349,7 @@ export const dropCheckInMetadata = internalMutation({
       }
       await ctx.db.replace(pass._id, {
         userId: pass.userId,
-        signupId: pass.signupId,
+        editionId: pass.editionId,
         code: pass.code,
         status: pass.status,
         codeSentAt: pass.codeSentAt,

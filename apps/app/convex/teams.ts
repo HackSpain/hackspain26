@@ -1,6 +1,5 @@
 import { v } from "convex/values";
-import { imagePathFor } from "./lib/files";
-import { avatarUrlFor } from "./users";
+import { assertStoredImage, imagePathFor } from "./lib/files";
 import {
   adminMutation,
   adminQuery,
@@ -12,85 +11,38 @@ import {
   identifierTypeValidator,
   teamMemberStatusValidator,
 } from "./lib/validators";
+import { findUserByEmail } from "./lib/auth";
+import { canonicalRepoUrl } from "./lib/github";
 import {
   normalizeEmail,
   normalizeGithub,
   normalizeTwitter,
 } from "./lib/normalize";
-import { canonicalRepoUrl } from "./lib/github";
-import { MAX_TECH_LENGTH, MAX_TECH_STACK } from "./lib/stack";
-import { findUserByEmail, getSignupForUser } from "./lib/auth";
-import { membershipForUser, teamLogoUrlFor } from "./lib/team";
+import { currentEditionId, ofEdition, resolveEditionId } from "./lib/editions";
+import { getCurrentParticipation } from "./lib/participations";
+import { scheduleStackScan } from "./lib/stack";
+import {
+  currentMembership,
+  findTeamSubmission,
+  hydrateMember,
+  JOIN_CODE_LENGTH,
+  MAX_REPOS,
+  nextJoinCode,
+  normalizeJoinCode,
+  normalizeRepoUrls,
+  normalizeTechStack,
+  ownedTeam,
+  resolveIdentifier,
+  teamLogoUrlFor,
+  teamRepoList,
+} from "./lib/team";
 import { fail } from "./lib/errors";
-import { isTrackCombinationAllowed, MAX_TEAMS_PER_TRACK } from "./tracks";
-import { scheduleStackScan, teamRepoList } from "./stack";
+import { avatarUrlFor } from "./lib/photo";
+import { isTrackCombinationAllowed, MAX_TEAMS_PER_TRACK } from "./lib/tracks";
+import { removePostSocial } from "./lib/feedSocial";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { removePostSocial } from "./feedSocial";
-
-// No 0/O/1/I so codes survive being read aloud or handwritten.
-const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const JOIN_CODE_LENGTH = 8;
-const MAX_REPOS = 5;
-
-function randomJoinCode(): string {
-  const bytes = new Uint8Array(JOIN_CODE_LENGTH);
-  crypto.getRandomValues(bytes);
-  return Array.from(
-    bytes,
-    (b) => JOIN_CODE_ALPHABET[b % JOIN_CODE_ALPHABET.length]
-  ).join("");
-}
-
-export function normalizeJoinCode(raw: string): string {
-  return raw.toUpperCase().replaceAll(/[^A-Z0-9]/g, "");
-}
-
-async function uniqueJoinCode(ctx: MutationCtx): Promise<string> {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const code = randomJoinCode();
-    const taken = await ctx.db
-      .query("teams")
-      .withIndex("by_join_code", (q) => q.eq("joinCode", code))
-      .first();
-    if (!taken) {
-      return code;
-    }
-  }
-  throw new Error("No se pudo generar un código de equipo");
-}
-
-function normalizeRepoUrls(raw: string[]): string[] {
-  const out = [
-    ...new Set(raw.map(canonicalRepoUrl).filter((url) => url !== null)),
-  ];
-  if (out.length > MAX_REPOS) {
-    fail("VALIDATION", `Máximo ${MAX_REPOS} repositorios`);
-  }
-  return out;
-}
-
-export function normalizeTechStack(raw: string[]): string[] {
-  const seen = new Set<string>();
-  for (const entry of raw) {
-    const tech = entry.trim().toLowerCase();
-    if (!tech) {
-      continue;
-    }
-    if (tech.length > MAX_TECH_LENGTH) {
-      fail(
-        "VALIDATION",
-        `"${entry.trim()}" supera ${MAX_TECH_LENGTH} caracteres`
-      );
-    }
-    seen.add(tech);
-  }
-  if (seen.size > MAX_TECH_STACK) {
-    fail("VALIDATION", `Máximo ${MAX_TECH_STACK} tecnologías`);
-  }
-  return [...seen];
-}
 
 const memberReturn = v.object({
   _id: v.id("teamMembers"),
@@ -150,107 +102,20 @@ const teamSummaryReturn = v.object({
   ),
 });
 
-async function hydrateMember(
-  ctx: QueryCtx | MutationCtx,
-  member: Doc<"teamMembers">
-) {
-  const user = member.userId ? await ctx.db.get(member.userId) : null;
-  const signup = member.signupId ? await ctx.db.get(member.signupId) : null;
-  return {
-    _id: member._id,
-    email: user?.email ?? signup?.email,
-    identifier: member.identifier,
-    identifierType: member.identifierType,
-    name: user?.name ?? signup?.fullName,
-    status: member.status,
-    userId: member.userId,
-  };
-}
-
-async function resolveIdentifier(
-  ctx: MutationCtx,
-  identifierType: "email" | "github" | "twitter",
-  raw: string
-): Promise<{
-  identifier: string;
-  userId?: Id<"users">;
-  signupId?: Id<"signups">;
-  status: "member" | "pending";
-}> {
-  let identifier: string;
-  if (identifierType === "email") {
-    identifier = normalizeEmail(raw);
-  } else if (identifierType === "github") {
-    identifier = normalizeGithub(raw);
-  } else {
-    identifier = normalizeTwitter(raw);
-  }
-  if (!identifier) {
-    throw new Error(
-      "Introduce un usuario de GitHub, un handle de X o un email válido"
-    );
-  }
-
-  let signup: Doc<"signups"> | null = null;
-  if (identifierType === "email") {
-    signup = await ctx.db
-      .query("signups")
-      .withIndex("by_email", (q) => q.eq("email", identifier))
-      .unique();
-  } else if (identifierType === "github") {
-    signup = await ctx.db
-      .query("signups")
-      .withIndex("by_github", (q) => q.eq("githubUsername", identifier))
-      .unique();
-  } else {
-    signup = await ctx.db
-      .query("signups")
-      .withIndex("by_twitter", (q) => q.eq("twitterHandle", identifier))
-      .unique();
-  }
-
-  let user: Doc<"users"> | null = null;
-  if (identifierType === "email") {
-    user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identifier))
-      .unique();
-  } else if (identifierType === "github") {
-    user = await ctx.db
-      .query("users")
-      .withIndex("by_github", (q) => q.eq("githubUsername", identifier))
-      .first();
-  } else {
-    user = await ctx.db
-      .query("users")
-      .withIndex("by_twitter", (q) => q.eq("twitterHandle", identifier))
-      .first();
-  }
-  if (!user && signup) {
-    user = await ctx.db
-      .query("users")
-      .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
-      .unique();
-  }
-
-  return {
-    identifier,
-    signupId: signup?._id,
-    status: user ? "member" : "pending",
-    userId: user?._id,
-  };
-}
-
 export const mine = onboardedQuery({
   args: {},
   handler: async (ctx) => {
-    const membership = await membershipForUser(ctx, ctx.user._id);
+    const editionId = await currentEditionId(ctx);
+    const membership = await currentMembership(ctx, ctx.user._id);
     const team = membership
       ? await ctx.db.get(membership.teamId)
-      : await ctx.db
-          .query("teams")
-          .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
-          .unique();
+      : (ofEdition(
+          await ctx.db
+            .query("teams")
+            .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
+            .collect(),
+          editionId
+        )[0] ?? null);
     if (!team) {
       return null;
     }
@@ -283,14 +148,18 @@ export const mine = onboardedQuery({
 export const mineId = anytimeOnboardedQuery({
   args: {},
   handler: async (ctx) => {
-    const membership = await membershipForUser(ctx, ctx.user._id);
+    const editionId = await currentEditionId(ctx);
+    const membership = await currentMembership(ctx, ctx.user._id);
     if (membership) {
       return membership.teamId;
     }
-    const owned = await ctx.db
-      .query("teams")
-      .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
-      .unique();
+    const owned = ofEdition(
+      await ctx.db
+        .query("teams")
+        .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
+        .collect(),
+      editionId
+    )[0];
     return owned?._id ?? null;
   },
   returns: v.union(v.id("teams"), v.null()),
@@ -299,9 +168,13 @@ export const mineId = anytimeOnboardedQuery({
 export const list = onboardedQuery({
   args: {},
   handler: async (ctx) => {
+    const editionId = await currentEditionId(ctx);
     const [membership, teams] = await Promise.all([
-      membershipForUser(ctx, ctx.user._id),
-      ctx.db.query("teams").collect(),
+      currentMembership(ctx, ctx.user._id),
+      ctx.db
+        .query("teams")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
     ]);
     // Tracks are shared by many teams. Reuse each read within this execution.
     const trackReads = new Map<Id<"tracks">, Promise<Doc<"tracks"> | null>>();
@@ -337,17 +210,16 @@ export const list = onboardedQuery({
               const user = member.userId
                 ? await ctx.db.get(member.userId)
                 : null;
-              // Signup is only a name fallback; onboarded users already have one.
-              const signup =
-                (user?.name === undefined || user.name === null) &&
-                member.signupId
-                  ? await ctx.db.get(member.signupId)
+              const participation =
+                user && user.name === undefined
+                  ? await getCurrentParticipation(ctx, user)
                   : null;
               return {
                 _id: member._id,
                 avatarUrl: user ? avatarUrlFor(user) : undefined,
                 isOwner: member.userId === team.ownerId,
-                name: user?.name ?? signup?.fullName ?? member.identifier,
+                name:
+                  user?.name ?? participation?.fullName ?? member.identifier,
                 userId: member.userId,
               };
             })
@@ -378,21 +250,6 @@ export const list = onboardedQuery({
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
-async function ownedTeam(
-  ctx: MutationCtx,
-  userId: Id<"users">
-): Promise<Doc<"teams">> {
-  const membership = await membershipForUser(ctx, userId);
-  const team = membership ? await ctx.db.get(membership.teamId) : null;
-  if (!team) {
-    fail("NO_TEAM", "No tienes equipo");
-  }
-  if (team.ownerId !== userId) {
-    fail("NOT_OWNER", "Solo el dueño del equipo puede cambiar el logo");
-  }
-  return team;
-}
-
 /** Upload target for the team logo. POST the file there, then call setLogo. */
 export const generateLogoUploadUrl = onboardedMutation({
   args: {},
@@ -407,16 +264,12 @@ export const setLogo = onboardedMutation({
   args: { imageId: v.id("_storage") },
   handler: async (ctx, args) => {
     const team = await ownedTeam(ctx, ctx.user._id);
-    const meta = await ctx.db.system.get(args.imageId);
-    if (!meta) {
-      fail("NOT_FOUND", "La imagen no se ha subido");
-    }
-    if (!meta.contentType?.startsWith("image/")) {
-      fail("VALIDATION", "Solo se admiten imágenes");
-    }
-    if (meta.size > MAX_LOGO_BYTES) {
-      fail("VALIDATION", "El logo no puede superar 2 MB");
-    }
+    await assertStoredImage(
+      ctx,
+      args.imageId,
+      MAX_LOGO_BYTES,
+      "El logo no puede superar 2 MB"
+    );
     const previous = team.logoId;
     await ctx.db.patch(team._id, {
       logoId: args.imageId,
@@ -475,32 +328,17 @@ async function insertMember(
     );
   }
   if (resolved.userId) {
-    const other = await membershipForUser(ctx, resolved.userId);
+    const other = await currentMembership(ctx, resolved.userId);
     if (other) {
       throw new Error("Esa persona ya pertenece a otro equipo");
     }
   }
-  if (resolved.signupId) {
-    const bySignup = await ctx.db
-      .query("teamMembers")
-      .withIndex("by_signup", (q) => q.eq("signupId", resolved.signupId))
-      .collect();
-    if (bySignup.some((row) => row.teamId === team._id)) {
-      throw new Error("Esa persona ya está en este equipo");
-    }
-    if (bySignup.length > 0) {
-      throw new Error(
-        "Esa persona ya tiene invitación o membresía en otro equipo"
-      );
-    }
-  }
-
   return await ctx.db.insert("teamMembers", {
     addedBy,
     createdAt: Date.now(),
+    editionId: team.editionId ?? (await currentEditionId(ctx)),
     identifier: resolved.identifier,
     identifierType,
-    signupId: resolved.signupId,
     status: resolved.status,
     teamId: team._id,
     userId: resolved.userId,
@@ -517,28 +355,30 @@ export const create = onboardedMutation({
     if (name.length < 2) {
       throw new Error("El nombre del equipo debe tener al menos 2 caracteres");
     }
-    const existing = await membershipForUser(ctx, ctx.user._id);
+    const existing = await currentMembership(ctx, ctx.user._id);
     if (existing) {
       throw new Error("Ya perteneces a un equipo");
     }
 
     const now = Date.now();
+    const editionId = await currentEditionId(ctx);
     const teamId = await ctx.db.insert("teams", {
+      createdAt: now,
+      editionId,
+      joinCode: await nextJoinCode(ctx),
       name,
       ownerId: ctx.user._id,
-      joinCode: await uniqueJoinCode(ctx),
-      createdAt: now,
       updatedAt: now,
     });
     await ctx.db.insert("teamMembers", {
-      teamId,
-      userId: ctx.user._id,
-      signupId: ctx.user.signupId,
-      identifierType: "email",
-      identifier: ctx.user.email ?? ctx.user._id,
-      status: "member",
       addedBy: ctx.user._id,
       createdAt: now,
+      editionId,
+      identifier: ctx.user.email ?? ctx.user._id,
+      identifierType: "email",
+      status: "member",
+      teamId,
+      userId: ctx.user._id,
     });
 
     const team = await ctx.db.get(teamId);
@@ -565,13 +405,19 @@ export const create = onboardedMutation({
 export const leave = onboardedMutation({
   args: {},
   handler: async (ctx) => {
-    const membership = await membershipForUser(ctx, ctx.user._id);
+    const membership = await currentMembership(ctx, ctx.user._id);
     if (!membership) {
       throw new Error("No estás en un equipo");
     }
     const team = await ctx.db.get(membership.teamId);
     if (team && team.ownerId === ctx.user._id) {
       throw new Error("El dueño no puede salir del equipo");
+    }
+    if (team) {
+      const submission = await findTeamSubmission(ctx, team._id);
+      if (submission?.submittedBy === ctx.user._id) {
+        await ctx.db.patch(submission._id, { submittedBy: team.ownerId });
+      }
     }
     await ctx.db.delete(membership._id);
     return null;
@@ -582,7 +428,7 @@ export const leave = onboardedMutation({
 async function requireMemberTeam(
   ctx: MutationCtx & { user: Doc<"users"> }
 ): Promise<Doc<"teams">> {
-  const membership = await membershipForUser(ctx, ctx.user._id);
+  const membership = await currentMembership(ctx, ctx.user._id);
   if (!membership) {
     fail("NO_TEAM", "No estás en un equipo");
   }
@@ -632,14 +478,6 @@ async function clearPendingInvites(
         .collect())
     );
   }
-  if (user.signupId) {
-    rows.push(
-      ...(await ctx.db
-        .query("teamMembers")
-        .withIndex("by_signup", (q) => q.eq("signupId", user.signupId))
-        .collect())
-    );
-  }
   const seen = new Set<string>();
   for (const row of rows) {
     if (seen.has(row._id) || row.status !== "pending") {
@@ -657,15 +495,18 @@ export const join = onboardedMutation({
     if (code.length !== JOIN_CODE_LENGTH) {
       fail("BAD_CODE", "El código de equipo tiene 8 caracteres");
     }
+    const editionId = await currentEditionId(ctx);
     const team = await ctx.db
       .query("teams")
-      .withIndex("by_join_code", (q) => q.eq("joinCode", code))
+      .withIndex("by_edition_join_code", (q) =>
+        q.eq("editionId", editionId).eq("joinCode", code)
+      )
       .unique();
     if (!team) {
       fail("BAD_CODE", "No hay ningún equipo con ese código");
     }
 
-    const existing = await membershipForUser(ctx, ctx.user._id);
+    const existing = await currentMembership(ctx, ctx.user._id);
     if (existing) {
       if (existing.teamId === team._id) {
         return team._id;
@@ -675,14 +516,14 @@ export const join = onboardedMutation({
 
     await clearPendingInvites(ctx, ctx.user);
     await ctx.db.insert("teamMembers", {
-      teamId: team._id,
-      userId: ctx.user._id,
-      signupId: ctx.user.signupId,
-      identifierType: "email",
-      identifier: ctx.user.email ?? ctx.user._id,
-      status: "member",
       addedBy: ctx.user._id,
       createdAt: Date.now(),
+      editionId: team.editionId ?? editionId,
+      identifier: ctx.user.email ?? ctx.user._id,
+      identifierType: "email",
+      status: "member",
+      teamId: team._id,
+      userId: ctx.user._id,
     });
     await ctx.db.patch(team._id, { updatedAt: Date.now() });
     return team._id;
@@ -697,7 +538,7 @@ export const regenerateCode = onboardedMutation({
     if (team.ownerId !== ctx.user._id) {
       fail("NOT_OWNER", "Solo el dueño puede regenerar el código");
     }
-    const joinCode = await uniqueJoinCode(ctx);
+    const joinCode = await nextJoinCode(ctx);
     await ctx.db.patch(team._id, { joinCode, updatedAt: Date.now() });
     return joinCode;
   },
@@ -945,7 +786,7 @@ export const backfillJoinCodes = internalMutation({
       if (team.joinCode) {
         continue;
       }
-      await ctx.db.patch(team._id, { joinCode: await uniqueJoinCode(ctx) });
+      await ctx.db.patch(team._id, { joinCode: await nextJoinCode(ctx) });
       updated++;
     }
     return updated;
@@ -955,10 +796,9 @@ export const backfillJoinCodes = internalMutation({
 
 function memberEmails(
   user: { email?: string } | null,
-  signup: { email?: string } | null,
   member: Doc<"teamMembers">
 ): string[] {
-  const emails = [user?.email, signup?.email];
+  const emails = [user?.email];
   if (member.identifierType === "email") {
     emails.push(member.identifier);
   }
@@ -968,11 +808,22 @@ function memberEmails(
 }
 
 export const adminDirectory = adminQuery({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    editionId: v.optional(v.id("editions")),
+    search: v.optional(v.string()),
+    trackId: v.optional(v.id("tracks")),
+  },
+  handler: async (ctx, args) => {
+    const editionId = await resolveEditionId(ctx, args.editionId);
     const [teams, catalog] = await Promise.all([
-      ctx.db.query("teams").collect(),
-      ctx.db.query("tracks").collect(),
+      ctx.db
+        .query("teams")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
+      ctx.db
+        .query("tracks")
+        .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+        .collect(),
     ]);
     const tracks = catalog.toSorted((a, b) => a.sortOrder - b.sortOrder);
     const rows = [];
@@ -1002,15 +853,12 @@ export const adminDirectory = adminQuery({
           continue;
         }
         const user = member.userId ? await ctx.db.get(member.userId) : null;
-        const signup = member.signupId
-          ? await ctx.db.get(member.signupId)
-          : null;
-        const found = memberEmails(user, signup, member);
+        const found = memberEmails(user, member);
         emails.push(...found);
         people.push({
           email: found[0],
           isOwner: member.userId === team.ownerId,
-          name: user?.name ?? signup?.fullName ?? member.identifier,
+          name: user?.name ?? member.identifier,
         });
       }
       rows.push({
@@ -1024,9 +872,25 @@ export const adminDirectory = adminQuery({
         submitted: submission?.status === "submitted",
       });
     }
+    const needle = args.search?.trim().toLowerCase() ?? "";
+    const listed = rows.filter((team) => {
+      if (
+        args.trackId &&
+        !team.entered.some((track) => track._id === args.trackId)
+      ) {
+        return false;
+      }
+      if (!needle) {
+        return true;
+      }
+      return (
+        team.name.toLowerCase().includes(needle) ||
+        team.emails.some((email) => email.toLowerCase().includes(needle))
+      );
+    });
     return {
       teamLimit: MAX_TEAMS_PER_TRACK,
-      teams: rows.toSorted((a, b) => a.name.localeCompare(b.name, "es")),
+      teams: listed.toSorted((a, b) => a.name.localeCompare(b.name, "es")),
       tracks: tracks.map((track) => ({
         _id: track._id,
         label: track.label,
@@ -1120,6 +984,7 @@ export const adminSetTrack = adminMutation({
           challengeIds,
           createdAt: now,
           description: "",
+          editionId: team.editionId ?? (await currentEditionId(ctx)),
           name: team.name,
           perkIds: [],
           status: "draft",
@@ -1171,7 +1036,10 @@ export const adminRemoveTrack = adminMutation({
 export const adminOptions = adminQuery({
   args: {},
   handler: async (ctx) => {
-    const teams = await ctx.db.query("teams").collect();
+    const teams = ofEdition(
+      await ctx.db.query("teams").collect(),
+      await currentEditionId(ctx)
+    );
     return teams
       .map((team) => ({ _id: team._id, name: team.name }))
       .toSorted((a, b) => a.name.localeCompare(b.name, "es"));
@@ -1181,55 +1049,35 @@ export const adminOptions = adminQuery({
 
 async function loadAdminParticipant(
   ctx: QueryCtx | MutationCtx,
-  args: { signupId?: Id<"signups">; userId?: Id<"users"> }
+  args: { signupId?: string; userId?: Id<"users"> }
 ) {
-  const signup = args.signupId ? await ctx.db.get(args.signupId) : null;
+  const participation = args.signupId
+    ? await ctx.db.get(args.signupId as Id<"participations">)
+    : null;
   let user = args.userId ? await ctx.db.get(args.userId) : null;
-  if (!user && signup) {
-    user =
-      (await ctx.db
-        .query("users")
-        .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
-        .unique()) ?? (await findUserByEmail(ctx, signup.email));
+  if (!user && participation?.userId) {
+    user = await ctx.db.get(participation.userId);
   }
-  const resolvedSignup =
-    signup ?? (user ? await getSignupForUser(ctx, user) : null);
-  if (!user && !resolvedSignup) {
+  if (!user && participation?.email) {
+    user = await findUserByEmail(ctx, participation.email);
+  }
+  if (!user && !participation) {
     throw new Error("Participante no encontrado");
   }
-  return { signup: resolvedSignup, user };
+  return { participation, user };
 }
 
 async function membershipsForPerson(
   ctx: QueryCtx | MutationCtx,
-  user: Doc<"users"> | null,
-  signup: Doc<"signups"> | null
+  user: Doc<"users"> | null
 ): Promise<Doc<"teamMembers">[]> {
-  const rows: Doc<"teamMembers">[] = [];
-  const seen = new Set<string>();
-  const take = (row: Doc<"teamMembers">) => {
-    if (!seen.has(row._id)) {
-      seen.add(row._id);
-      rows.push(row);
-    }
-  };
-  if (user) {
-    for (const row of await ctx.db
-      .query("teamMembers")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect()) {
-      take(row);
-    }
+  if (!user) {
+    return [];
   }
-  if (signup) {
-    for (const row of await ctx.db
-      .query("teamMembers")
-      .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
-      .collect()) {
-      take(row);
-    }
-  }
-  return rows;
+  return await ctx.db
+    .query("teamMembers")
+    .withIndex("by_user", (q) => q.eq("userId", user._id))
+    .collect();
 }
 
 async function dropMemberships(
@@ -1273,7 +1121,7 @@ async function dropMemberships(
 
 export const adminAssignMember = adminMutation({
   args: {
-    signupId: v.optional(v.id("signups")),
+    signupId: v.optional(v.string()),
     teamId: v.id("teams"),
     userId: v.optional(v.id("users")),
   },
@@ -1282,12 +1130,12 @@ export const adminAssignMember = adminMutation({
     if (!team) {
       throw new Error("Equipo no encontrado");
     }
-    const { signup, user } = await loadAdminParticipant(ctx, args);
-    const email = user?.email ?? signup?.email;
+    const { participation, user } = await loadAdminParticipant(ctx, args);
+    const email = user?.email ?? participation?.email;
     if (!email) {
       throw new Error("Este participante no tiene email para asignarlo");
     }
-    const existing = await membershipsForPerson(ctx, user, signup);
+    const existing = await membershipsForPerson(ctx, user);
     if (
       existing.some((row) => row.teamId === team._id && row.status === "member")
     ) {
@@ -1300,7 +1148,6 @@ export const adminAssignMember = adminMutation({
     const stillOnTeam = existing.find((row) => row.teamId === team._id);
     if (stillOnTeam) {
       await ctx.db.patch(stillOnTeam._id, {
-        signupId: stillOnTeam.signupId ?? signup?._id,
         status: user ? "member" : stillOnTeam.status,
         userId: stillOnTeam.userId ?? user?._id,
       });
@@ -1310,9 +1157,9 @@ export const adminAssignMember = adminMutation({
     await ctx.db.insert("teamMembers", {
       addedBy: ctx.user._id,
       createdAt: Date.now(),
+      editionId: team.editionId ?? (await currentEditionId(ctx)),
       identifier: normalizeEmail(email),
       identifierType: "email",
-      signupId: signup?._id,
       status: user ? "member" : "pending",
       teamId: team._id,
       userId: user?._id,
@@ -1325,12 +1172,12 @@ export const adminAssignMember = adminMutation({
 
 export const adminRemoveMember = adminMutation({
   args: {
-    signupId: v.optional(v.id("signups")),
+    signupId: v.optional(v.string()),
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const { signup, user } = await loadAdminParticipant(ctx, args);
-    const existing = await membershipsForPerson(ctx, user, signup);
+    const { user } = await loadAdminParticipant(ctx, args);
+    const existing = await membershipsForPerson(ctx, user);
     if (existing.length === 0) {
       throw new Error("Esta persona no está en ningún equipo");
     }

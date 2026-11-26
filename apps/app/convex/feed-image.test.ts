@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MutationCtx } from "./_generated/server";
 import { post } from "./feed";
+import { testEditionRow } from "./lib/testFixtures";
 
 function context(size: number, contentType = "image/png") {
   const inserted: unknown[] = [];
@@ -10,7 +11,20 @@ function context(size: number, contentType = "image/png") {
     db: {
       get: async () => ({ _id: "author", role: "admin" }),
       system: { get: async () => ({ size, contentType }) },
-      query: () => ({ withIndex: () => ({ first: async () => null }) }),
+      query: (table: string) => {
+        if (table === "editions") {
+          return {
+            withIndex: () => ({ unique: async () => testEditionRow() }),
+          };
+        }
+        return {
+          withIndex: () => ({
+            collect: async () => [],
+            first: async () => null,
+            unique: async () => null,
+          }),
+        };
+      },
       insert: async (_table: string, row: unknown) => {
         inserted.push(row);
         return "post";

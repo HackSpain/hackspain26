@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import {
   TICKER_DURATION,
   resolveTvSponsors,
@@ -65,7 +66,7 @@ function SponsorLogoStrip({
     items.map((sponsor) => (
       <span
         key={`${copy}-${sponsor.name}`}
-        className="flex h-full shrink-0 items-center px-[1.6cqw]"
+        className="flex h-full shrink-0 items-center px-cq-16"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -76,8 +77,8 @@ function SponsorLogoStrip({
       </span>
     ));
   return (
-    <div className="grid h-full grid-cols-[auto_minmax(0,1fr)_auto] gap-[0.3cqw] bg-hs-ink">
-      <p className="flex items-center bg-hs-orange px-[1.2cqw] font-bungee text-[clamp(0.7rem,1.1cqw,1.5rem)] uppercase text-hs-paper">
+    <div className="grid h-full grid-cols-[auto_minmax(0,1fr)_auto] gap-cq-3 bg-hs-ink">
+      <p className="flex items-center bg-hs-orange px-cq-12 font-bungee text-cq-2xl uppercase text-hs-paper">
         Patrocinan
       </p>
       <div className="flex min-w-0 overflow-hidden bg-hs-paper">
@@ -87,11 +88,13 @@ function SponsorLogoStrip({
           </div>
         ) : (
           <div
-            className="tv-ticker flex h-full w-max"
-            style={{
-              animationDuration: TICKER_DURATION[speed],
-              animationPlayState: visible ? "running" : "paused",
-            }}
+            className="tv-ticker anim-duration-var anim-play-var flex h-full w-max"
+            style={
+              {
+                "--anim-duration": TICKER_DURATION[speed],
+                "--anim-play": visible ? "running" : "paused",
+              } as CSSProperties
+            }
           >
             {[0, 1].map((copy) => (
               <div
@@ -105,13 +108,11 @@ function SponsorLogoStrip({
           </div>
         )}
       </div>
-      <p className="flex flex-col items-center justify-center bg-hs-navy px-[1.2cqw] leading-none text-hs-paper">
-        <span className="text-[clamp(0.45rem,0.6cqw,0.8rem)] font-bold tracking-[0.12em] uppercase">
+      <p className="flex flex-col items-center justify-center bg-hs-navy px-cq-12 leading-none text-hs-paper">
+        <span className="text-cq-xs font-bold tracking-caps uppercase">
           Powered by
         </span>
-        <span className="mt-[0.3cqw] font-bungee text-[clamp(0.7rem,1.1cqw,1.5rem)]">
-          RawTree
-        </span>
+        <span className="mt-[0.3cqw] font-bungee text-cq-2xl">RawTree</span>
       </p>
     </div>
   );
@@ -151,17 +152,19 @@ export function SponsorTickerBox({
   return (
     <div className="flex h-full items-center overflow-hidden bg-hs-gold">
       <div
-        className="tv-ticker flex w-max"
-        style={{
-          animationDuration: TICKER_DURATION[speed],
-          animationPlayState: visible ? "running" : "paused",
-        }}
+        className="tv-ticker anim-duration-var anim-play-var flex w-max"
+        style={
+          {
+            "--anim-duration": TICKER_DURATION[speed],
+            "--anim-play": visible ? "running" : "paused",
+          } as CSSProperties
+        }
       >
         {[0, 1].map((copy) => (
           <p
             key={copy}
             aria-hidden={copy === 1}
-            className="flex shrink-0 items-center whitespace-nowrap font-bungee text-[clamp(0.9rem,2.4cqw,1.8rem)] text-hs-ink uppercase"
+            className="flex shrink-0 items-center whitespace-nowrap font-bungee text-cq-7xl text-hs-ink uppercase"
           >
             {items.map((sponsor) => (
               <span

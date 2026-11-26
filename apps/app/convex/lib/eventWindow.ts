@@ -1,12 +1,13 @@
 import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { currentEdition } from "./editions";
 import { fail } from "./errors";
+import { editionDatesLine, formatEventDate } from "./eventFormat";
+
+export { editionDatesLine, formatEventDate };
 
 type Ctx = QueryCtx | MutationCtx;
-
-/** Key of the singleton `settings` row that holds hackathon-wide switches. */
-export const HACKATHON_SETTINGS_KEY = "hackathon";
 
 export type EventWindow = { startsAt?: number; endsAt?: number };
 
@@ -31,16 +32,9 @@ export const eventWindowValidator = v.object({
   startsAt: v.optional(v.number()),
 });
 
-export async function settingsDoc(ctx: Ctx): Promise<Doc<"settings"> | null> {
-  return await ctx.db
-    .query("settings")
-    .withIndex("by_key", (q) => q.eq("key", HACKATHON_SETTINGS_KEY))
-    .unique();
-}
-
 export async function getEventWindow(ctx: Ctx): Promise<EventWindow> {
-  const row = await settingsDoc(ctx);
-  return { endsAt: row?.eventEndsAt, startsAt: row?.eventStartsAt };
+  const edition = await currentEdition(ctx);
+  return { endsAt: edition.eventEndsAt, startsAt: edition.eventStartsAt };
 }
 
 export function eventPhase(window: EventWindow, now: number): EventPhase {
@@ -58,19 +52,6 @@ export function eventPhase(window: EventWindow, now: number): EventPhase {
 
 export function eventIsOpen(phase: EventPhase): boolean {
   return phase === "unscheduled" || phase === "during";
-}
-
-const DATE_FORMAT = new Intl.DateTimeFormat("es-ES", {
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  month: "long",
-  timeZone: "Europe/Madrid",
-  weekday: "long",
-});
-
-export function formatEventDate(ms: number): string {
-  return DATE_FORMAT.format(new Date(ms));
 }
 
 /** Spanish copy for a closed window; the CLI swaps it for English by code. */
@@ -92,9 +73,9 @@ export function closedMessage(phase: EventPhase, window: EventWindow): string {
  */
 export async function requireEventOpen(
   ctx: Ctx,
-  user: Pick<Doc<"users">, "role">
+  user: Pick<Doc<"users">, "admin" | "role">
 ): Promise<void> {
-  if (user.role === "admin") {
+  if (user.admin === true || user.role === "admin") {
     return;
   }
   const window = await getEventWindow(ctx);

@@ -19,7 +19,7 @@ import type { DirectoryParticipant } from "./types";
 import { personHeading } from "./types";
 import "./connection-graph.css";
 
-const CONTAINER = contentWidth("/participantes");
+const CONTAINER = contentWidth("/people");
 
 function panelLeft(): number | null {
   return null;

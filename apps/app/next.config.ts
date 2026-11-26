@@ -5,6 +5,80 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 const nextConfig: NextConfig = {
   agentRules: false,
   allowedDevOrigins: ["127.0.2.2", "127.0.0.1", "localhost"],
+  redirects() {
+    return [
+      {
+        source: "/participantes",
+        destination: "/people",
+        permanent: true,
+      },
+      {
+        source: "/judging-sponsors",
+        destination: "/deliveries",
+        permanent: true,
+      },
+      {
+        source: "/judging-sponsors/:submissionId",
+        destination: "/deliveries?project=:submissionId",
+        permanent: true,
+      },
+      {
+        source: "/admin/equipos",
+        destination: "/admin/teams",
+        permanent: true,
+      },
+      {
+        source: "/admin/evento",
+        destination: "/admin/event",
+        permanent: true,
+      },
+      {
+        source: "/admin/notifications",
+        destination: "/admin/event?tab=avisos",
+        permanent: true,
+      },
+      {
+        source: "/admin/check-in",
+        destination: "/admin/event?tab=accesos",
+        permanent: true,
+      },
+      {
+        source: "/admin/applications",
+        destination: "/admin/perks?tab=solicitudes",
+        permanent: true,
+      },
+      {
+        source: "/admin/final",
+        destination: "/admin/judging?tab=final",
+        permanent: true,
+      },
+      {
+        source: "/admin/types",
+        destination: "/admin?tab=roles",
+        permanent: true,
+      },
+      {
+        source: "/admin/submit",
+        destination: "/admin/teams?tab=entregas",
+        permanent: true,
+      },
+      {
+        source: "/admin/users/:id",
+        destination: "/admin?user=:id",
+        permanent: true,
+      },
+      {
+        source: "/cli",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/feed",
+        destination: "/",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 const configuredApp = withBetterStack(nextConfig);

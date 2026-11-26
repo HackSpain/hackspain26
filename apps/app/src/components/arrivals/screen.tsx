@@ -5,6 +5,7 @@ import Image from "next/image";
 import { gsap } from "gsap";
 import { Maximize, Minimize } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { api } from "@convex/_generated/api";
 import { ArenaLights } from "@/components/arena-lights";
 import type { Arrival, ArrivalQueue } from "@/lib/arrival-queue";
@@ -75,11 +76,11 @@ function Portrait({ person }: { person: Arrival }) {
           unoptimized
           priority
           onError={() => setFailed(true)}
-          className="object-cover object-top saturate-[0.7] sepia-[0.25] contrast-[1.08]"
+          className="object-cover object-top saturate-70 sepia-25 contrast-108"
         />
       ) : (
         <div className="arena-monogram absolute inset-0 flex items-center justify-center">
-          <span className="arena-type -rotate-6 text-[min(24cqw,46cqh)] leading-none text-hs-paper">
+          <span className="arena-type -rotate-6 text-cq-min-24 leading-none text-hs-paper">
             {person.name
               .split(/\s+/)
               .slice(0, 2)
@@ -206,28 +207,32 @@ function Player({ person }: { person: Arrival }) {
         className="arena-brand-panel absolute top-0 right-0 h-full w-[41%]"
       />
       <Portrait person={person} />
-      <div className="arena-details absolute inset-y-0 left-[4.6%] z-10 flex w-[59%] flex-col justify-center py-[14cqh]">
-        <h1 className="arena-type uppercase leading-[0.98] tracking-[-0.025em] text-hs-paper">
-          <span className="block overflow-hidden pb-[0.7cqh]">
+      <div className="arena-details absolute inset-y-0 left-[4.6%] z-10 flex w-[59%] flex-col justify-center py-cqh-140">
+        <h1 className="arena-type uppercase leading-pack tracking-tight text-hs-paper">
+          <span className="block overflow-hidden pb-cqh-7">
             <span
-              className="arena-first block text-hs-gold"
-              style={{
-                fontSize:
-                  firstName.length > 14 || lastName.length > 15
-                    ? "min(5cqw,9cqh)"
-                    : "min(6.9cqw,12cqh)",
-              }}
+              className="arena-first font-size-var block text-hs-gold"
+              style={
+                {
+                  "--font-size":
+                    firstName.length > 14 || lastName.length > 15
+                      ? "min(5cqw,9cqh)"
+                      : "min(6.9cqw,12cqh)",
+                } as CSSProperties
+              }
             >
               {firstName}
             </span>
           </span>
           {lastName ? (
-            <span className="block overflow-hidden pb-[1.4cqh]">
+            <span className="block overflow-hidden pb-cqh-14">
               <span
-                className="arena-last block text-balance break-words"
-                style={{
-                  fontSize: `min(${nameSize / 19.2}cqw,${nameSize / 10.8}cqh)`,
-                }}
+                className="arena-last font-size-var block text-balance break-words"
+                style={
+                  {
+                    "--font-size": `min(${nameSize / 19.2}cqw,${nameSize / 10.8}cqh)`,
+                  } as CSSProperties
+                }
               >
                 {lastName}
               </span>
@@ -235,8 +240,8 @@ function Player({ person }: { person: Arrival }) {
           ) : null}
         </h1>
         <div className="arena-affiliation mt-[2.5cqh] max-w-full">
-          <p className="flex flex-wrap items-baseline gap-x-[1cqw] gap-y-1 text-[min(1.5cqw,2.5cqh)] leading-snug">
-            <span className="font-semibold uppercase tracking-[0.08em] text-hs-gold">
+          <p className="flex flex-wrap items-baseline gap-x-cq gap-y-1 text-cq-min-15 leading-snug">
+            <span className="font-semibold uppercase tracking-label text-hs-gold">
               {person.role}
             </span>
             {person.city ? (
@@ -250,24 +255,24 @@ function Player({ person }: { person: Arrival }) {
           </p>
           {person.company || person.university ? (
             <dl
-              className={`mt-[2.3cqh] grid gap-x-[2cqw] gap-y-[1.5cqh] ${person.company && person.university ? "grid-cols-2" : "grid-cols-1"}`}
+              className={`mt-[2.3cqh] grid gap-x-cq-20 gap-y-cqh-15 ${person.company && person.university ? "grid-cols-2" : "grid-cols-1"}`}
             >
               {person.company ? (
                 <div>
-                  <dt className="text-[min(1cqw,1.8cqh)] font-medium uppercase tracking-[0.16em] text-hs-paper/45">
+                  <dt className="text-cq-min-1 font-medium uppercase tracking-display text-hs-paper/45">
                     Empresa
                   </dt>
-                  <dd className="mt-[0.7cqh] line-clamp-2 text-[min(1.9cqw,3.2cqh)] leading-tight text-hs-paper">
+                  <dd className="mt-[0.7cqh] line-clamp-2 text-cq-min-19 leading-tight text-hs-paper">
                     {person.company}
                   </dd>
                 </div>
               ) : null}
               {person.university ? (
                 <div>
-                  <dt className="text-[min(1cqw,1.8cqh)] font-medium uppercase tracking-[0.16em] text-hs-paper/45">
+                  <dt className="text-cq-min-1 font-medium uppercase tracking-display text-hs-paper/45">
                     Universidad
                   </dt>
-                  <dd className="mt-[0.7cqh] line-clamp-2 text-[min(1.9cqw,3.2cqh)] leading-tight text-hs-paper">
+                  <dd className="mt-[0.7cqh] line-clamp-2 text-cq-min-19 leading-tight text-hs-paper">
                     {person.university}
                   </dd>
                 </div>
@@ -276,7 +281,7 @@ function Player({ person }: { person: Arrival }) {
           ) : null}
           {person.skills.length > 0 ? (
             <p
-              className="mt-[2cqh] line-clamp-2 text-[min(1.35cqw,2.4cqh)] leading-relaxed text-hs-paper/60"
+              className="mt-[2cqh] line-clamp-2 text-cq-min-135 leading-relaxed text-hs-paper/60"
               aria-label="Especialidades"
             >
               {person.skills.slice(0, 3).join(" · ")}
@@ -284,7 +289,7 @@ function Player({ person }: { person: Arrival }) {
           ) : null}
         </div>
       </div>
-      <p className="arena-number arena-type absolute right-[4.6%] bottom-[6%] z-10 text-[min(4cqw,7cqh)] leading-none tracking-[-0.02em] text-hs-paper/65">
+      <p className="arena-number arena-type absolute right-[4.6%] bottom-[6%] z-10 text-cq-min-4 leading-none tracking-snug text-hs-paper/65">
         <span className="mr-1 text-hs-gold">#</span>
         {number}
       </p>
@@ -368,14 +373,10 @@ function ArrivalBands({
     <div
       ref={root}
       aria-hidden
-      className="arena-color-curtain pointer-events-none absolute inset-0 z-40 overflow-hidden"
+      className="arena-color-curtain pointer-events-none absolute inset-0 z-40 grid grid-cols-5 overflow-hidden"
     >
-      {BAND_TONES.map((tone, column) => (
-        <div
-          key={tone}
-          className={`arena-color-band absolute inset-y-0 ${tone}`}
-          style={{ left: `${column * 20}%`, width: "calc(20% + 1px)" }}
-        />
+      {BAND_TONES.map((tone) => (
+        <div key={tone} className={`arena-color-band min-w-0 -mr-px ${tone}`} />
       ))}
     </div>
   );
@@ -432,7 +433,7 @@ export function ArrivalStage({
         {person ? <Player key={person.id} person={person} /> : null}
         <ArrivalBands personId={person?.id} static={waiting} />
         {waiting ? (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-[6cqh] px-[8cqw]">
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-cqh-60 px-cq-80">
             <Image
               src="/logo.svg"
               alt="HackSpain"
@@ -441,7 +442,7 @@ export function ArrivalStage({
               priority
               className="h-auto w-[min(62cqw,110cqh)]"
             />
-            <h1 className="text-center font-bungee text-[min(4cqw,7cqh)] leading-tight text-balance text-hs-paper">
+            <h1 className="text-center font-bungee text-cq-min-4 leading-tight text-balance text-hs-paper">
               EMPEZAMOS EN POCO
             </h1>
           </div>
@@ -455,7 +456,7 @@ export function ArrivalStage({
               className="h-auto w-[clamp(90px,10cqw,240px)]"
             />
             {demo || !connected ? (
-              <p className="font-mono text-[clamp(10px,0.8cqw,18px)] uppercase tracking-[0.2em] text-hs-paper/45">
+              <p className="font-mono text-cq-caption uppercase tracking-poster text-hs-paper/45">
                 {demo ? "Demo" : "Reconectando"}
               </p>
             ) : null}

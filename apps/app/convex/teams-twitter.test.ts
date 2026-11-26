@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MutationCtx } from "./_generated/server";
+import { testEditionRow, withCurrentEdition } from "./lib/testFixtures";
 import { create, join } from "./teams";
 
 function context(twitterHandle = "hacker") {
@@ -8,23 +9,47 @@ function context(twitterHandle = "hacker") {
     users: [
       { _id: "operator", role: "admin", twitterHandle },
       { _id: "hacker", twitterHandle: "invited" },
-    ],
-    teams: [{ _id: "team", ownerId: "other", joinCode: "ABCDEFGH" }],
-    teamMembers: [
       {
+        _id: "xoauth",
+        twitterHandle: "linkedx",
+        twitterLinkedAt: 1,
+      },
+      {
+        _id: "linked",
+        githubUsername: "octocat",
+        githubLinkedAt: 1,
+      },
+      { _id: "typed", githubUsername: "impostor" },
+      {
+        _id: "mailed",
+        email: "ada@x.test",
+        emailVerificationTime: 1,
+      },
+    ],
+    editions: [testEditionRow()],
+    participations: [],
+    teams: [
+      withCurrentEdition({
+        _id: "team",
+        ownerId: "other",
+        joinCode: "ABCDEFGH",
+      }),
+    ],
+    teamMembers: [
+      withCurrentEdition({
         _id: "pending",
         teamId: "other",
         identifierType: "twitter",
         identifier: "hacker",
         status: "pending",
-      },
-      {
+      }),
+      withCurrentEdition({
         _id: "unrelated",
         teamId: "other",
         identifierType: "twitter",
         identifier: "someone",
         status: "pending",
-      },
+      }),
     ],
   };
   const ctx = {
@@ -86,7 +111,7 @@ test("joining clears the user's normalized X invitation and preserves other invi
   );
 });
 
-test("X invitations resolve registered users even without a signup X handle", async () => {
+test("X invitations stay pending; a self-declared handle does not join the team", async () => {
   const { ctx, tables } = context();
   const teamId = await create._handler(ctx, {
     name: "New team",
@@ -96,7 +121,74 @@ test("X invitations resolve registered users even without a signup X handle", as
     tables.teamMembers.some(
       (row) =>
         row.teamId === teamId &&
-        row.userId === "hacker" &&
+        row.identifierType === "twitter" &&
+        row.identifier === "invited" &&
+        row.status === "pending" &&
+        row.userId === undefined
+    )
+  );
+});
+
+test("X invitations join only an OAuth-linked account", async () => {
+  const { ctx, tables } = context();
+  const teamId = await create._handler(ctx, {
+    name: "Linked X",
+    members: [{ identifierType: "twitter", identifier: "@LinkedX" }],
+  });
+  assert.ok(
+    tables.teamMembers.some(
+      (row) =>
+        row.teamId === teamId &&
+        row.userId === "xoauth" &&
+        row.status === "member"
+    )
+  );
+});
+
+test("GitHub invitations join only an OAuth-linked account", async () => {
+  const { ctx, tables } = context();
+  const teamId = await create._handler(ctx, {
+    name: "Linked",
+    members: [{ identifierType: "github", identifier: "Octocat" }],
+  });
+  assert.ok(
+    tables.teamMembers.some(
+      (row) =>
+        row.teamId === teamId &&
+        row.userId === "linked" &&
+        row.status === "member"
+    )
+  );
+});
+
+test("a self-declared GitHub handle stays a pending invitation", async () => {
+  const { ctx, tables } = context();
+  const teamId = await create._handler(ctx, {
+    name: "Typed",
+    members: [{ identifierType: "github", identifier: "impostor" }],
+  });
+  assert.ok(
+    tables.teamMembers.some(
+      (row) =>
+        row.teamId === teamId &&
+        row.identifier === "impostor" &&
+        row.status === "pending" &&
+        row.userId === undefined
+    )
+  );
+});
+
+test("email invitations join a verified account", async () => {
+  const { ctx, tables } = context();
+  const teamId = await create._handler(ctx, {
+    name: "Mail",
+    members: [{ identifierType: "email", identifier: "Ada@x.test" }],
+  });
+  assert.ok(
+    tables.teamMembers.some(
+      (row) =>
+        row.teamId === teamId &&
+        row.userId === "mailed" &&
         row.status === "member"
     )
   );

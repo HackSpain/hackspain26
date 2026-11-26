@@ -2,13 +2,14 @@ import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials"
 import { convexAuth } from "@convex-dev/auth/server";
 import type { Tokens } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { ResendOTP } from "./ResendOTP";
 import { STUB_CODE, emailOtpStubEnabled } from "./devOtp";
 import { fail } from "./lib/errors";
+import { isRecord } from "./lib/isRecord";
 import { adminEmailAllowlist, normalizeEmail } from "./lib/normalize";
 import {
   findSignupByEmail,
@@ -55,11 +56,11 @@ const CliHandoff = ConvexCredentials<DataModel>({
   },
 });
 
-// `signIn` below wraps the library action so a dev stub code can be swapped
-// for the real one. The client always calls `auth:signIn`.
-export const {
+// Library `signIn` is re-exported as an internal action below so clients
+// cannot skip the eligibility check on `auth:signIn`.
+const {
   auth,
-  signIn: signInWithProvider,
+  signIn: librarySignIn,
   signOut,
   store,
   isAuthenticated,
@@ -71,9 +72,18 @@ export const {
         typeof args.profile.email === "string" ? args.profile.email : "";
       const email = rawEmail ? normalizeEmail(rawEmail) : undefined;
       const allowlist = adminEmailAllowlist();
-      const signup = email ? await findSignupByEmail(ctx, email) : null;
+      const participation = email ? await findSignupByEmail(ctx, email) : null;
       const allowlisted = Boolean(email && allowlist.has(email));
       const role = resolvedLoginRole(undefined, allowlisted);
+
+      const attachParticipation = async (
+        userId: typeof args.existingUserId
+      ) => {
+        if (!userId || !participation || participation.userId === userId) {
+          return;
+        }
+        await ctx.db.patch(participation._id, { userId });
+      };
 
       if (args.existingUserId) {
         const existing = await ctx.db.get(args.existingUserId);
@@ -82,17 +92,14 @@ export const {
         }
         await ctx.db.patch(args.existingUserId, {
           email: email ?? existing.email,
-          name: existing.name ?? signup?.fullName,
-          signupId: existing.signupId ?? signup?._id,
-          dietaryRestrictions:
-            existing.dietaryRestrictions ?? signup?.dietaryRestrictions,
-          dietaryDetails: existing.dietaryDetails ?? signup?.dietaryDetails,
+          name: existing.name ?? participation?.fullName,
           role: resolvedLoginRole(existing.role, allowlisted),
           emailVerificationTime:
             args.profile.emailVerified || args.type === "email"
               ? Date.now()
               : existing.emailVerificationTime,
         });
+        await attachParticipation(args.existingUserId);
         return args.existingUserId;
       }
 
@@ -100,37 +107,74 @@ export const {
         const byEmail = await findUserByEmail(ctx, email);
         if (byEmail) {
           await ctx.db.patch(byEmail._id, {
-            name: byEmail.name ?? signup?.fullName,
-            signupId: byEmail.signupId ?? signup?._id,
-            dietaryRestrictions:
-              byEmail.dietaryRestrictions ?? signup?.dietaryRestrictions,
-            dietaryDetails: byEmail.dietaryDetails ?? signup?.dietaryDetails,
+            name: byEmail.name ?? participation?.fullName,
             role: resolvedLoginRole(byEmail.role, allowlisted),
             emailVerificationTime: Date.now(),
           });
+          await attachParticipation(byEmail._id);
           return byEmail._id;
         }
       }
 
-      return await ctx.db.insert("users", {
+      const userId = await ctx.db.insert("users", {
         email,
-        name: signup?.fullName,
+        name: participation?.fullName,
+        admin: role === "admin",
         role,
-        signupId: signup?._id,
-        dietaryRestrictions: signup?.dietaryRestrictions,
-        dietaryDetails: signup?.dietaryDetails,
         notificationConsent: false,
-        attendanceStatus: "attending",
-        onboardingComplete: false,
         emailVerificationTime: Date.now(),
       });
+      await attachParticipation(userId);
+      return userId;
     },
   },
 });
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+export { auth, signOut, store, isAuthenticated };
+
+type SignInResult = {
+  redirect?: string;
+  verifier?: string;
+  tokens?: Tokens | null;
+  started?: boolean;
+  /** Set with `started: false` when the send step refused the email. */
+  reason?: "UNREGISTERED";
+};
+
+type SignInArgs = {
+  provider?: string;
+  params?: unknown;
+  verifier?: string;
+  refreshToken?: string;
+  calledBy?: string;
+};
+
+const signInArgs = {
+  provider: v.optional(v.string()),
+  params: v.optional(v.any()),
+  verifier: v.optional(v.string()),
+  refreshToken: v.optional(v.string()),
+  calledBy: v.optional(v.string()),
+};
+
+async function runLibrarySignIn(
+  ctx: ActionCtx,
+  args: SignInArgs
+): Promise<SignInResult> {
+  if (!("_handler" in librarySignIn)) {
+    throw new TypeError("Convex Auth signIn handler missing");
+  }
+  const handler = librarySignIn._handler;
+  if (typeof handler !== "function") {
+    throw new TypeError("Convex Auth signIn handler missing");
+  }
+  return await handler(ctx, args);
 }
+
+export const signInWithProvider = internalAction({
+  args: signInArgs,
+  handler: runLibrarySignIn,
+});
 
 // Convex Auth keeps one single-use code per account: a second "send code"
 // (another tab, the CLI, an e2e run) replaces it and any verify attempt
@@ -152,22 +196,13 @@ async function resolveStubCode(
     return params;
   }
   const email = params.email;
-  await ctx.runAction(api.auth.signInWithProvider, {
+  await ctx.runAction(internal.auth.signInWithProvider, {
     provider: ResendOTP.id,
     params: { email },
   });
   const code = await ctx.runQuery(internal.devOtp.lookup, { email });
   return code ? { ...params, code } : params;
 }
-
-type SignInResult = {
-  redirect?: string;
-  verifier?: string;
-  tokens?: Tokens | null;
-  started?: boolean;
-  /** Set with `started: false` when the send step refused the email. */
-  reason?: "UNREGISTERED";
-};
 
 const VERIFY_COPY = {
   BAD_OTP: "Ese código no es correcto. Revisa el email o pide uno nuevo.",
@@ -202,10 +237,10 @@ async function signInWithEmailOtp(
     if (eligible === "unregistered") {
       return { started: false, reason: "UNREGISTERED" };
     }
-    return await ctx.runAction(api.auth.signInWithProvider, forwarded);
+    return await ctx.runAction(internal.auth.signInWithProvider, forwarded);
   }
   try {
-    return await ctx.runAction(api.auth.signInWithProvider, forwarded);
+    return await ctx.runAction(internal.auth.signInWithProvider, forwarded);
   } catch (caughtError) {
     if (caughtError instanceof ConvexError || !isCouldNotVerify(caughtError)) {
       throw caughtError;
@@ -216,13 +251,7 @@ async function signInWithEmailOtp(
 }
 
 export const signIn = action({
-  args: {
-    provider: v.optional(v.string()),
-    params: v.optional(v.any()),
-    verifier: v.optional(v.string()),
-    refreshToken: v.optional(v.string()),
-    calledBy: v.optional(v.string()),
-  },
+  args: signInArgs,
   handler: async (ctx, args): Promise<SignInResult> => {
     const params: unknown = await resolveStubCode(
       ctx,
@@ -237,7 +266,7 @@ export const signIn = action({
       const email = normalizeEmail(params.email);
       return await signInWithEmailOtp(ctx, args, { ...params, email }, email);
     }
-    return await ctx.runAction(api.auth.signInWithProvider, {
+    return await ctx.runAction(internal.auth.signInWithProvider, {
       ...args,
       params,
     });

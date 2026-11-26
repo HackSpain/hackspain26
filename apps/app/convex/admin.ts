@@ -3,24 +3,33 @@ import { adminMutation, adminQuery } from "./lib/customFunctions";
 import {
   attendanceValidator,
   claimStatusValidator,
+  participationStatusValidator,
   roleValidator,
   signupPublicValidator,
   submissionStatusValidator,
 } from "./lib/validators";
 import { countsAsAttending } from "./lib/attendance";
+import { findUserByEmail, isAdmin } from "./lib/auth";
 import {
-  findSignupByEmail,
-  findUserByEmail,
-  getSignupForUser,
-} from "./lib/auth";
+  currentEditionId,
+  requireCurrentEdition,
+  resolveEditionId,
+} from "./lib/editions";
+import {
+  getCurrentParticipation,
+  participationByEditionEmail,
+  participationIsAccepted,
+  participationIsRegistered,
+} from "./lib/participations";
 import { parseEmailList } from "./lib/normalize";
-import { urlsFromRecord, urlsValidator } from "./lib/urls";
+import { urlsValidator } from "./lib/urls";
+import { findOwnedSubmission, membershipForUser } from "./lib/team";
 import {
-  findOwnedSubmission,
-  membershipForSignup,
-  membershipForUser,
-} from "./lib/team";
-import { userTypeSummaryValidator } from "./lib/userTypes";
+  typeOpenForApplications,
+  typeRequiresConfirmed,
+  userTypeSummaryValidator,
+} from "./lib/userTypes";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { UrlEntry } from "./lib/urls";
@@ -28,17 +37,16 @@ import type { Role } from "./lib/validators";
 
 async function teamForParticipant(
   ctx: QueryCtx,
-  userId: Id<"users"> | undefined,
-  signupId: Id<"signups"> | undefined
+  userId: Id<"users"> | undefined
 ): Promise<{
   _id: Id<"teams">;
   isOwner: boolean;
   name: string;
   status: string;
 } | null> {
-  const membership =
-    (userId ? await membershipForUser(ctx, userId) : null) ??
-    (signupId ? await membershipForSignup(ctx, signupId) : null);
+  const membership = userId
+    ? await membershipForUser(ctx, userId, await currentEditionId(ctx))
+    : null;
   if (!membership) {
     return null;
   }
@@ -54,10 +62,16 @@ async function teamForParticipant(
   };
 }
 
-async function teamsByUserId(ctx: QueryCtx) {
+async function teamsByUserId(ctx: QueryCtx, editionId: Id<"editions">) {
   const [members, teams] = await Promise.all([
-    ctx.db.query("teamMembers").collect(),
-    ctx.db.query("teams").collect(),
+    ctx.db
+      .query("teamMembers")
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+      .collect(),
+    ctx.db
+      .query("teams")
+      .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+      .collect(),
   ]);
   const teamsById = new Map(teams.map((team) => [team._id, team]));
   const byUser = new Map<string, { name: string; status: string }>();
@@ -93,7 +107,8 @@ const participantSummary = v.object({
   onboardingComplete: v.optional(v.boolean()),
   phone: v.optional(v.string()),
   role: v.optional(roleValidator),
-  signupId: v.optional(v.id("signups")),
+  signupId: v.optional(v.string()),
+  status: participationStatusValidator,
   teamName: v.optional(v.string()),
   travelOrigin: v.optional(v.string()),
   userId: v.optional(v.id("users")),
@@ -109,89 +124,58 @@ export const listParticipants = adminQuery({
   args: {
     accepted: v.optional(v.boolean()),
     attendance: v.optional(attendanceValidator),
+    editionId: v.optional(v.id("editions")),
     hasAccount: v.optional(v.boolean()),
     role: v.optional(roleValidator),
     search: v.optional(v.string()),
     page: v.optional(v.number()),
     pageSize: v.optional(v.number()),
+    status: v.optional(participationStatusValidator),
     /** Filter by assigned type; "none" keeps only users without one. */
     userType: v.optional(v.union(v.id("userTypes"), v.literal("none"))),
   },
   handler: async (ctx, args) => {
-    const signups = await ctx.db.query("signups").collect();
-    const users = await ctx.db.query("users").collect();
-    const teamMap = await teamsByUserId(ctx);
+    const editionId = await resolveEditionId(ctx, args.editionId);
+    const status = args.status;
+    const participations = status
+      ? await ctx.db
+          .query("participations")
+          .withIndex("by_edition_status", (q) =>
+            q.eq("editionId", editionId).eq("status", status)
+          )
+          .collect()
+      : await ctx.db
+          .query("participations")
+          .withIndex("by_edition", (q) => q.eq("editionId", editionId))
+          .collect();
+    const teamMap = await teamsByUserId(ctx, editionId);
     const types = await ctx.db.query("userTypes").collect();
     const typeLabels = new Map(types.map((type) => [type._id, type.label]));
-    const typeLabelOf = (user: (typeof users)[number] | undefined) =>
-      user?.userTypeId ? typeLabels.get(user.userTypeId) : undefined;
-    const usersBySignup = new Map(
-      users
-        .filter((user) => user.signupId !== undefined)
-        .map((user) => [user.signupId as string, user])
-    );
-    const usersByEmail = new Map(
-      users
-        .filter((user) => user.email)
-        .map((user) => [user.email as string, user])
-    );
 
     const rows = [];
-    const seenUserIds = new Set<string>();
 
-    for (const signup of signups) {
-      const user =
-        usersBySignup.get(signup._id) ?? usersByEmail.get(signup.email);
-      if (user) {
-        seenUserIds.add(user._id);
-      }
-
-      const team = user ? teamMap.get(user._id) : undefined;
-
+    for (const participation of participations) {
+      const team = participation.userId
+        ? teamMap.get(participation.userId)
+        : undefined;
       rows.push({
-        signupId: signup._id,
-        userId: user?._id,
-        email: signup.email,
-        name: user?.name ?? signup.fullName,
-        role: user?.role,
-        accepted: signup.accepted === true,
-        phone: user?.phone,
-        dietaryRestrictions: user?.dietaryRestrictions,
-        travelOrigin: user?.travelOrigin,
-        attendanceStatus: user?.attendanceStatus,
-        onboardingComplete: user?.onboardingComplete,
-        isRegistered: true,
-        hasAccount: Boolean(user),
+        accepted: participationIsAccepted(participation.status),
+        attendanceStatus: participation.attendanceStatus,
+        createdAt: participation.createdAt,
+        dietaryRestrictions: participation.dietaryRestrictions,
+        email: participation.email,
+        hasAccount: Boolean(participation.userId),
+        isRegistered: participationIsRegistered(participation.status),
+        name: participation.fullName ?? participation.email,
+        onboardingComplete: participation.onboardingComplete,
+        signupId: participation._id,
+        status: participation.status,
         teamName: team?.name,
-        wantsAmbassador: signup.wantsAmbassador,
-        createdAt: signup.createdAt,
-        userTypeId: user?.userTypeId,
-        userTypeLabel: typeLabelOf(user),
-      });
-    }
-
-    for (const user of users) {
-      if (seenUserIds.has(user._id)) {
-        continue;
-      }
-      const team = teamMap.get(user._id);
-      rows.push({
-        userId: user._id,
-        email: user.email ?? "unknown",
-        name: user.name ?? "Unknown",
-        role: user.role,
-        accepted: false,
-        phone: user.phone,
-        dietaryRestrictions: user.dietaryRestrictions,
-        travelOrigin: user.travelOrigin,
-        attendanceStatus: user.attendanceStatus,
-        onboardingComplete: user.onboardingComplete,
-        isRegistered: false,
-        hasAccount: true,
-        teamName: team?.name,
-        createdAt: user._creationTime,
-        userTypeId: user.userTypeId,
-        userTypeLabel: typeLabelOf(user),
+        travelOrigin: participation.travelOrigin,
+        userId: participation.userId,
+        userTypeId: participation.roleId,
+        userTypeLabel: typeLabels.get(participation.roleId),
+        wantsAmbassador: participation.wantsAmbassador,
       });
     }
 
@@ -213,9 +197,6 @@ export const listParticipants = adminQuery({
           return false;
         }
         if (args.accepted !== undefined && row.accepted !== args.accepted) {
-          return false;
-        }
-        if (args.role && row.role !== args.role) {
           return false;
         }
         if (args.userType === "none" && row.userTypeId !== undefined) {
@@ -249,13 +230,51 @@ export const listParticipants = adminQuery({
       MAX_PAGE_SIZE,
       Math.max(1, Math.floor(args.pageSize ?? DEFAULT_PAGE_SIZE))
     );
+
+    async function attachUser(row: (typeof filtered)[number]) {
+      const user = row.userId
+        ? await ctx.db.get(row.userId)
+        : await findUserByEmail(ctx, row.email);
+      return {
+        ...row,
+        hasAccount: Boolean(user),
+        name: user?.name ?? row.name,
+        phone: user?.phone,
+        role: user?.role,
+        userId: user?._id ?? row.userId,
+      };
+    }
+
+    if (args.role) {
+      const withRole = [];
+      for (const row of filtered) {
+        const attached = await attachUser(row);
+        if (attached.role === args.role) {
+          withRole.push(attached);
+        }
+      }
+      const total = withRole.length;
+      const lastPage = Math.max(1, Math.ceil(total / pageSize));
+      const page = Math.min(lastPage, Math.max(1, Math.floor(args.page ?? 1)));
+      const start = (page - 1) * pageSize;
+      return {
+        items: withRole.slice(start, start + pageSize),
+        page,
+        pageSize,
+        total,
+      };
+    }
+
     const total = filtered.length;
     const lastPage = Math.max(1, Math.ceil(total / pageSize));
     const page = Math.min(lastPage, Math.max(1, Math.floor(args.page ?? 1)));
     const start = (page - 1) * pageSize;
+    const items = await Promise.all(
+      filtered.slice(start, start + pageSize).map((row) => attachUser(row))
+    );
 
     return {
-      items: filtered.slice(start, start + pageSize),
+      items,
       total,
       page,
       pageSize,
@@ -271,43 +290,33 @@ export const listParticipants = adminQuery({
 
 export const getParticipant = adminQuery({
   args: {
-    signupId: v.optional(v.id("signups")),
+    signupId: v.optional(v.string()),
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const signup = args.signupId ? await ctx.db.get(args.signupId) : null;
+    const participation = args.signupId
+      ? await ctx.db.get(args.signupId as Id<"participations">)
+      : null;
     let user = args.userId ? await ctx.db.get(args.userId) : null;
-    if (!user && signup) {
-      user =
-        (await ctx.db
-          .query("users")
-          .withIndex("by_signup", (q) => q.eq("signupId", signup._id))
-          .unique()) ??
-        (await ctx.db
-          .query("users")
-          .withIndex("email", (q) => q.eq("email", signup.email))
-          .unique());
+    if (!user && participation?.userId) {
+      user = await ctx.db.get(participation.userId);
     }
-    if (!signup && !user) {
+    if (!user && participation?.email) {
+      user = await findUserByEmail(ctx, participation.email);
+    }
+    const resolved =
+      participation ?? (user ? await getCurrentParticipation(ctx, user) : null);
+    if (!resolved && !user) {
       return null;
     }
-    const resolvedSignup =
-      signup ?? (user ? await getSignupForUser(ctx, user) : null);
-    const pass =
-      (resolvedSignup
-        ? await ctx.db
-            .query("eventPasses")
-            .withIndex("by_signup", (q) => q.eq("signupId", resolvedSignup._id))
-            .unique()
-        : null) ??
-      (user
-        ? await ctx.db
-            .query("eventPasses")
-            .withIndex("by_user", (q) => q.eq("userId", user._id))
-            .unique()
-        : null);
+    const pass = user
+      ? await ctx.db
+          .query("eventPasses")
+          .withIndex("by_user", (q) => q.eq("userId", user._id))
+          .unique()
+      : null;
 
-    const email = user?.email ?? signup?.email;
+    const email = user?.email ?? resolved?.email;
     const ambassador = email
       ? await ctx.db
           .query("ambassadorApplications")
@@ -315,11 +324,9 @@ export const getParticipant = adminQuery({
           .unique()
       : null;
 
-    const team =
-      (await teamForParticipant(ctx, user?._id, resolvedSignup?._id)) ??
-      undefined;
-    const userType = user?.userTypeId
-      ? await ctx.db.get(user.userTypeId)
+    const team = (await teamForParticipant(ctx, user?._id)) ?? undefined;
+    const userType = resolved?.roleId
+      ? await ctx.db.get(resolved.roleId)
       : null;
 
     const claims = [];
@@ -392,19 +399,19 @@ export const getParticipant = adminQuery({
     }
 
     return {
-      signup: signup
+      signup: resolved
         ? {
-            _id: signup._id,
-            email: signup.email,
-            fullName: signup.fullName,
-            urls: urlsFromRecord(signup),
-            achievements: signup.achievements,
-            freeTime: signup.freeTime,
-            wantsAmbassador: signup.wantsAmbassador,
-            ambassadorMotivation: signup.ambassadorMotivation,
-            ambassadorStudyWhere: signup.ambassadorStudyWhere,
-            accepted: signup.accepted === true,
-            createdAt: signup.createdAt,
+            _id: resolved._id,
+            email: resolved.email,
+            fullName: resolved.fullName ?? user?.name ?? resolved.email,
+            urls: resolved.urls ?? [],
+            achievements: resolved.achievements,
+            freeTime: resolved.freeTime,
+            wantsAmbassador: resolved.wantsAmbassador === true,
+            ambassadorMotivation: resolved.ambassadorMotivation,
+            ambassadorStudyWhere: resolved.ambassadorStudyWhere,
+            accepted: participationIsAccepted(resolved.status),
+            createdAt: resolved.createdAt,
           }
         : undefined,
       user: user
@@ -415,11 +422,11 @@ export const getParticipant = adminQuery({
             role: user.role,
             phone: user.phone,
             notificationConsent: user.notificationConsent,
-            dietaryRestrictions: user.dietaryRestrictions,
-            dietaryDetails: user.dietaryDetails,
-            travelOrigin: user.travelOrigin,
-            attendanceStatus: user.attendanceStatus,
-            onboardingComplete: user.onboardingComplete,
+            dietaryRestrictions: resolved?.dietaryRestrictions,
+            dietaryDetails: resolved?.dietaryDetails,
+            travelOrigin: resolved?.travelOrigin,
+            attendanceStatus: resolved?.attendanceStatus,
+            onboardingComplete: resolved?.onboardingComplete === true,
             adminNotes: user.adminNotes,
             userType: userType
               ? {
@@ -427,6 +434,8 @@ export const getParticipant = adminQuery({
                   description: userType.description,
                   isDefault: userType.isDefault,
                   label: userType.label,
+                  openForApplications: typeOpenForApplications(userType),
+                  requiresConfirmed: typeRequiresConfirmed(userType),
                   sections: userType.sections,
                   slug: userType.slug,
                   sortOrder: userType.sortOrder,
@@ -458,7 +467,7 @@ export const getParticipant = adminQuery({
     v.object({
       signup: v.optional(
         v.object({
-          _id: v.id("signups"),
+          _id: v.string(),
           ...signupPublicValidator.fields,
           ambassadorMotivation: v.optional(v.string()),
           ambassadorStudyWhere: v.optional(v.string()),
@@ -477,7 +486,7 @@ export const getParticipant = adminQuery({
           dietaryRestrictions: v.optional(v.string()),
           dietaryDetails: v.optional(v.string()),
           travelOrigin: v.optional(v.string()),
-          attendanceStatus: attendanceValidator,
+          attendanceStatus: v.optional(attendanceValidator),
           onboardingComplete: v.boolean(),
           adminNotes: v.optional(v.string()),
           userType: v.optional(userTypeSummaryValidator),
@@ -545,28 +554,31 @@ export const setRole = adminMutation({
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
-    await ctx.db.patch(user._id, { role: args.role });
+    await ctx.db.patch(user._id, {
+      admin: args.role === "admin",
+      role: args.role,
+    });
     return null;
   },
   returns: v.null(),
 });
 
 export const setUserType = adminMutation({
-  args: { typeId: v.union(v.id("userTypes"), v.null()), userId: v.id("users") },
+  args: { typeId: v.id("userTypes"), userId: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
-    if (args.typeId) {
-      const type = await ctx.db.get(args.typeId);
-      if (!type) {
-        throw new Error("Tipo no encontrado");
-      }
-      await ctx.db.patch(user._id, { userTypeId: type._id });
-    } else {
-      await ctx.db.patch(user._id, { userTypeId: undefined });
+    const participation = await getCurrentParticipation(ctx, user);
+    if (!participation) {
+      throw new Error("No hay participación en la edición en curso");
     }
+    const type = await ctx.db.get(args.typeId);
+    if (!type) {
+      throw new Error("Tipo no encontrado");
+    }
+    await ctx.db.patch(participation._id, { roleId: type._id });
     return null;
   },
   returns: v.null(),
@@ -588,71 +600,91 @@ async function upsertPerson(
   userTypeId: Id<"userTypes"> | undefined,
   name: string | undefined,
   actorId: Id<"users">
-): Promise<"added" | "updated" | "skipped"> {
+): Promise<"added" | "updated"> {
+  const editionId = await currentEditionId(ctx);
   const existingUser = await findUserByEmail(ctx, email);
-  const signup = await findSignupByEmail(ctx, email);
-  const fullName = name ?? signup?.fullName ?? nameFromEmail(email);
+  const existingPart = await participationByEditionEmail(ctx, editionId, email);
+  const fullName =
+    name ??
+    existingPart?.fullName ??
+    existingUser?.name ??
+    nameFromEmail(email);
+  const roleId =
+    userTypeId ??
+    existingPart?.roleId ??
+    (
+      await ctx.db
+        .query("userTypes")
+        .withIndex("by_slug", (q) => q.eq("slug", "hacker"))
+        .unique()
+    )?._id;
+  if (!roleId) {
+    throw new Error("Tipo no encontrado");
+  }
 
   if (existingUser) {
     if (existingUser._id === actorId && role !== "admin") {
       throw new Error("No puedes quitarte el rol de admin a ti mismo");
     }
-    if (signup && role === "user" && signup.accepted !== true) {
-      await ctx.db.patch(signup._id, { accepted: true });
-    }
     const patch: {
+      admin?: boolean;
       name?: string;
       role?: Role;
-      signupId?: Id<"signups">;
-      userTypeId?: Id<"userTypes">;
     } = {};
     if (existingUser.role !== role) {
       patch.role = role;
     }
-    if (userTypeId && existingUser.userTypeId !== userTypeId) {
-      patch.userTypeId = userTypeId;
+    if (isAdmin(existingUser) !== (role === "admin")) {
+      patch.admin = role === "admin";
     }
     if (!existingUser.name) {
       patch.name = fullName;
     }
-    if (signup && !existingUser.signupId) {
-      patch.signupId = signup._id;
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(existingUser._id, patch);
     }
-    if (Object.keys(patch).length === 0) {
-      return "skipped";
-    }
-    await ctx.db.patch(existingUser._id, patch);
-    return existingUser.role === role &&
-      (!userTypeId || existingUser.userTypeId === userTypeId)
-      ? "skipped"
-      : "updated";
-  }
-
-  let signupId = signup?._id;
-  if (role === "user") {
-    if (!signupId) {
-      signupId = await ctx.db.insert("signups", {
-        email,
+    if (existingPart) {
+      await ctx.db.patch(existingPart._id, {
         fullName,
-        urls: [],
-        wantsAmbassador: false,
-        accepted: true,
-        createdAt: Date.now(),
+        roleId,
+        status: participationIsAccepted(existingPart.status)
+          ? existingPart.status
+          : "accepted",
+        userId: existingUser._id,
       });
-    } else if (signup && signup.accepted !== true) {
-      await ctx.db.patch(signup._id, { accepted: true });
+      return "updated";
     }
+    await ctx.db.insert("participations", {
+      attendanceStatus: "attending",
+      createdAt: Date.now(),
+      editionId,
+      email,
+      fullName,
+      onboardingComplete: false,
+      roleId,
+      status: "accepted",
+      userId: existingUser._id,
+    });
+    return "added";
   }
 
-  await ctx.db.insert("users", {
+  const userId = await ctx.db.insert("users", {
+    admin: role === "admin",
     email,
     name: fullName,
-    role,
-    signupId,
-    userTypeId,
     notificationConsent: false,
+    role,
+  });
+  await ctx.db.insert("participations", {
     attendanceStatus: "attending",
+    createdAt: Date.now(),
+    editionId,
+    email,
+    fullName,
     onboardingComplete: false,
+    roleId,
+    status: "accepted",
+    userId,
   });
   return "added";
 }
@@ -665,6 +697,7 @@ export const addPeople = adminMutation({
     userTypeId: v.optional(v.id("userTypes")),
   },
   handler: async (ctx, args) => {
+    await requireCurrentEdition(ctx);
     const parsed = parseEmailList(args.emails);
     if (parsed.emails.length === 0) {
       throw new Error("Añade al menos un email válido");
@@ -684,7 +717,6 @@ export const addPeople = adminMutation({
 
     let added = 0;
     let updated = 0;
-    let skipped = 0;
     for (const email of parsed.emails) {
       const result = await upsertPerson(
         ctx,
@@ -696,36 +728,54 @@ export const addPeople = adminMutation({
       );
       if (result === "added") {
         added += 1;
-      } else if (result === "updated") {
-        updated += 1;
       } else {
-        skipped += 1;
+        updated += 1;
       }
     }
 
     return {
       added,
       updated,
-      skipped,
       invalid: parsed.invalid,
     };
   },
   returns: v.object({
     added: v.number(),
     updated: v.number(),
-    skipped: v.number(),
     invalid: v.array(v.string()),
   }),
 });
 
 export const setAccepted = adminMutation({
-  args: { accepted: v.boolean(), signupId: v.id("signups") },
+  args: { accepted: v.boolean(), signupId: v.string() },
   handler: async (ctx, args) => {
-    const signup = await ctx.db.get(args.signupId);
-    if (!signup) {
+    const participation = await ctx.db.get(
+      args.signupId as Id<"participations">
+    );
+    if (!participation) {
       throw new Error("Solicitud no encontrada");
     }
-    await ctx.db.patch(signup._id, { accepted: args.accepted });
+    const alreadyHadPlace =
+      participation.status === "accepted" ||
+      participation.status === "confirmed";
+    let status: typeof participation.status = "applied";
+    if (args.accepted) {
+      status =
+        participation.status === "confirmed"
+          ? participation.status
+          : "accepted";
+    }
+    const managementToken =
+      participation.managementToken ?? crypto.randomUUID();
+    await ctx.db.patch(participation._id, {
+      managementToken,
+      status,
+    });
+    if (args.accepted && !alreadyHadPlace) {
+      await ctx.scheduler.runAfter(0, internal.landing.sendAcceptEmail, {
+        participationId: participation._id,
+      });
+    }
     return null;
   },
   returns: v.null(),
@@ -738,7 +788,16 @@ export const setAttendance = adminMutation({
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
-    await ctx.db.patch(user._id, { attendanceStatus: args.attendanceStatus });
+    const participation = await getCurrentParticipation(ctx, user);
+    if (!participation) {
+      throw new Error("No hay participación en la edición en curso");
+    }
+    await ctx.db.patch(participation._id, {
+      attendanceStatus: args.attendanceStatus,
+      ...(args.attendanceStatus === "cancelled"
+        ? { status: "cancelled" as const }
+        : {}),
+    });
     return null;
   },
   returns: v.null(),
@@ -755,4 +814,82 @@ export const setNotes = adminMutation({
     return null;
   },
   returns: v.null(),
+});
+
+const bulkStatusValidator = v.union(
+  v.literal("accepted"),
+  v.literal("waitlist"),
+  v.literal("rejected")
+);
+
+export const bulkSetStatus = adminMutation({
+  args: {
+    signupIds: v.array(v.string()),
+    status: bulkStatusValidator,
+  },
+  handler: async (ctx, args) => {
+    await requireCurrentEdition(ctx);
+    if (args.signupIds.length === 0) {
+      throw new Error("Selecciona al menos una persona");
+    }
+    if (args.signupIds.length > MAX_ADD_PEOPLE) {
+      throw new Error(`Como máximo ${MAX_ADD_PEOPLE} personas de una vez`);
+    }
+    let updated = 0;
+    for (const signupId of args.signupIds) {
+      const participation = await ctx.db.get(signupId as Id<"participations">);
+      if (!participation) {
+        continue;
+      }
+      const alreadyHadPlace =
+        participation.status === "accepted" ||
+        participation.status === "confirmed";
+      const status =
+        args.status === "accepted" && participation.status === "confirmed"
+          ? participation.status
+          : args.status;
+      const managementToken =
+        participation.managementToken ?? crypto.randomUUID();
+      await ctx.db.patch(participation._id, { managementToken, status });
+      if (args.status === "accepted" && !alreadyHadPlace) {
+        await ctx.scheduler.runAfter(0, internal.landing.sendAcceptEmail, {
+          participationId: participation._id,
+        });
+      }
+      updated += 1;
+    }
+    return { updated };
+  },
+  returns: v.object({ updated: v.number() }),
+});
+
+export const bulkSetRole = adminMutation({
+  args: {
+    roleId: v.id("userTypes"),
+    signupIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireCurrentEdition(ctx);
+    if (args.signupIds.length === 0) {
+      throw new Error("Selecciona al menos una persona");
+    }
+    if (args.signupIds.length > MAX_ADD_PEOPLE) {
+      throw new Error(`Como máximo ${MAX_ADD_PEOPLE} personas de una vez`);
+    }
+    const type = await ctx.db.get(args.roleId);
+    if (!type) {
+      throw new Error("Tipo no encontrado");
+    }
+    let updated = 0;
+    for (const signupId of args.signupIds) {
+      const participation = await ctx.db.get(signupId as Id<"participations">);
+      if (!participation) {
+        continue;
+      }
+      await ctx.db.patch(participation._id, { roleId: type._id });
+      updated += 1;
+    }
+    return { updated };
+  },
+  returns: v.object({ updated: v.number() }),
 });

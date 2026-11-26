@@ -1,26 +1,28 @@
 import { v } from "convex/values";
 import { acceptedMutation, acceptedQuery } from "./lib/customFunctions";
 import { defaultedAttendance } from "./lib/attendance";
-import { getSignupForUser } from "./lib/auth";
+import { isAdmin } from "./lib/auth";
+import { getCurrentParticipation } from "./lib/participations";
 import { attendanceValidator } from "./lib/validators";
 import { normalizePhone, PHONE_ERROR } from "./lib/normalize";
 
 export const status = acceptedQuery({
   args: {},
   handler: async (ctx) => {
-    const signup = await getSignupForUser(ctx, ctx.user);
+    const participation = await getCurrentParticipation(ctx, ctx.user);
+    const onboarded =
+      participation?.onboardingComplete === true || isAdmin(ctx.user);
     return {
       phone: ctx.user.phone,
       notificationConsent: ctx.user.notificationConsent,
       attendanceStatus: defaultedAttendance(
-        ctx.user.attendanceStatus,
-        ctx.user.onboardingComplete || ctx.user.role === "admin"
+        participation?.attendanceStatus,
+        onboarded
       ),
-      dietaryRestrictions:
-        ctx.user.dietaryRestrictions ?? signup?.dietaryRestrictions,
-      dietaryDetails: ctx.user.dietaryDetails ?? signup?.dietaryDetails,
-      travelOrigin: ctx.user.travelOrigin,
-      onboardingComplete: ctx.user.onboardingComplete,
+      dietaryRestrictions: participation?.dietaryRestrictions,
+      dietaryDetails: participation?.dietaryDetails,
+      travelOrigin: participation?.travelOrigin,
+      onboardingComplete: onboarded,
     };
   },
   returns: v.object({
@@ -51,32 +53,43 @@ export const confirmDetails = acceptedMutation({
     if (!args.termsAccepted) {
       throw new Error("Acepta los términos para continuar");
     }
+    const participation = await getCurrentParticipation(ctx, ctx.user);
     const travelOrigin =
-      args.travelOrigin?.trim() || ctx.user.travelOrigin?.trim() || undefined;
-    const signup = await getSignupForUser(ctx, ctx.user);
-    const dietaryRestrictions =
-      ctx.user.dietaryRestrictions?.trim() ||
-      signup?.dietaryRestrictions?.trim() ||
-      "Ninguna";
-    const dietaryDetails =
-      ctx.user.dietaryDetails?.trim() ||
-      signup?.dietaryDetails?.trim() ||
+      args.travelOrigin?.trim() ||
+      participation?.travelOrigin?.trim() ||
       undefined;
+    const dietaryRestrictions =
+      participation?.dietaryRestrictions?.trim() || "Ninguna";
+    const dietaryDetails = participation?.dietaryDetails?.trim() || undefined;
     // Revisiting the step from the wizard's "Atrás" keeps the original stamps.
     const consentChanged = ctx.user.notificationConsent !== args.consent;
     await ctx.db.patch(ctx.user._id, {
       phone,
-      dietaryRestrictions,
-      dietaryDetails,
-      travelOrigin,
       notificationConsent: args.consent,
       notificationConsentAt: consentChanged
         ? Date.now()
         : (ctx.user.notificationConsentAt ?? Date.now()),
-      termsAcceptedAt: ctx.user.termsAcceptedAt ?? Date.now(),
-      attendanceStatus: "attending",
-      onboardingComplete: true,
     });
+    if (participation) {
+      const cancelled = participation.attendanceStatus === "cancelled";
+      await ctx.db.patch(participation._id, {
+        dietaryDetails,
+        dietaryRestrictions,
+        onboardingComplete: true,
+        termsAcceptedAt: participation.termsAcceptedAt ?? Date.now(),
+        travelOrigin,
+        ...(cancelled
+          ? {}
+          : {
+              attendanceStatus: "attending" as const,
+              status:
+                participation.status === "accepted" ||
+                participation.status === "confirmed"
+                  ? ("confirmed" as const)
+                  : participation.status,
+            }),
+      });
+    }
     return null;
   },
   returns: v.null(),

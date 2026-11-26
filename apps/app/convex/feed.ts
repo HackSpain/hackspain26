@@ -1,17 +1,22 @@
 import { v } from "convex/values";
-import { getSignupForUser, isOnboarded } from "./lib/auth";
+import { isOnboarded } from "./lib/auth";
+import { currentEditionId, ofEdition } from "./lib/editions";
 import {
   authedQuery,
   onboardedMutation,
   onboardedQuery,
 } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
-import { checkedMentions, removePostSocial } from "./feedSocial";
-import { mentionValidator } from "./lib/feedSocial";
+import {
+  checkedMentions,
+  mentionValidator,
+  removePostSocial,
+} from "./lib/feedSocial";
 import { feedTabValidator, hasMemeTag } from "./lib/feedTabs";
-import { imagePathFor } from "./lib/files";
+import { assertStoredImage, imagePathFor } from "./lib/files";
 import { membershipForUser, teamLogoUrlFor } from "./lib/team";
-import { avatarUrlFor } from "./users";
+import { userTypeFor } from "./lib/userTypes";
+import { avatarUrlFor } from "./lib/photo";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 
@@ -98,7 +103,11 @@ async function teamForPost(
   if (stored || !author) {
     return stored;
   }
-  const membership = await membershipForUser(ctx, author._id);
+  const membership = await membershipForUser(
+    ctx,
+    author._id,
+    await currentEditionId(ctx)
+  );
   return membership ? await ctx.db.get(membership.teamId) : null;
 }
 
@@ -108,8 +117,7 @@ async function hydrate(
   viewerId: Doc<"users">["_id"]
 ) {
   const author = post.authorId ? await ctx.db.get(post.authorId) : null;
-  const signup = author ? await getSignupForUser(ctx, author) : null;
-  const type = author?.userTypeId ? await ctx.db.get(author.userTypeId) : null;
+  const type = author ? await userTypeFor(ctx, author) : null;
   const team = await teamForPost(ctx, post, author);
   return {
     _id: post._id,
@@ -117,7 +125,7 @@ async function hydrate(
     author: author
       ? {
           _id: author._id,
-          name: author.name ?? signup?.fullName,
+          name: author.name,
           avatarUrl: avatarUrlFor(author),
           userType: type?.label,
         }
@@ -172,7 +180,11 @@ export const list = onboardedQuery({
           q.gt("createdAt", after).lt("createdAt", before)
         );
     }
-    const rows = await indexed.order("desc").take(limit);
+    const editionId = await currentEditionId(ctx);
+    const rows = ofEdition(
+      await indexed.order("desc").take(limit * 3),
+      editionId
+    ).slice(0, limit);
     const out = [];
     for (const row of rows) {
       out.push(await hydrate(ctx, row, ctx.user._id));
@@ -203,28 +215,26 @@ export const post = onboardedMutation({
       fail("VALIDATION", `Máximo ${MAX_TEXT} caracteres`);
     }
     if (args.imageId) {
-      const meta = await ctx.db.system.get(args.imageId);
-      if (!meta) {
-        fail("NOT_FOUND", "La imagen no se ha subido");
-      }
-      if (!meta.contentType?.startsWith("image/")) {
-        fail("VALIDATION", "Solo se admiten imágenes");
-      }
-      if (meta.size > MAX_IMAGE_BYTES) {
-        fail("VALIDATION", "La imagen no puede superar 5 MB");
-      }
+      await assertStoredImage(
+        ctx,
+        args.imageId,
+        MAX_IMAGE_BYTES,
+        "La imagen no puede superar 5 MB"
+      );
     }
-    const membership = await membershipForUser(ctx, ctx.user._id);
+    const editionId = await currentEditionId(ctx);
+    const membership = await membershipForUser(ctx, ctx.user._id, editionId);
     return await ctx.db.insert("posts", {
-      kind: "post",
       authorId: ctx.user._id,
-      teamId: membership?.teamId,
-      text,
-      imageId: args.imageId,
       clientId: args.clientId,
+      createdAt: Date.now(),
+      editionId,
+      imageId: args.imageId,
+      kind: "post",
       meme: hasMemeTag(text) || undefined,
       mentions: await checkedMentions(ctx, text, args.mentions),
-      createdAt: Date.now(),
+      teamId: membership?.teamId,
+      text,
     });
   },
   returns: v.id("posts"),

@@ -124,24 +124,15 @@ export function LoginTransition({
 
   return (
     <div ref={root} className="fixed inset-0 z-[70] overflow-hidden">
-      <div aria-hidden className="absolute inset-0">
-        {BANDS.map((tone, index) => (
-          <div
-            key={tone}
-            data-band
-            className={cn("absolute inset-y-0", tone)}
-            style={{
-              left: `${index * 20}%`,
-              // A hair of overlap hides sub-pixel seams between bands.
-              width: "calc(20% + 1px)",
-            }}
-          />
+      <div aria-hidden className="absolute inset-0 grid grid-cols-5">
+        {BANDS.map((tone) => (
+          <div key={tone} data-band className={cn("min-w-0 -mr-px", tone)} />
         ))}
       </div>
       <div className="absolute inset-0 flex items-center justify-center px-4">
         <div
           data-plate
-          className="flex w-full max-w-xs flex-col items-center border-[3px] border-hs-ink bg-hs-paper px-8 py-8"
+          className="flex w-full max-w-xs flex-col items-center border-3 border-hs-ink bg-hs-paper px-8 py-8"
         >
           <Image
             src="/logo.svg"
@@ -152,7 +143,7 @@ export function LoginTransition({
           />
           <div
             aria-hidden
-            className="mt-6 h-[3px] w-24 overflow-hidden bg-hs-sand"
+            className="mt-6 h-stroke w-24 overflow-hidden bg-hs-sand"
           >
             <div data-slider className="h-full w-8 bg-hs-gold" />
           </div>

@@ -76,18 +76,18 @@ const components: Components = {
   ),
   em: ({ children }) => <em>{children}</em>,
   blockquote: ({ children }) => (
-    <blockquote className="border-l-[3px] border-hs-ink/30 pl-3 text-hs-brown">
+    <blockquote className="border-l-3 border-hs-ink/30 pl-3 text-hs-brown">
       {children}
     </blockquote>
   ),
   hr: () => <hr className="border-hs-ink/20" />,
   pre: ({ children }) => (
-    <pre className="overflow-x-auto border-[3px] border-hs-ink bg-hs-sand/50 p-3 font-mono text-sm leading-relaxed">
+    <pre className="overflow-x-auto border-3 border-hs-ink bg-hs-sand/50 p-3 font-mono text-sm leading-relaxed">
       {children}
     </pre>
   ),
   code: ({ children }) => (
-    <code className="bg-hs-sand/80 px-1 py-0.5 font-mono text-[0.9em] [pre_&]:bg-transparent [pre_&]:p-0">
+    <code className="bg-hs-sand/80 px-1 py-0.5 font-mono text-em [pre_&]:bg-transparent [pre_&]:p-0">
       {children}
     </code>
   ),

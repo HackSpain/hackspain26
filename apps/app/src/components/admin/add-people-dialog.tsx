@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 
 const NO_TYPE = "none";
@@ -31,7 +32,6 @@ const NO_TYPE = "none";
 function resultMessage(result: {
   added: number;
   updated: number;
-  skipped: number;
   invalid: string[];
 }): string {
   const parts: string[] = [];
@@ -48,9 +48,6 @@ function resultMessage(result: {
         ? "1 persona actualizada"
         : `${result.updated} personas actualizadas`
     );
-  }
-  if (parts.length === 0 && result.skipped > 0) {
-    parts.push(result.skipped === 1 ? "Ya estaba así" : "Ya estaban así");
   }
   if (result.invalid.length > 0) {
     parts.push(`No válidos: ${result.invalid.join(", ")}`);
@@ -69,19 +66,25 @@ export function AddPeopleDialog() {
   const [emails, setEmails] = useState("");
   const [name, setName] = useState("");
   const [userTypeId, setUserTypeId] = useState<string>(NO_TYPE);
-  const [role, setRole] = useState<"user" | "admin">("user");
+  const [makeAdmin, setMakeAdmin] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const defaultTypeId =
+    userTypes?.find((type) => type.isDefault)?._id ?? userTypes?.[0]?._id;
+  const resolvedTypeId =
+    userTypeId === NO_TYPE ? (defaultTypeId ?? NO_TYPE) : userTypeId;
+
   const parsed = parseEmailList([emails]);
-  const canSubmit = parsed.emails.length > 0 && !saving;
+  const canSubmit =
+    parsed.emails.length > 0 && resolvedTypeId !== NO_TYPE && !saving;
 
   const reset = () => {
     setEmails("");
     setName("");
-    setUserTypeId(NO_TYPE);
-    setRole("user");
+    setUserTypeId(defaultTypeId ?? NO_TYPE);
+    setMakeAdmin(false);
     setFormError(null);
     setNotice(null);
   };
@@ -96,9 +99,8 @@ export function AddPeopleDialog() {
     try {
       const result = await addPeople({
         emails: parsed.emails,
-        role,
-        userTypeId:
-          userTypeId === NO_TYPE ? undefined : (userTypeId as Id<"userTypes">),
+        role: makeAdmin ? "admin" : "user",
+        userTypeId: resolvedTypeId as Id<"userTypes">,
         name:
           parsed.emails.length === 1 && name.trim() ? name.trim() : undefined,
       });
@@ -135,8 +137,8 @@ export function AddPeopleDialog() {
         <DialogHeader>
           <DialogTitle>Añadir personas</DialogTitle>
           <DialogDescription>
-            Pega emails y elige tipo y acceso. Aparecen en el CRM ahora; al
-            entrar con ese email tendrán esa configuración.
+            Pega emails y elige el rol. Aparecen en el CRM ahora; al entrar con
+            ese email tendrán esa configuración.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -166,22 +168,16 @@ export function AddPeopleDialog() {
               spellCheck={false}
             />
           </Field>
-          <Field label="Tipo" htmlFor={typeId}>
+          <Field label="Rol" htmlFor={typeId}>
             <Select
-              value={userTypeId}
+              value={resolvedTypeId}
               onValueChange={setUserTypeId}
               disabled={userTypes === undefined}
             >
-              <SelectTrigger id={typeId} aria-label="Tipo de usuario">
-                <SelectValue />
+              <SelectTrigger id={typeId} aria-label="Rol">
+                <SelectValue placeholder="Elige un rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_TYPE}>
-                  Sin tipo{" "}
-                  <span className="text-xs text-hs-brown">
-                    · usa el tipo por defecto
-                  </span>
-                </SelectItem>
                 {(userTypes ?? []).map((type) => (
                   <SelectItem key={type._id} value={type._id}>
                     {type.label}
@@ -196,20 +192,19 @@ export function AddPeopleDialog() {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Acceso" htmlFor={roleId}>
-            <Select
-              value={role}
-              onValueChange={(value) => setRole(value as "user" | "admin")}
-            >
-              <SelectTrigger id={roleId} aria-label="Acceso">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">Participante</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
+          <label htmlFor={roleId} className="flex items-start gap-3 text-sm">
+            <Checkbox
+              id={roleId}
+              checked={makeAdmin}
+              onCheckedChange={(state) => setMakeAdmin(state === true)}
+            />
+            <span>
+              <span className="block font-semibold">Admin</span>
+              <span className="block text-xs text-hs-brown">
+                Abre el panel de organización. Independiente del rol.
+              </span>
+            </span>
+          </label>
           <Field
             label="Nombre"
             htmlFor={nameId}

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   ACCESS_CODE_EMAIL_SUBJECT,
   accessCodeEmailHtml,
+  accessCodeEmailSubject,
   accessCodeEmailText,
 } from "./accessCodeEmail";
 
@@ -31,4 +32,21 @@ test("access code email escapes participant-controlled HTML", () => {
 
   assert.doesNotMatch(html, /<img src=x/);
   assert.match(html, /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/);
+});
+
+test("access code email copy follows the edition when provided", () => {
+  assert.equal(accessCodeEmailSubject(), ACCESS_CODE_EMAIL_SUBJECT);
+  assert.equal(
+    accessCodeEmailSubject("HackSpain 2027"),
+    "Tu código de acceso a HackSpain 2027"
+  );
+  const html = accessCodeEmailHtml({
+    code: "AB7K",
+    datesLine: "Madrid · 12—14 marzo 2027",
+    label: "HackSpain 2027",
+    name: "Ada",
+  });
+  assert.match(html, /HackSpain 2027/);
+  assert.match(html, /Madrid · 12—14 marzo 2027/);
+  assert.doesNotMatch(html, /HackSpain 2026/);
 });

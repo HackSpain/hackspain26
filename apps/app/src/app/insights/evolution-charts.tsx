@@ -4,6 +4,7 @@
 // https://github.com/Subhan-code/Amicro--Micro-transitions-
 // License: MIT, see THIRD_PARTY_NOTICES.md at the repository root.
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import {
   Area,
   Bar,
@@ -193,13 +194,13 @@ export function ConsumptionChart({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-hs-brown">
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-2xs text-hs-brown">
         {view === "harnesses" ? (
           harnesses.map((harness) => (
             <span key={harness.id} className="inline-flex items-center gap-2">
               <span
-                className="size-2 rounded-full"
-                style={{ backgroundColor: harness.color }}
+                className="size-2 rounded-full bg-(--swatch)"
+                style={{ "--swatch": harness.color } as CSSProperties}
               />
               {harness.name}
             </span>
@@ -208,7 +209,10 @@ export function ConsumptionChart({
           <>
             <span>Barras · intervalos de {bucketSpan(timeline)}</span>
             <span className="inline-flex items-center gap-2">
-              <span className="h-0.5 w-4" style={{ backgroundColor: color }} />
+              <span
+                className="h-0.5 w-4 bg-(--swatch)"
+                style={{ "--swatch": color } as CSSProperties}
+              />
               Línea · media de los tres últimos intervalos disponibles
             </span>
           </>

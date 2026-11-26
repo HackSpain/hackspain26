@@ -194,7 +194,7 @@ export function ParticipantDirectory({
   const view: ParticipantView = params.has(DIRECTORY_PARAM)
     ? "directory"
     : "graph";
-  const container = contentWidth("/participantes");
+  const container = contentWidth("/people");
 
   function setView(next: ParticipantView) {
     const persona = params.get(PERSON_PARAM);

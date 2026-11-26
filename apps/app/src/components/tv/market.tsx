@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { ReactNode, CSSProperties } from "react";
 import { api } from "@convex/_generated/api";
 import {
   compact,
@@ -110,7 +110,7 @@ function Face({
     <span
       aria-hidden
       className={cn(
-        "flex aspect-square shrink-0 items-center justify-center overflow-hidden border-[length:calc(var(--line)*0.5)] border-hs-ink",
+        "flex aspect-square shrink-0 items-center justify-center overflow-hidden border-(length:--line-0-5) border-hs-ink",
         logo ? "bg-hs-paper" : "bg-hs-sand",
         className
       )}
@@ -125,11 +125,11 @@ function Face({
           onError={() => setFailed(src)}
           className={cn(
             "size-full",
-            logo ? "object-contain p-[14%]" : "object-cover"
+            logo ? "object-contain p-14p" : "object-cover"
           )}
         />
       ) : (
-        <span className="hsx-title text-[0.75em] text-hs-brown">
+        <span className="hsx-title text-em-sm text-hs-brown">
           {mark ?? initialsOf(name)}
         </span>
       )}
@@ -154,7 +154,7 @@ function Move({ move }: { move: number }) {
     <span
       className={cn(
         "hsx-num",
-        move > 0 ? "text-[var(--hsx-up)]" : "text-[var(--hsx-down)]"
+        move > 0 ? "text-(--hsx-up)" : "text-(--hsx-down)"
       )}
     >
       {move > 0 ? "▲" : "▼"}
@@ -181,7 +181,7 @@ function Clock({ endsAt }: { endsAt?: number }) {
               : "Quedan"}
         </span>
         {left !== null ? (
-          <span className="hsx-title hsx-num hsx-xl mt-[calc(var(--u)*0.4)]">
+          <span className="hsx-title hsx-num hsx-xl mt-(--u-0-4)">
             {pad(Math.floor(left / 3600))}:{pad(Math.floor(left / 60) % 60)}:
             {pad(left % 60)}
           </span>
@@ -189,7 +189,7 @@ function Clock({ endsAt }: { endsAt?: number }) {
       </div>
       <div className="flex flex-col items-center justify-center bg-hs-teal leading-none text-hs-paper">
         <span className="hsx-label">Madrid</span>
-        <span className="hsx-title hsx-num hsx-xl mt-[calc(var(--u)*0.4)]">
+        <span className="hsx-title hsx-num hsx-xl mt-(--u-0-4)">
           {now?.toLocaleTimeString("es-ES", {
             hour: "2-digit",
             minute: "2-digit",
@@ -216,13 +216,11 @@ export function Diagonal({
   return (
     <div aria-hidden className={cn("relative overflow-hidden", bg, className)}>
       <div
-        className={cn("absolute inset-0", tri)}
-        style={{
-          clipPath:
-            corner === "tl"
-              ? "polygon(0 0, 100% 0, 0 100%)"
-              : "polygon(100% 0, 100% 100%, 0 100%)",
-        }}
+        className={cn(
+          "absolute inset-0",
+          tri,
+          corner === "tl" ? "clip-tri-tl" : "clip-tri-br"
+        )}
       />
       <svg
         viewBox="0 0 100 100"
@@ -254,11 +252,13 @@ function Marquee({
   return (
     <div className="flex h-full min-w-0 flex-1 items-center overflow-hidden">
       <div
-        className="tv-ticker flex w-max items-center"
-        style={{
-          animationDuration: `${seconds}s`,
-          animationPlayState: visible ? "running" : "paused",
-        }}
+        className="tv-ticker anim-duration-var anim-play-var flex w-max items-center"
+        style={
+          {
+            "--anim-duration": `${seconds}s`,
+            "--anim-play": visible ? "running" : "paused",
+          } as CSSProperties
+        }
       >
         {[0, 1].map((copy) => (
           <div
@@ -276,8 +276,8 @@ function Marquee({
 
 function TeamTape({ teams }: { teams: MarketTeam[] }) {
   return (
-    <div className="grid h-[5.6%] shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-[var(--line)]">
-      <p className="hsx-title hsx-sm flex items-center bg-hs-gold px-[calc(var(--u)*1.4)] text-hs-ink">
+    <div className="grid h-[5.6%] shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-(--line)">
+      <p className="hsx-title hsx-sm flex items-center bg-hs-gold px-(--u-1-4) text-hs-ink">
         Equipos
       </p>
       <div className="flex min-w-0 bg-hs-ink text-hs-paper [--hsx-down:var(--color-hs-orange)] [--hsx-up:var(--color-hs-slate)]">
@@ -286,9 +286,9 @@ function TeamTape({ teams }: { teams: MarketTeam[] }) {
             {teams.map((team) => (
               <span
                 key={team.id}
-                className="hsx-md flex items-baseline gap-[calc(var(--u)*0.85)] border-r border-hs-paper/15 px-[calc(var(--u)*1.6)] whitespace-nowrap"
+                className="hsx-md flex items-baseline gap-(--u-0-85) border-r border-hs-paper/15 px-(--u-1-6) whitespace-nowrap"
               >
-                <span className="flex items-baseline gap-[calc(var(--u)*0.45)]">
+                <span className="flex items-baseline gap-(--u-0-45)">
                   <span className="hsx-num opacity-50">
                     {String(team.rank).padStart(2, "0")}
                   </span>
@@ -298,7 +298,7 @@ function TeamTape({ teams }: { teams: MarketTeam[] }) {
                   <Face
                     name={team.name}
                     src={team.logoUrl}
-                    className="h-[calc(var(--u)*1.7)] self-center border-hs-paper/40"
+                    className="h-(--u-1-7) self-center border-hs-paper/40"
                   />
                 ) : null}
                 <span className="font-bold">{team.name}</span>
@@ -309,7 +309,7 @@ function TeamTape({ teams }: { teams: MarketTeam[] }) {
             ))}
           </Marquee>
         ) : (
-          <p className="hsx-label flex items-center px-[calc(var(--u)*1.6)]">
+          <p className="hsx-label flex items-center px-(--u-1-6)">
             A la espera de los primeros equipos
           </p>
         )}
@@ -336,7 +336,7 @@ function Kpi({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col justify-between gap-[calc(var(--u)*0.4)] p-[calc(var(--u)*1.1)] [--hsx-flash:var(--color-hs-paper)]",
+        "flex min-w-0 flex-col justify-between gap-(--u-0-4) p-(--u-1-1) [--hsx-flash:var(--color-hs-paper)]",
         tone
       )}
     >
@@ -347,7 +347,7 @@ function Kpi({
       <div className="h-[calc(var(--u)*2.2)]">
         <Spark values={trend} />
       </div>
-      <p className="hsx-num hsx-sm truncate border-t-[length:var(--line)] border-current/30 pt-[calc(var(--u)*0.5)] font-semibold">
+      <p className="hsx-num hsx-sm truncate border-t-(length:--line) border-current/30 pt-(--u-0-5) font-semibold">
         {recent}
       </p>
     </div>
@@ -401,7 +401,7 @@ function Kpis({ series }: { series: MarketSeries }) {
   return (
     <div
       className={cn(
-        "grid shrink-0 gap-[var(--line)]",
+        "grid shrink-0 gap-(--line)",
         cards.length === 1 && "grid-cols-1",
         cards.length === 2 && "grid-cols-2",
         cards.length === 3 &&
@@ -523,21 +523,23 @@ function PulseSlide({
           Tokens por tramo
         </p>
         <p
-          className="hsx-num hsx-sm absolute -translate-x-1/2 bg-hs-ink px-[calc(var(--u)*0.5)] font-bold text-hs-gold"
-          style={{
-            left: `${x(head) / 10}%`,
-            top: `${Math.max(0, y(running) / 4 - 9)}%`,
-          }}
+          className="hsx-num hsx-sm absolute top-(--top) left-(--left) -translate-x-1/2 bg-hs-ink px-(--u-0-5) font-bold text-hs-gold"
+          style={
+            {
+              "--left": `${x(head) / 10}%`,
+              "--top": `${Math.max(0, y(running) / 4 - 9)}%`,
+            } as CSSProperties
+          }
         >
           AHORA
         </p>
       </div>
-      <div className="hsx-num hsx-xs relative mt-[calc(var(--u)*0.5)] h-[calc(var(--u)*1.2)] shrink-0 text-hs-brown">
+      <div className="hsx-num hsx-xs relative mt-(--u-0-5) h-(--u-1-2) shrink-0 text-hs-brown">
         {[0, 4, 8, 12, 16, 20].map((bucket) => (
           <span
             key={bucket}
-            className="absolute -translate-x-1/2 whitespace-nowrap"
-            style={{ left: `${x(bucket) / 10}%` }}
+            className="absolute left-(--left) -translate-x-1/2 whitespace-nowrap"
+            style={{ "--left": `${x(bucket) / 10}%` } as CSSProperties}
           >
             {timeLabel(bucket, timeline)}
           </span>
@@ -548,7 +550,7 @@ function PulseSlide({
 }
 
 const RANKING_GRID =
-  "grid grid-cols-[2.4em_3.2em_minmax(0,1fr)_8em_6em_7.5em_4.4em_3.2em] items-center whitespace-nowrap gap-x-[calc(var(--u)*1.1)]";
+  "grid grid-cols-[2.4em_3.2em_minmax(0,1fr)_8em_6em_7.5em_4.4em_3.2em] items-center whitespace-nowrap gap-x-(--u-1-1)";
 
 function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
   const rows = teams.slice(page * RANKING_ROWS, (page + 1) * RANKING_ROWS);
@@ -560,7 +562,7 @@ function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
       <div
         className={cn(
           RANKING_GRID,
-          "hsx-label shrink-0 border-b-[length:var(--line)] border-hs-ink pb-[calc(var(--u)*0.5)]"
+          "hsx-label shrink-0 border-b-(length:--line) border-hs-ink pb-(--u-0-5)"
         )}
       >
         <span>#</span>
@@ -572,10 +574,7 @@ function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
         <span className="text-right">Pushes</span>
         <span className="text-right">PR</span>
       </div>
-      <ol
-        className="grid min-h-0 flex-1"
-        style={{ gridTemplateRows: `repeat(${RANKING_ROWS}, minmax(0, 1fr))` }}
-      >
+      <ol className="grid min-h-0 flex-1 grid-rows-7">
         {rows.map((team, index) => (
           <motion.li
             key={team.id}
@@ -597,11 +596,11 @@ function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
               {team.rank}
             </span>
             <Move move={team.move} />
-            <span className="flex min-w-0 items-center gap-[calc(var(--u)*0.8)]">
+            <span className="flex min-w-0 items-center gap-(--u-0-8)">
               <Face
                 name={team.name}
                 src={team.logoUrl}
-                className="h-[calc(var(--u)*2.6)]"
+                className="h-(--u-2-6)"
               />
               <span className="min-w-0 leading-tight">
                 <span className="block truncate font-bold">{team.name}</span>
@@ -614,10 +613,8 @@ function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
             </span>
             <span
               className={cn(
-                "h-[calc(var(--u)*1.7)]",
-                team.move < 0
-                  ? "text-[var(--hsx-down)]"
-                  : "text-[var(--hsx-up)]"
+                "h-(--u-1-7)",
+                team.move < 0 ? "text-(--hsx-down)" : "text-(--hsx-up)"
               )}
             >
               <Spark values={team.trend} />
@@ -625,7 +622,7 @@ function RankingSlide({ teams, page }: { teams: MarketTeam[]; page: number }) {
             <span className="hsx-num text-right font-bold">
               <Figure value={team.tokens}>{compact(team.tokens)}</Figure>
             </span>
-            <span className="hsx-num text-right font-semibold text-[var(--hsx-up)]">
+            <span className="hsx-num text-right font-semibold text-(--hsx-up)">
               {team.recent > 0 ? `+${compact(team.recent)}` : "·"}
             </span>
             <span className="hsx-num text-right text-hs-brown">
@@ -657,28 +654,27 @@ function Bars({
 }) {
   return (
     <ol
-      className="hsx-md grid h-full grid-flow-col grid-cols-2 gap-x-[calc(var(--u)*2.4)]"
-      style={{
-        gridTemplateRows: `repeat(${Math.max(1, Math.ceil(rows.length / 2))}, minmax(0, 1fr))`,
-      }}
+      className="hsx-md grid h-full grid-flow-col grid-cols-2 grid-rows-repeat-var gap-x-(--u-2-4)"
+      style={
+        {
+          "--grid-rows": Math.max(1, Math.ceil(rows.length / 2)),
+        } as CSSProperties
+      }
     >
       {rows.map((row, index) => (
-        <li
-          key={row.key}
-          className="flex min-w-0 items-center gap-[calc(var(--u)*0.9)]"
-        >
+        <li key={row.key} className="flex min-w-0 items-center gap-(--u-0-9)">
           <Face
             name={row.name}
             src={row.icon}
             mark={row.mark}
             logo
-            className="h-[calc(var(--u)*2.6)]"
+            className="h-(--u-2-6)"
           />
-          <div className="flex min-w-0 flex-1 flex-col justify-center gap-[calc(var(--u)*0.4)]">
-            <div className="flex items-baseline justify-between gap-[calc(var(--u)*0.8)]">
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-(--u-0-4)">
+            <div className="flex items-baseline justify-between gap-(--u-0-8)">
               <span className="truncate font-bold">
                 {row.name}
-                <span className="hsx-xs ml-[calc(var(--u)*0.6)] font-normal text-hs-brown">
+                <span className="hsx-xs ml-(--u-0-6) font-normal text-hs-brown">
                   {row.detail}
                 </span>
               </span>
@@ -686,13 +682,15 @@ function Bars({
                 {row.value}
               </span>
             </div>
-            <div className="h-[calc(var(--u)*0.7)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand">
+            <div className="h-(--u-0-7) border-(length:--line-0-5) border-hs-ink bg-hs-sand">
               <motion.div
-                className="h-full origin-left"
-                style={{
-                  backgroundColor: row.color,
-                  width: `${Math.max(row.share * 100, 1)}%`,
-                }}
+                className="h-full w-(--w) origin-left bg-(--swatch)"
+                style={
+                  {
+                    "--swatch": row.color,
+                    "--w": `${Math.max(row.share * 100, 1)}%`,
+                  } as CSSProperties
+                }
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{
@@ -709,7 +707,13 @@ function Bars({
   );
 }
 
-const STACK_COLORS = ["#1e3958", "#35858a", "#d96b2a", "#cc291f", "#eab619"];
+const STACK_COLORS = [
+  "var(--color-hs-navy)",
+  "var(--color-hs-teal)",
+  "var(--color-hs-orange)",
+  "var(--color-hs-red)",
+  "var(--color-hs-gold)",
+];
 
 function Board({
   data,
@@ -754,29 +758,31 @@ function Board({
   const [title, detail] = heading[slide.kind];
   return (
     <section className="flex min-h-0 flex-1 flex-col bg-hs-paper text-hs-ink">
-      <header className="flex shrink-0 items-center justify-between gap-[calc(var(--u)*1.5)] border-b-[length:var(--line)] border-hs-ink px-[calc(var(--u)*1.3)] py-[calc(var(--u)*0.8)]">
-        <div className="flex min-w-0 items-baseline gap-[calc(var(--u)*1.1)]">
+      <header className="flex shrink-0 items-center justify-between gap-(--u-1-5) border-b-(length:--line) border-hs-ink px-(--u-1-3) py-(--u-0-8)">
+        <div className="flex min-w-0 items-baseline gap-(--u-1-1)">
           <h2 className="hsx-title hsx-lg shrink-0">{title}</h2>
           <p className="hsx-label truncate">{detail}</p>
         </div>
-        <div className="flex shrink-0 gap-[calc(var(--u)*0.35)]" aria-hidden>
+        <div className="flex shrink-0 gap-(--u-0-35)" aria-hidden>
           {slides.map((item, index) => (
             <span
               key={`${item.kind}-${index}`}
-              className="h-[calc(var(--u)*0.5)] w-[calc(var(--u)*1.8)] overflow-hidden bg-hs-ink/15"
+              className="h-(--u-0-5) w-(--u-1-8) overflow-hidden bg-hs-ink/15"
             >
               {index === tick % slides.length ? (
                 <span
                   key={tick}
-                  className="hsx-progress block h-full origin-left bg-hs-orange"
-                  style={{ animationDuration: `${SLIDE_MS}ms` }}
+                  className="hsx-progress anim-duration-var block h-full origin-left bg-hs-orange"
+                  style={
+                    { "--anim-duration": `${SLIDE_MS}ms` } as CSSProperties
+                  }
                 />
               ) : null}
             </span>
           ))}
         </div>
       </header>
-      <div className="relative min-h-0 flex-1 p-[calc(var(--u)*1.3)]">
+      <div className="relative min-h-0 flex-1 p-(--u-1-3)">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${slide.kind}-${slide.kind === "ranking" ? slide.page : 0}`}
@@ -815,7 +821,8 @@ function Board({
                 <Bars
                   rows={stacks.map((row, index) => ({
                     color:
-                      STACK_COLORS[index % STACK_COLORS.length] ?? "#eab619",
+                      STACK_COLORS[index % STACK_COLORS.length] ??
+                      "var(--color-hs-gold)",
                     detail: row.category,
                     icon: TECH_ICONS[row.name],
                     key: row.name,
@@ -868,10 +875,7 @@ function FeedRows({
     );
   }
   return (
-    <ol
-      className="grid h-full gap-[var(--line)] overflow-hidden"
-      style={{ gridTemplateRows: `repeat(${FEED_ROWS}, minmax(0, 1fr))` }}
-    >
+    <ol className="grid h-full grid-rows-6 gap-(--line) overflow-hidden">
       <AnimatePresence initial={false} mode="popLayout">
         {rows.map((post) => (
           <motion.li
@@ -881,12 +885,12 @@ function FeedRows({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45, ease: EASE }}
-            className="flex min-h-0 flex-col justify-center gap-[calc(var(--u)*0.35)] bg-hs-paper px-[calc(var(--u)*1.3)] text-hs-ink"
+            className="flex min-h-0 flex-col justify-center gap-(--u-0-35) bg-hs-paper px-(--u-1-3) text-hs-ink"
           >
-            <p className="hsx-sm flex items-center gap-[calc(var(--u)*0.6)]">
+            <p className="hsx-sm flex items-center gap-(--u-0-6)">
               <span
                 className={cn(
-                  "hsx-num hsx-xs px-[calc(var(--u)*0.45)] py-[calc(var(--u)*0.1)] font-bold text-hs-paper",
+                  "hsx-num hsx-xs px-(--u-0-45) py-(--u-0-1) font-bold text-hs-paper",
                   post.kind === "github" ? "bg-hs-navy" : "bg-hs-orange"
                 )}
               >
@@ -900,7 +904,7 @@ function FeedRows({
                 {minute ? ago(minute.getTime(), post.createdAt) : ""}
               </span>
             </p>
-            <p className="line-clamp-2 text-[length:calc(var(--u)*1.3)] leading-snug break-words">
+            <p className="line-clamp-2 text-(length:--u-1-3) leading-snug break-words">
               {post.text}
             </p>
           </motion.li>
@@ -912,7 +916,7 @@ function FeedRows({
 
 // Widths in --u, not em: the header row is set smaller than the rows and must share their columns.
 const PEOPLE_GRID =
-  "grid grid-cols-[calc(var(--u)*2.4)_minmax(0,1fr)_calc(var(--u)*4.6)_calc(var(--u)*3.6)_calc(var(--u)*2)] items-center whitespace-nowrap gap-x-[calc(var(--u)*0.9)]";
+  "grid grid-cols-[var(--u-2-4)_minmax(0,1fr)_calc(var(--u)*4.6)_calc(var(--u)*3.6)_var(--u-2)] items-center whitespace-nowrap gap-x-(--u-0-9)";
 
 /** Both individual rankings share the columns; the one that orders the board reads in ink, the rest in brown. */
 function PeopleRows({
@@ -925,11 +929,11 @@ function PeopleRows({
   const rows = marketPeople(people, metric, PEOPLE_ROWS);
   const lead = (on: boolean) => (on ? "font-bold" : "text-hs-brown");
   return (
-    <div className="hsx-md flex h-full flex-col bg-hs-paper px-[calc(var(--u)*1.3)] pt-[calc(var(--u)*0.9)] text-hs-ink">
+    <div className="hsx-md flex h-full flex-col bg-hs-paper px-(--u-1-3) pt-(--u-0-9) text-hs-ink">
       <div
         className={cn(
           PEOPLE_GRID,
-          "hsx-label shrink-0 border-b-[length:var(--line)] border-hs-ink pb-[calc(var(--u)*0.5)]"
+          "hsx-label shrink-0 border-b-(length:--line) border-hs-ink pb-(--u-0-5)"
         )}
       >
         <span>#</span>
@@ -938,10 +942,7 @@ function PeopleRows({
         <span className="text-right">Pushes</span>
         <span className="text-right">PR</span>
       </div>
-      <ol
-        className="grid min-h-0 flex-1"
-        style={{ gridTemplateRows: `repeat(${PEOPLE_ROWS}, minmax(0, 1fr))` }}
-      >
+      <ol className="grid min-h-0 flex-1 grid-rows-8">
         {rows.map((person, index) => (
           <motion.li
             key={person.id}
@@ -962,11 +963,11 @@ function PeopleRows({
             >
               {index + 1}
             </span>
-            <span className="flex min-w-0 items-center gap-[calc(var(--u)*0.7)]">
+            <span className="flex min-w-0 items-center gap-(--u-0-7)">
               <Face
                 name={person.name}
                 src={person.photoUrl}
-                className="h-[calc(var(--u)*2.6)]"
+                className="h-(--u-2-6)"
               />
               <span className="min-w-0 leading-tight">
                 <span className="block truncate font-bold">{person.name}</span>
@@ -1047,10 +1048,10 @@ function Side({ feed, people }: { feed: MarketFeed; people: MarketPerson[] }) {
   const side = sides[tick % sides.length] ?? "posts";
   const head = SIDE_HEAD[side];
   return (
-    <section className="flex min-h-0 flex-col gap-[var(--line)]">
+    <section className="flex min-h-0 flex-col gap-(--line)">
       <header
         className={cn(
-          "relative flex shrink-0 items-center justify-between gap-[calc(var(--u)*1)] px-[calc(var(--u)*1.3)] py-[calc(var(--u)*0.9)] transition-colors duration-300",
+          "relative flex shrink-0 items-center justify-between gap-(--u-1) px-(--u-1-3) py-(--u-0-9) transition-colors duration-300",
           head.tone
         )}
       >
@@ -1060,8 +1061,8 @@ function Side({ feed, people }: { feed: MarketFeed; people: MarketPerson[] }) {
           <span
             key={tick}
             aria-hidden
-            className="hsx-progress absolute inset-x-0 bottom-0 h-[calc(var(--u)*0.3)] origin-left bg-current opacity-45"
-            style={{ animationDuration: `${SIDE_MS}ms` }}
+            className="hsx-progress anim-duration-var absolute inset-x-0 bottom-0 h-(--u-0-3) origin-left bg-current opacity-45"
+            style={{ "--anim-duration": `${SIDE_MS}ms` } as CSSProperties}
           />
         ) : null}
       </header>
@@ -1093,8 +1094,8 @@ function Side({ feed, people }: { feed: MarketFeed; people: MarketPerson[] }) {
 function SponsorStrip() {
   const sponsors = resolveTvSponsors();
   return (
-    <div className="grid h-[9%] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-[var(--line)]">
-      <p className="hsx-title hsx-sm flex items-center bg-hs-orange px-[calc(var(--u)*1.4)] text-hs-paper">
+    <div className="grid h-[9%] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-(--line)">
+      <p className="hsx-title hsx-sm flex items-center bg-hs-orange px-(--u-1-4) text-hs-paper">
         Patrocinan
       </p>
       <div className="flex min-w-0 bg-hs-paper">
@@ -1102,7 +1103,7 @@ function SponsorStrip() {
           {sponsors.map((sponsor) => (
             <span
               key={sponsor.name}
-              className="flex h-[calc(var(--u)*3.2)] items-center px-[calc(var(--u)*2.6)]"
+              className="flex h-[calc(var(--u)*3.2)] items-center px-(--u-2-6)"
             >
               <Image
                 src={sponsor.logoUrl}
@@ -1115,11 +1116,9 @@ function SponsorStrip() {
           ))}
         </Marquee>
       </div>
-      <p className="flex flex-col items-center justify-center bg-hs-navy px-[calc(var(--u)*1.7)] leading-none text-hs-paper">
+      <p className="flex flex-col items-center justify-center bg-hs-navy px-(--u-1-7) leading-none text-hs-paper">
         <span className="hsx-label">Powered by</span>
-        <span className="hsx-title hsx-sm mt-[calc(var(--u)*0.4)]">
-          RawTree
-        </span>
+        <span className="hsx-title hsx-sm mt-(--u-0-4)">RawTree</span>
       </p>
     </div>
   );
@@ -1163,12 +1162,12 @@ function MiniMarketStage({
   ];
   return (
     <main
-      className="h-dvh w-full overflow-hidden bg-hs-ink px-[5vw] py-[5vh] text-hs-ink [container-type:size]"
+      className="h-dvh w-full overflow-hidden bg-hs-ink px-vw-5 py-vh-5 text-hs-ink [container-type:size]"
       aria-label="HackSpain en directo · Panel mini"
     >
-      <div className="hsx hsx-mini flex h-full flex-col gap-[var(--line)] p-[var(--line)]">
-        <header className="grid h-[16%] shrink-0 grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)] gap-[var(--line)] portrait:h-[20%] portrait:grid-cols-2 portrait:grid-rows-2">
-          <div className="flex min-w-0 items-center justify-between gap-[var(--u)] bg-hs-paper px-[var(--u)] portrait:col-span-2">
+      <div className="hsx hsx-mini flex h-full flex-col gap-(--line) p-(--line)">
+        <header className="grid h-[16%] shrink-0 grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)] gap-(--line) portrait:h-[20%] portrait:grid-cols-2 portrait:grid-rows-2">
+          <div className="flex min-w-0 items-center justify-between gap-(--u) bg-hs-paper px-(--u) portrait:col-span-2">
             <Image
               src="/logo.svg"
               alt="HackSpain"
@@ -1190,16 +1189,16 @@ function MiniMarketStage({
           <Clock endsAt={data.endsAt} />
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,0.8fr)_minmax(0,1.5fr)]">
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.65fr)] gap-(--line) portrait:grid-cols-1 portrait:grid-rows-[minmax(0,0.8fr)_minmax(0,1.5fr)]">
           <section
             aria-label="Cifras del hackathon"
-            className="grid min-h-0 grid-rows-2 gap-[var(--line)] portrait:grid-cols-2 portrait:grid-rows-1"
+            className="grid min-h-0 grid-rows-2 gap-(--line) portrait:grid-cols-2 portrait:grid-rows-1"
           >
             {cards.map((card) => (
               <div
                 key={card.label}
                 className={cn(
-                  "flex min-h-0 min-w-0 flex-col justify-center gap-[calc(var(--u)*0.6)] px-[calc(var(--u)*1.2)]",
+                  "flex min-h-0 min-w-0 flex-col justify-center gap-(--u-0-6) px-(--u-1-2)",
                   card.tone
                 )}
               >
@@ -1216,7 +1215,7 @@ function MiniMarketStage({
             ))}
           </section>
 
-          <section className="flex min-h-0 flex-col bg-hs-paper px-[calc(var(--u)*1.2)] py-[var(--u)]">
+          <section className="flex min-h-0 flex-col bg-hs-paper px-(--u-1-2) py-(--u)">
             <div className="relative min-h-0 flex-1 overflow-hidden">
               <AnimatePresence initial={false}>
                 <motion.div
@@ -1236,7 +1235,7 @@ function MiniMarketStage({
                   }}
                   transition={{ duration: 0.2, ease: EASE }}
                 >
-                  <header className="flex shrink-0 items-baseline justify-between gap-[var(--u)] border-b-[length:var(--line)] border-hs-ink pb-[calc(var(--u)*0.6)]">
+                  <header className="flex shrink-0 items-baseline justify-between gap-(--u) border-b-(length:--line) border-hs-ink pb-(--u-0-6)">
                     <h2 className="hsx-title hsx-lg">
                       {showPeople ? "Top personas" : "Top equipos"}
                     </h2>
@@ -1257,7 +1256,7 @@ function MiniMarketStage({
                       {ranking.map((row, index) => (
                         <li
                           key={`${showPeople ? "person" : "team"}-${row.id}`}
-                          className="grid min-h-0 grid-cols-[1.6em_1.8em_minmax(0,1fr)_auto] items-center gap-[calc(var(--u)*0.7)] border-b border-hs-ink/15 text-[calc(var(--u)*1.4)] last:border-0"
+                          className="grid min-h-0 grid-cols-[1.6em_1.8em_minmax(0,1fr)_auto] items-center gap-(--u-0-7) border-b border-hs-ink/15 text-(--u-1-4) last:border-0"
                         >
                           <span
                             className={cn(
@@ -1288,15 +1287,17 @@ function MiniMarketStage({
             </div>
             <div
               aria-hidden
-              className="mt-[calc(var(--u)*0.5)] h-[calc(var(--u)*0.25)] shrink-0 overflow-hidden bg-hs-ink/15"
+              className="mt-(--u-0-5) h-[calc(var(--u)*0.25)] shrink-0 overflow-hidden bg-hs-ink/15"
             >
               <span
                 key={slide}
-                className="hsx-mini-progress block h-full origin-left bg-hs-gold"
-                style={{
-                  animationDuration: `${MINI_SLIDE_MS}ms`,
-                  animationPlayState: visible ? "running" : "paused",
-                }}
+                className="hsx-mini-progress anim-duration-var anim-play-var block h-full origin-left bg-hs-gold"
+                style={
+                  {
+                    "--anim-duration": `${MINI_SLIDE_MS}ms`,
+                    "--anim-play": visible ? "running" : "paused",
+                  } as CSSProperties
+                }
                 onAnimationEnd={() => setSlide((value) => value + 1)}
               />
             </div>
@@ -1308,15 +1309,15 @@ function MiniMarketStage({
 
         <section
           aria-label="Última actividad"
-          className="flex h-[24%] shrink-0 flex-col justify-center gap-[calc(var(--u)*0.5)] overflow-hidden bg-hs-navy px-[calc(var(--u)*1.2)] py-[calc(var(--u)*0.6)] text-hs-paper"
+          className="flex h-[24%] shrink-0 flex-col justify-center gap-(--u-0-5) overflow-hidden bg-hs-navy px-(--u-1-2) py-(--u-0-6) text-hs-paper"
         >
-          <div className="hsx-sm flex items-baseline gap-[var(--u)]">
+          <div className="hsx-sm flex items-baseline gap-(--u)">
             <h2 className="shrink-0 font-bold text-hs-gold">Última hora</h2>
             {post ? (
               <p className="truncate">{post.teamName || post.authorName}</p>
             ) : null}
           </div>
-          <p className="line-clamp-2 text-[calc(var(--u)*1.5)] leading-snug break-words">
+          <p className="line-clamp-2 text-(--u-1-5) leading-snug break-words">
             {post?.text ||
               (posts ? "La actividad aparecerá aquí" : "Cargando actividad…")}
           </p>
@@ -1365,9 +1366,9 @@ function MarketStage({
       className="relative h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]"
       aria-label="HackSpain en directo"
     >
-      <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] px-[var(--line)] pt-[var(--line)] pb-[calc(var(--u)*1.2)]">
-        <header className="grid h-[9%] shrink-0 grid-cols-[minmax(0,1.45fr)_minmax(0,2.4fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-[var(--line)] portrait:h-[11%] portrait:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
-          <div className="flex min-w-0 items-center justify-between gap-[calc(var(--u)*1.5)] bg-hs-paper px-[calc(var(--u)*1.6)]">
+      <div className="hsx hsx-md flex h-full flex-col gap-(--line) px-(--line) pt-(--line) pb-(--u-1-2)">
+        <header className="grid h-[9%] shrink-0 grid-cols-[minmax(0,1.45fr)_minmax(0,2.4fr)_minmax(0,1.2fr)_minmax(0,1fr)] gap-(--line) portrait:h-[11%] portrait:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 items-center justify-between gap-(--u-1-5) bg-hs-paper px-(--u-1-6)">
             <Image
               src="/logo.svg"
               alt="HackSpain"
@@ -1376,12 +1377,12 @@ function MarketStage({
               priority
               className="h-[62%] w-auto min-w-0"
             />
-            <p className="hsx-label flex shrink-0 items-center gap-[calc(var(--u)*0.55)] border-l-[length:var(--line)] border-hs-ink/20 pl-[calc(var(--u)*1.2)] text-hs-red">
-              <span className="size-[calc(var(--u)*0.65)] rounded-full bg-current" />
+            <p className="hsx-label flex shrink-0 items-center gap-(--u-0-55) border-l-(length:--line) border-hs-ink/20 pl-(--u-1-2) text-hs-red">
+              <span className="size-(--u-0-65) rounded-full bg-current" />
               {demo ? "Demo" : "En directo"}
             </p>
           </div>
-          <div className="flex flex-col justify-center gap-[calc(var(--u)*0.65)] bg-hs-paper px-[calc(var(--u)*1.8)] leading-none portrait:col-span-3 portrait:row-start-2">
+          <div className="flex flex-col justify-center gap-(--u-0-65) bg-hs-paper px-(--u-1-8) leading-none portrait:col-span-3 portrait:row-start-2">
             <p className="hsx-label flex justify-between">
               <span>Tramo del hackathon</span>
               <span className="hsx-num font-bold text-hs-ink">
@@ -1389,19 +1390,25 @@ function MarketStage({
               </span>
             </p>
             <div
-              className="relative h-[calc(var(--u)*0.85)] overflow-hidden border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand"
+              className="relative h-(--u-0-85) overflow-hidden border-(length:--line-0-5) border-hs-ink bg-hs-sand"
               aria-hidden
             >
               <span
-                className="absolute inset-y-0 left-0 bg-hs-teal"
-                style={{ width: `${(bucket / MARKET_BUCKETS) * 100}%` }}
+                className="absolute inset-y-0 left-0 w-(--w) bg-hs-teal"
+                style={
+                  {
+                    "--w": `${(bucket / MARKET_BUCKETS) * 100}%`,
+                  } as CSSProperties
+                }
               />
               <span
-                className="absolute inset-y-0 bg-hs-gold"
-                style={{
-                  left: `${(bucket / MARKET_BUCKETS) * 100}%`,
-                  width: `${100 / MARKET_BUCKETS}%`,
-                }}
+                className="absolute inset-y-0 left-(--left) w-(--w) bg-hs-gold"
+                style={
+                  {
+                    "--left": `${(bucket / MARKET_BUCKETS) * 100}%`,
+                    "--w": `${100 / MARKET_BUCKETS}%`,
+                  } as CSSProperties
+                }
               />
             </div>
           </div>
@@ -1409,8 +1416,8 @@ function MarketStage({
         </header>
         <TeamTape teams={teams} />
         <div className="relative min-h-0 flex-1">
-          <div className="grid h-full min-h-0 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)]">
-            <div className="flex min-h-0 flex-col gap-[var(--line)]">
+          <div className="grid h-full min-h-0 grid-cols-[minmax(0,2.15fr)_minmax(0,1fr)] gap-(--line) portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="flex min-h-0 flex-col gap-(--line)">
               <Kpis series={series} />
               <Board data={data} series={series} teams={teams} />
             </div>

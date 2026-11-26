@@ -1,4 +1,4 @@
-import { SECTION_KEYS } from "@convex/lib/userTypes";
+import { NAV_SECTION_KEYS } from "@convex/lib/userTypes";
 import type { SectionKey } from "@convex/lib/userTypes";
 
 /**
@@ -13,7 +13,7 @@ export const SECTION_NAV: Record<
   tracks: { href: "/tracks", label: "Retos", hint: "Proyecto y retos." },
   perks: { href: "/perks", label: "Perks", hint: "Beneficios de partners." },
   participantes: {
-    href: "/participantes",
+    href: "/people",
     label: "Participantes",
     hint: "Directorio de la comunidad. Solo quien tiene acceso.",
     private: true,
@@ -25,7 +25,7 @@ export const SECTION_NAV: Record<
     private: true,
   },
   judgingSponsors: {
-    href: "/judging-sponsors",
+    href: "/deliveries",
     label: "Entregas",
     hint: "Submissions por reto. Sin puntuar.",
     private: true,
@@ -33,11 +33,13 @@ export const SECTION_NAV: Record<
   cli: { href: "/cli", label: "CLI", hint: "Instalación y comandos." },
 };
 
-export const SECTION_ORDER: readonly SectionKey[] = SECTION_KEYS;
+export const SECTION_ORDER: readonly Exclude<SectionKey, "cli">[] =
+  NAV_SECTION_KEYS;
 
 export const JUDGING_PATH = "/judging";
-export const JUDGING_SPONSORS_PATH = "/judging-sponsors";
-export const DIRECTORY_PATH = "/participantes";
+export const JUDGING_SPONSORS_PATH = "/deliveries";
+export const DELIVERIES_PATH = "/deliveries";
+export const DIRECTORY_PATH = "/people";
 
 export function isJudgingPath(pathname: string): boolean {
   if (isSponsorJudgingPath(pathname)) {
@@ -48,8 +50,10 @@ export function isJudgingPath(pathname: string): boolean {
 
 export function isSponsorJudgingPath(pathname: string): boolean {
   return (
-    pathname === JUDGING_SPONSORS_PATH ||
-    pathname.startsWith(`${JUDGING_SPONSORS_PATH}/`)
+    pathname === DELIVERIES_PATH ||
+    pathname.startsWith(`${DELIVERIES_PATH}/`) ||
+    pathname === "/judging-sponsors" ||
+    pathname.startsWith("/judging-sponsors/")
   );
 }
 
@@ -86,6 +90,9 @@ export function sectionForPath(pathname: string): SectionKey | null {
   if (isSponsorJudgingPath(pathname)) {
     return "judgingSponsors";
   }
+  if (pathname === "/participantes" || pathname.startsWith("/participantes/")) {
+    return "participantes";
+  }
   for (const key of SECTION_ORDER) {
     const { href } = SECTION_NAV[key];
     if (pathname === href || pathname.startsWith(`${href}/`)) {
@@ -105,6 +112,7 @@ export function sectionForPath(pathname: string): SectionKey | null {
 const OPEN_WHEN_CLOSED = [
   "/",
   "/profile",
+  "/people",
   "/participantes",
   "/perks",
   "/insights",
@@ -115,7 +123,8 @@ const OPEN_WHEN_CLOSED = [
   "/pending",
   "/unregistered",
   JUDGING_PATH,
-  JUDGING_SPONSORS_PATH,
+  DELIVERIES_PATH,
+  "/judging-sponsors",
 ];
 
 export function isPathAllowedWhenClosed(

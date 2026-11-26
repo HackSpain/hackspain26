@@ -12,7 +12,7 @@ export function envFromRuntime(name: string): string | undefined {
     : undefined;
 }
 
-export function siteOriginFromRuntime(): string {
+function siteOriginFromRuntime(): string {
   const configured = envFromRuntime("SITE_URL") ?? "https://hackspain.com";
   try {
     const url = new URL(configured);

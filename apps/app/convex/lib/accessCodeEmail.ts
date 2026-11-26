@@ -20,10 +20,19 @@ const LOGO_URL = "https://hackspain.com/hs-email-logo.png";
 
 export const ACCESS_CODE_EMAIL_SUBJECT = "Tu código de acceso a HackSpain 2026";
 
+export function accessCodeEmailSubject(label?: string): string {
+  return label ? `Tu código de acceso a ${label}` : ACCESS_CODE_EMAIL_SUBJECT;
+}
+
 type AccessCodeEmailContent = {
   code: string;
+  datesLine?: string;
+  label?: string;
   name: string;
 };
+
+const DEFAULT_DATES_LINE = "Madrid · 18—20 septiembre 2026";
+const DEFAULT_LABEL = "HackSpain 2026";
 
 function escapeHtml(value: string): string {
   return value
@@ -36,7 +45,10 @@ function escapeHtml(value: string): string {
 
 export function accessCodeEmailHtml(content: AccessCodeEmailContent): string {
   const code = escapeHtml(content.code);
+  const datesLine = escapeHtml(content.datesLine ?? DEFAULT_DATES_LINE);
+  const label = escapeHtml(content.label ?? DEFAULT_LABEL);
   const name = escapeHtml(content.name);
+  const subject = escapeHtml(accessCodeEmailSubject(content.label));
 
   return `<!doctype html>
 <html lang="es">
@@ -45,10 +57,10 @@ export function accessCodeEmailHtml(content: AccessCodeEmailContent): string {
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="color-scheme" content="light only" />
 <meta name="supported-color-schemes" content="light only" />
-<title>${ACCESS_CODE_EMAIL_SUBJECT}</title>
+<title>${subject}</title>
 </head>
 <body style="margin:0;padding:0;background:${PALETTE.ink};">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Tu código personal para entrar en HackSpain 2026.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Tu código personal para entrar en ${label}.</div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PALETTE.ink}" style="background:${PALETTE.ink};">
     <tr>
@@ -63,7 +75,7 @@ export function accessCodeEmailHtml(content: AccessCodeEmailContent): string {
 
           <tr>
             <td align="center" bgcolor="${PALETTE.gold}" style="background:${PALETTE.gold};border:3px solid ${PALETTE.ink};border-top:0;padding:11px 24px;">
-              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:${PALETTE.brown};">Madrid · 18—20 septiembre 2026</div>
+              <div style="font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:${PALETTE.brown};">${datesLine}</div>
             </td>
           </tr>
 
@@ -79,7 +91,7 @@ export function accessCodeEmailHtml(content: AccessCodeEmailContent): string {
             <td bgcolor="${PALETTE.paper}" style="background:${PALETTE.paper};border:3px solid ${PALETTE.ink};border-top:0;border-bottom:0;padding:30px 26px 8px;">
               <div style="font-family:${SANS};font-size:24px;line-height:1.25;font-weight:800;color:${PALETTE.ink};padding-bottom:14px;">Hola, ${name}</div>
               <p style="margin:0;font-family:${SANS};font-size:16px;line-height:1.6;color:${PALETTE.ink};">
-                Este es tu código personal para entrar en HackSpain 2026. Guárdalo y tenlo a mano cuando llegues.
+                Este es tu código personal para entrar en ${label}. Guárdalo y tenlo a mano cuando llegues.
               </p>
             </td>
           </tr>
@@ -137,7 +149,7 @@ export function accessCodeEmailHtml(content: AccessCodeEmailContent): string {
 export function accessCodeEmailText(content: AccessCodeEmailContent): string {
   return `Hola ${content.name},
 
-Tu código de acceso a HackSpain 2026 es: ${content.code}
+Tu código de acceso a ${content.label ?? DEFAULT_LABEL} es: ${content.code}
 
 Enséñalo al equipo de acreditación cuando llegues. Después del check-in, inicia sesión en https://hackspain.app desde tu ordenador con este mismo email para acceder a la experiencia del evento.
 

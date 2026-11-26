@@ -1,19 +1,32 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MutationCtx } from "./_generated/server";
+import { testEditionRow, withCurrentEdition } from "./lib/testFixtures";
 import { dissolve } from "./teams";
 
 function context(logoId?: string, submitted = false) {
   const deletedFiles: string[] = [];
   const deletedRows: string[] = [];
   const rows: Record<string, Record<string, unknown>[]> = {
+    editions: [testEditionRow()],
     users: [{ _id: "owner", role: "admin" }],
-    teams: [{ _id: "team", ownerId: "owner", logoId }],
+    teams: [withCurrentEdition({ _id: "team", ownerId: "owner", logoId })],
     teamMembers: [
-      { _id: "member", userId: "owner", teamId: "team", status: "member" },
+      withCurrentEdition({
+        _id: "member",
+        userId: "owner",
+        teamId: "team",
+        status: "member",
+      }),
     ],
     submissions: submitted
-      ? [{ _id: "project", teamId: "team", status: "submitted" }]
+      ? [
+          withCurrentEdition({
+            _id: "project",
+            teamId: "team",
+            status: "submitted",
+          }),
+        ]
       : [],
   };
   const ctx = {

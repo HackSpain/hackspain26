@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { api } from "@convex/_generated/api";
 import { NetworkCanvas } from "@/components/participant-directory/network-canvas";
 import "@/components/participant-directory/connection-graph.css";
@@ -91,7 +92,7 @@ function Stat({
   return (
     <div
       className={cn(
-        "flex flex-col justify-center gap-[calc(var(--u)*0.4)] px-[calc(var(--u)*1.5)] leading-none",
+        "flex flex-col justify-center gap-(--u-0-4) px-(--u-1-5) leading-none",
         tone
       )}
     >
@@ -109,13 +110,13 @@ function Stat({
 function Moves({ events }: { events: FormationEvent[] }) {
   const reduced = useReducedMotion();
   return (
-    <div className="grid h-[8.5%] shrink-0 grid-cols-[auto_minmax(0,1fr)_calc(var(--u)*9)] gap-[var(--line)]">
-      <p className="hsx-title hsx-sm flex items-center bg-hs-orange px-[calc(var(--u)*1.4)] text-hs-paper">
+    <div className="grid h-[8.5%] shrink-0 grid-cols-[auto_minmax(0,1fr)_calc(var(--u)*9)] gap-(--line)">
+      <p className="hsx-title hsx-sm flex items-center bg-hs-orange px-(--u-1-4) text-hs-paper">
         Últimos
         <br />
         movimientos
       </p>
-      <ol className="grid min-w-0 grid-cols-4 gap-[var(--line)] overflow-hidden">
+      <ol className="grid min-w-0 grid-cols-4 gap-(--line) overflow-hidden">
         <AnimatePresence initial={false} mode="popLayout">
           {events.slice(0, SHOWN_EVENTS).map((event) => (
             <motion.li
@@ -125,12 +126,12 @@ function Moves({ events }: { events: FormationEvent[] }) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5, ease: EASE }}
-              className="flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.3)] bg-hs-paper px-[calc(var(--u)*1.2)] text-hs-ink"
+              className="flex min-w-0 flex-col justify-center gap-(--u-0-3) bg-hs-paper px-(--u-1-2) text-hs-ink"
             >
-              <p className="flex min-w-0 items-center gap-[calc(var(--u)*0.6)]">
+              <p className="flex min-w-0 items-center gap-(--u-0-6)">
                 <span
                   className={cn(
-                    "hsx-xs shrink-0 px-[calc(var(--u)*0.45)] py-[calc(var(--u)*0.1)] font-bold",
+                    "hsx-xs shrink-0 px-(--u-0-45) py-(--u-0-1) font-bold",
                     event.kind === "new"
                       ? "bg-hs-gold text-hs-ink"
                       : "bg-hs-teal text-hs-paper"
@@ -145,7 +146,7 @@ function Moves({ events }: { events: FormationEvent[] }) {
           ))}
         </AnimatePresence>
         {events.length === 0 ? (
-          <li className="hsx-label col-span-4 flex items-center bg-hs-paper px-[calc(var(--u)*1.4)] text-hs-ink">
+          <li className="hsx-label col-span-4 flex items-center bg-hs-paper px-(--u-1-4) text-hs-ink">
             Busca equipo o crea el tuyo desde la app, en Equipos. Los
             movimientos aparecerán aquí.
           </li>
@@ -172,10 +173,10 @@ function TeamsStage({
       className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]"
       aria-label="Formación de equipos en directo"
     >
-      <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] p-[var(--line)]">
-        <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.4fr)_minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,0.9fr)_calc(var(--u)*7)] gap-[var(--line)]">
+      <div className="hsx hsx-md flex h-full flex-col gap-(--line) p-(--line)">
+        <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.4fr)_minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,0.9fr)_calc(var(--u)*7)] gap-(--line)">
           <Diagonal bg="bg-hs-paper" tri="bg-hs-orange" corner="tl" />
-          <div className="flex items-center justify-center bg-hs-paper px-[calc(var(--u)*1.4)]">
+          <div className="flex items-center justify-center bg-hs-paper px-(--u-1-4)">
             <Image
               src="/logo.svg"
               alt="HackSpain"
@@ -185,8 +186,8 @@ function TeamsStage({
               className="h-[74%] w-auto"
             />
           </div>
-          <p className="hsx-title hsx-lg flex items-center justify-center gap-[calc(var(--u)*0.7)] bg-hs-red px-[calc(var(--u)*1)] text-hs-paper">
-            <span className="tv-pulse size-[calc(var(--u)*0.9)] shrink-0 rounded-full bg-hs-paper" />
+          <p className="hsx-title hsx-lg flex items-center justify-center gap-(--u-0-7) bg-hs-red px-(--u-1) text-hs-paper">
+            <span className="tv-pulse size-(--u-0-9) shrink-0 rounded-full bg-hs-paper" />
             {demo ? "Demo · equipos" : "Formando equipos"}
           </p>
           <Stat
@@ -194,7 +195,7 @@ function TeamsStage({
             value={stats.teams}
             tone="bg-hs-gold text-hs-ink [--hsx-flash:var(--color-hs-red)]"
           />
-          <div className="flex flex-col justify-center gap-[calc(var(--u)*0.55)] bg-hs-paper px-[calc(var(--u)*1.6)] leading-none">
+          <div className="flex flex-col justify-center gap-(--u-0-55) bg-hs-paper px-(--u-1-6) leading-none">
             <p className="hsx-label flex justify-between">
               <span>Ya tienen equipo</span>
               <span className="hsx-num font-bold text-hs-ink">
@@ -202,14 +203,16 @@ function TeamsStage({
               </span>
             </p>
             <div
-              className="h-[calc(var(--u)*0.9)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand"
+              className="h-(--u-0-9) border-(length:--line-0-5) border-hs-ink bg-hs-sand"
               aria-hidden
             >
               <div
-                className="h-full origin-left bg-hs-teal transition-transform duration-700 ease-out"
-                style={{
-                  transform: `scaleX(${stats.total ? stats.placed / stats.total : 0})`,
-                }}
+                className="scale-x-var h-full origin-left bg-hs-teal transition-transform duration-700 ease-out"
+                style={
+                  {
+                    "--scale-x": stats.total ? stats.placed / stats.total : 0,
+                  } as CSSProperties
+                }
               />
             </div>
           </div>
@@ -220,7 +223,7 @@ function TeamsStage({
           />
           <div className="flex flex-col items-center justify-center bg-hs-teal leading-none text-hs-paper">
             <span className="hsx-label">Madrid</span>
-            <span className="hsx-title hsx-num hsx-xl mt-[calc(var(--u)*0.4)]">
+            <span className="hsx-title hsx-num hsx-xl mt-(--u-0-4)">
               {now?.toLocaleTimeString("es-ES", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -230,10 +233,7 @@ function TeamsStage({
           </div>
           <Diagonal bg="bg-hs-teal" tri="bg-hs-orange" corner="br" />
         </header>
-        <div
-          className="pg-stage tv-teams pointer-events-none min-h-0 flex-1"
-          style={{ borderBottom: "none", borderTop: "none", height: "auto" }}
-        >
+        <div className="pg-stage tv-teams pointer-events-none min-h-0 flex-1">
           <NetworkCanvas
             participants={participants}
             lens="team"

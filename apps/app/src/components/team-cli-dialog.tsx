@@ -4,7 +4,6 @@ import { Check, Copy } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -83,9 +82,9 @@ function LineCopyButton({ value }: { value: string }) {
       aria-live="polite"
       aria-label={copied ? `Copiado: ${value}` : `Copiar: ${value}`}
       className={cn(
-        "inline-flex min-h-10 shrink-0 items-center gap-1.5 px-1.5 font-bungee text-[11px] uppercase tracking-wide outline-none",
+        "inline-flex min-h-10 shrink-0 items-center gap-1.5 px-1.5 font-bungee text-2xs uppercase tracking-wide outline-none",
         "text-hs-paper/70 hover:text-hs-paper focus-visible:text-hs-paper focus-visible:ring-2 focus-visible:ring-hs-gold",
-        "motion-safe:transition-[color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.96]",
+        "motion-safe:transition-surface motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.96]",
         copied && "text-hs-gold hover:text-hs-gold"
       )}
       onClick={() => {
@@ -129,7 +128,7 @@ export function CodeBlock({ children }: { children: string }) {
   const lines = commandLines(children);
 
   return (
-    <div className="border-[3px] border-hs-ink bg-hs-ink">
+    <div className="border-3 border-hs-ink bg-hs-ink">
       <ul className="m-0 flex list-none flex-col p-0">
         {lines.map((line, index) => (
           <li
@@ -192,17 +191,6 @@ export function TeamCliDialog({ children }: { children: ReactNode }) {
             }
           </CodeBlock>
         </div>
-
-        <p className="text-sm text-hs-brown">
-          Todos los comandos, en la{" "}
-          <Link
-            href="/cli"
-            className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
-          >
-            guía completa de la CLI
-          </Link>
-          .
-        </p>
       </DialogContent>
     </Dialog>
   );

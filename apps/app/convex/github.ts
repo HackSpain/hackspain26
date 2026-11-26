@@ -1,18 +1,11 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { authedMutation } from "./lib/customFunctions";
-import { getSignupForUser } from "./lib/auth";
-import { resolvePendingInvites } from "./users";
+import { getCurrentParticipation } from "./lib/participations";
+import { githubRedirectUri } from "./lib/github";
+import { resolvePendingInvites } from "./lib/team";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
-
-export function githubRedirectUri(): string {
-  const convexSite = process.env.CONVEX_SITE_URL;
-  if (!convexSite) {
-    throw new Error("CONVEX_SITE_URL no está configurada");
-  }
-  return `${convexSite.replace(/\/$/, "")}/github/callback`;
-}
 
 function randomState(): string {
   const bytes = new Uint8Array(24);
@@ -128,24 +121,11 @@ export const linkAccount = internalMutation({
       githubLinkedAt: Date.now(),
       image: user.image ?? args.avatarUrl,
     });
-    const signup = await getSignupForUser(ctx, user);
-    if (signup && signup.githubUsername !== login) {
-      const clash = await ctx.db
-        .query("signups")
-        .withIndex("by_github", (q) => q.eq("githubUsername", login))
-        .first();
-      if (!clash) {
-        await ctx.db.patch(signup._id, { githubUsername: login });
-      }
+    const participation = await getCurrentParticipation(ctx, user);
+    if (participation && participation.githubUsername !== login) {
+      await ctx.db.patch(participation._id, { githubUsername: login });
     }
-    await resolvePendingInvites(
-      ctx,
-      user._id,
-      user.email,
-      signup?._id ?? user.signupId,
-      login,
-      signup?.twitterHandle
-    );
+    await resolvePendingInvites(ctx, user._id);
     return null;
   },
   returns: v.null(),

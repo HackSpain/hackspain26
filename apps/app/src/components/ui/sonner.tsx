@@ -20,7 +20,7 @@ function Toaster(props: ToasterProps) {
         unstyled: true,
         classNames: {
           toast:
-            "flex w-full items-start gap-3 border-[3px] border-hs-ink bg-hs-paper px-4 py-3 text-left text-sm text-hs-ink shadow-[4px_4px_0_0_var(--color-hs-ink)] sm:w-[22rem]",
+            "flex w-full items-start gap-3 border-3 border-hs-ink bg-hs-paper px-4 py-3 text-left text-sm text-hs-ink shadow-[4px_4px_0_0_var(--color-hs-ink)] sm:w-[22rem]",
           title: "font-medium leading-snug",
           description: "text-hs-brown leading-snug",
           icon: "mt-0.5 size-4 shrink-0 [&>svg]:size-4",

@@ -1,9 +1,12 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import Image from "next/image";
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
+import { EditionDates } from "@/components/edition-label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -108,11 +111,13 @@ function Tile({
 }: TileSpec & { reduced: boolean }) {
   return (
     <motion.div
-      className={cn("min-h-0 min-w-0", tone, clip)}
-      style={{
-        gridArea: area,
-        transformOrigin: origin === "bottom" ? "50% 100%" : "50% 0%",
-      }}
+      className={cn(
+        "grid-area-var min-h-0 min-w-0",
+        origin === "bottom" ? "origin-bottom" : "origin-top",
+        tone,
+        clip
+      )}
+      style={{ "--grid-area": area } as CSSProperties}
       variants={reduced ? fadeTile : scaleTile}
     />
   );
@@ -124,21 +129,7 @@ export function HomeSplash() {
 
   return (
     <div className="h-dvh overflow-hidden bg-hs-ink text-hs-ink">
-      <div
-        className="grid h-full w-full gap-[3px] p-[3px]"
-        style={{
-          gridTemplateAreas: `
-            "a b c d e f"
-            "g s s s s h"
-            "i s s s s j"
-            "k s s s s l"
-            "m n o p q r"
-          `,
-          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-          gridTemplateRows:
-            "minmax(3.25rem, 12vh) 1fr 1fr 1fr minmax(3.25rem, 12vh)",
-        }}
-      >
+      <div className="hs-splash-mosaic grid h-full w-full gap-stroke p-stroke">
         <motion.div
           aria-hidden
           className="contents"
@@ -150,10 +141,7 @@ export function HomeSplash() {
             <Tile key={tile.area} reduced={reduced} {...tile} />
           ))}
         </motion.div>
-        <div
-          className="flex min-h-0 min-w-0 flex-col items-center justify-center bg-hs-paper px-6 py-8 sm:px-10"
-          style={{ gridArea: "s" }}
-        >
+        <div className="col-span-4 col-start-2 row-span-3 row-start-2 flex min-h-0 min-w-0 flex-col items-center justify-center bg-hs-paper px-6 py-8 sm:px-10">
           <motion.div
             className="flex w-full max-w-sm flex-col items-center"
             initial="hidden"
@@ -171,15 +159,12 @@ export function HomeSplash() {
             </motion.h1>
             <motion.div
               aria-hidden
-              className="mt-6 h-[3px] w-16 origin-center bg-hs-gold"
+              className="mt-6 h-stroke w-16 origin-center bg-hs-gold"
               variants={reduced ? item : rule}
             />
-            <motion.p
-              className="mt-5 text-center font-bungee text-xs tracking-wide text-pretty text-hs-brown sm:text-sm"
-              variants={item}
-            >
-              Madrid · 18–20 sep 2026
-            </motion.p>
+            <motion.div className="mt-5 text-center sm:text-sm" variants={item}>
+              <EditionDates className="text-pretty sm:text-sm" />
+            </motion.div>
             <motion.div className="mt-8 w-full max-w-56" variants={item}>
               <Button asChild className="w-full">
                 <Link href="/login">Entrar</Link>

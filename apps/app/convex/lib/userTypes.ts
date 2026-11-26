@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Infer } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { getCurrentParticipation } from "./participationLookup";
 
 /**
  * Dashboard sections a user type can switch on. The feed (home), the profile
@@ -32,18 +33,20 @@ export const userTypeSummaryValidator = v.object({
   description: v.optional(v.string()),
   isDefault: v.boolean(),
   label: v.string(),
+  openForApplications: v.boolean(),
+  requiresConfirmed: v.boolean(),
   sections: sectionsValidator,
   slug: v.string(),
   sortOrder: v.number(),
 });
 
+/** Header and CRM checkboxes. `cli` stays in stored arrays but is not a nav section. */
+export const NAV_SECTION_KEYS = SECTION_KEYS.filter(
+  (key): key is Exclude<SectionKey, "cli"> => key !== "cli"
+);
+
 /** Fallback when no type is assigned and none is marked as default. */
-export const PARTICIPANT_SECTIONS: Sections = [
-  "teams",
-  "tracks",
-  "perks",
-  "cli",
-];
+export const PARTICIPANT_SECTIONS: Sections = ["teams", "tracks", "perks"];
 
 export const ALL_SECTIONS: Sections = [...SECTION_KEYS];
 
@@ -79,112 +82,87 @@ export async function defaultUserType(
  */
 export async function userTypeFor(
   ctx: Ctx,
-  user: Pick<Doc<"users">, "userTypeId">
+  user: Pick<Doc<"users">, "_id" | "email">
 ): Promise<Doc<"userTypes"> | null> {
-  if (user.userTypeId) {
-    const assigned = await ctx.db.get(user.userTypeId);
-    if (assigned) {
-      return assigned;
+  try {
+    const row = await getCurrentParticipation(ctx, user);
+    if (row?.roleId) {
+      const assigned = await ctx.db.get(row.roleId);
+      if (assigned) {
+        return assigned;
+      }
     }
+  } catch {
+    // Editions table missing in tests that still seed only users.
   }
   return await defaultUserType(ctx);
 }
 
+function catalogAdmin(
+  user: Pick<Doc<"users">, "role"> & { admin?: boolean }
+): boolean {
+  return user.admin === true || user.role === "admin";
+}
+
+function navSections(sections: Sections): Sections {
+  return normalizeSections(sections.filter((key) => key !== "cli"));
+}
+
 /**
- * Sections this user may open. Admins see everything. The directory is
- * forced on for judges, sponsors and mentors and stripped from everyone
- * else, even if the CRM type still has the checkbox.
+ * Sections this user may open. Admins see every nav section. Checkboxes on
+ * the catalog row are the grant — no slug/label force or strip.
  */
 export function effectiveSections(
-  user: Pick<Doc<"users">, "role">,
+  user: Pick<Doc<"users">, "role"> & { admin?: boolean },
   type: Doc<"userTypes"> | null
 ): Sections {
-  if (user.role === "admin") {
-    return ALL_SECTIONS;
+  if (catalogAdmin(user)) {
+    return navSections(ALL_SECTIONS);
   }
-  const sections = type
-    ? normalizeSections(type.sections)
-    : PARTICIPANT_SECTIONS;
-  let next = sections;
-  if (isSponsorType(type)) {
-    next = withSponsorCatalog(sections);
-  } else if (sections.includes("judging")) {
-    next = normalizeSections([...sections, "judgingSponsors"]);
-  }
-  if (grantsDirectory(user, type)) {
-    return normalizeSections([...next, "participantes"]);
-  }
-  return normalizeSections(next.filter((key) => key !== "participantes"));
+  return navSections(
+    type ? normalizeSections(type.sections) : PARTICIPANT_SECTIONS
+  );
 }
 
 export function grantsJudging(
-  user: Pick<Doc<"users">, "role">,
+  user: Pick<Doc<"users">, "role"> & { admin?: boolean },
   type: Doc<"userTypes"> | null
 ): boolean {
   return effectiveSections(user, type).includes("judging");
 }
 
 export function grantsSponsorCatalog(
-  user: Pick<Doc<"users">, "role">,
+  user: Pick<Doc<"users">, "role"> & { admin?: boolean },
   type: Doc<"userTypes"> | null
 ): boolean {
   return effectiveSections(user, type).includes("judgingSponsors");
 }
 
-/** Directory graph: admins, judges, sponsors and mentors. Never hackers. */
 export function grantsDirectory(
-  user: Pick<Doc<"users">, "role">,
+  user: Pick<Doc<"users">, "role"> & { admin?: boolean },
   type: Doc<"userTypes"> | null
 ): boolean {
-  if (user.role === "admin") {
-    return true;
-  }
-  if (isSponsorType(type) || isMentorType(type)) {
-    return true;
-  }
-  const sections = type
-    ? normalizeSections(type.sections)
-    : PARTICIPANT_SECTIONS;
-  return sections.includes("judging") || sections.includes("judgingSponsors");
+  return effectiveSections(user, type).includes("participantes");
 }
 
-/** CRM type "Sponsor": browses deliveries, never scores in the general pool. */
-export function isSponsorType(
-  type: Pick<Doc<"userTypes">, "slug" | "label"> | null | undefined
+export function typeRequiresConfirmed(
+  type: Pick<Doc<"userTypes">, "requiresConfirmed"> | null | undefined
 ): boolean {
-  return typeNamed(type, "sponsor");
+  return type?.requiresConfirmed !== false;
 }
 
-/** CRM type "Mentor": staff on the floor, not a hacker. */
-export function isMentorType(
-  type: Pick<Doc<"userTypes">, "slug" | "label"> | null | undefined
+export function typeOpenForApplications(
+  type: Pick<Doc<"userTypes">, "openForApplications"> | null | undefined
 ): boolean {
-  return typeNamed(type, "mentor");
-}
-
-function typeNamed(
-  type: Pick<Doc<"userTypes">, "slug" | "label"> | null | undefined,
-  name: string
-): boolean {
-  if (!type) {
-    return false;
-  }
-  return type.slug === name || type.label.trim().toLowerCase() === name;
-}
-
-export function withSponsorCatalog(sections: readonly string[]): Sections {
-  return normalizeSections([
-    ...sections.filter((key) => key !== "judging"),
-    "judgingSponsors",
-  ]);
+  return type?.openForApplications === true;
 }
 
 /** Async form for the gates: looks the type up when the user has one. */
 export async function canJudge(
   ctx: Ctx,
-  user: Pick<Doc<"users">, "role" | "userTypeId">
+  user: Pick<Doc<"users">, "_id" | "admin" | "email" | "role">
 ): Promise<boolean> {
-  if (user.role === "admin") {
+  if (catalogAdmin(user)) {
     return true;
   }
   return grantsJudging(user, await userTypeFor(ctx, user));
@@ -192,9 +170,9 @@ export async function canJudge(
 
 export async function canBrowseSponsorCatalog(
   ctx: Ctx,
-  user: Pick<Doc<"users">, "role" | "userTypeId">
+  user: Pick<Doc<"users">, "_id" | "admin" | "email" | "role">
 ): Promise<boolean> {
-  if (user.role === "admin") {
+  if (catalogAdmin(user)) {
     return true;
   }
   return grantsSponsorCatalog(user, await userTypeFor(ctx, user));
@@ -202,9 +180,9 @@ export async function canBrowseSponsorCatalog(
 
 export async function canBrowseDirectory(
   ctx: Ctx,
-  user: Pick<Doc<"users">, "role" | "userTypeId">
+  user: Pick<Doc<"users">, "_id" | "admin" | "email" | "role">
 ): Promise<boolean> {
-  if (user.role === "admin") {
+  if (catalogAdmin(user)) {
     return true;
   }
   return grantsDirectory(user, await userTypeFor(ctx, user));

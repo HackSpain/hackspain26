@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
@@ -15,6 +16,7 @@ import {
   MetaRow,
 } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
+
 import type { DirectoryParticipant } from "./types";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -25,7 +27,13 @@ const EVENT_LABELS: Record<string, string> = {
   tag: "tags",
 };
 
-const HEAT = ["#e8dcc4", "#eab61966", "#eab619", "#d96b2a", "#35858a"];
+const HEAT = [
+  "var(--color-hs-sand)",
+  "color-mix(in srgb, var(--color-hs-gold) 40%, transparent)",
+  "var(--color-hs-gold)",
+  "var(--color-hs-orange)",
+  "var(--color-hs-teal)",
+];
 
 function githubLoginOf(person: DirectoryParticipant): string | null {
   return (
@@ -42,13 +50,13 @@ function formatCount(value: number): string {
 
 function heatFill(count: number, max: number): string {
   if (count <= 0 || max <= 0) {
-    return HEAT[0] ?? "#e8dcc4";
+    return HEAT[0] ?? "var(--color-hs-sand)";
   }
   const rank = Math.min(
     HEAT.length - 1,
     Math.ceil((count / max) * (HEAT.length - 1))
   );
-  return HEAT[rank] ?? "#35858a";
+  return HEAT[rank] ?? "var(--color-hs-teal)";
 }
 
 export function GithubPanel({ person }: { person: DirectoryParticipant }) {
@@ -185,8 +193,12 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
                   <span
                     key={day.date}
                     title={`${day.date}: ${day.count}`}
-                    className="size-2"
-                    style={{ background: heatFill(day.count, heatMax) }}
+                    className="size-2 bg-(--heat)"
+                    style={
+                      {
+                        "--heat": heatFill(day.count, heatMax),
+                      } as CSSProperties
+                    }
                   />
                 ))}
               </div>
@@ -211,8 +223,8 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
                       </div>
                       <div className="mt-1 h-1.5 bg-hs-sand">
                         <div
-                          className="h-full bg-hs-teal"
-                          style={{ width: `${pct}%` }}
+                          className="h-full w-(--w) bg-hs-teal"
+                          style={{ "--w": `${pct}%` } as CSSProperties}
                         />
                       </div>
                     </li>
@@ -233,7 +245,7 @@ export function GithubPanel({ person }: { person: DirectoryParticipant }) {
                       href={repo.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="block border-2 border-hs-ink/20 bg-hs-sand/60 px-3 py-2 hs-hover-bright motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.96]"
+                      className="block border-2 border-hs-ink/20 bg-hs-sand/60 px-3 py-2 hs-hover-bright motion-safe:transition-transform motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.96]"
                     >
                       <span className="block font-medium">{repo.name}</span>
                       <span className="block text-sm text-hs-brown">

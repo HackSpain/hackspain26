@@ -55,24 +55,13 @@ export function ProjectCliDialog({ children }: { children: ReactNode }) {
             envían en{" "}
             <Link
               href="/submit"
-              className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+              className="text-hs-navy underline decoration-hs-navy/40 underline-offset-3"
             >
               /submit
             </Link>
             . Un proyecto enviado queda bloqueado.
           </p>
         </div>
-
-        <p className="text-sm text-hs-brown">
-          Todos los comandos, en la{" "}
-          <Link
-            href="/cli"
-            className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
-          >
-            guía completa de la CLI
-          </Link>
-          .
-        </p>
       </DialogContent>
     </Dialog>
   );

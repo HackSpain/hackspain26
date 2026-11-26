@@ -158,7 +158,7 @@ export function ChoiceField({
               placeholder={placeholder}
               value={text}
               disabled={disabled}
-              className="pr-10"
+              size="icon"
               onFocus={(event) => {
                 openList();
                 event.currentTarget.select();
@@ -230,7 +230,7 @@ export function ChoiceField({
             >
               <ChevronDown
                 className={cn(
-                  "size-4 motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
+                  "size-4 motion-safe:transition-transform motion-safe:duration-press motion-safe:ease-out",
                   open && "rotate-180"
                 )}
                 aria-hidden
@@ -247,7 +247,7 @@ export function ChoiceField({
             collisionPadding={8}
             onOpenAutoFocus={(event) => event.preventDefault()}
             onCloseAutoFocus={(event) => event.preventDefault()}
-            className="z-50 max-h-64 w-(--radix-popover-trigger-width) origin-(--radix-popover-content-transform-origin) overflow-y-auto border border-hs-ink/20 bg-hs-paper p-1 text-hs-ink motion-safe:duration-150 motion-safe:ease-[var(--ease-out)] data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95"
+            className="z-50 max-h-64 w-(--radix-popover-trigger-width) origin-(--radix-popover-content-transform-origin) overflow-y-auto border border-hs-ink/20 bg-hs-paper p-1 text-hs-ink motion-safe:duration-150 motion-safe:ease-out data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95"
           >
             {items.length === 0 ? (
               <p className="px-2 py-2 text-sm text-hs-brown">

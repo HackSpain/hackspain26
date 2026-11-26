@@ -32,6 +32,7 @@ Keep instructions here only when they prevent a mistake that is easy to make aft
 ## Deployment and data
 
 - Use development deployments for validation, seeding, resets and OTP stubs. Production Convex is deployed by the dashboard's Vercel build: manual branch deployments are overwritten and can leave rows that block the next schema push. Migration scripts may import real signup data.
+- Participants and the CLI always see the **current** edition. Admins switch editions in localStorage (`hackspain.admin.edition`); missing or unknown falls back to current. Do not add `?edition=` to URLs.
 - Moving signup data between Neon and Convex requires a migration plan covering existing rows and writers; changing an endpoint does not complete that migration.
 
 ## Authentication and CLI

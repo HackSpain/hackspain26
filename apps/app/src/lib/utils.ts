@@ -161,16 +161,4 @@ export function fromDatetimeLocal(value: string): number | undefined {
   return Number.isNaN(ms) ? undefined : ms;
 }
 
-const EVENT_DATE = new Intl.DateTimeFormat("es-ES", {
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  month: "long",
-  timeZone: "Europe/Madrid",
-  weekday: "long",
-});
-
-/** "sábado, 3 de octubre, 10:00" in Madrid time, matching the server copy. */
-export function formatEventDate(ms: number): string {
-  return EVENT_DATE.format(new Date(ms));
-}
+export { formatEventDate } from "@convex/lib/eventFormat";

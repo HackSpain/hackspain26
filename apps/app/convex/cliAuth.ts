@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { authedMutation } from "./lib/customFunctions";
 import { fail } from "./lib/errors";
+import { randomCode as randomFromAlphabet } from "./lib/randomCode";
 import {
   START_LIMIT_PER_IP,
   START_WINDOW_MS,
@@ -29,11 +30,7 @@ const SECRET_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
 const EXPIRED_SWEEP_LIMIT = 20;
 
 function randomCode(): string {
-  const bytes = new Uint8Array(CODE_LENGTH);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join(
-    ""
-  );
+  return randomFromAlphabet(CODE_ALPHABET, CODE_LENGTH);
 }
 
 export const start = mutation({

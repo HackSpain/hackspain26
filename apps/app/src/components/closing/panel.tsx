@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { ReactNode, CSSProperties } from "react";
 import { Diagonal } from "@/components/tv/market";
 import { figure, percent } from "@/lib/closing-summary";
 import type { ClosingSummary } from "@/lib/closing-summary";
@@ -21,7 +21,7 @@ const KPI_TONES = [
   "bg-hs-gold",
   "bg-hs-teal text-hs-paper",
 ];
-const PAD = "p-[calc(var(--u)*1.2)]";
+const PAD = "p-(--u-1-2)";
 
 type View = { title: string; body: ReactNode };
 
@@ -53,11 +53,11 @@ function Box({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 flex-col gap-[calc(var(--u)*0.8)] bg-hs-paper",
+        "flex min-h-0 min-w-0 flex-col gap-(--u-0-8) bg-hs-paper",
         PAD
       )}
     >
-      <div className="flex items-baseline justify-between gap-[calc(var(--u)*1)]">
+      <div className="flex items-baseline justify-between gap-(--u-1)">
         <h3 className="hsx-title hsx-md truncate">{title}</h3>
         {note ? (
           <p className="hsx-xs hsx-num shrink-0 font-semibold text-hs-brown">
@@ -87,11 +87,11 @@ function Rotator({
   return (
     <div
       className={cn(
-        "relative flex min-h-0 min-w-0 flex-col gap-[calc(var(--u)*0.8)] bg-hs-paper",
+        "relative flex min-h-0 min-w-0 flex-col gap-(--u-0-8) bg-hs-paper",
         PAD
       )}
     >
-      <div className="flex items-baseline justify-between gap-[calc(var(--u)*1)]">
+      <div className="flex items-baseline justify-between gap-(--u-1)">
         <h3 className="hsx-title hsx-md truncate">{view.title}</h3>
         <p className="hsx-xs hsx-num shrink-0 font-semibold text-hs-brown">
           {current + 1} / {views.length}
@@ -107,8 +107,8 @@ function Rotator({
         <div
           key={`bar-${index}`}
           aria-hidden
-          className="hsx-progress absolute inset-x-0 bottom-0 h-[calc(var(--u)*0.3)] origin-left bg-hs-ink"
-          style={{ animationDuration: `${HOLD_MS}ms` }}
+          className="hsx-progress anim-duration-var absolute inset-x-0 bottom-0 h-(--u-0-3) origin-left bg-hs-ink"
+          style={{ "--anim-duration": `${HOLD_MS}ms` } as CSSProperties}
         />
       ) : null}
     </div>
@@ -126,12 +126,12 @@ function FeedView({ feed }: { feed: ClosingSummary["feed"] }) {
     (_, hour) => `${String(hour).padStart(2, "0")} h`
   );
   return (
-    <div className="flex h-full flex-col justify-between gap-[calc(var(--u)*0.8)]">
-      <dl className="grid grid-cols-2 gap-x-[calc(var(--u)*1.5)] gap-y-[calc(var(--u)*0.9)]">
+    <div className="flex h-full flex-col justify-between gap-(--u-0-8)">
+      <dl className="grid grid-cols-2 gap-x-(--u-1-5) gap-y-(--u-0-9)">
         {stats.map((stat) => (
           <div key={stat.label}>
             <dt className="hsx-label">{stat.label}</dt>
-            <dd className="hsx-title hsx-num text-[calc(var(--u)*2.5)]">
+            <dd className="hsx-title hsx-num text-(--u-2-5)">
               {figure(stat.value)}
             </dd>
           </div>
@@ -147,15 +147,10 @@ function FeedView({ feed }: { feed: ClosingSummary["feed"] }) {
           tickEvery={6}
         />
       </div>
-      <ul className="flex flex-wrap gap-x-[calc(var(--u)*1.3)] gap-y-[calc(var(--u)*0.4)] border-t-[length:calc(var(--line)*0.5)] border-hs-ink/30 pt-[calc(var(--u)*0.8)]">
+      <ul className="flex flex-wrap gap-x-(--u-1-3) gap-y-(--u-0-4) border-t-(length:--line-0-5) border-hs-ink/30 pt-(--u-0-8)">
         {feed.emojis.slice(0, 5).map((row) => (
-          <li
-            key={row.emoji}
-            className="flex items-center gap-[calc(var(--u)*0.4)]"
-          >
-            <span className="text-[calc(var(--u)*1.7)] leading-none">
-              {row.emoji}
-            </span>
+          <li key={row.emoji} className="flex items-center gap-(--u-0-4)">
+            <span className="text-(--u-1-7) leading-none">{row.emoji}</span>
             <span className="hsx-num hsx-md font-bold">
               {figure(row.count)}
             </span>
@@ -172,16 +167,16 @@ function AwardsView({ awards }: { awards: ClosingSummary["awards"] }) {
   }
   return (
     <ol
-      className="grid h-full"
-      style={{ gridTemplateRows: `repeat(${awards.length}, minmax(0, 1fr))` }}
+      className="grid h-full grid-rows-repeat-var"
+      style={{ "--grid-rows": awards.length } as CSSProperties}
     >
       {awards.map((award) => (
         <li
           key={award.title}
-          className="flex min-w-0 flex-col justify-center border-b-[length:calc(var(--line)*0.5)] border-hs-ink/20 last:border-b-0"
+          className="flex min-w-0 flex-col justify-center border-b-(length:--line-0-5) border-hs-ink/20 last:border-b-0"
         >
           <p className="hsx-label">{award.title}</p>
-          <p className="hsx-md flex items-baseline justify-between gap-[calc(var(--u)*0.8)]">
+          <p className="hsx-md flex items-baseline justify-between gap-(--u-0-8)">
             <span className="truncate font-bold">{award.team}</span>
             <span className="hsx-sm hsx-num shrink-0 text-hs-brown">
               {award.detail}
@@ -250,11 +245,11 @@ export function ClosingPanel({
       className="relative h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]"
       aria-label="HackSpain en cifras"
     >
-      <div className="hsx hsx-md grid h-full grid-rows-[11%_19%_minmax(0,1fr)] gap-[var(--line)] p-[var(--line)]">
-        <header className="grid min-h-0 grid-cols-[6.2%_minmax(0,1fr)_15%_17%_6.2%] gap-[var(--line)]">
+      <div className="hsx hsx-md grid h-full grid-rows-[11%_19%_minmax(0,1fr)] gap-(--line) p-(--line)">
+        <header className="grid min-h-0 grid-cols-[6.2%_minmax(0,1fr)_15%_17%_6.2%] gap-(--line)">
           <Diagonal bg="bg-hs-gold" tri="bg-hs-red" corner="tl" />
-          <div className="flex min-w-0 items-baseline gap-[calc(var(--u)*1.4)] bg-hs-paper px-[calc(var(--u)*1.6)] pt-[calc(var(--u)*1.55)]">
-            <h1 className="hsx-title truncate text-[calc(var(--u)*2.6)]">
+          <div className="flex min-w-0 items-baseline gap-(--u-1-4) bg-hs-paper px-(--u-1-6) pt-(--u-1-55)">
+            <h1 className="hsx-title truncate text-(--u-2-6)">
               HackSpain en cifras
             </h1>
             {summary.hours > 0 ? (
@@ -273,13 +268,13 @@ export function ClosingPanel({
               className="h-[58%] w-auto"
             />
           </div>
-          <p className="hsx-label flex items-center justify-center gap-[calc(var(--u)*0.55)] bg-hs-paper text-hs-red">
-            <span className="size-[calc(var(--u)*0.65)] rounded-full bg-current" />
+          <p className="hsx-label flex items-center justify-center gap-(--u-0-55) bg-hs-paper text-hs-red">
+            <span className="size-(--u-0-65) rounded-full bg-current" />
             {stampOf(summary, demo)}
           </p>
           <Diagonal bg="bg-hs-teal" tri="bg-hs-navy" corner="br" />
         </header>
-        <div className="grid min-h-0 grid-cols-8 gap-[var(--line)]">
+        <div className="grid min-h-0 grid-cols-8 gap-(--line)">
           {summary.hero.map((stat, index) => (
             <div
               key={stat.label}
@@ -290,14 +285,14 @@ export function ClosingPanel({
               )}
             >
               <p className="hsx-label">{stat.label}</p>
-              <p className="hsx-title hsx-num text-[calc(var(--u)*2.7)] whitespace-nowrap">
+              <p className="hsx-title hsx-num text-(--u-2-7) whitespace-nowrap">
                 {figure(stat.value)}
               </p>
             </div>
           ))}
         </div>
-        <div className="grid min-h-0 grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)] gap-[var(--line)]">
-          <div className="grid min-h-0 grid-rows-2 gap-[var(--line)]">
+        <div className="grid min-h-0 grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)_minmax(0,1fr)] gap-(--line)">
+          <div className="grid min-h-0 grid-rows-2 gap-(--line)">
             <Box
               title="Tokens de IA, hora a hora"
               note={`${percent(timeline.nightShare)} de madrugada · ${percent(usage.cachedShare)} desde caché · ${figure(usage.sessions)} sesiones`}

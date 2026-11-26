@@ -542,7 +542,7 @@ function header(
 ): { lines: string[]; slot?: ImageSlot } {
   const right = c.dim(`${clock(now)} · up ${elapsed(state.startedAt, now)}`);
   if (tall) {
-    const tag = c.dim("live usage board · HackSpain 2026 · Madrid");
+    const tag = c.dim("live usage board · HackSpain · Madrid");
     const tagLine = `${tag}${" ".repeat(Math.max(1, w - width(tag) - width(right)))}${right}`;
     if (state.imageProtocol) {
       const cells = imageCells(LOGO_WIDTH, LOGO_HEIGHT, {

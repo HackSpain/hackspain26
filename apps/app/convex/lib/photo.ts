@@ -37,3 +37,13 @@ export function avatarThumbnailFor(
   }
   return user.image ? externalThumbnail(user.image) : undefined;
 }
+
+/** Full-size uploaded file, else the GitHub (or other) image URL. */
+export function avatarUrlFor(
+  user: Pick<Doc<"users">, "avatarId" | "image">
+): string | undefined {
+  if (user.avatarId) {
+    return imagePathFor(user.avatarId);
+  }
+  return user.image;
+}
