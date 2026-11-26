@@ -90,7 +90,7 @@ export function ListTableSkeleton({
         aria-hidden
       >
         {keys.slice(0, 3).map((key) => (
-          <div key={key} className="border-[3px] border-hs-ink bg-hs-paper p-4">
+          <div key={key} className="border-3 border-hs-ink bg-hs-paper p-4">
             <Skeleton className="h-4 w-40" />
             <Skeleton className="mt-2 h-3 w-56" />
             <Skeleton className="mt-4 h-3 w-28" />
@@ -99,12 +99,12 @@ export function ListTableSkeleton({
       </div>
       <div
         className={cn(
-          "hidden border-[3px] border-hs-ink",
+          "hidden border-3 border-hs-ink",
           fill ? "min-h-0 flex-1 flex-col md:flex" : "md:block"
         )}
         aria-hidden
       >
-        <div className="h-11 border-b-[3px] border-hs-ink bg-hs-sand" />
+        <div className="h-11 border-b-3 border-hs-ink bg-hs-sand" />
         {keys.map((key) => (
           <div
             key={key}
@@ -269,7 +269,7 @@ export function MetaLink({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+      className="text-hs-navy underline decoration-hs-navy/40 underline-offset-3"
     >
       {children}
     </a>

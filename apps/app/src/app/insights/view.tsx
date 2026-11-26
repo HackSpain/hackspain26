@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Tabs } from "radix-ui";
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Panel } from "./panel";
@@ -158,12 +159,12 @@ function StatCard({
         <Icon className="size-4 text-hs-brown" aria-hidden />
       </div>
       <div className="flex flex-wrap items-end justify-between gap-1">
-        <p className="font-sans text-4xl font-black tracking-[-0.06em] tabular-nums">
+        <p className="font-sans text-4xl font-black tracking-display-tight tabular-nums">
           {value}
         </p>
         <Sparkline values={trend} color={highlight ? "#4a2c1f" : "#35858a"} />
       </div>
-      <p className="border-t border-hs-ink/15 pt-3 text-[11px] text-hs-brown">
+      <p className="border-t border-hs-ink/15 pt-3 text-2xs text-hs-brown">
         {detail}
       </p>
     </Card>
@@ -175,10 +176,15 @@ function ToolMark({ id, small = false }: { id: HarnessId; small?: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center border border-current font-mono font-bold",
-        small ? "size-6 text-[9px]" : "size-8 text-[11px]"
+        "inline-flex shrink-0 items-center justify-center border border-current bg-(--swatch-bg) font-mono font-bold text-(--swatch)",
+        small ? "size-6 text-4xs" : "size-8 text-2xs"
       )}
-      style={{ color: harness.color, backgroundColor: `${harness.color}12` }}
+      style={
+        {
+          "--swatch": harness.color,
+          "--swatch-bg": `${harness.color}12`,
+        } as CSSProperties
+      }
       aria-hidden
     >
       {harness.mark}
@@ -218,7 +224,7 @@ function HarnessUsage({
         <UsageDonut rows={sorted} metric={metric} onExplore={onExplore} />
         {total > 0 ? (
           <div className="max-w-28 space-y-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-hs-brown">
+            <span className="inline-flex items-center gap-1 text-2xs font-semibold uppercase tracking-wide text-hs-brown">
               <Terminal className="size-3" aria-hidden /> Más utilizado
             </span>
             <p className="font-bungee text-base leading-snug">
@@ -244,8 +250,8 @@ function HarnessUsage({
             <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
               <span className="flex items-center gap-2 font-medium">
                 <span
-                  className="size-2 rounded-full"
-                  style={{ backgroundColor: row.color }}
+                  className="size-2 rounded-full bg-(--swatch)"
+                  style={{ "--swatch": row.color } as CSSProperties}
                 />
                 {row.name}
                 <ArrowUpRight
@@ -259,17 +265,19 @@ function HarnessUsage({
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-hs-navy/10">
               <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${total ? (row[metric] / total) * 100 : 0}%`,
-                  backgroundColor: row.color,
-                }}
+                className="h-full w-(--w) rounded-full bg-(--swatch)"
+                style={
+                  {
+                    "--w": `${total ? (row[metric] / total) * 100 : 0}%`,
+                    "--swatch": row.color,
+                  } as CSSProperties
+                }
               />
             </div>
           </button>
         ))}
       </div>
-      <p className="mt-4 text-[11px] leading-relaxed text-hs-brown">
+      <p className="mt-4 text-2xs leading-relaxed text-hs-brown">
         Selecciona un harness para ver sus equipos en el leaderboard.
       </p>
     </Panel>
@@ -340,7 +348,7 @@ function Leaderboard({
           type="button"
           variant="outline"
           size="sm"
-          className="min-h-11 border text-xs sm:min-h-10"
+          className="min-h-11 sm:min-h-10"
           disabled={filtered.length === 0}
           onClick={() => downloadCsv(filtered)}
         >
@@ -366,13 +374,15 @@ function Leaderboard({
               placeholder="Buscar equipo…"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="h-11 border pl-9 text-sm sm:h-10 sm:w-44"
+              size="search"
+              className="h-11 sm:h-10 sm:w-44"
             />
           </div>
           <Select value={harness} onValueChange={setHarness}>
             <SelectTrigger
               aria-label="Filtrar equipos por harness"
-              className="min-h-11 border text-sm sm:min-h-10 sm:w-44"
+              size="sm"
+              className="min-h-11 sm:min-h-10 sm:w-44"
             >
               <SelectValue />
             </SelectTrigger>
@@ -451,19 +461,21 @@ function Leaderboard({
                     onClick={() => onSelect(team)}
                   >
                     <span
-                      className="flex size-9 shrink-0 items-center justify-center border border-hs-ink/15 font-mono text-xs font-bold"
-                      style={{
-                        backgroundColor: `${team.color}18`,
-                        color: team.color,
-                      }}
+                      className="flex size-9 shrink-0 items-center justify-center border border-hs-ink/15 bg-(--swatch-bg) font-mono text-xs font-bold text-(--swatch)"
+                      style={
+                        {
+                          "--swatch-bg": `${team.color}18`,
+                          "--swatch": team.color,
+                        } as CSSProperties
+                      }
                     >
                       {team.name.slice(0, 2).toUpperCase()}
                     </span>
                     <span>
-                      <span className="block text-[13px] font-bold group-hover:underline">
+                      <span className="block text-sm font-bold group-hover:underline">
                         {team.name}
                       </span>
-                      <span className="mt-0.5 block text-[11px] text-hs-brown">
+                      <span className="mt-0.5 block text-2xs text-hs-brown">
                         {team.project}
                       </span>
                     </span>
@@ -500,8 +512,12 @@ function Leaderboard({
                     {metric === item.id ? (
                       <span className="mt-1.5 ml-auto block h-1 w-14 bg-hs-sand">
                         <span
-                          className="block h-full bg-hs-teal"
-                          style={{ width: `${(team[metric] / max) * 100}%` }}
+                          className="block h-full w-(--w) bg-hs-teal"
+                          style={
+                            {
+                              "--w": `${(team[metric] / max) * 100}%`,
+                            } as CSSProperties
+                          }
                         />
                       </span>
                     ) : null}
@@ -555,7 +571,7 @@ function Leaderboard({
           )}
         </div>
       ) : null}
-      <div className="mt-3 flex flex-wrap justify-between gap-2 text-[11px] text-hs-brown">
+      <div className="mt-3 flex flex-wrap justify-between gap-2 text-2xs text-hs-brown">
         <span>
           {filtered.length} de {teams.length} equipos · Pulsa un equipo para ver
           su ficha.
@@ -575,7 +591,7 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
   return (
     <>
       <DialogHeader>
-        <p className="mb-1 font-mono text-[11px] uppercase tracking-widest text-hs-brown">
+        <p className="mb-1 font-mono text-2xs uppercase tracking-widest text-hs-brown">
           Ficha de equipo
         </p>
         <DialogTitle>{team.name}</DialogTitle>
@@ -597,7 +613,7 @@ function TeamDetails({ team, samples }: { team: TeamRow; samples: Sample[] }) {
                 ? compact(team.tokens)
                 : number(team[metric.id])}
             </p>
-            <p className="mt-1 text-[11px] text-hs-brown">{metric.label}</p>
+            <p className="mt-1 text-2xs text-hs-brown">{metric.label}</p>
           </div>
         ))}
       </div>
@@ -768,7 +784,8 @@ export function InsightsView() {
                 >
                   <SelectTrigger
                     aria-label="Periodo de los insights"
-                    className="min-h-11 border text-xs sm:min-h-10 sm:w-44"
+                    size="xs"
+                    className="min-h-11 sm:min-h-10 sm:w-44"
                   >
                     <SelectValue />
                   </SelectTrigger>

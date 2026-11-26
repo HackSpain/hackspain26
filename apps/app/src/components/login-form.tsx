@@ -115,7 +115,7 @@ function TextLink({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline font-medium text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px] outline-none motion-safe:transition-[text-decoration-color] motion-safe:duration-[var(--duration-press)] hover:decoration-hs-navy focus-visible:decoration-hs-navy disabled:cursor-default disabled:text-hs-brown disabled:no-underline"
+      className="inline font-medium text-hs-navy underline decoration-hs-navy/40 underline-offset-3 outline-none motion-safe:transition-colors motion-safe:duration-press hover:decoration-hs-navy focus-visible:decoration-hs-navy disabled:cursor-default disabled:text-hs-brown disabled:no-underline"
     >
       {children}
     </button>

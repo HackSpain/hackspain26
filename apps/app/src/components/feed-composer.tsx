@@ -162,7 +162,7 @@ export function FeedComposer({ me }: { me: Me }) {
   }
 
   return (
-    <div className="min-w-0 border-[3px] border-hs-ink bg-hs-paper motion-safe:transition-[border-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] focus-within:border-hs-navy">
+    <div className="min-w-0 border-3 border-hs-ink bg-hs-paper motion-safe:transition-colors motion-safe:duration-press motion-safe:ease-out focus-within:border-hs-navy">
       <MentionTextarea
         value={text}
         mentions={mentions}
@@ -174,7 +174,7 @@ export function FeedComposer({ me }: { me: Me }) {
         placeholder="¿En qué estáis? Un avance, una foto del equipo, una demo que funciona… Menciona a alguien con @"
         rows={3}
         aria-label="Nueva publicación"
-        className="min-h-24 resize-y border-0 focus-visible:border-transparent"
+        className="min-h-24 resize-y"
       />
       {/* Toolbar: one 36 px row, same 12 px inset as the textarea text so the
           image icon lines up with the first character and the button with
@@ -224,7 +224,7 @@ export function FeedComposer({ me }: { me: Me }) {
             onClick={submit}
             disabled={uploading}
             aria-busy={uploading || undefined}
-            className="min-h-9 min-w-[6.5rem] px-4"
+            className="min-h-9 min-w-[6.5rem]"
           >
             {uploading ? "Subiendo…" : "Publicar"}
           </Button>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { compact, HARNESSES } from "@/app/insights/mock-data";
 import { LoadingText } from "@/components/page";
+
 import { HARNESS_ICONS } from "@/lib/tv-icons";
 
 type HarnessRow = {
@@ -39,8 +41,12 @@ function HarnessMark({ id }: { id: string }) {
   }
   return (
     <span
-      className="grid size-5 place-items-center font-mono text-[9px] font-bold"
-      style={{ color: meta?.color ?? "#4a2c1f" }}
+      className="grid size-5 place-items-center font-mono text-4xs font-bold text-(--swatch)"
+      style={
+        {
+          "--swatch": meta?.color ?? "var(--color-hs-brown)",
+        } as CSSProperties
+      }
       aria-hidden
     >
       {meta?.mark ?? id.slice(0, 2)}
@@ -133,8 +139,8 @@ export function UsagePanel({ userId }: { userId: string }) {
                   </div>
                   <div className="mt-1 h-1.5 bg-hs-sand">
                     <div
-                      className="h-full bg-hs-teal"
-                      style={{ width: `${pct}%` }}
+                      className="h-full w-(--w) bg-hs-teal"
+                      style={{ "--w": `${pct}%` } as CSSProperties}
                     />
                   </div>
                 </li>

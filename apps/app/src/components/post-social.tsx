@@ -65,7 +65,7 @@ const MORE_REACTIONS = [
 ];
 
 const PILL =
-  "inline-flex h-8 min-w-11 items-center justify-center gap-1.5 border-2 px-2 text-sm tabular-nums outline-none motion-safe:transition-[background-color,border-color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] focus-visible:border-hs-navy active:scale-[0.96]";
+  "inline-flex h-8 min-w-11 items-center justify-center gap-1.5 border-2 px-2 text-sm tabular-nums outline-none motion-safe:transition-surface motion-safe:duration-press motion-safe:ease-out focus-visible:border-hs-navy active:scale-[0.96]";
 
 function ReactionPicker({ onPick }: { onPick: (emoji: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -106,7 +106,7 @@ function ReactionPicker({ onPick }: { onPick: (emoji: string) => void }) {
           align="start"
           sideOffset={6}
           collisionPadding={12}
-          className="z-50 w-[19rem] max-w-[calc(100vw-1.5rem)] origin-[var(--radix-popover-content-transform-origin)] border-[3px] border-hs-ink bg-hs-paper p-3 shadow-[4px_4px_0_var(--color-hs-ink)] hs-enter"
+          className="z-50 w-[19rem] max-w-[calc(100vw-1.5rem)] origin-(--radix-popover-content-transform-origin) border-3 border-hs-ink bg-hs-paper p-3 shadow-hard hs-enter"
         >
           <div
             className="grid grid-cols-8 gap-1"
@@ -221,7 +221,7 @@ function Comments({
               <Avatar
                 name={comment.author.name}
                 src={comment.author.avatarUrl}
-                className="size-7 border-2 text-[10px]"
+                className="size-7 border-2 text-3xs"
               />
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-baseline gap-x-2 text-sm leading-5">
@@ -267,7 +267,7 @@ function Comments({
             rows={1}
             placeholder="Comenta, o menciona a alguien con @"
             aria-label="Nuevo comentario"
-            className="min-h-10 resize-none py-1.5 [field-sizing:content]"
+            className="min-h-10 resize-none field-sizing-content"
             onKeyDown={(event) => {
               if (
                 event.key === "Enter" &&

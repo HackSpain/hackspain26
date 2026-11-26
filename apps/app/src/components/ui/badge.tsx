@@ -5,7 +5,7 @@ import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex w-fit items-center border border-hs-ink/15 px-2 py-0.5 font-bungee text-xs uppercase",
+  "inline-flex w-fit items-center gap-1 whitespace-nowrap border border-hs-ink/15 px-2 py-0.5 font-bungee text-xs uppercase tabular-nums",
   {
     defaultVariants: {
       variant: "default",
@@ -14,6 +14,9 @@ const badgeVariants = cva(
       variant: {
         default: "bg-hs-sand text-hs-ink",
         gold: "bg-hs-gold text-hs-ink",
+        paper: "bg-hs-paper text-hs-ink",
+        destructive: "border-hs-red bg-hs-red/10 text-hs-red",
+        inverse: "border-hs-red bg-hs-red text-hs-paper",
       },
     },
   }

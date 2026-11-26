@@ -100,7 +100,9 @@ export function IdentityStep({
               id="onboarding-name"
               readOnly
               value={name}
-              className="cursor-pointer bg-hs-sand/60 pr-10 focus-visible:border-hs-ink/25 focus-visible:ring-0"
+              variant="quiet"
+              size="icon"
+              className="cursor-pointer"
               onClick={() => setNameHelpOpen(true)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -164,7 +166,7 @@ export function IdentityStep({
               type="button"
               variant="outline"
               size="sm"
-              className="min-h-8 px-3 text-xs"
+              className="min-h-8"
               disabled={github.pending || action.pending}
               onClick={() => run(() => github.link())}
             >

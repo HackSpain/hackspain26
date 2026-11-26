@@ -78,12 +78,12 @@ function TeamLogo({ team }: { team: MyTeam }) {
       <Avatar
         name={team.name}
         src={team.logoUrl}
-        className="size-20 text-2xl shadow-[4px_4px_0_var(--color-hs-ink)]"
+        className="size-20 text-2xl shadow-hard"
       />
       {team.isOwner ? (
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border-[3px] border-hs-ink bg-hs-gold px-5 font-bungee text-sm text-hs-ink hs-hover-bright">
+            <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border-3 border-hs-ink bg-hs-gold px-5 font-bungee text-sm text-hs-ink hs-hover-bright">
               <ImagePlus className="size-4" aria-hidden />
               {busy
                 ? "Subiendo…"
@@ -140,7 +140,7 @@ function TeamRow({ team }: { team: TeamSummary }) {
           : inTrack
             ? "before:bg-hs-teal"
             : "before:bg-hs-ink/20",
-        "transition-[background-color] duration-150 ease-[var(--ease-out)] hover:bg-hs-sand/50"
+        "transition-colors duration-150 ease-out hover:bg-hs-sand/50"
       )}
     >
       <div className="min-w-0 space-y-2">
@@ -148,12 +148,12 @@ function TeamRow({ team }: { team: TeamSummary }) {
           <Avatar
             name={team.name}
             src={team.logoUrl}
-            className="size-8 border-2 text-[11px]"
+            className="size-8 border-2 text-2xs"
           />
           <span className="min-w-0 break-words">{team.name}</span>
           {team.isMine ? <Badge variant="gold">Tu equipo</Badge> : null}
           {team.pendingCount > 0 ? (
-            <Badge className="tabular-nums">
+            <Badge>
               {team.pendingCount}{" "}
               {team.pendingCount === 1 ? "invitación" : "invitaciones"}
             </Badge>
@@ -171,7 +171,7 @@ function TeamRow({ team }: { team: TeamSummary }) {
               <Avatar
                 name={member.name}
                 src={member.avatarUrl}
-                className="size-7 border-2 text-[10px]"
+                className="size-7 border-2 text-3xs"
               />
               <span className="min-w-0 truncate">{member.name}</span>
               {member.isOwner ? (
@@ -190,7 +190,7 @@ function TeamRow({ team }: { team: TeamSummary }) {
         </ul>
       </div>
       <div className="min-w-0 space-y-1.5 text-xs">
-        <p className="font-bungee text-[11px] uppercase text-hs-brown">
+        <p className="font-bungee text-2xs uppercase text-hs-brown">
           {inTrack ? "En reto" : "Sin reto"}
         </p>
         {inTrack ? (
@@ -228,10 +228,8 @@ function TeamDirectory() {
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
           <Users className="size-4" aria-hidden /> Todos los equipos
-          <Badge className="tabular-nums">{teams.length}</Badge>
-          <Badge variant="gold" className="tabular-nums">
-            {inTrack} en reto
-          </Badge>
+          <Badge>{teams.length}</Badge>
+          <Badge variant="gold">{inTrack} en reto</Badge>
         </CardTitle>
         <CardDescription>
           Quién está con quién y en qué reto. Se actualiza en cuanto un equipo
@@ -244,7 +242,7 @@ function TeamDirectory() {
         ) : (
           <ul
             aria-label="Equipos"
-            className="divide-y-2 divide-hs-ink/15 border-[3px] border-hs-ink bg-hs-paper"
+            className="divide-y-2 divide-hs-ink/15 border-3 border-hs-ink bg-hs-paper"
           >
             {teams.map((team) => (
               <TeamRow key={team._id} team={team} />

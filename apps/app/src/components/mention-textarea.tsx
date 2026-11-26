@@ -190,6 +190,7 @@ export function MentionTextarea({
         {...props}
         ref={field}
         value={value}
+        variant={props.variant ?? "plain"}
         className={className}
         role="combobox"
         aria-autocomplete="list"
@@ -210,7 +211,7 @@ export function MentionTextarea({
           id={listId}
           role="listbox"
           aria-label="Mencionar a alguien"
-          className="absolute top-full left-0 z-30 mt-1 max-h-64 w-72 max-w-full overflow-y-auto border-[3px] border-hs-ink bg-hs-paper shadow-[4px_4px_0_var(--color-hs-ink)]"
+          className="absolute top-full left-0 z-30 mt-1 max-h-64 w-72 max-w-full overflow-y-auto border-3 border-hs-ink bg-hs-paper shadow-hard"
         >
           {people ? (
             options.map((person, index) => (
@@ -234,7 +235,7 @@ export function MentionTextarea({
                 <Avatar
                   name={person.name}
                   src={person.avatarUrl}
-                  className="size-7 border-2 text-[10px]"
+                  className="size-7 border-2 text-3xs"
                 />
                 <span className="min-w-0 truncate font-medium">
                   {person.name}

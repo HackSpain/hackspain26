@@ -32,7 +32,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden border-[3px] border-hs-ink bg-hs-gold font-bungee text-hs-ink",
+        "flex shrink-0 items-center justify-center overflow-hidden border-3 border-hs-ink bg-hs-gold font-bungee text-hs-ink",
         className
       )}
       aria-hidden

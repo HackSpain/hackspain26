@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { INSIGHT_BUCKETS } from "@convex/tvPlayback";
 import {
   compact,
@@ -49,17 +49,13 @@ function LiveHeader({
   return (
     <header
       className={cn(
-        "flex shrink-0 items-baseline justify-between gap-3 border-b pb-[0.5cqw]",
+        "flex shrink-0 items-baseline justify-between gap-3 border-b pb-cq-5",
         dark ? "border-hs-ink/25" : "border-hs-ink/15"
       )}
     >
-      <p className="font-bungee text-[clamp(0.6rem,1.05cqw,1.4rem)] leading-none">
-        {title}
-      </p>
+      <p className="font-bungee text-cq-xl leading-none">{title}</p>
       {aside ? (
-        <p className="text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown tabular-nums">
-          {aside}
-        </p>
+        <p className="text-cq-md text-hs-brown tabular-nums">{aside}</p>
       ) : null}
     </header>
   );
@@ -139,24 +135,24 @@ function AgentRow({
   return (
     <li
       ref={rowRef}
-      className="absolute inset-x-0 top-0 flex items-center gap-[0.7cqw] pr-[0.2cqw]"
-      style={{ height: `${100 / rows}%` }}
+      className="absolute inset-x-0 top-0 flex h-(--h) items-center gap-cq-7 pr-cq-2"
+      style={{ "--h": `${100 / rows}%` } as CSSProperties}
     >
       <span ref={flash} data-flash aria-hidden className={FLASH_LAYER_CLASS} />
       <span
-        className="font-bungee flex w-[2.2cqw] shrink-0 items-center justify-center py-[0.25cqw] text-[clamp(0.5rem,0.7cqw,0.95rem)] text-hs-paper"
-        style={{ backgroundColor: row.color }}
+        className="font-bungee flex w-[2.2cqw] shrink-0 items-center justify-center bg-(--swatch) py-cq-25 text-cq-sm-plus text-hs-paper"
+        style={{ "--swatch": row.color } as CSSProperties}
       >
         {row.mark}
       </span>
-      <span className="w-[6.5cqw] shrink-0 truncate text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold">
+      <span className="w-[6.5cqw] shrink-0 truncate text-cq-lg font-semibold">
         {row.name}
       </span>
       <span className="relative h-[0.7cqw] min-w-0 flex-1 overflow-hidden bg-hs-ink/8">
         <span
           ref={bar}
-          className="absolute inset-0 origin-left scale-x-0 overflow-hidden"
-          style={{ backgroundColor: row.color }}
+          className="absolute inset-0 origin-left scale-x-0 overflow-hidden bg-(--swatch)"
+          style={{ "--swatch": row.color } as CSSProperties}
         >
           <span
             ref={shine}
@@ -165,21 +161,21 @@ function AgentRow({
           />
         </span>
       </span>
-      <span className="relative flex w-[3.6cqw] shrink-0 items-center justify-end gap-[0.4cqw]">
+      <span className="relative flex w-[3.6cqw] shrink-0 items-center justify-end gap-cq-4">
         <span
           ref={delta}
           aria-hidden
-          className="absolute -top-[0.9cqw] right-0 font-mono text-[clamp(0.45rem,0.6cqw,0.8rem)] font-bold text-hs-ink opacity-0 tabular-nums"
+          className="absolute -top-[0.9cqw] right-0 font-mono text-cq-xs font-bold text-hs-ink opacity-0 tabular-nums"
         />
         <span
           data-live-dot
-          className="size-[0.45cqw] rounded-full"
-          style={{ backgroundColor: row.color }}
+          className="size-[0.45cqw] rounded-full bg-(--swatch)"
+          style={{ "--swatch": row.color } as CSSProperties}
           aria-hidden
         />
         <span
           ref={count}
-          className="inline-block font-mono text-[clamp(0.6rem,0.85cqw,1.15rem)] tabular-nums"
+          className="inline-block font-mono text-cq-lg tabular-nums"
         >
           {number(row.sessions)}
         </span>
@@ -254,7 +250,7 @@ export function LiveAgentsBox() {
   return (
     <div
       ref={root}
-      className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink"
+      className="flex h-full flex-col bg-hs-paper p-cq text-hs-ink"
     >
       <LiveHeader
         title="Agentes activos"
@@ -287,12 +283,12 @@ export function LiveAgentsBox() {
 }
 
 const MODEL_ROWS = 5;
-const OTHER_FAMILY = { color: "#8a7a6a", mark: "AI" };
-const FAMILY_STYLE: Record<string, { color: string; mark: string }> = {
-  claude: { color: "#d96b2a", mark: "CL" },
-  gpt: { color: "#35858a", mark: "GPT" },
-  gemini: { color: "#1e3958", mark: "GEM" },
-  qwen: { color: "#8b6b9f", mark: "QW" },
+const OTHER_FAMILY = { tone: "bg-hs-brown", mark: "AI" };
+const FAMILY_STYLE: Record<string, { tone: string; mark: string }> = {
+  claude: { tone: "bg-hs-orange", mark: "CL" },
+  gpt: { tone: "bg-hs-teal", mark: "GPT" },
+  gemini: { tone: "bg-hs-navy", mark: "GEM" },
+  qwen: { tone: "bg-hs-slate", mark: "QW" },
   other: OTHER_FAMILY,
 };
 
@@ -371,36 +367,39 @@ function ModelRowView({
   return (
     <li
       ref={rowRef}
-      className="absolute inset-x-0 top-0 flex items-center gap-[0.7cqw] pr-[0.2cqw]"
-      style={{ height: `${100 / rows}%` }}
+      className="absolute inset-x-0 top-0 flex h-(--h) items-center gap-cq-7 pr-cq-2"
+      style={{ "--h": `${100 / rows}%` } as CSSProperties}
     >
       <span ref={flash} data-flash aria-hidden className={FLASH_LAYER_CLASS} />
       <span
         className={cn(
-          "font-bungee flex w-[2.2cqw] shrink-0 items-center justify-center py-[0.25cqw] text-[clamp(0.45rem,0.6cqw,0.85rem)]",
-          rank === 0 ? "text-hs-gold" : "text-hs-paper"
+          "font-bungee flex w-[2.2cqw] shrink-0 items-center justify-center py-cq-25 text-cq-xs-plus",
+          rank === 0
+            ? "bg-hs-ink text-hs-gold"
+            : cn(style.tone, "text-hs-paper")
         )}
-        style={{ backgroundColor: rank === 0 ? "#2a170f" : style.color }}
       >
         {style.mark}
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-[0.25cqw]">
-        <span className="flex items-baseline justify-between gap-[0.6cqw]">
+      <span className="flex min-w-0 flex-1 flex-col gap-cq-25">
+        <span className="flex items-baseline justify-between gap-cq-6">
           <span
             ref={name}
-            className="truncate font-mono text-[clamp(0.6rem,0.85cqw,1.15rem)] font-semibold"
+            className="truncate font-mono text-cq-lg font-semibold"
           >
             {model.name}
           </span>
-          <span className="shrink-0 text-[clamp(0.5rem,0.65cqw,0.9rem)] text-hs-brown tabular-nums">
+          <span className="shrink-0 text-cq-sm text-hs-brown tabular-nums">
             {percent(model.tokens, total)}
           </span>
         </span>
         <span className="relative h-[0.45cqw] w-full overflow-hidden bg-hs-ink/8">
           <span
             ref={bar}
-            className="absolute inset-0 origin-left scale-x-0 overflow-hidden"
-            style={{ backgroundColor: style.color }}
+            className={cn(
+              "absolute inset-0 origin-left scale-x-0 overflow-hidden",
+              style.tone
+            )}
           >
             <span
               ref={shine}
@@ -412,7 +411,7 @@ function ModelRowView({
       </span>
       <span
         ref={tokens}
-        className="w-[3.6cqw] shrink-0 text-right font-mono text-[clamp(0.6rem,0.85cqw,1.15rem)] tabular-nums"
+        className="w-[3.6cqw] shrink-0 text-right font-mono text-cq-lg tabular-nums"
       >
         {compact(model.tokens)}
       </span>
@@ -441,7 +440,7 @@ export function LiveModelsBox() {
   );
 
   return (
-    <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
+    <div className="flex h-full flex-col bg-hs-paper p-cq text-hs-ink">
       <LiveHeader
         title="Modelos"
         aside={
@@ -451,7 +450,7 @@ export function LiveModelsBox() {
         }
       />
       {ranked.length === 0 ? (
-        <p className="mt-[0.6cqw] text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
+        <p className="mt-[0.6cqw] text-cq-md text-hs-brown">
           {data.status === "loading"
             ? "Cargando modelos…"
             : "Sin modelos todavía."}
@@ -662,18 +661,15 @@ function Odometer({
     <span
       role="img"
       aria-label={`${compact(target)} tokens`}
-      className="inline-flex items-end font-sans font-black tracking-[-0.06em] tabular-nums"
+      className="inline-flex items-end font-sans font-black tracking-display-tight tabular-nums"
     >
-      <span
-        aria-hidden
-        className="inline-flex text-[clamp(1.6rem,4.6cqw,6.5rem)] leading-none"
-      >
+      <span aria-hidden className="inline-flex text-cq-display leading-none">
         {columns}
       </span>
       {layout.unit ? (
         <span
           aria-hidden
-          className="mb-[0.55cqw] ml-[0.3cqw] font-bungee text-[clamp(0.9rem,2cqw,2.8rem)] leading-none"
+          className="mb-[0.55cqw] ml-[0.3cqw] font-bungee text-cq-6xl leading-none"
         >
           {layout.unit}
         </span>
@@ -770,7 +766,7 @@ function TokenBars({ values, current }: { values: number[]; current: number }) {
     <div
       ref={root}
       aria-hidden
-      className="flex h-full min-w-0 flex-1 items-end gap-[0.2cqw]"
+      className="flex h-full min-w-0 flex-1 items-end gap-cq-2"
     >
       {values.map((value, index) => (
         <span
@@ -900,12 +896,12 @@ export function LiveTokensBox() {
   return (
     <div
       ref={root}
-      className="relative flex h-full flex-col overflow-hidden bg-hs-gold p-[1cqw] text-hs-ink"
+      className="relative flex h-full flex-col overflow-hidden bg-hs-gold p-cq text-hs-ink"
     >
       <span
         ref={ring}
         aria-hidden
-        className="pointer-events-none absolute inset-0 border-[0.3cqw] border-hs-paper opacity-0"
+        className="pointer-events-none absolute inset-0 border-(length:--spacing-cq-3) border-hs-paper opacity-0"
       />
       <LiveHeader
         title="Tokens"
@@ -916,9 +912,9 @@ export function LiveTokensBox() {
           </>
         }
       />
-      <div className="mt-[0.6cqw] flex min-h-0 flex-1 items-stretch justify-between gap-[2cqw]">
+      <div className="mt-[0.6cqw] flex min-h-0 flex-1 items-stretch justify-between gap-cq-20">
         <div className="flex min-w-0 shrink-0 flex-col justify-end">
-          <div className="flex items-start gap-[0.6cqw]">
+          <div className="flex items-start gap-cq-6">
             <span
               data-odometer
               className="relative inline-block overflow-hidden will-change-transform"
@@ -933,10 +929,10 @@ export function LiveTokensBox() {
             <span
               ref={chip}
               aria-hidden
-              className="mt-[0.2cqw] shrink-0 bg-hs-ink px-[0.5cqw] py-[0.15cqw] font-mono text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-gold opacity-0 tabular-nums"
+              className="mt-[0.2cqw] shrink-0 bg-hs-ink px-cq-5 py-cq-15 font-mono text-cq-md text-hs-gold opacity-0 tabular-nums"
             />
           </div>
-          <p className="mt-[0.3cqw] text-[clamp(0.55rem,0.75cqw,1rem)] text-hs-brown">
+          <p className="mt-[0.3cqw] text-cq-md text-hs-brown">
             {percent(totals.cachedTokens, totals.tokens)} reutilizados desde
             caché
           </p>
@@ -982,30 +978,27 @@ function TeamRowView({
   return (
     <li
       ref={rowRef}
-      className="absolute inset-x-0 top-0 flex items-center gap-[0.7cqw] border-b border-hs-ink/10"
-      style={{ height: `${100 / rows}%` }}
+      className="absolute inset-x-0 top-0 flex h-(--h) items-center gap-cq-7 border-b border-hs-ink/10"
+      style={{ "--h": `${100 / rows}%` } as CSSProperties}
     >
       <span ref={flash} data-flash aria-hidden className={FLASH_LAYER_CLASS} />
       <span
         className={cn(
-          "flex size-[1.8cqw] shrink-0 items-center justify-center font-bungee text-[clamp(0.55rem,0.8cqw,1.1rem)]",
+          "flex size-[1.8cqw] shrink-0 items-center justify-center font-bungee text-cq-md-plus",
           rank + offset === 0 ? "bg-hs-ink text-hs-gold" : "text-hs-brown"
         )}
       >
         {rank + offset + 1}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[clamp(0.6rem,0.9cqw,1.2rem)] font-bold">
+        <span className="block truncate text-cq-lg-plus font-bold">
           {team.name}
         </span>
-        <span className="block truncate text-[clamp(0.5rem,0.65cqw,0.9rem)] text-hs-brown">
+        <span className="block truncate text-cq-sm text-hs-brown">
           {team.project}
         </span>
       </span>
-      <span
-        ref={tokens}
-        className="font-mono text-[clamp(0.6rem,0.85cqw,1.15rem)] tabular-nums"
-      >
+      <span ref={tokens} className="font-mono text-cq-lg tabular-nums">
         {compact(team.tokens)}
       </span>
     </li>
@@ -1092,7 +1085,7 @@ export function LiveLeaderboardBox() {
   const offset = page * LEADERBOARD_PAGE;
 
   return (
-    <div className="flex h-full flex-col bg-hs-paper p-[1cqw] text-hs-ink">
+    <div className="flex h-full flex-col bg-hs-paper p-cq text-hs-ink">
       <LiveHeader
         title="Equipos"
         aside={pages > 1 ? `${page + 1} / ${pages} · por tokens` : "por tokens"}

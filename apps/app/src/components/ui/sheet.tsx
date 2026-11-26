@@ -18,7 +18,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-hs-ink/60 motion-safe:duration-[var(--duration-enter)] motion-safe:data-closed:duration-[var(--duration-exit)] motion-safe:ease-[var(--ease-out)] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-hs-ink/60 motion-safe:duration-enter motion-safe:data-closed:duration-exit motion-safe:ease-out data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -42,11 +42,11 @@ function SheetContent({
         data-side={side}
         className={cn(
           "fixed inset-y-0 z-50 flex h-dvh w-full flex-col overflow-hidden bg-hs-paper text-sm text-hs-ink outline-none sm:max-w-xl",
-          "motion-safe:duration-[var(--duration-enter)] motion-safe:data-closed:duration-[var(--duration-exit)] motion-safe:ease-[var(--ease-out)] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+          "motion-safe:duration-enter motion-safe:data-closed:duration-exit motion-safe:ease-out data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
           side === "right" &&
-            "right-0 border-l-[3px] border-hs-ink motion-safe:data-open:slide-in-from-right motion-safe:data-closed:slide-out-to-right",
+            "right-0 border-l-3 border-hs-ink motion-safe:data-open:slide-in-from-right motion-safe:data-closed:slide-out-to-right",
           side === "left" &&
-            "left-0 border-r-[3px] border-hs-ink motion-safe:data-open:slide-in-from-left motion-safe:data-closed:slide-out-to-left",
+            "left-0 border-r-3 border-hs-ink motion-safe:data-open:slide-in-from-left motion-safe:data-closed:slide-out-to-left",
           className
         )}
         {...props}
@@ -54,7 +54,7 @@ function SheetContent({
         {children}
         <SheetPrimitive.Close
           data-slot="sheet-close"
-          className="absolute top-3 right-3 flex size-9 items-center justify-center text-hs-brown outline-none hs-hover-bright focus-visible:border-[3px] focus-visible:border-hs-navy disabled:pointer-events-none"
+          className="absolute top-3 right-3 flex size-9 items-center justify-center text-hs-brown outline-none hs-hover-bright focus-visible:border-3 focus-visible:border-hs-navy disabled:pointer-events-none"
         >
           <XIcon className="size-5" />
           <span className="sr-only">Cerrar</span>
@@ -69,7 +69,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sheet-header"
       className={cn(
-        "grid shrink-0 gap-1 border-b-[3px] border-hs-ink bg-hs-sand p-5 pr-14 text-left",
+        "grid shrink-0 gap-1 border-b-3 border-hs-ink bg-hs-sand p-5 pr-14 text-left",
         className
       )}
       {...props}
@@ -95,7 +95,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sheet-footer"
       className={cn(
-        "flex shrink-0 flex-col-reverse gap-2 border-t-[3px] border-hs-ink p-5 sm:flex-row sm:justify-end",
+        "flex shrink-0 flex-col-reverse gap-2 border-t-3 border-hs-ink p-5 sm:flex-row sm:justify-end",
         className
       )}
       {...props}

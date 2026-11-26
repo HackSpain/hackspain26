@@ -52,7 +52,7 @@ export function PerkCard({
               href={perk.sponsorUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-baseline gap-1 underline decoration-hs-ink/30 decoration-[3px] underline-offset-4 outline-none hover:decoration-hs-ink focus-visible:decoration-hs-navy"
+              className="inline-flex items-baseline gap-1 underline decoration-3 decoration-hs-ink/30 underline-offset-4 outline-none hover:decoration-hs-ink focus-visible:decoration-hs-navy"
             >
               {headline}
               <ArrowUpRightIcon
@@ -76,7 +76,7 @@ export function PerkCard({
         ) : null}
         {perk.type === "external" && perk.instructions ? (
           <div className="mt-3 border-t border-hs-ink/20 pt-4">
-            <p className="font-bungee text-[11px] leading-none tracking-[0.06em] uppercase text-hs-brown">
+            <p className="font-bungee text-2xs leading-none tracking-micro uppercase text-hs-brown">
               Cómo canjearlo
             </p>
             <p className="mt-1.5 text-sm leading-relaxed text-pretty text-hs-brown/80">
@@ -88,7 +88,7 @@ export function PerkCard({
           <dl className="mt-3 grid gap-3 border-t border-hs-ink/20 pt-4">
             {answered.map((entry) => (
               <div key={entry.label} className="min-w-0">
-                <dt className="font-bungee text-[11px] leading-none tracking-[0.06em] uppercase text-hs-brown">
+                <dt className="font-bungee text-2xs leading-none tracking-micro uppercase text-hs-brown">
                   {entry.label}
                 </dt>
                 <dd className="mt-0.5 text-sm leading-snug break-words">
@@ -99,7 +99,7 @@ export function PerkCard({
           </dl>
         ) : null}
       </div>
-      <div className="mt-auto flex min-h-[4.5rem] items-center justify-between gap-4 border-t-[3px] border-hs-ink bg-hs-sand px-5 py-4">
+      <div className="mt-auto flex min-h-[4.5rem] items-center justify-between gap-4 border-t-3 border-hs-ink bg-hs-sand px-5 py-4">
         <PerkFooter perk={perk} claim={claim} onClaim={onClaim} />
       </div>
     </Card>
@@ -245,7 +245,7 @@ function claimDetail(status: NonNullable<PerkCardClaim>["status"]): string {
 
 function MetaLabel({ children }: { children: string }) {
   return (
-    <p className="font-bungee text-[11px] leading-none tracking-[0.06em] uppercase text-hs-brown">
+    <p className="font-bungee text-2xs leading-none tracking-micro uppercase text-hs-brown">
       {children}
     </p>
   );

@@ -366,7 +366,7 @@ export function ProfilePage() {
 
   return (
     <Page className="[&_button]:focus-visible:outline-2 [&_button]:focus-visible:outline-offset-4 [&_button]:focus-visible:outline-hs-navy">
-      <div className="overflow-hidden border-[3px] border-hs-ink">
+      <div className="overflow-hidden border-3 border-hs-ink">
         <div className="flex items-center justify-between gap-4 bg-hs-navy px-5 py-3 text-hs-paper sm:px-7">
           <h1 className="text-lg sm:text-xl">Mi perfil</h1>
           <span className="font-bungee text-xs text-hs-gold">HackSpain</span>
@@ -375,7 +375,7 @@ export function ProfilePage() {
           <Avatar
             name={me.name}
             src={me.avatarUrl}
-            className="size-16 text-2xl shadow-[4px_4px_0_var(--color-hs-ink)] sm:size-20"
+            className="size-16 text-2xl shadow-hard sm:size-20"
           />
           <div className="min-w-0 flex-1">
             <p className="font-bungee text-xl leading-tight break-words sm:text-2xl">

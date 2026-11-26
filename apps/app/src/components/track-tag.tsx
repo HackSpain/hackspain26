@@ -51,7 +51,7 @@ export function TrackTag({
     <span
       title={track.label}
       className={cn(
-        "inline-flex max-w-full items-center border border-hs-ink/30 bg-hs-paper px-1.5 py-0.5 text-[11px] uppercase tracking-wide",
+        "inline-flex max-w-full items-center border border-hs-ink/30 bg-hs-paper px-1.5 py-0.5 text-2xs uppercase tracking-wide",
         className
       )}
     >

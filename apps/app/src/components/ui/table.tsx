@@ -18,13 +18,16 @@ function Table({
       ref={containerRef}
       data-slot="table-container"
       className={cn(
-        "relative w-full overflow-auto border-[3px] border-hs-ink bg-hs-paper",
+        "relative w-full overflow-auto border-3 border-hs-ink bg-hs-paper",
         containerClassName
       )}
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn(
+          "w-full caption-bottom border-spacing-0 text-sm",
+          className
+        )}
         {...props}
       />
     </div>
@@ -36,7 +39,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
     <thead
       data-slot="table-header"
       className={cn(
-        "bg-hs-sand [&_tr]:border-b-[3px] [&_tr]:border-hs-ink",
+        "bg-hs-sand [&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand [&_tr]:border-b-3 [&_tr]:border-hs-ink",
         className
       )}
       {...props}
@@ -59,7 +62,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b border-hs-ink/20 data-[state=selected]:bg-hs-sand",
+        "border-b border-hs-ink/20 motion-safe:transition-colors motion-safe:duration-100 data-[state=selected]:bg-hs-sand data-[tone=alert]:[&_td]:bg-hs-red/5 data-[tone=highlight]:bg-hs-gold/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 [&_td]:border-b [&_td]:border-hs-ink/20",
         className
       )}
       {...props}

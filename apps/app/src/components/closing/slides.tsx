@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { ReactNode } from "react";
+import type { ReactNode, CSSProperties } from "react";
 import { Diagonal } from "@/components/tv/market";
 import { figure, percent } from "@/lib/closing-summary";
 import type { Bar, ClosingSummary } from "@/lib/closing-summary";
@@ -15,7 +15,7 @@ const TONES = [
   "bg-hs-navy text-hs-paper",
   "bg-hs-red text-hs-paper",
 ];
-const PAD = "p-[calc(var(--u)*1.6)]";
+const PAD = "p-(--u-1-6)";
 const NUMBER = "hsx-title hsx-num whitespace-nowrap";
 
 function tone(index: number): string {
@@ -39,14 +39,12 @@ function Frame({
       className="relative aspect-video w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]"
       aria-label={title}
     >
-      <div className="hsx hsx-md grid h-full grid-rows-[15%_minmax(0,1fr)_4.5%] gap-[var(--line)] p-[var(--line)]">
-        <header className="grid min-h-0 grid-cols-[8.4%_minmax(0,1fr)_16%_8.4%] gap-[var(--line)]">
+      <div className="hsx hsx-md grid h-full grid-rows-[15%_minmax(0,1fr)_4.5%] gap-(--line) p-(--line)">
+        <header className="grid min-h-0 grid-cols-[8.4%_minmax(0,1fr)_16%_8.4%] gap-(--line)">
           <Diagonal bg="bg-hs-gold" tri="bg-hs-red" corner="tl" />
-          <div className="flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.5)] bg-hs-paper px-[calc(var(--u)*1.8)]">
+          <div className="flex min-w-0 flex-col justify-center gap-(--u-0-5) bg-hs-paper px-(--u-1-8)">
             <p className="hsx-label">{kicker}</p>
-            <h2 className="hsx-title truncate text-[calc(var(--u)*3.4)]">
-              {title}
-            </h2>
+            <h2 className="hsx-title truncate text-(--u-3-4)">{title}</h2>
           </div>
           <div className="flex items-center justify-center bg-hs-paper">
             <Image
@@ -60,7 +58,7 @@ function Frame({
           <Diagonal bg="bg-hs-teal" tri="bg-hs-navy" corner="br" />
         </header>
         <div className="min-h-0">{children}</div>
-        <footer className="hsx-label flex items-center justify-between bg-hs-paper px-[calc(var(--u)*1.8)]">
+        <footer className="hsx-label flex items-center justify-between bg-hs-paper px-(--u-1-8)">
           <span>HackSpain 2026 · Madrid</span>
           <span className="hsx-num">{stamp}</span>
         </footer>
@@ -86,11 +84,9 @@ function Stat({
     >
       <p className="hsx-label">{label}</p>
       <div>
-        <p className={cn(NUMBER, "text-[calc(var(--u)*4.4)]")}>{value}</p>
+        <p className={cn(NUMBER, "text-(--u-4-4)")}>{value}</p>
         {detail ? (
-          <p className="hsx-md mt-[calc(var(--u)*0.5)] font-semibold">
-            {detail}
-          </p>
+          <p className="hsx-md mt-(--u-0-5) font-semibold">{detail}</p>
         ) : null}
       </div>
     </div>
@@ -111,12 +107,12 @@ function Panel({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 flex-col gap-[calc(var(--u)*1.1)] bg-hs-paper",
+        "flex min-h-0 min-w-0 flex-col gap-(--u-1-1) bg-hs-paper",
         PAD,
         className
       )}
     >
-      <div className="flex items-baseline justify-between gap-[calc(var(--u)*1.2)]">
+      <div className="flex items-baseline justify-between gap-(--u-1-2)">
         <h3 className="hsx-title hsx-lg">{title}</h3>
         {note ? (
           <p className="hsx-sm font-semibold text-hs-brown">{note}</p>
@@ -155,22 +151,22 @@ export function HBars({
     <ol
       className={cn(
         size,
-        "grid h-full grid-flow-col gap-x-[calc(var(--u)*3)]",
+        "grid h-full grid-flow-col grid-rows-repeat-var gap-x-(--u-3)",
         columns === 2 ? "grid-cols-2" : "grid-cols-1"
       )}
-      style={{ gridTemplateRows: `repeat(${perColumn}, minmax(0, 1fr))` }}
+      style={{ "--grid-rows": perColumn } as CSSProperties}
     >
       {rows.map((row) => (
         <li
           key={row.key}
-          className="flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.45)]"
+          className="flex min-w-0 flex-col justify-center gap-(--u-0-45)"
           title={`${row.name}: ${figure(row.value)}`}
         >
-          <div className="flex items-baseline justify-between gap-[calc(var(--u)*1)]">
+          <div className="flex items-baseline justify-between gap-(--u-1)">
             <span className="truncate font-bold">
               {row.name}
               {row.detail ? (
-                <span className="hsx-sm ml-[calc(var(--u)*0.7)] font-normal text-hs-brown">
+                <span className="hsx-sm ml-(--u-0-7) font-normal text-hs-brown">
                   {row.detail}
                 </span>
               ) : null}
@@ -179,10 +175,14 @@ export function HBars({
               {figure(row.value)}
             </span>
           </div>
-          <div className="h-[calc(var(--u)*1)] border-[length:calc(var(--line)*0.5)] border-hs-ink bg-hs-sand">
+          <div className="h-(--u-1) border-(length:--line-0-5) border-hs-ink bg-hs-sand">
             <div
-              className={cn("h-full", fill)}
-              style={{ width: `${Math.max(row.share * 100, 1)}%` }}
+              className={cn("h-full w-(--w)", fill)}
+              style={
+                {
+                  "--w": `${Math.max(row.share * 100, 1)}%`,
+                } as CSSProperties
+              }
             />
           </div>
         </li>
@@ -214,19 +214,19 @@ export function Columns({
   const peak = values.indexOf(max);
   return (
     <div className="flex h-full flex-col">
-      <div className="flex min-h-0 flex-1 items-stretch border-b-[length:calc(var(--line)*0.5)] border-hs-ink">
+      <div className="flex min-h-0 flex-1 items-stretch border-b-(length:--line-0-5) border-hs-ink">
         {values.map((value, index) => (
           <div
             key={labels[index]}
             className={cn(
-              "relative flex min-w-0 flex-1 flex-col justify-end px-[calc(var(--u)*0.14)] pt-[calc(var(--u)*1.7)]",
+              "relative flex min-w-0 flex-1 flex-col justify-end px-(--u-0-14) pt-(--u-1-7)",
               night?.[index] && "bg-hs-sand"
             )}
             title={`${labels[index]}: ${figure(value)} ${unit}`}
           >
             <div
-              className="relative"
-              style={{ height: `${(value / max) * 100}%` }}
+              className="relative h-(--h)"
+              style={{ "--h": `${(value / max) * 100}%` } as CSSProperties}
             >
               {index === peak ? (
                 <span
@@ -243,7 +243,7 @@ export function Columns({
           </div>
         ))}
       </div>
-      <div className="hsx-xs hsx-num flex pt-[calc(var(--u)*0.4)] font-semibold text-hs-brown">
+      <div className="hsx-xs hsx-num flex pt-(--u-0-4) font-semibold text-hs-brown">
         {labels.map((label, index) => (
           <span key={label} className="min-w-0 flex-1 whitespace-nowrap">
             {index % tickEvery === 0 ? label : ""}
@@ -280,7 +280,7 @@ function HeroSlide({
       }
       stamp={stamp}
     >
-      <div className="grid h-full grid-cols-4 grid-rows-2 gap-[var(--line)]">
+      <div className="grid h-full grid-cols-4 grid-rows-2 gap-(--line)">
         {summary.hero.map((stat, index) => (
           <Stat
             key={stat.label}
@@ -308,8 +308,8 @@ function PulseSlide({
       kicker="Actividad hora a hora · franja oscura = madrugada"
       stamp={stamp}
     >
-      <div className="grid h-full grid-cols-[minmax(0,3.4fr)_minmax(0,1fr)] gap-[var(--line)]">
-        <div className="grid min-h-0 grid-rows-2 gap-[var(--line)]">
+      <div className="grid h-full grid-cols-[minmax(0,3.4fr)_minmax(0,1fr)] gap-(--line)">
+        <div className="grid min-h-0 grid-rows-2 gap-(--line)">
           <Panel title="Tokens de IA" note={`${figure(usage.tokens)} en total`}>
             <Columns
               values={timeline.tokens}
@@ -334,7 +334,7 @@ function PulseSlide({
             />
           </Panel>
         </div>
-        <div className="grid min-h-0 grid-rows-3 gap-[var(--line)]">
+        <div className="grid min-h-0 grid-rows-3 gap-(--line)">
           <Stat
             label="De madrugada"
             value={percent(timeline.nightShare)}
@@ -372,7 +372,7 @@ function ToolsSlide({
       kicker="Tokens por herramienta y por modelo"
       stamp={stamp}
     >
-      <div className="grid h-full grid-cols-2 gap-[var(--line)]">
+      <div className="grid h-full grid-cols-2 gap-(--line)">
         <Panel title="Herramientas">
           <HBars rows={summary.harnesses} fill="bg-hs-orange" />
         </Panel>
@@ -398,11 +398,11 @@ function StackSlide({
       kicker="Tecnologías por número de proyectos"
       stamp={stamp}
     >
-      <div className="grid h-full grid-cols-[minmax(0,3.4fr)_minmax(0,1fr)] gap-[var(--line)]">
+      <div className="grid h-full grid-cols-[minmax(0,3.4fr)_minmax(0,1fr)] gap-(--line)">
         <Panel title="El stack de HackSpain">
           <HBars rows={stacks.rows} fill="bg-hs-navy" columns={2} />
         </Panel>
-        <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.6fr)] gap-[var(--line)]">
+        <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.6fr)] gap-(--line)">
           <Stat
             label="Proyectos con stack"
             value={figure(stacks.total)}
@@ -440,7 +440,7 @@ function FeedSlide({
       kicker={`${figure(feed.authors)} personas publicaron`}
       stamp={stamp}
     >
-      <div className="grid h-full grid-cols-4 grid-rows-[minmax(0,1fr)_minmax(0,1.25fr)] gap-[var(--line)]">
+      <div className="grid h-full grid-cols-4 grid-rows-[minmax(0,1fr)_minmax(0,1.25fr)] gap-(--line)">
         <Stat label="Posts" value={figure(feed.posts)} className="bg-hs-gold" />
         <Stat
           label="Memes"
@@ -472,17 +472,16 @@ function FeedSlide({
             <Empty />
           ) : (
             <ul
-              className="grid h-full grid-cols-2 gap-[calc(var(--u)*0.6)]"
-              style={{
-                gridTemplateRows: `repeat(${Math.ceil(feed.emojis.length / 2)}, minmax(0, 1fr))`,
-              }}
+              className="grid h-full grid-cols-2 grid-rows-repeat-var gap-(--u-0-6)"
+              style={
+                {
+                  "--grid-rows": Math.ceil(feed.emojis.length / 2),
+                } as CSSProperties
+              }
             >
               {feed.emojis.map((row) => (
-                <li
-                  key={row.emoji}
-                  className="flex items-center gap-[calc(var(--u)*0.7)]"
-                >
-                  <span className="text-[calc(var(--u)*2.6)] leading-none">
+                <li key={row.emoji} className="flex items-center gap-(--u-0-7)">
+                  <span className="text-(--u-2-6) leading-none">
                     {row.emoji}
                   </span>
                   <span className="hsx-num hsx-lg font-bold">
@@ -512,8 +511,8 @@ function TracksSlide({
       kicker="Proyectos entregados por reto · un proyecto puede ir a varios"
       stamp={stamp}
     >
-      <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,3.4fr)] gap-[var(--line)]">
-        <div className="grid min-h-0 grid-rows-[minmax(0,1.4fr)_minmax(0,1fr)] gap-[var(--line)]">
+      <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,3.4fr)] gap-(--line)">
+        <div className="grid min-h-0 grid-rows-[minmax(0,1.4fr)_minmax(0,1fr)] gap-(--line)">
           <Stat
             label="Proyectos entregados"
             value={figure(tracks.total)}
@@ -551,7 +550,7 @@ function AwardsSlide({
           <Empty />
         </div>
       ) : (
-        <div className="grid h-full grid-cols-3 grid-rows-2 gap-[var(--line)]">
+        <div className="grid h-full grid-cols-3 grid-rows-2 gap-(--line)">
           {summary.awards.map((award, index) => (
             <div
               key={award.title}
@@ -563,10 +562,10 @@ function AwardsSlide({
             >
               <p className="hsx-label">{award.title}</p>
               <div className="min-w-0">
-                <p className="hsx-title line-clamp-2 text-[calc(var(--u)*3)] break-words">
+                <p className="hsx-title line-clamp-2 text-(--u-3) break-words">
                   {award.team}
                 </p>
-                <p className="hsx-lg mt-[calc(var(--u)*0.7)] font-semibold">
+                <p className="hsx-lg mt-(--u-0-7) font-semibold">
                   {award.detail}
                 </p>
               </div>

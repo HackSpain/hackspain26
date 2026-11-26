@@ -413,7 +413,7 @@ export function AdminCrm() {
                 className={cn(
                   "min-h-0 flex-1",
                   refreshing &&
-                    "opacity-60 motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-[var(--ease-out)]"
+                    "opacity-60 motion-safe:transition-opacity motion-safe:duration-150 motion-safe:ease-out"
                 )}
               >
                 <div
@@ -444,7 +444,7 @@ export function AdminCrm() {
                         onKeyDown={(event) =>
                           activateOnKey(event, () => open(event.currentTarget))
                         }
-                        className="block cursor-pointer outline-none motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97] [@media(hover:hover)_and_(pointer:fine)]:hover:[&>[data-slot=card]]:bg-hs-sand/60 focus-visible:[&>[data-slot=card]]:border-hs-navy aria-expanded:[&>[data-slot=card]]:bg-hs-sand"
+                        className="block cursor-pointer outline-none motion-safe:transition-transform motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.97] [@media(hover:hover)_and_(pointer:fine)]:hover:[&>[data-slot=card]]:bg-hs-sand/60 focus-visible:[&>[data-slot=card]]:border-hs-navy aria-expanded:[&>[data-slot=card]]:bg-hs-sand"
                       >
                         <RecordCard
                           title={row.name}
@@ -493,7 +493,7 @@ export function AdminCrm() {
                     containerClassName="min-h-0 flex-1 overflow-auto overscroll-contain"
                     containerRef={tableRef}
                   >
-                    <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+                    <TableHeader className="sticky top-0 z-10 [&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
                       <TableRow>
                         {isCurrent ? (
                           <TableHead className="w-10">
@@ -534,7 +534,7 @@ export function AdminCrm() {
                                 )
                               );
                             }}
-                            className="h-11 cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 motion-safe:transition-colors motion-safe:duration-100 [&_td]:border-b [&_td]:border-hs-ink/20"
+                            className="h-11 cursor-pointer"
                           >
                             {isCurrent && row.signupId ? (
                               <TableCell
@@ -561,15 +561,11 @@ export function AdminCrm() {
                                   data-row-trigger
                                   aria-haspopup="dialog"
                                   aria-expanded={isSelected}
-                                  className="-mx-1 min-w-0 truncate px-1 text-left underline-offset-2 outline-none [@media(hover:hover)_and_(pointer:fine)]:hover:underline focus-visible:border-[3px] focus-visible:border-hs-navy"
+                                  className="-mx-1 min-w-0 truncate px-1 text-left underline-offset-2 outline-none [@media(hover:hover)_and_(pointer:fine)]:hover:underline focus-visible:border-3 focus-visible:border-hs-navy"
                                 >
                                   {row.name}
                                 </button>
-                                {staff ? (
-                                  <Badge className="whitespace-nowrap">
-                                    {staff}
-                                  </Badge>
-                                ) : null}
+                                {staff ? <Badge>{staff}</Badge> : null}
                               </div>
                             </TableCell>
                             <TableCell className="max-w-56 truncate">
@@ -640,7 +636,7 @@ function CrmPager({
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-[3px] border-hs-ink bg-hs-sand px-3">
+    <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-3 border-hs-ink bg-hs-sand px-3">
       <p className="text-sm text-hs-brown tabular-nums">
         {from}–{to} de {total}
       </p>
@@ -648,8 +644,7 @@ function CrmPager({
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          className="bg-hs-paper"
+          variant="paper"
           disabled={page <= 1}
           aria-label="Página anterior"
           onClick={() => onPage(page - 1)}
@@ -666,8 +661,7 @@ function CrmPager({
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          className="bg-hs-paper"
+          variant="paper"
           disabled={page >= pages}
           aria-label="Página siguiente"
           onClick={() => onPage(page + 1)}
@@ -697,13 +691,13 @@ function CrmToolbarSkeleton() {
 function SheetSkeleton() {
   return (
     <div className="space-y-4" aria-hidden>
-      <div className="border-[3px] border-hs-ink p-4">
+      <div className="border-3 border-hs-ink p-4">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="mt-3 h-3 w-full" />
         <Skeleton className="mt-2 h-3 w-3/4" />
         <Skeleton className="mt-2 h-3 w-1/2" />
       </div>
-      <div className="border-[3px] border-hs-ink p-4">
+      <div className="border-3 border-hs-ink p-4">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="mt-3 h-11 w-40" />
         <Skeleton className="mt-2 h-11 w-36" />

@@ -5,7 +5,7 @@ import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "relative w-full border-[3px] px-3 py-2.5 text-left text-sm",
+  "relative w-full border-3 px-3 py-2.5 text-left text-sm",
   {
     defaultVariants: {
       variant: "default",

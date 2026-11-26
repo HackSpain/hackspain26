@@ -265,7 +265,7 @@ export function AdminEventControls() {
         })}
       </ol>
 
-      <Card className="border-hs-ink shadow-[6px_6px_0_#1d1a17]">
+      <Card className="border-hs-ink shadow-hard-md">
         <CardHeader>
           <div className="flex size-12 items-center justify-center rounded-sm bg-hs-gold text-hs-ink">
             <KeyRound className="size-6" strokeWidth={2} aria-hidden />
@@ -295,7 +295,8 @@ export function AdminEventControls() {
               autoCapitalize="characters"
               autoComplete="off"
               spellCheck={false}
-              className="h-20 text-center font-bungee text-4xl tracking-[0.22em] uppercase tabular-nums sm:text-5xl"
+              variant="hero"
+              className="h-20 text-center"
               aria-label="Código de check-in"
               inputMode="text"
               maxLength={4}

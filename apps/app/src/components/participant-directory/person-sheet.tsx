@@ -87,11 +87,11 @@ function Portrait({
       height={size === "sm" ? 40 : 64}
       loading="lazy"
       decoding="async"
-      className={`${box} shrink-0 rounded-full border-[3px] border-hs-ink object-cover outline outline-1 outline-black/10`}
+      className={`${box} shrink-0 rounded-full border-3 border-hs-ink object-cover outline outline-1 outline-black/10`}
     />
   ) : (
     <span
-      className={`grid ${box} shrink-0 place-items-center rounded-full border-[3px] border-hs-ink bg-hs-sand font-bungee text-sm text-hs-brown`}
+      className={`grid ${box} shrink-0 place-items-center rounded-full border-3 border-hs-ink bg-hs-sand font-bungee text-sm text-hs-brown`}
       aria-hidden="true"
     >
       {initialsOf(person.displayName)}
@@ -111,7 +111,7 @@ function PersonRow({
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-3 border-2 border-hs-ink/20 bg-hs-sand/60 px-3 py-2 text-left hs-hover-bright motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.96]"
+      className="flex w-full items-center gap-3 border-2 border-hs-ink/20 bg-hs-sand/60 px-3 py-2 text-left hs-hover-bright motion-safe:transition-transform motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.96]"
       onClick={(event) => onOpen(person.id, event.currentTarget)}
     >
       <Portrait person={person} size="sm" />

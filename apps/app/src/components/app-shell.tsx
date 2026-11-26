@@ -64,7 +64,7 @@ function AccountMenu({
             type="button"
             variant="outline"
             size="icon"
-            className="overflow-hidden p-0 data-open:bg-hs-sand"
+            className="overflow-hidden"
             aria-label="Cuenta"
           >
             <Avatar
@@ -129,7 +129,7 @@ function AccountMenu({
 }
 
 const BACK_LINK_CLASS =
-  "inline-flex min-h-11 items-center gap-2 font-bungee text-xs uppercase text-hs-brown underline-offset-4 outline-none hover:text-hs-ink hover:underline focus-visible:text-hs-ink focus-visible:underline motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]";
+  "inline-flex min-h-11 items-center gap-2 font-bungee text-xs uppercase text-hs-brown underline-offset-4 outline-none hover:text-hs-ink hover:underline focus-visible:text-hs-ink focus-visible:underline motion-safe:transition-transform motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.97]";
 
 function ParticipantNav({
   sections,

@@ -9,6 +9,7 @@ import {
   AdminEditionProvider,
   useAdminEdition,
 } from "@/components/admin/use-admin-edition";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const NAV_LINK =
-  "flex min-h-11 items-center px-2 font-bungee text-xs uppercase outline-none select-none focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 motion-safe:transition-[color,background-color,transform] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97]";
+  "flex min-h-11 items-center px-2 font-bungee text-xs uppercase outline-none select-none focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 motion-safe:transition-surface motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.97]";
 
 function editionOptionLabel(edition: { current: boolean; slug: string }) {
   return edition.current ? `${edition.slug} · actual` : edition.slug;
@@ -35,7 +36,7 @@ function EditionSwitcher() {
       <select
         value={selected?.slug ?? ""}
         onChange={(event) => select(event.target.value)}
-        className="min-h-11 w-full max-w-[8.5rem] border-0 border-b-[3px] border-hs-ink bg-transparent px-1 font-bungee text-base uppercase text-hs-ink outline-none lg:max-w-none lg:text-xs focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2"
+        className="min-h-11 w-full max-w-[8.5rem] border-0 border-b-3 border-hs-ink bg-transparent px-1 font-bungee text-base uppercase text-hs-ink outline-none lg:max-w-none lg:text-xs focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2"
       >
         {editions.map((edition) => (
           <option key={edition._id} value={edition.slug}>
@@ -84,15 +85,15 @@ function AdminMobileNav() {
   return (
     <div className="flex min-w-0 flex-1 items-center lg:hidden">
       <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label="Sección"
-          className={cn(
-            NAV_LINK,
-            "flex-1 justify-between gap-2 bg-hs-gold text-hs-ink"
-          )}
-        >
-          {current.label}
-          <ChevronDown className="size-4 shrink-0" aria-hidden />
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            aria-label="Sección"
+            className="flex-1 justify-between"
+          >
+            {current.label}
+            <ChevronDown className="size-4 shrink-0" aria-hidden />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
@@ -139,7 +140,7 @@ function PastEditionBanner() {
     return null;
   }
   return (
-    <p className="border-[3px] border-hs-ink bg-hs-sand px-3 py-1.5 text-sm font-medium text-hs-brown">
+    <p className="border-3 border-hs-ink bg-hs-sand px-3 py-1.5 text-sm font-medium text-hs-brown">
       Estás viendo {selected.label}. Las altas están cerradas; el calendario sí
       se puede editar.
     </p>

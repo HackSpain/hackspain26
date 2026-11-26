@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 /** Regional indicator pair for an ISO code, e.g. "ES" → 🇪🇸. */
 function flag(iso: string): string {
@@ -135,11 +134,6 @@ export function PhoneInput({
           disabled={disabled}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={cn(
-            "tabular-nums",
-            error &&
-              "border-hs-red focus-visible:border-hs-red focus-visible:ring-hs-red/25"
-          )}
           onChange={(event) => {
             const typed = event.target.value;
             // A pasted "+34 600…" moves its prefix to the dropdown.

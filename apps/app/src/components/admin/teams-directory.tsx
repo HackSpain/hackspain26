@@ -392,7 +392,7 @@ export function AdminTeams() {
           className="border-separate border-spacing-0"
           containerClassName="min-h-0 flex-1 overflow-auto overscroll-contain"
         >
-          <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+          <TableHeader className="sticky top-0 z-10 [&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
             <TableRow>
               <TableHead className="w-10">
                 <Checkbox
@@ -467,7 +467,6 @@ function TeamRowView({
   const available = tracks.filter((track) => !enteredIds.has(track._id));
   return (
     <TableRow
-      className="[&_td]:border-b [&_td]:border-hs-ink/20"
       data-disabled={disabled || undefined}
       data-state={checked ? "selected" : undefined}
     >
@@ -496,7 +495,7 @@ function TeamRowView({
                 <Badge
                   key={track._id}
                   variant={extras || count > teamLimit ? "gold" : "default"}
-                  className="gap-1 pr-0.5 tabular-nums"
+                  className="pr-0.5"
                 >
                   {track.label} · {occupancy(count, teamLimit)}
                   <button

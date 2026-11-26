@@ -46,7 +46,7 @@ function eventClosedCopy(event: EventInfo): {
 export function EventClosedBanner({ event }: { event: EventInfo }) {
   const copy = eventClosedCopy(event);
   return (
-    <div className="border-b-[3px] border-hs-ink bg-hs-sand text-hs-ink">
+    <div className="border-b-3 border-hs-ink bg-hs-sand text-hs-ink">
       <div className="mx-auto flex w-full max-w-6xl items-start gap-3 px-4 py-3">
         <CalendarClock className="mt-0.5 size-5 shrink-0" aria-hidden />
         <div className="min-w-0">

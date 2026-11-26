@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import type { RefObject } from "react";
+import type { RefObject, CSSProperties } from "react";
 import type { TvWidget } from "@/lib/tv";
 import { cn } from "@/lib/utils";
 import {
@@ -127,7 +127,7 @@ export function TvStage({
     >
       {widgets.length === 0 ? (
         <div className="flex h-full items-center justify-center">
-          <p className="font-bungee text-[clamp(1.5rem,6cqw,5rem)] text-hs-gold/60 uppercase">
+          <p className="font-bungee text-cq-hero text-hs-gold/60 uppercase">
             Madrid · 2026
           </p>
         </div>
@@ -136,14 +136,16 @@ export function TvStage({
           <div
             key={widget._id}
             data-tv-box={widget._id}
-            className="absolute overflow-hidden"
-            style={{
-              left: `${widget.x}%`,
-              top: `${widget.y}%`,
-              width: `${widget.w}%`,
-              height: `${widget.h}%`,
-              zIndex: widget.z,
-            }}
+            className="absolute top-(--top) left-(--left) z-(--z) h-(--h) w-(--w) overflow-hidden"
+            style={
+              {
+                "--left": `${widget.x}%`,
+                "--top": `${widget.y}%`,
+                "--w": `${widget.w}%`,
+                "--h": `${widget.h}%`,
+                "--z": widget.z,
+              } as CSSProperties
+            }
           >
             <TvWidgetView widget={widget} />
           </div>
@@ -153,7 +155,7 @@ export function TvStage({
         <div
           data-tv-sweep
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 z-50 h-[1%] bg-hs-gold opacity-0 shadow-[0_0_2cqw_0.3cqw_rgba(234,182,25,0.45)]"
+          className="pointer-events-none absolute inset-x-0 top-0 z-50 h-[1%] bg-hs-gold opacity-0 shadow-gold-glow"
         />
       ) : null}
     </div>

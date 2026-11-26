@@ -53,7 +53,7 @@ function TrackTeams({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-bungee text-[11px] uppercase text-hs-brown">
+        <span className="font-bungee text-2xs uppercase text-hs-brown">
           {teamCount >= teamLimit
             ? `Completo · ${teamCount}/${teamLimit} equipos`
             : `${teamCount}/${teamLimit} equipos`}
@@ -74,7 +74,7 @@ function TrackTeams({
                   aria-controls={rosterId}
                   onClick={() => setOpenId(active ? null : team._id)}
                   className={cn(
-                    "block outline-none motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.94] focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-paper",
+                    "block outline-none motion-safe:transition-transform motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.94] focus-visible:ring-2 focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-paper",
                     active &&
                       "ring-2 ring-hs-navy ring-offset-2 ring-offset-hs-paper"
                   )}
@@ -83,7 +83,7 @@ function TrackTeams({
                     name={team.name}
                     src={team.logoUrl}
                     className={cn(
-                      "size-8 border-2 text-[11px]",
+                      "size-8 border-2 text-2xs",
                       team.isMine && "bg-hs-teal/60"
                     )}
                   />
@@ -95,7 +95,7 @@ function TrackTeams({
       </div>
       <div id={rosterId}>
         {open ? (
-          <div className="space-y-2 border-[3px] border-hs-ink bg-hs-sand/40 p-3">
+          <div className="space-y-2 border-3 border-hs-ink bg-hs-sand/40 p-3">
             <p className="flex flex-wrap items-center gap-2 font-bungee text-sm">
               <span>{open.name}</span>
               {open.isMine ? <Badge variant="gold">Tu equipo</Badge> : null}
@@ -118,7 +118,7 @@ function TrackTeams({
                   <Avatar
                     name={member.name}
                     src={member.avatarUrl}
-                    className="size-7 border-2 text-[10px]"
+                    className="size-7 border-2 text-3xs"
                   />
                   <span className="min-w-0 truncate">{member.name}</span>
                   {member.isOwner ? (
@@ -189,11 +189,9 @@ export function TracksPage() {
                 <CardTitle className="flex min-h-12 items-center justify-between gap-3">
                   <TrackLogo track={track} className="h-9 max-w-56" />
                   {submittedIds.has(track._id) ? (
-                    <Badge variant="gold" className="whitespace-nowrap">
-                      Enviado
-                    </Badge>
+                    <Badge variant="gold">Enviado</Badge>
                   ) : entered.has(track._id) ? (
-                    <Badge className="whitespace-nowrap">En el borrador</Badge>
+                    <Badge>En el borrador</Badge>
                   ) : null}
                 </CardTitle>
                 <CardDescription className="border-t border-hs-ink/15 pt-3 text-base font-medium text-hs-ink">

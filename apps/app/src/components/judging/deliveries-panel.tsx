@@ -123,7 +123,7 @@ export function SponsorPanel() {
           <div
             aria-busy={loading}
             className={cn(
-              "motion-safe:transition-opacity motion-safe:duration-[var(--duration-exit)] motion-safe:ease-[var(--ease-out)]",
+              "motion-safe:transition-opacity motion-safe:duration-exit motion-safe:ease-out",
               loading && "pointer-events-none opacity-50"
             )}
           >

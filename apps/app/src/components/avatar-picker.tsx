@@ -112,15 +112,11 @@ export function AvatarPicker({
       <Avatar
         name={name}
         src={avatarUrl}
-        className="size-20 shrink-0 text-xl shadow-[4px_4px_0_var(--color-hs-ink)]"
+        className="size-20 shrink-0 text-xl shadow-hard"
       />
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap gap-2">
-          <Button
-            asChild
-            size="sm"
-            className="min-h-8 cursor-pointer px-3 text-xs"
-          >
+          <Button asChild size="sm" className="min-h-8 cursor-pointer">
             <label>
               <ImagePlus className="size-3.5" aria-hidden />
               {action.pending
@@ -158,7 +154,7 @@ export function AvatarPicker({
               type="button"
               variant="outline"
               size="sm"
-              className="min-h-8 px-3 text-xs"
+              className="min-h-8"
               disabled={action.pending}
               onClick={() =>
                 void action.run(async () => {

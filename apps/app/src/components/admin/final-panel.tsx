@@ -122,7 +122,7 @@ function Stat({
 }) {
   const counting = value === undefined;
   return (
-    <div className="border-[3px] border-hs-ink bg-hs-paper px-4 py-3">
+    <div className="border-3 border-hs-ink bg-hs-paper px-4 py-3">
       <p
         className={cn(
           "font-bungee text-3xl leading-none tabular-nums",
@@ -518,12 +518,11 @@ export function FinalPanel() {
           </div>
         </div>
 
-        <div className="overflow-hidden border-[3px] border-hs-ink">
+        <div className="overflow-hidden border-3 border-hs-ink">
           <div className="flex flex-wrap items-end gap-x-4 gap-y-3 bg-hs-sand px-3 py-3">
             <Button
               type="button"
-              variant="outline"
-              className="bg-hs-paper"
+              variant="paper"
               disabled={allInIds.length === 0}
               onClick={() => selectIds(allInIds)}
             >
@@ -538,7 +537,7 @@ export function FinalPanel() {
               <div className="space-y-1.5">
                 <Label
                   htmlFor={`${ids}-since`}
-                  className="text-xs tracking-[0.08em] text-hs-ink/70"
+                  className="text-xs tracking-label text-hs-ink/70"
                 >
                   Entraron a la final desde
                 </Label>
@@ -547,15 +546,14 @@ export function FinalPanel() {
                   type="datetime-local"
                   step={60}
                   aria-label="Hora a partir de la que entraron a la final"
-                  className="w-full bg-hs-paper sm:w-56"
+                  className="w-full sm:w-56"
                   value={since}
                   onChange={(event) => setSince(event.target.value)}
                 />
               </div>
               <Button
                 type="button"
-                variant="outline"
-                className="bg-hs-paper"
+                variant="paper"
                 disabled={sinceIds.length === 0}
                 onClick={() => selectIds(sinceIds)}
               >
@@ -566,12 +564,12 @@ export function FinalPanel() {
           </div>
 
           {people === undefined && (
-            <div className="border-t-[3px] border-hs-ink bg-hs-paper px-3 py-6">
+            <div className="border-t-3 border-hs-ink bg-hs-paper px-3 py-6">
               <LoadingText />
             </div>
           )}
           {people !== undefined && visible.length === 0 && (
-            <div className="border-t-[3px] border-hs-ink bg-hs-paper px-4 py-8">
+            <div className="border-t-3 border-hs-ink bg-hs-paper px-4 py-8">
               <p className="font-bungee text-base">
                 {people.length === 0 ? "Todavía vacío" : "Nadie en este filtro"}
               </p>
@@ -583,7 +581,7 @@ export function FinalPanel() {
             </div>
           )}
           {people !== undefined && visible.length > 0 && (
-            <Table containerClassName="max-h-[min(36rem,70vh)] border-0 border-t-[3px]">
+            <Table containerClassName="max-h-[min(36rem,70vh)] border-0 border-t-3">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">
@@ -672,12 +670,13 @@ export function FinalPanel() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={row.status === "in" ? "gold" : "default"}
-                          className={cn(
-                            "whitespace-nowrap",
-                            row.status === "canceled" &&
-                              "bg-hs-red text-hs-paper"
-                          )}
+                          variant={
+                            row.status === "in"
+                              ? "gold"
+                              : row.status === "canceled"
+                                ? "inverse"
+                                : "default"
+                          }
                         >
                           {row.status === "in"
                             ? "Dentro"
@@ -708,9 +707,8 @@ export function FinalPanel() {
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="danger"
                               aria-busy={busy}
-                              className="text-hs-red"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 setConfirm({ kind: "cancelPerson", row });
@@ -816,9 +814,9 @@ export function FinalPanel() {
             </Button>
             <Button
               type="button"
-              className={cn(
-                confirm?.kind === "cancelPerson" && "bg-hs-red text-hs-paper"
-              )}
+              variant={
+                confirm?.kind === "cancelPerson" ? "destructive" : "default"
+              }
               onClick={() => {
                 if (confirm?.kind === "send") {
                   void submitSend();

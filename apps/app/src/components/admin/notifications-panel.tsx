@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { CheckCircle2, ChevronRight, Loader2, Send } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import type { ChangeEvent, ReactNode } from "react";
+import type { ChangeEvent, ReactNode, CSSProperties } from "react";
 import { api } from "@convex/_generated/api";
 import { FormError, errorMessage } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +65,7 @@ function ComposeField({
       <div className="flex min-h-4 items-baseline justify-between gap-3">
         <Label
           htmlFor={htmlFor}
-          className="text-xs tracking-[0.08em] text-hs-ink/70"
+          className="text-xs tracking-label text-hs-ink/70"
         >
           {label}
         </Label>
@@ -94,7 +94,7 @@ function RecipientCount({
       aria-atomic="true"
       aria-busy={counting}
       className={cn(
-        "flex items-baseline gap-2 border-[3px] px-3 py-2.5 motion-safe:transition-[border-color,background-color] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)]",
+        "flex items-baseline gap-2 border-3 px-3 py-2.5 motion-safe:transition-surface motion-safe:duration-press motion-safe:ease-out",
         empty && !needsEmail
           ? "border-hs-orange bg-hs-orange/10"
           : "border-hs-ink bg-hs-paper"
@@ -167,11 +167,14 @@ function DeliveryBar({ item }: { item: HistoryItem }) {
         aria-hidden
         className="h-1.5 w-full max-w-48 flex-1 overflow-hidden bg-hs-sand"
       >
-        <div className="flex h-full origin-left scale-x-100 motion-safe:transition-transform motion-safe:duration-[280ms] motion-safe:ease-[var(--ease-out)] starting:scale-x-0">
-          <div className="h-full bg-hs-teal" style={{ width: `${sentPct}%` }} />
+        <div className="flex h-full origin-left scale-x-100 motion-safe:transition-transform motion-safe:duration-280 motion-safe:ease-out starting:scale-x-0">
           <div
-            className="h-full bg-hs-red"
-            style={{ width: `${failedPct}%` }}
+            className="h-full w-(--w) bg-hs-teal"
+            style={{ "--w": `${sentPct}%` } as CSSProperties}
+          />
+          <div
+            className="h-full w-(--w) bg-hs-red"
+            style={{ "--w": `${failedPct}%` } as CSSProperties}
           />
         </div>
       </div>
@@ -228,7 +231,7 @@ function HistoryBody({ body }: { body: string }) {
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
-          className="-my-1.5 -ml-1 mt-0.5 px-1 py-1.5 font-bungee text-xs text-hs-navy underline-offset-2 hover:underline focus-visible:outline-[3px] focus-visible:outline-offset-1 focus-visible:outline-hs-navy"
+          className="-my-1.5 -ml-1 mt-0.5 px-1 py-1.5 font-bungee text-xs text-hs-navy underline-offset-2 hover:underline focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-hs-navy"
         >
           {expanded ? "Ver menos" : "Ver más"}
         </button>
@@ -247,11 +250,13 @@ function HistoryRow({ item }: { item: HistoryItem }) {
           {item.subject}
         </h3>
         <Badge
-          variant={item.status === "sent" ? "gold" : "default"}
-          className={cn(
-            "whitespace-nowrap",
-            item.status === "failed" && "bg-hs-red text-hs-paper"
-          )}
+          variant={
+            item.status === "sent"
+              ? "gold"
+              : item.status === "failed"
+                ? "inverse"
+                : "default"
+          }
         >
           {statusLabel(item.status)}
         </Badge>
@@ -272,14 +277,14 @@ function HistoryRow({ item }: { item: HistoryItem }) {
       <DeliveryBar item={item} />
       {failed > 0 ? (
         <details className="group/failures text-xs">
-          <summary className="-my-1.5 -ml-1 flex w-fit cursor-pointer select-none list-none items-center gap-1 px-1 py-1.5 font-bungee text-hs-red focus-visible:outline-[3px] focus-visible:outline-offset-1 focus-visible:outline-hs-navy [&::-webkit-details-marker]:hidden">
+          <summary className="-my-1.5 -ml-1 flex w-fit cursor-pointer select-none list-none items-center gap-1 px-1 py-1.5 font-bungee text-hs-red focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-hs-navy [&::-webkit-details-marker]:hidden">
             <ChevronRight
               aria-hidden
-              className="size-3.5 shrink-0 motion-safe:transition-transform motion-safe:duration-[160ms] motion-safe:ease-out group-open/failures:rotate-90"
+              className="size-3.5 shrink-0 motion-safe:transition-transform motion-safe:duration-160 motion-safe:ease-out group-open/failures:rotate-90"
             />
             {failed} {plural(failed, "fallo", "fallos")}
           </summary>
-          <ul className="mt-2 space-y-1.5 border-l-[3px] border-hs-red/40 pl-3 font-mono text-xs">
+          <ul className="mt-2 space-y-1.5 border-l-3 border-hs-red/40 pl-3 font-mono text-xs">
             {item.failures.map((failure) => (
               <li key={failure.email} className="break-words">
                 <span className="text-hs-ink">{failure.email}</span>
@@ -411,7 +416,7 @@ export function NotificationsPanel() {
                 <Textarea
                   id={`${ids}-body`}
                   rows={8}
-                  className="min-h-48 max-h-[60vh] field-sizing-content leading-relaxed"
+                  className="min-h-48 max-h-[60vh] field-sizing-content"
                   placeholder="Texto plano. Los saltos de línea se respetan."
                   value={body}
                   onChange={edit(setBody)}
@@ -462,7 +467,7 @@ export function NotificationsPanel() {
 
               <DialogTrigger asChild>
                 <Button
-                  className="w-full focus-visible:ring-[3px] focus-visible:ring-hs-navy focus-visible:ring-offset-2 focus-visible:ring-offset-hs-sand aria-busy:cursor-progress"
+                  className="w-full aria-busy:cursor-progress"
                   disabled={!ready || pending}
                   aria-busy={pending}
                 >
@@ -523,7 +528,7 @@ export function NotificationsPanel() {
             </span>
           ) : null}
         </h2>
-        <div className="border-[3px] border-hs-ink bg-hs-paper">
+        <div className="border-3 border-hs-ink bg-hs-paper">
           {history === undefined ? (
             <p className="px-4 py-8 text-center text-sm text-hs-brown">
               Cargando…

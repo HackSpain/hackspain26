@@ -45,6 +45,113 @@
   --radius-2xl: 4px;
   --radius-3xl: 6px;
   --radius-4xl: 8px;
+
+  --border-width-3: 3px;
+  --outline-width-3: 3px;
+  --text-underline-offset-3: 3px;
+  --spacing-stroke: 3px;
+  --spacing-14p: 14%;
+  --text-decoration-thickness-3: 3px;
+  --stroke-width-3: 3px;
+  --spacing-em: 0.3em;
+  --spacing-cq: 1cqw;
+  --spacing-cq-15: 0.15cqw;
+  --spacing-cq-2: 0.2cqw;
+  --spacing-cq-25: 0.25cqw;
+  --spacing-cq-3: 0.3cqw;
+  --spacing-cq-35: 0.35cqw;
+  --spacing-cq-4: 0.4cqw;
+  --spacing-cq-45: 0.45cqw;
+  --spacing-cq-5: 0.5cqw;
+  --spacing-cq-6: 0.6cqw;
+  --spacing-cq-7: 0.7cqw;
+  --spacing-cq-8: 0.8cqw;
+  --spacing-cq-9: 0.9cqw;
+  --border-width-cq-3: 0.3cqw;
+  --border-width-cq-35: 0.35cqw;
+  --spacing-cq-12: 1.2cqw;
+  --spacing-cq-16: 1.6cqw;
+  --spacing-cq-20: 2cqw;
+  --spacing-cq-80: 8cqw;
+  --spacing-cqh-7: 0.7cqh;
+  --spacing-cqh-14: 1.4cqh;
+  --spacing-cqh-15: 1.5cqh;
+  --spacing-cqh-60: 6cqh;
+  --spacing-cqh-140: 14cqh;
+  --spacing-vmin-2: 2vmin;
+  --spacing-vmin-3: 3vmin;
+  --spacing-vmin-4: 4vmin;
+  --spacing-vw-5: 5vw;
+  --spacing-vh-5: 5vh;
+
+  --text-2xs: 0.6875rem;
+  --text-3xs: 0.625rem;
+  --text-4xs: 0.5625rem;
+  --text-5xs: 0.5rem;
+  --text-em: 0.9em;
+  --text-em-sm: 0.75em;
+  --text-2vmin: 2vmin;
+  --text-4vmin: 4vmin;
+  --text-cq-2: 0.7cqw;
+  --text-cq-xs: clamp(0.45rem, 0.6cqw, 0.8rem);
+  --text-cq-xs-plus: clamp(0.45rem, 0.6cqw, 0.85rem);
+  --text-cq-sm: clamp(0.5rem, 0.65cqw, 0.9rem);
+  --text-cq-sm-plus: clamp(0.5rem, 0.7cqw, 0.95rem);
+  --text-cq-md: clamp(0.55rem, 0.75cqw, 1rem);
+  --text-cq-md-plus: clamp(0.55rem, 0.8cqw, 1.1rem);
+  --text-cq-lg: clamp(0.6rem, 0.85cqw, 1.15rem);
+  --text-cq-lg-plus: clamp(0.6rem, 0.9cqw, 1.2rem);
+  --text-cq-xl: clamp(0.6rem, 1.05cqw, 1.4rem);
+  --text-cq-2xl: clamp(0.7rem, 1.1cqw, 1.5rem);
+  --text-cq-3xl: clamp(0.7rem, 1.3cqw, 1.8rem);
+  --text-cq-4xl: clamp(0.8rem, 1.5cqw, 2rem);
+  --text-cq-5xl: clamp(0.9rem, 2cqw, 1.7rem);
+  --text-cq-6xl: clamp(0.9rem, 2cqw, 2.8rem);
+  --text-cq-7xl: clamp(0.9rem, 2.4cqw, 1.8rem);
+  --text-cq-8xl: clamp(1.1rem, 2.4cqw, 3.2rem);
+  --text-cq-hero: clamp(1.5rem, 6cqw, 5rem);
+  --text-cq-display: clamp(1.6rem, 4.6cqw, 6.5rem);
+  --text-cq-caption: clamp(10px, 0.8cqw, 18px);
+  --text-cq-min-1: min(1cqw, 1.8cqh);
+  --text-cq-min-135: min(1.35cqw, 2.4cqh);
+  --text-cq-min-15: min(1.5cqw, 2.5cqh);
+  --text-cq-min-19: min(1.9cqw, 3.2cqh);
+  --text-cq-min-4: min(4cqw, 7cqh);
+  --text-cq-min-24: min(24cqw, 46cqh);
+  --text-vmin-sm: clamp(16px, 2.5vmin, 48px);
+  --text-vmin-md: clamp(18px, 2.3vmin, 48px);
+  --text-vmin-lg: clamp(18px, 3vmin, 64px);
+
+  --leading-pack: 0.98;
+  --leading-squeeze: 1.1;
+  --leading-compact: 1.15;
+
+  --tracking-micro: 0.06em;
+  --tracking-label: 0.08em;
+  --tracking-caps: 0.12em;
+  --tracking-display: 0.16em;
+  --tracking-poster: 0.2em;
+  --tracking-otp: 0.22em;
+  --tracking-display-tight: -0.06em;
+  --tracking-snug: -0.02em;
+
+  --shadow-hard-sm: 2px 2px 0 var(--color-hs-ink);
+  --shadow-hard: 4px 4px 0 var(--color-hs-ink);
+  --shadow-hard-md: 6px 6px 0 var(--color-hs-ink);
+  --shadow-hard-lg: 8px 8px 0 var(--color-hs-ink);
+  --shadow-gold-glow: 0 0 2cqw 0.3cqw
+    color-mix(in srgb, var(--color-hs-gold) 45%, transparent);
+
+  --duration-press: 140ms;
+  --duration-enter: 240ms;
+  --duration-exit: 180ms;
+  --duration-160: 160ms;
+  --duration-280: 280ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  --saturate-70: 0.7;
+  --sepia-25: 0.25;
+  --contrast-108: 1.08;
 }
 
 :root {
@@ -67,10 +174,6 @@
   --input: #2a170f;
   --ring: #1e3958;
   --radius: 0px;
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --duration-press: 140ms;
-  --duration-enter: 240ms;
-  --duration-exit: 180ms;
 }
 
 @layer base {
@@ -267,6 +370,42 @@
   --hsx-up: var(--color-hs-teal);
   --hsx-down: var(--color-hs-red);
   --hsx-flash: var(--color-hs-orange);
+  --u-0-1: var(--u-0-1);
+  --u-0-14: var(--u-0-14);
+  --u-0-3: var(--u-0-3);
+  --u-0-35: var(--u-0-35);
+  --u-0-4: var(--u-0-4);
+  --u-0-45: var(--u-0-45);
+  --u-0-5: var(--u-0-5);
+  --u-0-55: var(--u-0-55);
+  --u-0-6: var(--u-0-6);
+  --u-0-65: var(--u-0-65);
+  --u-0-7: var(--u-0-7);
+  --u-0-8: var(--u-0-8);
+  --u-0-85: var(--u-0-85);
+  --u-0-9: var(--u-0-9);
+  --u-1: var(--u);
+  --u-1-1: var(--u-1-1);
+  --u-1-2: var(--u-1-2);
+  --u-1-3: var(--u-1-3);
+  --u-1-4: var(--u-1-4);
+  --u-1-5: var(--u-1-5);
+  --u-1-55: var(--u-1-55);
+  --u-1-6: var(--u-1-6);
+  --u-1-7: var(--u-1-7);
+  --u-1-8: var(--u-1-8);
+  --u-2: var(--u-2);
+  --u-2-4: var(--u-2-4);
+  --u-2-5: var(--u-2-5);
+  --u-2-6: var(--u-2-6);
+  --u-2-7: var(--u-2-7);
+  --u-3: var(--u-3);
+  --u-3-4: var(--u-3-4);
+  --u-4: var(--u-4);
+  --u-4-4: var(--u-4-4);
+  --line-0-5: var(--line-0-5);
+  --line-0-6: var(--line-0-6);
+  --line-2-2: var(--line-2-2);
 }
 @media (orientation: portrait) {
   .hsx {
@@ -277,16 +416,16 @@
   font-size: calc(var(--u) * 0.74);
 }
 .hsx-sm {
-  font-size: calc(var(--u) * 0.9);
+  font-size: var(--u-0-9);
 }
 .hsx-md {
-  font-size: calc(var(--u) * 1.1);
+  font-size: var(--u-1-1);
 }
 .hsx-lg {
   font-size: calc(var(--u) * 1.45);
 }
 .hsx-xl {
-  font-size: calc(var(--u) * 2);
+  font-size: var(--u-2);
 }
 .hsx-2xl {
   font-size: calc(var(--u) * 3.3);
@@ -306,6 +445,59 @@
   line-height: 1;
 }
 
+@utility transition-press {
+  transition-property: transform, filter, opacity;
+}
+
+@utility transition-surface {
+  transition-property:
+    color, background-color, border-color, box-shadow, text-decoration-color,
+    transform, filter;
+}
+
+@utility anim-duration-var {
+  animation-duration: var(--anim-duration);
+}
+
+@utility anim-play-var {
+  animation-play-state: var(--anim-play);
+}
+
+@utility scale-x-var {
+  transform: scaleX(var(--scale-x));
+}
+
+@utility grid-rows-repeat-var {
+  grid-template-rows: repeat(var(--grid-rows), minmax(0, 1fr));
+}
+
+@utility font-size-var {
+  font-size: var(--font-size);
+}
+
+@utility clip-tri-tl {
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+@utility clip-tri-br {
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+@utility grid-area-var {
+  grid-area: var(--grid-area);
+}
+
+.hs-splash-mosaic {
+  grid-template-areas:
+    "a b c d e f"
+    "g s s s s h"
+    "i s s s s j"
+    "k s s s s l"
+    "m n o p q r";
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: minmax(3.25rem, 12vh) 1fr 1fr 1fr minmax(3.25rem, 12vh);
+}
+
 /* Panel mini trades density for larger type on smaller venue screens. */
 .hsx-mini {
   --u: min(2cqw, 3.6cqh);
@@ -317,6 +509,11 @@
 }
 
 /* /tv?view=equipos: the participants map, read from across a hall. */
+.tv-teams.pg-stage {
+  border-top: none;
+  border-bottom: none;
+  height: auto;
+}
 .tv-teams .pg-zone-label {
   font-size: 14px;
   fill: var(--color-hs-ink);

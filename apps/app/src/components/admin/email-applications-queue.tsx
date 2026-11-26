@@ -87,9 +87,11 @@ export function ReviewActions({
           placeholder="Código"
           value={code}
           disabled={pending}
+          variant="mono"
+          size={compact ? "sm" : "default"}
           className={cn(
-            "min-w-0 font-mono",
-            compact ? "h-9 flex-1 text-sm" : stacked ? "w-full" : "max-w-48"
+            "min-w-0",
+            compact ? "h-9 flex-1" : stacked ? "w-full" : "max-w-48"
           )}
           onChange={(event) => setCode(event.target.value)}
         />

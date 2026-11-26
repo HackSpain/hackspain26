@@ -45,7 +45,7 @@ function CancelCard({
     <main className="flex min-h-dvh items-center justify-center bg-hs-paper px-4 py-10">
       <section
         aria-labelledby="cancel-title"
-        className="w-full max-w-xl border-[3px] border-hs-ink bg-hs-paper p-6 shadow-[8px_8px_0_var(--color-hs-ink)] sm:p-10"
+        className="w-full max-w-xl border-3 border-hs-ink bg-hs-paper p-6 shadow-hard-lg sm:p-10"
       >
         <a
           href="https://hackspain.com"
@@ -176,7 +176,7 @@ function CancelFlow() {
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <Button
           aria-busy={pending}
-          className="border-hs-ink bg-hs-red text-hs-paper"
+          variant="destructive"
           onClick={() => void confirm()}
         >
           {pending ? "Cancelando…" : "Sí, cancelar mi plaza"}

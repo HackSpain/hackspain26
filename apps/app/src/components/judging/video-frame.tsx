@@ -4,7 +4,7 @@ export function VideoFrame({ url }: { url?: string }) {
   const embed = parseVideoUrl(url);
 
   return (
-    <div className="aspect-video w-full overflow-hidden border-[3px] border-hs-ink bg-hs-ink outline outline-black/10">
+    <div className="aspect-video w-full overflow-hidden border-3 border-hs-ink bg-hs-ink outline outline-black/10">
       {embed?.kind === "file" ? (
         <video
           className="size-full bg-hs-ink object-contain"

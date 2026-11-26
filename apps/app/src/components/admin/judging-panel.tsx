@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { RefObject, CSSProperties } from "react";
 import { api } from "@convex/_generated/api";
 import { AdminTableSkeleton } from "@/components/admin/admin-table-skeleton";
 import { AdminTabs, useAdminTab } from "@/components/admin/admin-tabs";
@@ -166,7 +166,7 @@ export function AdminJudging() {
 
 function CountBadge({ label, value }: { label: string; value: number }) {
   return (
-    <Badge variant={value > 0 ? "gold" : "default"} className="tabular-nums">
+    <Badge variant={value > 0 ? "gold" : "default"}>
       {label} {value}
     </Badge>
   );
@@ -411,7 +411,7 @@ function PreviewTable({
         . Aún no está guardada.
       </p>
       <Table className="border-separate border-spacing-0 font-medium">
-        <TableHeader className="[&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+        <TableHeader className="[&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
           <TableRow>
             <TableHead>Juez</TableHead>
             <TableHead className="text-right">Cola</TableHead>
@@ -420,10 +420,7 @@ function PreviewTable({
         </TableHeader>
         <TableBody>
           {preview.judges.map((judge) => (
-            <TableRow
-              key={judge._id}
-              className="[&_td]:border-b [&_td]:border-hs-ink/20"
-            >
+            <TableRow key={judge._id}>
               <TableCell className="align-top">{judge.name}</TableCell>
               <TableCell className="align-top text-right tabular-nums">
                 {judge.assigned}
@@ -455,7 +452,7 @@ function ConflictsSection({ overview }: { overview: Overview }) {
   );
 
   return (
-    <div className="space-y-3 border-t-[3px] border-hs-ink pt-4">
+    <div className="space-y-3 border-t-3 border-hs-ink pt-4">
       <div>
         <p className="font-bungee text-xs uppercase">Conflictos de interés</p>
       </div>
@@ -464,7 +461,7 @@ function ConflictsSection({ overview }: { overview: Overview }) {
           {overview.conflicts.map((conflict) => (
             <li
               key={conflict._id}
-              className="inline-flex min-h-11 items-center gap-2 border-[3px] border-hs-ink bg-hs-paper px-3 text-sm font-medium"
+              className="inline-flex min-h-11 items-center gap-2 border-3 border-hs-ink bg-hs-paper px-3 text-sm font-medium"
             >
               <span>
                 {conflict.judge.name} · {conflict.projectName}
@@ -672,10 +669,7 @@ function CompletionCard({ overview }: { overview: Overview }) {
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
           Progreso
-          <Badge
-            variant={completion.complete ? "gold" : "default"}
-            className="tabular-nums"
-          >
+          <Badge variant={completion.complete ? "gold" : "default"}>
             {completion.submitted}/{completion.total}
           </Badge>
           <Badge variant={completion.complete ? "gold" : "default"}>
@@ -690,11 +684,11 @@ function CompletionCard({ overview }: { overview: Overview }) {
           aria-valuemax={completion.total}
           aria-valuenow={completion.submitted}
           aria-label="Evaluaciones enviadas"
-          className="h-3 w-full overflow-hidden border-[3px] border-hs-ink bg-hs-paper"
+          className="h-3 w-full overflow-hidden border-3 border-hs-ink bg-hs-paper"
         >
           <div
-            className="h-full w-full origin-left bg-hs-gold motion-safe:transition-transform motion-safe:duration-[var(--duration-enter)] motion-safe:ease-[var(--ease-out)]"
-            style={{ transform: `scaleX(${fraction})` }}
+            className="scale-x-var h-full w-full origin-left bg-hs-gold motion-safe:transition-transform motion-safe:duration-enter motion-safe:ease-out"
+            style={{ "--scale-x": fraction } as CSSProperties}
           />
         </div>
         {completion.complete ? null : (
@@ -753,7 +747,7 @@ function JudgesCard({ judges }: { judges: JudgeRow[] }) {
       </CardHeader>
       <CardContent>
         <Table className="border-separate border-spacing-0 font-medium">
-          <TableHeader className="[&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+          <TableHeader className="[&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
             <TableRow>
               <TableHead>Juez</TableHead>
               <TableHead className="text-right">Enviadas</TableHead>
@@ -763,10 +757,7 @@ function JudgesCard({ judges }: { judges: JudgeRow[] }) {
           </TableHeader>
           <TableBody>
             {judges.map((judge) => (
-              <TableRow
-                key={judge._id}
-                className="[&_td]:border-b [&_td]:border-hs-ink/20"
-              >
+              <TableRow key={judge._id}>
                 <TableCell>
                   <span className="block truncate">{judge.name}</span>
                   {judge.email ? (
@@ -782,7 +773,6 @@ function JudgesCard({ judges }: { judges: JudgeRow[] }) {
                         ? "gold"
                         : "default"
                     }
-                    className="tabular-nums"
                   >
                     {judge.submitted}/{judge.assigned}
                   </Badge>
@@ -839,9 +829,7 @@ function ProjectsCard({
         <CardTitle className="flex flex-wrap items-center gap-2">
           Proyectos
           {flagged > 0 ? (
-            <Badge className="border-hs-red bg-hs-red/10 text-hs-red">
-              {flagged} para revisar
-            </Badge>
+            <Badge variant="destructive">{flagged} para revisar</Badge>
           ) : null}
           <span className="ml-auto flex flex-wrap gap-2">
             <ExportButton
@@ -877,7 +865,7 @@ function ProjectsCard({
             className="border-separate border-spacing-0 font-medium"
             containerClassName="max-h-[min(48rem,calc(100dvh-14rem))] overflow-auto overscroll-contain"
           >
-            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
               <TableRow>
                 <TableHead className="w-14 text-right">#</TableHead>
                 <TableHead>Proyecto</TableHead>
@@ -905,7 +893,7 @@ function ProjectsCard({
                     )
                   }
                   className={cn(
-                    "h-11 cursor-pointer motion-safe:transition-colors motion-safe:duration-100 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 [&_td]:border-b [&_td]:border-hs-ink/20",
+                    "h-11 cursor-pointer",
                     project.flagged && "[&_td]:bg-hs-red/5"
                   )}
                 >
@@ -918,7 +906,7 @@ function ProjectsCard({
                       data-row-trigger
                       aria-haspopup="dialog"
                       aria-expanded={project._id === projectId}
-                      className="-mx-1 block min-w-0 max-w-64 truncate px-1 text-left underline-offset-2 outline-none focus-visible:border-[3px] focus-visible:border-hs-navy [@media(hover:hover)_and_(pointer:fine)]:hover:underline"
+                      className="-mx-1 block min-w-0 max-w-64 truncate px-1 text-left underline-offset-2 outline-none focus-visible:border-3 focus-visible:border-hs-navy [@media(hover:hover)_and_(pointer:fine)]:hover:underline"
                     >
                       {project.name || "Sin título"}
                     </button>
@@ -960,14 +948,11 @@ function ProjectsCard({
                         variant={
                           project.submittedCount === 2 ? "gold" : "default"
                         }
-                        className="tabular-nums"
                       >
                         {project.submittedCount}/2
                       </Badge>
                       {project.flagged ? (
-                        <Badge className="border-hs-red bg-hs-red/10 text-hs-red">
-                          Revisar
-                        </Badge>
+                        <Badge variant="destructive">Revisar</Badge>
                       ) : null}
                     </span>
                   </TableCell>
@@ -1025,9 +1010,7 @@ function ProjectSheet({
               <Badge variant="gold">Puesto {item.rank}</Badge>
             ) : null}
             {item?.flagged ? (
-              <Badge className="border-hs-red bg-hs-red/10 text-hs-red">
-                Revisar
-              </Badge>
+              <Badge variant="destructive">Revisar</Badge>
             ) : null}
           </SheetTitle>
           <SheetDescription className="font-medium">
@@ -1056,7 +1039,7 @@ function ProjectSheet({
                 />
               </div>
               <AssessmentBreakdown item={item} />
-              <div className="grid gap-5 border-t-[3px] border-hs-ink pt-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+              <div className="grid gap-5 border-t-3 border-hs-ink pt-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                 <VideoFrame url={urlOf(item.urls, "video")} />
                 <ProjectDetails item={item} />
               </div>
@@ -1078,7 +1061,7 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="border-[3px] border-hs-ink bg-hs-paper px-3 py-2">
+    <div className="border-3 border-hs-ink bg-hs-paper px-3 py-2">
       <p className="font-bungee text-xs uppercase text-hs-brown">{label}</p>
       <p className="font-bungee text-2xl leading-tight tabular-nums">{value}</p>
       {hint ? <p className="text-xs font-medium text-hs-red">{hint}</p> : null}
@@ -1111,7 +1094,7 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
     <div className="space-y-3">
       <ScoreLegend />
       <Table className="border-separate border-spacing-0 font-medium">
-        <TableHeader className="[&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+        <TableHeader className="[&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
           <TableRow>
             <TableHead>Criterio</TableHead>
             {rows.map(({ judge }) => (
@@ -1123,10 +1106,7 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
         </TableHeader>
         <TableBody>
           {CRITERIA.map((criterion) => (
-            <TableRow
-              key={criterion}
-              className="[&_td]:border-b [&_td]:border-hs-ink/20"
-            >
+            <TableRow key={criterion}>
               <TableCell>{CRITERION_LABELS[criterion]}</TableCell>
               {rows.map(({ judge, assessment }) => (
                 <TableCell key={judge._id} className="text-right tabular-nums">
@@ -1137,7 +1117,7 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
               ))}
             </TableRow>
           ))}
-          <TableRow className="[&_td]:border-b [&_td]:border-hs-ink/20">
+          <TableRow>
             <TableCell className="font-bungee text-xs uppercase">
               Nota bruta
             </TableCell>
@@ -1147,7 +1127,7 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
               </TableCell>
             ))}
           </TableRow>
-          <TableRow className="[&_td]:border-b [&_td]:border-hs-ink/20">
+          <TableRow>
             <TableCell className="font-bungee text-xs uppercase">
               Ajustada
             </TableCell>
@@ -1179,7 +1159,7 @@ function AssessmentBreakdown({ item }: { item: ProjectRow }) {
         {rows.map(({ judge, assessment }) => (
           <div
             key={judge._id}
-            className="border-[3px] border-hs-ink bg-hs-paper p-3"
+            className="border-3 border-hs-ink bg-hs-paper p-3"
           >
             <p className="font-bungee text-xs uppercase">{judge.name}</p>
             <p className="mt-1 text-sm font-medium text-pretty whitespace-pre-wrap">

@@ -2,6 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { api } from "@convex/_generated/api";
 import {
   Select,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
 import { Panel } from "./panel";
 import { ConsumptionChart } from "./evolution-charts";
 import {
@@ -37,18 +39,18 @@ function SummaryMetric({
     <Card className="gap-2 border border-hs-ink/15 px-4 py-4">
       <p className="text-xs text-hs-brown">{label}</p>
       <p className="text-2xl font-bold tabular-nums">{value}</p>
-      <p className="text-[11px] text-hs-brown">{detail}</p>
+      <p className="text-2xs text-hs-brown">{detail}</p>
     </Card>
   );
 }
 
 const STACK_COLORS = [
-  "#1e3958",
-  "#35858a",
-  "#d96b2a",
-  "#8b6b9f",
-  "#a67516",
-  "#677558",
+  "var(--color-hs-navy)",
+  "var(--color-hs-teal)",
+  "var(--color-hs-orange)",
+  "var(--color-hs-slate)",
+  "var(--color-hs-gold)",
+  "var(--color-hs-red)",
 ];
 const STACK_PAGE_SIZE = 8;
 
@@ -90,7 +92,8 @@ export function LiveTechnologyStacks() {
             >
               <SelectTrigger
                 aria-label="Categoría de tecnologías"
-                className="min-h-10 border text-xs sm:w-32"
+                size="xs"
+                className="min-h-10 sm:w-32"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -119,12 +122,16 @@ export function LiveTechnologyStacks() {
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-hs-sand">
                   <div
-                    className="h-full rounded-full"
-                    style={{
-                      backgroundColor:
-                        STACK_COLORS[(pageStart + index) % STACK_COLORS.length],
-                      width: `${(row.count / Math.max(total, 1)) * 100}%`,
-                    }}
+                    className="h-full w-(--w) rounded-full bg-(--swatch)"
+                    style={
+                      {
+                        "--swatch":
+                          STACK_COLORS[
+                            (pageStart + index) % STACK_COLORS.length
+                          ],
+                        "--w": `${(row.count / Math.max(total, 1)) * 100}%`,
+                      } as CSSProperties
+                    }
                   />
                 </div>
               </div>
@@ -167,7 +174,7 @@ export function LiveTechnologyStacks() {
           )}
         </>
       )}
-      <p className="mt-5 text-[11px] leading-relaxed text-hs-brown">
+      <p className="mt-5 text-2xs leading-relaxed text-hs-brown">
         {total === 0
           ? "Datos reales del repo."
           : `${histogram?.auto ?? 0} de ${total} stacks de proyecto detectados desde GitHub; no es un recuento de repos vinculados.`}
@@ -220,7 +227,7 @@ function RealEvolution({
         <Select value={scope} onValueChange={setTeamId}>
           <SelectTrigger
             aria-label="Equipo para analizar"
-            className="min-h-11 border sm:w-56"
+            className="min-h-11 sm:w-56"
           >
             <SelectValue />
           </SelectTrigger>

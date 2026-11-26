@@ -201,7 +201,6 @@ function InputField({
             id={id}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : undefined}
-            className={error ? "border-hs-red" : undefined}
           >
             <SelectValue placeholder="Elige una opción" />
           </SelectTrigger>
@@ -229,7 +228,6 @@ function InputField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className={error ? "border-hs-red" : undefined}
           placeholder={
             input.type === "url"
               ? "https://"

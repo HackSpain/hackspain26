@@ -9,7 +9,7 @@ export function LinkedText({ text }: { text: string }) {
         href={part.href}
         target="_blank"
         rel="noopener noreferrer"
-        className="break-all text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px] hover:decoration-hs-navy"
+        className="break-all text-hs-navy underline decoration-hs-navy/40 underline-offset-3 hover:decoration-hs-navy"
       >
         {part.text}
       </a>

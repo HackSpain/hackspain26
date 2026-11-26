@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { api } from "@convex/_generated/api";
 import {
   EMPTY_REEL,
@@ -121,17 +122,11 @@ function Picture({
       className={cn(
         "hsx-title flex size-full items-center justify-center text-balance break-words text-center",
         posterTone(meme._id),
-        cover && "hsx-sm p-[calc(var(--u)*1)] leading-[1.15]",
+        cover && "hsx-sm p-(--u-1) leading-compact",
         !cover &&
           (mini
-            ? cn(
-                "p-[calc(var(--u)*2)] leading-[1.1]",
-                long ? "hsx-lg" : "hsx-xl"
-              )
-            : cn(
-                "p-[calc(var(--u)*4)] leading-[1.1]",
-                long ? "hsx-xl" : "hsx-2xl"
-              ))
+            ? cn("p-(--u-2) leading-squeeze", long ? "hsx-lg" : "hsx-xl")
+            : cn("p-(--u-4) leading-squeeze", long ? "hsx-xl" : "hsx-2xl"))
       )}
     >
       <span className={cover ? "line-clamp-5" : "line-clamp-6"}>
@@ -157,7 +152,7 @@ function Reactions({
     <ul
       aria-label="Reacciones"
       className={cn(
-        "flex min-w-0 items-center gap-[calc(var(--u)*0.5)] [--hsx-flash:var(--color-hs-red)]",
+        "flex min-w-0 items-center gap-(--u-0-5) [--hsx-flash:var(--color-hs-red)]",
         className
       )}
     >
@@ -170,7 +165,7 @@ function Reactions({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.35, ease: EASE }}
-            className="flex shrink-0 items-center gap-[calc(var(--u)*0.35)] border-[length:calc(var(--line)*0.6)] border-hs-ink bg-hs-paper px-[calc(var(--u)*0.6)] py-[calc(var(--u)*0.3)] leading-none text-hs-ink"
+            className="flex shrink-0 items-center gap-(--u-0-35) border-(length:--line-0-6) border-hs-ink bg-hs-paper px-(--u-0-6) py-(--u-0-3) leading-none text-hs-ink"
           >
             <span className="hsx-lg">{reaction.emoji}</span>
             <span
@@ -213,7 +208,7 @@ function Feature({
   const reduced = useReducedMotion();
   if (!meme) {
     return (
-      <section className="flex min-h-0 flex-col items-center justify-center gap-[calc(var(--u)*1.6)] bg-hs-paper p-[calc(var(--u)*4)] text-center">
+      <section className="flex min-h-0 flex-col items-center justify-center gap-(--u-1-6) bg-hs-paper p-(--u-4) text-center">
         <p
           className={cn("hsx-title text-balance", mini ? "hsx-xl" : "hsx-2xl")}
         >
@@ -223,8 +218,8 @@ function Feature({
           className={cn("text-balance", mini ? "hsx-md" : "hsx-lg max-w-[70%]")}
         >
           Publica el tuyo en el feed de la app con{" "}
-          <strong className="bg-hs-gold px-[0.3em]">#meme</strong> y estrena
-          esta pantalla.
+          <strong className="bg-hs-gold px-em">#meme</strong> y estrena esta
+          pantalla.
         </p>
       </section>
     );
@@ -232,10 +227,7 @@ function Feature({
   const caption = memeCaption(meme.text);
   const reacted = reactionTotal(meme) > 0;
   return (
-    <section
-      className="flex min-h-0 flex-col gap-[var(--line)]"
-      aria-live="polite"
-    >
+    <section className="flex min-h-0 flex-col gap-(--line)" aria-live="polite">
       <div className="relative min-h-0 flex-1 overflow-hidden bg-hs-paper">
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div
@@ -259,7 +251,7 @@ function Feature({
           {fresh ? (
             <motion.p
               key={meme._id}
-              className="hsx-title hsx-xl absolute top-[calc(var(--u)*1.4)] left-[calc(var(--u)*1.4)] flex origin-top-left items-center gap-[calc(var(--u)*0.7)] border-[length:var(--line)] border-hs-ink bg-hs-red px-[calc(var(--u)*1.1)] py-[calc(var(--u)*0.7)] text-hs-paper"
+              className="hsx-title hsx-xl absolute top-(--u-1-4) left-(--u-1-4) flex origin-top-left items-center gap-(--u-0-7) border-(length:--line) border-hs-ink bg-hs-red px-(--u-1-1) py-(--u-0-7) text-hs-paper"
               initial={
                 reduced
                   ? { opacity: 0 }
@@ -273,7 +265,7 @@ function Feature({
                 ease: EASE,
               }}
             >
-              <span className="tv-pulse size-[calc(var(--u)*0.9)] shrink-0 rounded-full bg-hs-paper" />
+              <span className="tv-pulse size-(--u-0-9) shrink-0 rounded-full bg-hs-paper" />
               Nuevo meme
             </motion.p>
           ) : null}
@@ -281,7 +273,7 @@ function Feature({
       </div>
       <div
         className={cn(
-          "grid shrink-0 gap-[var(--line)]",
+          "grid shrink-0 gap-(--line)",
           mini
             ? "h-[22%] grid-cols-[minmax(0,1fr)_auto_auto]"
             : "h-[15%] grid-cols-[minmax(0,1fr)_auto_auto_calc(var(--u)*8)]"
@@ -289,11 +281,11 @@ function Feature({
       >
         <div
           className={cn(
-            "relative flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.5)] overflow-hidden px-[calc(var(--u)*1.6)] transition-colors duration-500",
+            "relative flex min-w-0 flex-col justify-center gap-(--u-0-5) overflow-hidden px-(--u-1-6) transition-colors duration-500",
             fresh ? "bg-hs-gold" : "bg-hs-paper"
           )}
         >
-          <p className="flex min-w-0 items-baseline gap-[calc(var(--u)*0.8)] leading-none">
+          <p className="flex min-w-0 items-baseline gap-(--u-0-8) leading-none">
             <span className="hsx-title hsx-lg truncate">{meme.authorName}</span>
             {meme.teamName ? (
               <span className="hsx-label truncate">{meme.teamName}</span>
@@ -310,16 +302,18 @@ function Feature({
             </p>
           ) : null}
           <div
-            className="absolute inset-x-0 bottom-0 h-[calc(var(--u)*0.45)] bg-hs-ink/15"
+            className="absolute inset-x-0 bottom-0 h-(--u-0-45) bg-hs-ink/15"
             aria-hidden
           >
             <div
               key={`${turn}-${visible}`}
-              className="hsx-progress h-full origin-left bg-hs-orange"
-              style={{
-                animationDuration: `${hold}ms`,
-                animationPlayState: visible ? "running" : "paused",
-              }}
+              className="hsx-progress anim-duration-var anim-play-var h-full origin-left bg-hs-orange"
+              style={
+                {
+                  "--anim-duration": `${hold}ms`,
+                  "--anim-play": visible ? "running" : "paused",
+                } as CSSProperties
+              }
             />
           </div>
         </div>
@@ -327,7 +321,7 @@ function Feature({
         {mini && !reacted ? null : (
           <div
             className={cn(
-              "flex min-w-0 flex-col justify-center gap-[calc(var(--u)*0.45)] bg-hs-teal px-[calc(var(--u)*1.2)] leading-none text-hs-paper",
+              "flex min-w-0 flex-col justify-center gap-(--u-0-45) bg-hs-teal px-(--u-1-2) leading-none text-hs-paper",
               mini ? "max-w-[38cqw]" : "max-w-[34cqw]"
             )}
           >
@@ -345,7 +339,7 @@ function Feature({
             )}
           </div>
         )}
-        <div className="flex flex-col items-center justify-center gap-[calc(var(--u)*0.4)] bg-hs-navy px-[calc(var(--u)*1.6)] leading-none text-hs-paper">
+        <div className="flex flex-col items-center justify-center gap-(--u-0-4) bg-hs-navy px-(--u-1-6) leading-none text-hs-paper">
           <span className="hsx-label">
             {now === undefined ? "Publicado" : memeAge(meme.createdAt, now)}
           </span>
@@ -376,7 +370,7 @@ function Wall({
   const shown = memes.slice(0, WALL_CELLS);
   return (
     <ol
-      className="grid min-h-0 grid-cols-2 grid-rows-3 gap-[var(--line)] portrait:grid-cols-3 portrait:grid-rows-2"
+      className="grid min-h-0 grid-cols-2 grid-rows-3 gap-(--line) portrait:grid-cols-3 portrait:grid-rows-2"
       aria-label="Últimos memes"
     >
       <AnimatePresence initial={false} mode="popLayout">
@@ -391,7 +385,7 @@ function Wall({
             className="relative min-h-0 min-w-0 overflow-hidden bg-hs-paper"
           >
             <Picture meme={meme} cover />
-            <p className="hsx-xs absolute inset-x-0 bottom-0 flex items-center gap-[calc(var(--u)*0.6)] bg-hs-ink px-[calc(var(--u)*0.7)] py-[calc(var(--u)*0.35)] font-bold text-hs-paper [--hsx-flash:var(--color-hs-gold)]">
+            <p className="hsx-xs absolute inset-x-0 bottom-0 flex items-center gap-(--u-0-6) bg-hs-ink px-(--u-0-7) py-(--u-0-35) font-bold text-hs-paper [--hsx-flash:var(--color-hs-gold)]">
               <span className="min-w-0 flex-1 truncate">
                 {meme.authorName}
                 {meme.teamName ? ` · ${meme.teamName}` : ""}
@@ -408,14 +402,14 @@ function Wall({
               ) : null}
             </p>
             {now !== undefined && now - meme.createdAt < NEW_TAG_MS ? (
-              <span className="hsx-title hsx-xs absolute top-0 left-0 bg-hs-gold px-[calc(var(--u)*0.6)] py-[calc(var(--u)*0.35)] text-hs-ink">
+              <span className="hsx-title hsx-xs absolute top-0 left-0 bg-hs-gold px-(--u-0-6) py-(--u-0-35) text-hs-ink">
                 Nuevo
               </span>
             ) : null}
             {meme._id === currentId ? (
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-0 border-[length:calc(var(--line)*2.2)] border-hs-gold"
+                className="pointer-events-none absolute inset-0 border-(length:--line-2-2) border-hs-gold"
               />
             ) : null}
           </motion.li>
@@ -475,12 +469,12 @@ function MemesStage({
     // Small venue screens: one meme at a time inside a safe margin, no wall.
     return (
       <main
-        className="h-dvh w-full overflow-hidden bg-hs-ink px-[5vw] py-[5vh] text-hs-ink [container-type:size]"
+        className="h-dvh w-full overflow-hidden bg-hs-ink px-vw-5 py-vh-5 text-hs-ink [container-type:size]"
         aria-label="Memes de HackSpain en directo · mini"
       >
-        <div className="hsx hsx-mini flex h-full flex-col gap-[var(--line)] p-[var(--line)]">
-          <header className="grid h-[14%] shrink-0 grid-cols-[minmax(0,1.1fr)_minmax(0,2.2fr)_minmax(0,0.8fr)] gap-[var(--line)]">
-            <div className="flex min-w-0 items-center justify-center bg-hs-paper px-[var(--u)]">
+        <div className="hsx hsx-mini flex h-full flex-col gap-(--line) p-(--line)">
+          <header className="grid h-[14%] shrink-0 grid-cols-[minmax(0,1.1fr)_minmax(0,2.2fr)_minmax(0,0.8fr)] gap-(--line)">
+            <div className="flex min-w-0 items-center justify-center bg-hs-paper px-(--u)">
               <Image
                 src="/logo.svg"
                 alt="HackSpain"
@@ -490,11 +484,11 @@ function MemesStage({
                 className="h-auto max-h-[68%] w-auto min-w-0 object-contain"
               />
             </div>
-            <p className="hsx-md flex min-w-0 items-center gap-[calc(var(--u)*0.6)] bg-hs-gold px-[var(--u)] leading-tight font-bold">
-              <span className="tv-pulse size-[calc(var(--u)*0.6)] shrink-0 rounded-full bg-hs-red" />
+            <p className="hsx-md flex min-w-0 items-center gap-(--u-0-6) bg-hs-gold px-(--u) leading-tight font-bold">
+              <span className="tv-pulse size-(--u-0-6) shrink-0 rounded-full bg-hs-red" />
               <span>
                 {demo ? "Demo · publica" : "Publica"} con{" "}
-                <strong className="hsx-title bg-hs-ink px-[0.3em] text-hs-gold">
+                <strong className="hsx-title bg-hs-ink px-em text-hs-gold">
                   #meme
                 </strong>
               </span>
@@ -515,10 +509,10 @@ function MemesStage({
       className="h-dvh w-full overflow-hidden bg-hs-ink text-hs-ink [container-type:size]"
       aria-label="Memes de HackSpain en directo"
     >
-      <div className="hsx hsx-md flex h-full flex-col gap-[var(--line)] p-[var(--line)]">
-        <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.4fr)_minmax(0,1.3fr)_minmax(0,3fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_calc(var(--u)*7)] gap-[var(--line)]">
+      <div className="hsx hsx-md flex h-full flex-col gap-(--line) p-(--line)">
+        <header className="grid h-[9%] shrink-0 grid-cols-[calc(var(--u)*7)_minmax(0,1.4fr)_minmax(0,1.3fr)_minmax(0,3fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_calc(var(--u)*7)] gap-(--line)">
           <Diagonal bg="bg-hs-paper" tri="bg-hs-orange" corner="tl" />
-          <div className="flex items-center justify-center bg-hs-paper px-[calc(var(--u)*1.4)]">
+          <div className="flex items-center justify-center bg-hs-paper px-(--u-1-4)">
             <Image
               src="/logo.svg"
               alt="HackSpain"
@@ -528,18 +522,18 @@ function MemesStage({
               className="h-[74%] w-auto"
             />
           </div>
-          <p className="hsx-title hsx-lg flex items-center justify-center gap-[calc(var(--u)*0.7)] bg-hs-red px-[calc(var(--u)*1)] text-hs-paper">
-            <span className="tv-pulse size-[calc(var(--u)*0.9)] shrink-0 rounded-full bg-hs-paper" />
+          <p className="hsx-title hsx-lg flex items-center justify-center gap-(--u-0-7) bg-hs-red px-(--u-1) text-hs-paper">
+            <span className="tv-pulse size-(--u-0-9) shrink-0 rounded-full bg-hs-paper" />
             {demo ? "Demo · memes" : "Memes"}
           </p>
-          <p className="hsx-lg flex items-center bg-hs-paper px-[calc(var(--u)*1.6)] leading-tight">
+          <p className="hsx-lg flex items-center bg-hs-paper px-(--u-1-6) leading-tight">
             <span>
               Publica en el feed con{" "}
-              <strong className="hsx-title bg-hs-gold px-[0.3em]">#meme</strong>{" "}
-              y sal en esta pantalla
+              <strong className="hsx-title bg-hs-gold px-em">#meme</strong> y
+              sal en esta pantalla
             </span>
           </p>
-          <div className="flex flex-col justify-center gap-[calc(var(--u)*0.4)] bg-hs-gold px-[calc(var(--u)*1.5)] leading-none [--hsx-flash:var(--color-hs-red)]">
+          <div className="flex flex-col justify-center gap-(--u-0-4) bg-hs-gold px-(--u-1-5) leading-none [--hsx-flash:var(--color-hs-red)]">
             <p className="hsx-label">Último meme</p>
             <p className="hsx-title hsx-lg truncate">
               <span key={latest?._id} className="hsx-flash">
@@ -551,13 +545,13 @@ function MemesStage({
           </div>
           <div className="flex flex-col items-center justify-center bg-hs-teal leading-none text-hs-paper">
             <span className="hsx-label">Madrid</span>
-            <span className="hsx-title hsx-num hsx-xl mt-[calc(var(--u)*0.4)]">
+            <span className="hsx-title hsx-num hsx-xl mt-(--u-0-4)">
               {time}
             </span>
           </div>
           <Diagonal bg="bg-hs-teal" tri="bg-hs-orange" corner="br" />
         </header>
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] gap-[var(--line)] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] gap-(--line) portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1.7fr)_minmax(0,1fr)]">
           {feature}
           <Wall memes={list} currentId={reel.currentId} now={now} />
         </div>

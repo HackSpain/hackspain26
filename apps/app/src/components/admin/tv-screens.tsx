@@ -96,9 +96,8 @@ function ScreenCard({ screen, now }: { screen: Screen; now: number }) {
           </Button>
           {!online.length ? (
             <Button
-              variant="outline"
+              variant="danger"
               size="icon"
-              className="text-hs-red"
               aria-label={`Borrar ${screen.key}`}
               title="Borrar pantalla"
               disabled={busy}

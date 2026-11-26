@@ -155,7 +155,7 @@ export function ProjectTable({
             onKeyDown={(event) =>
               activateOnKey(event, () => onOpen(row._id, event.currentTarget))
             }
-            className="block cursor-pointer outline-none motion-safe:transition-transform motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97] [@media(hover:hover)_and_(pointer:fine)]:hover:[&>[data-slot=card]]:bg-hs-sand/60 focus-visible:[&>[data-slot=card]]:border-hs-navy aria-expanded:[&>[data-slot=card]]:bg-hs-sand"
+            className="block cursor-pointer outline-none motion-safe:transition-transform motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.97] [@media(hover:hover)_and_(pointer:fine)]:hover:[&>[data-slot=card]]:bg-hs-sand/60 focus-visible:[&>[data-slot=card]]:border-hs-navy aria-expanded:[&>[data-slot=card]]:bg-hs-sand"
           >
             <RecordCard
               title={row.name || "Sin título"}
@@ -176,7 +176,7 @@ export function ProjectTable({
           className="border-separate border-spacing-0 font-medium"
           containerClassName="max-h-[min(40rem,calc(100dvh-18rem))] overflow-auto overscroll-contain"
         >
-          <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+          <TableHeader className="sticky top-0 z-10 [&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
             <TableRow>
               <TableHead>Proyecto</TableHead>
               <TableHead>Equipo</TableHead>
@@ -197,7 +197,7 @@ export function ProjectTable({
                     )
                   )
                 }
-                className="h-11 cursor-pointer motion-safe:transition-colors motion-safe:duration-100 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-hs-sand/60 [&_td]:border-b [&_td]:border-hs-ink/20"
+                className="h-11 cursor-pointer"
               >
                 <TableCell>
                   <button
@@ -205,7 +205,7 @@ export function ProjectTable({
                     data-row-trigger
                     aria-haspopup="dialog"
                     aria-expanded={row._id === projectId}
-                    className="-mx-1 min-w-0 truncate px-1 text-left underline-offset-2 outline-none focus-visible:border-[3px] focus-visible:border-hs-navy [@media(hover:hover)_and_(pointer:fine)]:hover:underline"
+                    className="-mx-1 min-w-0 truncate px-1 text-left underline-offset-2 outline-none focus-visible:border-3 focus-visible:border-hs-navy [@media(hover:hover)_and_(pointer:fine)]:hover:underline"
                   >
                     {row.name || "Sin título"}
                   </button>

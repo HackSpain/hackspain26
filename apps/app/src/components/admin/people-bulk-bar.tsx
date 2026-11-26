@@ -68,7 +68,7 @@ export function PeopleBulkBar({
   }
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 border-[3px] border-hs-ink bg-hs-sand px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center">
+    <div className="flex shrink-0 flex-col gap-2 border-3 border-hs-ink bg-hs-sand px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center">
       <p className="text-sm font-medium tabular-nums">
         {count === 1 ? "1 seleccionada" : `${count} seleccionadas`}
       </p>
@@ -84,8 +84,7 @@ export function PeopleBulkBar({
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          className="bg-hs-paper"
+          variant="paper"
           disabled={pending !== null}
           onClick={() => void runStatus("waitlist")}
         >
@@ -94,8 +93,7 @@ export function PeopleBulkBar({
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          className="bg-hs-paper"
+          variant="paper"
           disabled={pending !== null}
           onClick={() => void runStatus("rejected")}
         >
@@ -106,7 +104,7 @@ export function PeopleBulkBar({
         <Select value={roleId} onValueChange={setRoleId}>
           <SelectTrigger
             aria-label="Rol para las seleccionadas"
-            className="w-full bg-hs-paper sm:max-w-48"
+            className="w-full sm:max-w-48"
           >
             <SelectValue placeholder="Cambiar rol" />
           </SelectTrigger>
@@ -121,8 +119,7 @@ export function PeopleBulkBar({
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          className="bg-hs-paper"
+          variant="paper"
           disabled={pending !== null || roleId === ""}
           onClick={() => void runRole()}
         >

@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "next/link";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { api } from "@convex/_generated/api";
 import type { PartialScores } from "@convex/lib/judging";
 import {
@@ -115,11 +116,15 @@ export function JudgingPanel() {
               aria-valuemax={total}
               aria-valuenow={queue.submittedCount}
               aria-label="Evaluaciones enviadas"
-              className="h-3 min-w-40 flex-1 overflow-hidden border-[3px] border-hs-ink bg-hs-paper sm:max-w-xs"
+              className="h-3 min-w-40 flex-1 overflow-hidden border-3 border-hs-ink bg-hs-paper sm:max-w-xs"
             >
               <div
-                className="h-full w-full origin-left bg-hs-gold motion-safe:transition-transform motion-safe:duration-[var(--duration-enter)] motion-safe:ease-[var(--ease-out)]"
-                style={{ transform: `scaleX(${queue.submittedCount / total})` }}
+                className="scale-x-var h-full w-full origin-left bg-hs-gold motion-safe:transition-transform motion-safe:duration-enter motion-safe:ease-out"
+                style={
+                  {
+                    "--scale-x": queue.submittedCount / total,
+                  } as CSSProperties
+                }
               />
             </div>
           </div>
@@ -157,7 +162,7 @@ export function JudgingPanel() {
               return (
                 <>
                   <StatusBadge item={item} />
-                  <Badge className="tabular-nums">
+                  <Badge>
                     <span className="inline-block min-w-[4ch] text-center">
                       {formatScore(item.assessment?.rawScore)}
                     </span>
@@ -178,7 +183,7 @@ export function JudgingPanel() {
         {selected ? (
           <div
             className={cn(
-              "border-t-[3px] border-hs-ink pt-5",
+              "border-t-3 border-hs-ink pt-5",
               saving && "opacity-70"
             )}
           >

@@ -181,7 +181,7 @@ export function DeliveriesPanel() {
                   key={team._id}
                   type="button"
                   onClick={() => openTeam(team._id)}
-                  className="border-[3px] border-hs-ink bg-hs-paper p-4 text-left motion-safe:transition-[transform,filter] motion-safe:duration-[var(--duration-press)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.97] hs-hover-bright"
+                  className="border-3 border-hs-ink bg-hs-paper p-4 text-left motion-safe:transition-press motion-safe:duration-press motion-safe:ease-out motion-safe:active:scale-[0.97] hs-hover-bright"
                 >
                   <p className="font-bungee text-base leading-snug text-balance">
                     {team.name}

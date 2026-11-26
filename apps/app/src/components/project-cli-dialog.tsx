@@ -55,7 +55,7 @@ export function ProjectCliDialog({ children }: { children: ReactNode }) {
             envían en{" "}
             <Link
               href="/submit"
-              className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+              className="text-hs-navy underline decoration-hs-navy/40 underline-offset-3"
             >
               /submit
             </Link>

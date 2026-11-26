@@ -181,7 +181,7 @@ function TrackEditor({
             className="h-7"
           />
           <Badge>{track.active ? "Activo" : "Oculto"}</Badge>
-          <Badge variant="gold" className="tabular-nums">
+          <Badge variant="gold">
             {projectCount(submissions.length, teamLimit)}
           </Badge>
         </CardTitle>
@@ -219,11 +219,12 @@ function TrackEditor({
             id="track-markdown"
             value={markdown}
             onChange={(event) => setMarkdown(event.target.value)}
-            className="min-h-48 font-mono text-sm"
+            variant="mono"
+            className="min-h-48"
           />
         </Field>
-        <div className="border-[3px] border-hs-ink/20 p-4">
-          <p className="mb-3 font-bungee text-[11px] uppercase text-hs-brown">
+        <div className="border-3 border-hs-ink/20 p-4">
+          <p className="mb-3 font-bungee text-2xs uppercase text-hs-brown">
             Vista previa
           </p>
           <div className="max-w-prose">
@@ -301,7 +302,7 @@ function TrackEditor({
         ) : (
           <ul
             aria-label="Proyectos en este reto"
-            className="divide-y-2 divide-hs-ink/15 border-[3px] border-hs-ink bg-hs-paper"
+            className="divide-y-2 divide-hs-ink/15 border-3 border-hs-ink bg-hs-paper"
           >
             {submissions.map((row) => (
               <ProjectRow key={row._id} row={row} />
@@ -321,7 +322,7 @@ function ProjectRow({ row }: { row: Submission }) {
         "relative grid gap-x-6 gap-y-1.5 py-3 pr-3 pl-4 md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)]",
         "before:absolute before:inset-y-0 before:left-0 before:w-1",
         submitted ? "before:bg-hs-gold" : "before:bg-hs-ink/20",
-        "transition-[background-color] duration-150 ease-[var(--ease-out)] hover:bg-hs-sand/50"
+        "transition-colors duration-150 ease-out hover:bg-hs-sand/50"
       )}
     >
       <div className="min-w-0 space-y-1.5">
@@ -362,7 +363,7 @@ function ProjectRow({ row }: { row: Submission }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 title={entry.url}
-                className="inline-flex min-w-0 max-w-full items-center gap-1 text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px] outline-none hover:decoration-hs-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-navy"
+                className="inline-flex min-w-0 max-w-full items-center gap-1 text-hs-navy underline decoration-hs-navy/40 underline-offset-3 outline-none hover:decoration-hs-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hs-navy"
               >
                 <span className="truncate">
                   {urlDisplay(entry.kind, entry.url)}

@@ -10,10 +10,7 @@ export default defineConfig({
   jsPlugins: [...base.jsPlugins, "@shadcn/lint"],
   rules: {
     // Documented core set is in @shadcn/lint adoption.md (the plugin has no preset).
-    // Measured on 70882ae with that five-rule config and src/components/ui/** overrides:
-    // no-arbitrary-values 572, no-restyle 434, no-inline-styles 84, no-raw-colors 1,
-    // require-static-classes 0. no-unknown-classes is a later adoption step, not enabled.
-    // Existing Oxlint/Biome do not check these; Biome lint is off in this workspace.
+    // no-unknown-classes is a later adoption step, not enabled.
     "shadcn/require-static-classes": "error",
     "shadcn/no-raw-colors": [
       "error",
@@ -23,19 +20,90 @@ export default defineConfig({
         allow: ["fill-opacity-*"],
       },
     ],
-    // Skipped after measurement (SETUP's no-arbitrary-values is the noisiest here):
-    // no-restyle 434: Card/Table/Button callers pass typography, spacing and color;
-    // enabling needs a variant/contract pass, not a class strip.
-    // no-arbitrary-values 572: 281 already use theme vars via var(); 104 are TV/closing
-    // cqw broadcast layout; many remaining are brand border-[3px]. SETUP starter, still noisy.
-    // no-inline-styles 84: Recharts, GSAP and dynamic widths; converting is a graphics rewrite.
+    "shadcn/no-restyle": [
+      "error",
+      {
+        allow: [
+          "layout",
+          "hs-enter",
+          "duration-press",
+          "duration-enter",
+          "duration-exit",
+          "ease-out",
+          "transition-press",
+          "transition-surface",
+        ],
+        contracts: [
+          {
+            pattern: "^Card$",
+            allow: [
+              "layout",
+              "spacing",
+              "color",
+              "shape",
+              "effects",
+              "motion",
+              "hs-enter",
+              "duration-enter",
+              "ease-out",
+            ],
+          },
+          { pattern: "^Badge$", allow: ["layout", "spacing"] },
+          {
+            pattern: "^CardTitle$",
+            allow: ["layout", "typography", "spacing"],
+          },
+          {
+            pattern: "^CardDescription$",
+            allow: ["layout", "typography", "color", "spacing", "shape"],
+          },
+          {
+            pattern: "^CardContent$",
+            allow: ["layout", "spacing", "typography", "color"],
+          },
+          { pattern: "^CardHeader$", allow: ["layout", "spacing"] },
+          { pattern: "^Frame$", allow: ["layout", "spacing", "color"] },
+          {
+            pattern: "^Table$",
+            allow: ["layout", "typography", "shape", "spacing"],
+          },
+          { pattern: "^TableHeader$", allow: ["layout", "color", "shape"] },
+          {
+            pattern: "^TableRow$",
+            allow: ["layout", "color", "motion", "shape"],
+          },
+          { pattern: "^TableCell$", allow: ["layout", "typography", "color"] },
+          { pattern: "^TableHead$", allow: ["layout", "typography"] },
+          { pattern: "^Label$", allow: ["layout", "typography", "color"] },
+          { pattern: "^SheetBody$", allow: ["layout", "spacing"] },
+          {
+            pattern: "^SheetTitle$",
+            allow: ["layout", "typography", "spacing"],
+          },
+          { pattern: "^SheetDescription$", allow: ["layout", "typography"] },
+          {
+            pattern: "^AlertDescription$",
+            allow: ["layout", "typography", "color", "spacing"],
+          },
+          {
+            pattern: "^DropdownMenuItem$",
+            allow: ["layout", "typography", "color"],
+          },
+          { pattern: "^DropdownMenuLabel$", allow: ["layout", "typography"] },
+        ],
+      },
+    ],
+    "shadcn/no-arbitrary-values": ["error", { allow: ["layout"] }],
+    "shadcn/no-inline-styles": "error",
   },
   overrides: [
     {
       files: ["src/components/ui/**"],
       rules: {
-        // Primitives compose class strings; the documented ui override turns this off there.
+        // Primitives own appearance and may use structural values such as ring-[3px].
         "shadcn/require-static-classes": "off",
+        "shadcn/no-restyle": "off",
+        "shadcn/no-arbitrary-values": "off",
       },
     },
     {

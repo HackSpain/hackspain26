@@ -250,7 +250,7 @@ function TypeCard({
         <CardTitle className="flex flex-wrap items-center gap-2">
           {type.label}
           {type.isDefault ? <Badge variant="gold">Por defecto</Badge> : null}
-          <Badge className="tabular-nums">{userCount(type.userCount)}</Badge>
+          <Badge>{userCount(type.userCount)}</Badge>
           {type.requiresConfirmed ? <Badge>Confirmar</Badge> : null}
           {type.openForApplications ? <Badge>Solicitudes</Badge> : null}
         </CardTitle>
@@ -387,8 +387,7 @@ function TypeCard({
               </p>
               <Button
                 type="button"
-                variant="outline"
-                className="text-hs-red"
+                variant="danger"
                 disabled={action.pending}
                 onClick={() =>
                   void action.run(() => remove({ typeId: type._id }))

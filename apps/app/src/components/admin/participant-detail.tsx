@@ -211,25 +211,12 @@ export function ParticipantDetail({
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">
               Perfil
-              <Badge
-                variant={signup?.accepted ? "gold" : "default"}
-                className="whitespace-nowrap"
-              >
+              <Badge variant={signup?.accepted ? "gold" : "default"}>
                 {signup?.accepted ? "aceptado" : "no aceptado"}
               </Badge>
-              {attendance ? (
-                <Badge className="whitespace-nowrap">
-                  {attendanceLabel(attendance)}
-                </Badge>
-              ) : null}
-              {staffRole ? (
-                <Badge className="whitespace-nowrap">{staffRole}</Badge>
-              ) : null}
-              {user?.userType ? (
-                <Badge className="whitespace-nowrap">
-                  {user.userType.label}
-                </Badge>
-              ) : null}
+              {attendance ? <Badge>{attendanceLabel(attendance)}</Badge> : null}
+              {staffRole ? <Badge>{staffRole}</Badge> : null}
+              {user?.userType ? <Badge>{user.userType.label}</Badge> : null}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -528,9 +515,7 @@ export function ParticipantDetail({
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">
               Proyecto
-              <Badge className="whitespace-nowrap">
-                {submissionStatusLabel(detail.submission.status)}
-              </Badge>
+              <Badge>{submissionStatusLabel(detail.submission.status)}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">

@@ -301,9 +301,7 @@ export function AdminPerks() {
                   {perk.value ? (
                     <Badge variant="gold">{perk.value}</Badge>
                   ) : null}
-                  {perk.active ? null : (
-                    <Badge className="bg-hs-paper">Inactivo</Badge>
-                  )}
+                  {perk.active ? null : <Badge variant="paper">Inactivo</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
@@ -334,7 +332,7 @@ export function AdminPerks() {
                         href={perk.sponsorUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-0.5 text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+                        className="inline-flex items-center gap-0.5 text-hs-navy underline decoration-hs-navy/40 underline-offset-3"
                       >
                         {perk.type === "external"
                           ? "Enlace para reclamar"
@@ -392,7 +390,7 @@ export function AdminPerks() {
                           [perk._id]: event.target.value,
                         }))
                       }
-                      className="font-mono"
+                      variant="mono"
                     />
                     <Button
                       variant="teal"
@@ -710,7 +708,7 @@ function PerkFields({
             id={`${ids}-codes`}
             value={draft.codes}
             onChange={(event) => set("codes", event.target.value)}
-            className="font-mono"
+            variant="mono"
           />
         </Field>
       ) : null}
@@ -776,7 +774,7 @@ function InputsEditor({
             return (
               <li
                 key={input.id}
-                className="grid gap-2 border-[3px] border-hs-ink bg-hs-sand/50 p-3 sm:grid-cols-2"
+                className="grid gap-2 border-3 border-hs-ink bg-hs-sand/50 p-3 sm:grid-cols-2"
               >
                 <div className="space-y-1">
                   <Label htmlFor={`${base}-label`} className="text-xs">
@@ -798,7 +796,7 @@ function InputsEditor({
                   <Input
                     id={`${base}-key`}
                     value={input.key}
-                    className="font-mono text-sm"
+                    variant="mono"
                     onChange={(event) =>
                       patch(input.id, {
                         key: slugKey(event.target.value),
@@ -928,7 +926,7 @@ function CodesSheet({ perk }: { perk: AdminPerk }) {
             className="border-separate border-spacing-0"
             containerClassName="min-h-0 flex-1 overflow-auto overscroll-contain border-0"
           >
-            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Estado</TableHead>
@@ -940,10 +938,7 @@ function CodesSheet({ perk }: { perk: AdminPerk }) {
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow
-                  key={row._id}
-                  className="[&_td]:border-b [&_td]:border-hs-ink/20"
-                >
+                <TableRow key={row._id}>
                   <TableCell className="font-mono text-xs">
                     {row.code}
                   </TableCell>
@@ -956,7 +951,7 @@ function CodesSheet({ perk }: { perk: AdminPerk }) {
                     {row.userId ? (
                       <Link
                         href={participantHref({ kind: "user", id: row.userId })}
-                        className="text-hs-navy underline decoration-hs-navy/40 underline-offset-[3px]"
+                        className="text-hs-navy underline decoration-hs-navy/40 underline-offset-3"
                       >
                         {row.name ?? "Participante"}
                       </Link>
@@ -1047,7 +1042,7 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
             className="border-separate border-spacing-0"
             containerClassName="min-h-0 flex-1 overflow-auto overscroll-contain border-0"
           >
-            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-[3px] [&_th]:border-hs-ink [&_th]:bg-hs-sand">
+            <TableHeader className="sticky top-0 z-10 [&_th]:border-b-3 [&_th]:border-hs-ink [&_th]:bg-hs-sand">
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Email</TableHead>
@@ -1063,10 +1058,7 @@ function RequestsSheet({ perk }: { perk: AdminPerk }) {
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow
-                  key={row._id}
-                  className="[&_td]:border-b [&_td]:border-hs-ink/20"
-                >
+                <TableRow key={row._id}>
                   <TableCell>{row.name ?? "—"}</TableCell>
                   <TableCell>{row.email ?? "—"}</TableCell>
                   <TableCell>{row.teamName ?? "—"}</TableCell>
